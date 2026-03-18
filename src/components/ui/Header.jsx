@@ -22,25 +22,30 @@ export default function Header({ club, hideMenu }) {
   return (
     <header className="w-full bg-white">
       <div className="w-full" style={{ borderBottom: `4px solid ${brand}` }}>
-        <div className="w-full max-w-screen-lg mx-auto px-4 py-3 md:h-24 md:py-0 grid md:grid-cols-3 items-center">
+        {/* MOBILE = flex row, DESKTOP = grid */}
+        <div className="
+          w-full max-w-screen-lg mx-auto px-4 py-3
+          flex items-center justify-between
+          md:grid md:grid-cols-3 md:items-center md:py-0 md:h-24
+        ">
 
           {/* LEFT */}
           <div className="flex items-center">
             <img
               src={rcracedayLogo}
               alt="RCRaceDay"
-              className="h-10 w-auto object-contain"
+              className="h-8 md:h-10 w-auto object-contain"
             />
           </div>
 
           {/* CENTER */}
-          <div className="flex justify-center">
+          <div className="flex items-center justify-center md:justify-center px-1 md:px-0">
             {logoSrc && (
               <Link to={`/${clubSlug}/app`} className="flex items-center">
                 <img
                   src={logoSrc}
                   alt={club?.name}
-                  className="h-14 md:h-20 w-auto object-contain"
+                  className="h-12 md:h-20 w-auto object-contain"
                 />
               </Link>
             )}
@@ -49,14 +54,14 @@ export default function Header({ club, hideMenu }) {
           {/* RIGHT */}
           {!hideMenu && user && (
             <>
-              {/* Desktop: avatar ALWAYS visible */}
-              <div className="hidden md:flex justify-end items-center gap-4">
+              {/* Desktop */}
+              <div className="hidden md:flex items-center justify-end gap-4">
                 <AvatarMenu />
                 <HamburgerMenu clubSlug={clubSlug} />
               </div>
 
-              {/* Mobile: avatar inside menu only */}
-              <div className="flex md:hidden justify-end items-center">
+              {/* Mobile */}
+              <div className="flex md:hidden items-center justify-end pr-2">
                 <HamburgerMenu clubSlug={clubSlug} showAvatarInside />
               </div>
             </>
