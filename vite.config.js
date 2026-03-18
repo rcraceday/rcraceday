@@ -11,10 +11,8 @@ export default defineConfig({
     react(),
     UnoCSS(),
 
-    // ⭐ Add PWA support
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "apple-touch-icon.png"],
       manifest: {
         id: "/",
         name: "RC RaceDay",

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
 
-    <!-- Critical for full-screen and removing white gutter -->
+    <!-- Required for full-screen and safe-area support -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
     <!-- Required for Android/Samsung to stop forcing dark mode -->
@@ -19,7 +19,7 @@
       rel="stylesheet"
     />
 
-    <!-- Static manifest (you must create /public/manifest.json) -->
+    <!-- Load the root manifest only -->
     <link rel="manifest" href="/manifest.json">
   </head>
 
@@ -27,5 +27,12 @@
     <div id="root"></div>
 
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Register the service worker (required for install prompt) -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js");
+      }
+    </script>
   </body>
 </html>
