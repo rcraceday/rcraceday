@@ -1,10 +1,11 @@
 // src/app/pages/public/Welcome.jsx
-import { Link, useOutletContext, useParams } from "react-router-dom";
+import { useOutletContext, useParams, useNavigate } from "react-router-dom";
 import Button from "@/components/ui/Button";
 
 export default function Welcome() {
   const { club, loadingClub } = useOutletContext();
   const { clubSlug } = useParams();
+  const navigate = useNavigate();
 
   const logoSrc =
     club?.logoUrl ||
@@ -30,17 +31,21 @@ export default function Welcome() {
       )}
 
       <div className="flex flex-col gap-4 w-full">
-        <Link to={`/${clubSlug}/public/login`} className="w-full">
-          <Button variant="primary" className="w-full py-3">
-            Log In
-          </Button>
-        </Link>
+        <Button
+          variant="primary"
+          className="w-full py-3"
+          onClick={() => navigate(`/${clubSlug}/public/login`)}
+        >
+          Log In
+        </Button>
 
-        <Link to={`/${clubSlug}/public/signup`} className="w-full">
-          <Button variant="secondary" className="w-full py-3">
-            Create Account
-          </Button>
-        </Link>
+        <Button
+          variant="secondary"
+          className="w-full py-3"
+          onClick={() => navigate(`/${clubSlug}/public/signup`)}
+        >
+          Create Account
+        </Button>
       </div>
     </div>
   );

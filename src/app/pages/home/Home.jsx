@@ -1,5 +1,5 @@
 // src/app/pages/home/Home.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useClub } from "@/app/providers/ClubProvider";
@@ -27,12 +27,25 @@ export default function Home() {
   const clubSlug = club?.slug;
 
   const brand =
-    club?.theme?.hero?.backgroundColor ||
-    "#0A66C2";
+    club?.theme?.hero?.backgroundColor || "#0A66C2";
 
   const [nextEvent, setNextEvent] = useState(null);
   const [loadingEvent, setLoadingEvent] = useState(true);
 
+  // ---- NEWS CAROUSEL ----
+  const newsScrollRef = useRef(null);
+  const cardWidth = 260; // px
+  const gap = 16; // px
+
+  const newsItems = [1, 2, 3, 4, 5]; // placeholder; swap for real data later
+
+  const scrollNewsBy = (direction) => {
+    if (!newsScrollRef.current) return;
+    const delta = (cardWidth + gap) * direction;
+    newsScrollRef.current.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
+  // ---- FETCH NEXT EVENT ----
   useEffect(() => {
     if (!club?.id) return;
 
@@ -77,22 +90,46 @@ export default function Home() {
           Club News
         </h2>
 
-        {/* Centered horizontally with px-4 */}
-        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 px-4">
-          {[1, 2, 3].map((i) => (
-            <Card
-              key={i}
-              className="min-w-[240px] snap-start rounded-lg p-0 overflow-hidden bg-white"
-              style={{ border: `2px solid ${brand}` }}
-            >
-              <div className="w-full h-32 bg-gray-200" />
-              <div className="p-4 space-y-2">
-                <div className="h-4 w-3/4 bg-gray-200 rounded" />
-                <div className="h-3 w-full bg-gray-200 rounded" />
-                <div className="h-3 w-2/3 bg-gray-200 rounded" />
-              </div>
-            </Card>
-          ))}
+        <div className="relative w-full">
+
+          {/* Scroll container: 3 cards visible, no scrollbar line */}
+          <div
+            ref={newsScrollRef}
+            className="flex gap-4 overflow-x-hidden snap-x snap-mandatory"
+          >
+            {newsItems.map((i) => (
+              <Card
+                key={i}
+                className="w-[260px] snap-start rounded-lg p-0 overflow-hidden bg-white flex-shrink-0"
+                style={{ border: `2px solid ${brand}` }}
+              >
+                <div className="w-full h-32 bg-gray-200" />
+                <div className="p-4 space-y-2">
+                  <div className="h-4 w-3/4 bg-gray-200 rounded" />
+                  <div className="h-3 w-full bg-gray-200 rounded" />
+                  <div className="h-3 w-2/3 bg-gray-200 rounded" />
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Left arrow */}
+          <button
+            type="button"
+            onClick={() => scrollNewsBy(-1)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white/90 border border-gray-200 hover:bg-white shadow-sm rounded-full h-8 w-8 flex items-center justify-center text-gray-500"
+          >
+            ‹
+          </button>
+
+          {/* Right arrow */}
+          <button
+            type="button"
+            onClick={() => scrollNewsBy(1)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-white/90 border border-gray-200 hover:bg-white shadow-sm rounded-full h-8 w-8 flex items-center justify-center text-gray-500"
+          >
+            ›
+          </button>
         </div>
       </section>
 
@@ -166,7 +203,6 @@ export default function Home() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
 
-          {/* EVENTS */}
           <Link to={`/${clubSlug}/app/events`} className="no-underline">
             <Button
               className="!rounded-lg !p-4 !w-full !h-full flex flex-col items-center justify-center gap-2"
@@ -177,7 +213,6 @@ export default function Home() {
             </Button>
           </Link>
 
-          {/* CALENDAR */}
           <Link to={`/${clubSlug}/app/calendar`} className="no-underline">
             <Button
               className="!rounded-lg !p-4 !w-full !h-full flex flex-col items-center justify-center gap-2"
@@ -188,7 +223,6 @@ export default function Home() {
             </Button>
           </Link>
 
-          {/* NOMINATIONS */}
           <Link to={`/${clubSlug}/app/nominate`} className="no-underline">
             <Button
               className="!rounded-lg !p-4 !w-full !h-full flex flex-col items-center justify-center gap-2"
@@ -199,7 +233,6 @@ export default function Home() {
             </Button>
           </Link>
 
-          {/* RESULTS */}
           <Button
             className="!rounded-lg !p-4 !w-full !h-full flex flex-col items-center justify-center gap-2 opacity-60"
             style={{ backgroundColor: brand }}
@@ -208,7 +241,6 @@ export default function Home() {
             <span className="text-sm font-medium text-white">Results</span>
           </Button>
 
-          {/* MEMBERSHIP */}
           <Link to={`/${clubSlug}/app/membership`} className="no-underline">
             <Button
               className="!rounded-lg !p-4 !w-full !h-full flex flex-col items-center justify-center gap-2"
