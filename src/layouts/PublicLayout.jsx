@@ -6,9 +6,37 @@ export default function PublicLayout() {
   const { club } = useClub();
 
   return (
-    <main className="flex-1 w-full bg-white">
-      <div className="max-w-[1024px] mx-auto px-4 py-6">
-        <Outlet context={{ club }} />
+    <main
+      style={{
+        width: "100%",
+        minHeight: "100vh",
+        background: "white",
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          paddingTop: "24px",
+          paddingBottom: "24px",
+        }}
+      >
+        <div
+          className="public-column"
+          style={{
+            width: "100%",
+            maxWidth: "320px",
+            marginLeft: "auto",
+            marginRight: "auto",
+            boxSizing: "border-box",
+          }}
+        >
+          <Outlet context={{ club }} />
+        </div>
       </div>
     </main>
   );

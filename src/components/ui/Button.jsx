@@ -12,7 +12,6 @@ export default function Button({
   const club = outlet.club;
   const theme = club?.theme;
 
-  // Use hero background color as brand color
   const brand = theme?.hero?.backgroundColor || "#0A66C2";
 
   const darken = (hex) => {
@@ -34,14 +33,14 @@ export default function Button({
       bg: brand,
       hover: brandHover,
       text: "#FFFFFF",
-      border: "transparent"
+      border: "rgba(255,255,255,0.8)",
     },
     secondary: {
       bg: "#FFFFFF",
       hover: "#F5F5F5",
       text: brand,
-      border: brand
-    }
+      border: brand,
+    },
   };
 
   const style = variants[variant];
@@ -51,20 +50,31 @@ export default function Button({
       {...props}
       disabled={disabled}
       className={`
-        w-full py-3 rounded-md font-semibold shadow-sm transition
+        block
+        w-full
+        py-3
+        rounded-md
+        text-[15px]
+        font-medium
+        text-center
+        transition-colors
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${className}
       `}
       style={{
         backgroundColor: style.bg,
         color: style.text,
-        border: `1px solid ${style.border}`
+        border: `1px solid ${style.border}`,
       }}
       onMouseEnter={(e) => {
-        if (!disabled) e.currentTarget.style.backgroundColor = style.hover;
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = style.hover;
+        }
       }}
       onMouseLeave={(e) => {
-        if (!disabled) e.currentTarget.style.backgroundColor = style.bg;
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = style.bg;
+        }
       }}
     >
       {children}

@@ -232,3 +232,19 @@
 html, body {
   font-family: var(--site-font), sans-serif;
 }
+/* public column authoritative layout */
+.public-column {
+  width: 320px;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+/* ensure inputs and buttons fill the column */
+.public-column input,
+.public-column textarea,
+.public-column button {
+  box-sizing: border-box;
+  width: 100%;
+}

@@ -2,7 +2,7 @@
 import { useOutletContext, Link, useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/supabaseClient";
-import TextInput from "@/components/ui/TextInput";
+import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
 export default function Signup() {
@@ -17,7 +17,7 @@ export default function Signup() {
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!club) return <div className="p-6 text-center">Loading…</div>;
+  if (!club) return <div style={{ padding: 24, textAlign: "center" }}>Loading…</div>;
 
   const logoSrc = club?.logo_url || club?.logo || null;
 
@@ -95,8 +95,8 @@ export default function Signup() {
           email: cleanEmail,
           club_name: club?.name || "",
           club_logo_url: club?.logo_url || club?.logo || "",
-        }
-      }
+        },
+      },
     };
 
     console.log("🔥 SIGNUP PAYLOAD:", JSON.stringify(payload, null, 2));
@@ -126,63 +126,93 @@ export default function Signup() {
   }
 
   return (
-    <div className="px-6 py-10 max-w-sm mx-auto flex flex-col items-center">
-      {logoSrc && (
-        <img
-          src={logoSrc}
-          alt={club?.name}
-          className="h-16 w-auto object-contain mb-4"
-        />
-      )}
-
-      <h1 className="text-2xl font-bold mb-6 text-center">Create Account</h1>
-
-      <form onSubmit={handleSignup} className="flex flex-col gap-4 w-full">
-        <TextInput
-          label="Full Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-
-        <TextInput
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <TextInput
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <TextInput
-          label="Confirm Password"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
-
-        {errorMsg && (
-          <p className="text-red-600 text-sm text-center">{errorMsg}</p>
-        )}
-
-        <Button type="submit" variant="primary" disabled={loading}>
-          {loading ? "Creating account…" : "Sign Up"}
-        </Button>
-      </form>
-
-      <p className="text-center mt-6 text-gray-600">
-        Already have an account?{" "}
-        <Link
-          to={`/${clubSlug}/public/login`}
-          className="text-blue-600 underline"
+    <div style={{ padding: 24 }}>
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          paddingTop: 0,
+          paddingBottom: 0,
+        }}
+      >
+        <div
+          className="public-column"
+          style={{
+            width: "100%",
+            maxWidth: "320px",
+            marginLeft: "auto",
+            marginRight: "auto",
+            boxSizing: "border-box",
+          }}
         >
-          Log in
-        </Link>
-      </p>
+          {logoSrc && (
+            <img
+              src={logoSrc}
+              alt={club?.name}
+              style={{
+                height: 64,
+                width: "auto",
+                objectFit: "contain",
+                marginBottom: 16,
+                display: "block",
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
+            />
+          )}
+
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24, textAlign: "center" }}>
+            Create Account
+          </h1>
+
+          <form onSubmit={handleSignup} style={{ width: "100%", display: "flex", flexDirection: "column", gap: 16 }}>
+            <Input
+              label="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+
+            <Input
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+
+            <Input
+              label="Confirm Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+
+            {errorMsg && (
+              <p style={{ color: "#dc2626", fontSize: 14, textAlign: "center" }}>
+                {errorMsg}
+              </p>
+            )}
+
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? "Creating account…" : "Sign Up"}
+            </Button>
+          </form>
+
+          <p style={{ textAlign: "center", marginTop: 24, color: "#6b7280" }}>
+            Already have an account?{" "}
+            <Link to={`/${clubSlug}/public/login`} style={{ color: "#0A66C2", textDecoration: "underline" }}>
+              Log in
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
