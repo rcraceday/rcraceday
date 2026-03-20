@@ -165,13 +165,6 @@ export default function MembershipProvider({ children }) {
     return m;
   }
 
-  // 🚨 CRITICAL FIX:
-  // Do NOT render children until user, club, and profile are all ready.
-  // This prevents downstream providers from crashing during boot.
-  if (!user || !club || !profile || loadingClub || loadingProfile) {
-    return children; // or <LoadingScreen />
-  }
-
   return (
     <MembershipContext.Provider
       value={{
