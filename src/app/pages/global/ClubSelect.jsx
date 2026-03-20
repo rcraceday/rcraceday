@@ -88,7 +88,7 @@ const styles = {
   welcome: {
     fontSize: "26px",
     fontWeight: "600",
-    color: "#333",
+    color: "#ad0000",
     marginBottom: "6px",
     textShadow: "none",
   },
