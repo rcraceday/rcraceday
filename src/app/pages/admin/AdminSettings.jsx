@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
 
   system_maintenance_mode: false,
   system_admin_contact_email: "",
+  system_support_email: "",            // ⭐ NEW SETTING
   system_enable_racer_directory: false,
   system_enable_event_previews: true,
 };
@@ -330,50 +331,94 @@ export default function AdminSettings() {
           />
         </div>
 
-        {/* E — SYSTEM SETTINGS */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-4">
-          <h2 className="text-xl font-semibold text-slate-50">
-            System Settings
-          </h2>
+{/* E — SYSTEM SETTINGS */}
+<div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-4">
+  <h2 className="text-xl font-semibold text-slate-50">
+    System Settings
+  </h2>
 
-          <InputField
-            label="Admin Contact Email"
-            type="email"
-            value={settings.system_admin_contact_email}
-            onChange={(v) =>
-              updateField("system_admin_contact_email", v)
-            }
-          />
+  <InputField
+    label="Admin Contact Email"
+    type="email"
+    value={settings.system_admin_contact_email}
+    onChange={(v) =>
+      updateField("system_admin_contact_email", v)
+    }
+  />
 
-          <div className="space-y-2">
-            <CheckboxField
-              id="system_maintenance_mode"
-              label="Enable maintenance mode (limit public access)"
-              checked={settings.system_maintenance_mode}
-              onChange={(v) =>
-                updateField("system_maintenance_mode", v)
-              }
-            />
+  {/* ⭐ NEW FIELD — SUPPORT EMAIL */}
+  <InputField
+    label="Support Email (Forgot Email Requests)"
+    type="email"
+    value={settings.system_support_email}
+    onChange={(v) =>
+      updateField("system_support_email", v)
+    }
+  />
 
-            <CheckboxField
-              id="system_enable_racer_directory"
-              label="Enable public racer directory (for opted‑in drivers)"
-              checked={settings.system_enable_racer_directory}
-              onChange={(v) =>
-                updateField("system_enable_racer_directory", v)
-              }
-            />
+  {/* ⭐ NEW BUTTON — TEST SUPPORT EMAIL */}
+  <button
+    onClick={async () => {
+      if (!settings.system_support_email) {
+        alert("Please enter a support email first.");
+        return;
+      }
 
-            <CheckboxField
-              id="system_enable_event_previews"
-              label="Enable event preview links"
-              checked={settings.system_enable_event_previews}
-              onChange={(v) =>
-                updateField("system_enable_event_previews", v)
-              }
-            />
-          </div>
-        </div>
+      const { error } = await window.supabase.functions.invoke(
+        "send-recovery-email",
+        {
+          body: {
+            fullName: "System Test",
+            message: "This is a test email from Admin Settings.",
+            clubName: settings.club_name || "Your Club",
+            clubLogo: settings.club_logo_url || null,
+            supportEmail: settings.system_support_email,
+            ip: "0.0.0.0",
+            clubSlug: "system-test",
+          },
+        }
+      );
+
+      if (error) {
+        alert("Failed to send test email. Check your Resend logs.");
+      } else {
+        alert("Test email sent successfully!");
+      }
+    }}
+    className="rounded-full bg-slate-800 text-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-700 transition-colors"
+  >
+    Send Test Email
+  </button>
+
+  <div className="space-y-2">
+    <CheckboxField
+      id="system_maintenance_mode"
+      label="Enable maintenance mode (limit public access)"
+      checked={settings.system_maintenance_mode}
+      onChange={(v) =>
+        updateField("system_maintenance_mode", v)
+      }
+    />
+
+    <CheckboxField
+      id="system_enable_racer_directory"
+      label="Enable public racer directory (for opted‑in drivers)"
+      checked={settings.system_enable_racer_directory}
+      onChange={(v) =>
+        updateField("system_enable_racer_directory", v)
+      }
+    />
+
+    <CheckboxField
+      id="system_enable_event_previews"
+      label="Enable event preview links"
+      checked={settings.system_enable_event_previews}
+      onChange={(v) =>
+        updateField("system_enable_event_previews", v)
+      }
+    />
+  </div>
+</div>
 
       </div>
     </div>

@@ -1,57 +1,90 @@
-// src/app/pages/public/ForgotPassword.jsx
+// src/app/pages/public/ForgotEmail.jsx
+
 import { useState } from "react";
-import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom";
+import { useParams, useOutletContext, Link } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
-import TextInput from "@/components/ui/TextInput";
+import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
-export default function ForgotPassword() {
+export default function ForgotEmail() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
-  const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [messageText, setMessageText] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!club) return <div style={{ padding: "24px", textAlign: "center" }}>Loading…</div>;
+  if (!club) {
+    return (
+      <div style={{ padding: 24, textAlign: "center" }}>
+        Loading…
+      </div>
+    );
+  }
+
+  const supportEmail =
+    club?.system_support_email ||
+    club?.support_email ||
+    club?.club_email ||
+    null;
 
   const logoSrc =
-    club?.logoUrl ||
-    club?.logo ||
     club?.logo_url ||
+    club?.logo ||
     club?.theme?.hero?.logo ||
     club?.branding?.logo ||
     club?.assets?.logo ||
     null;
 
-  async function handleReset(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setErrorMsg("");
     setMessage("");
 
-    if (!email.trim()) {
-      setErrorMsg("Please enter your email address.");
+    if (!fullName.trim()) {
+      setErrorMsg("Please enter your full name.");
+      return;
+    }
+
+    if (!supportEmail) {
+      setErrorMsg(
+        "This club has not configured a support email. Please contact the club directly."
+      );
       return;
     }
 
     setLoading(true);
 
-    const redirectUrl = `${window.location.origin}/${clubSlug}/public/reset-password/`;
+    let ip = "";
+    try {
+      const ipRes = await fetch("https://api.ipify.org?format=json");
+      const ipJson = await ipRes.json();
+      ip = ipJson.ip;
+    } catch {
+      ip = "0.0.0.0";
+    }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      email.trim().toLowerCase(),
-      { redirectTo: redirectUrl }
-    );
+    const { error } = await supabase.functions.invoke("send-recovery-email", {
+      body: {
+        fullName: fullName.trim(),
+        message: messageText.trim(),
+        clubName: club?.name,
+        clubLogo: logoSrc,
+        supportEmail,
+        ip,
+        clubSlug,
+      },
+    });
 
     if (error) {
-      setErrorMsg(error.message);
+      setErrorMsg("Unable to send request. Please try again.");
       setLoading(false);
       return;
     }
 
-    setMessage("A password reset link has been sent to your email.");
+    setMessage("Your request has been sent to the club administrator.");
     setLoading(false);
   }
 
@@ -70,7 +103,7 @@ export default function ForgotPassword() {
       {logoSrc && (
         <img
           src={logoSrc}
-          alt={club.name}
+          alt={club?.name}
           style={{
             maxWidth: "160px",
             width: "100%",
@@ -89,11 +122,11 @@ export default function ForgotPassword() {
           textAlign: "center",
         }}
       >
-        Reset Password
+        Recover Email
       </h1>
 
       <form
-        onSubmit={handleReset}
+        onSubmit={handleSubmit}
         style={{
           width: "100%",
           display: "flex",
@@ -101,12 +134,16 @@ export default function ForgotPassword() {
           gap: "16px",
         }}
       >
-        <TextInput
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={errorMsg.includes("email") ? errorMsg : ""}
+        <Input
+          label="Full Name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
+
+        <Input
+          label="Message (optional)"
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
         />
 
         {errorMsg && (
@@ -122,14 +159,15 @@ export default function ForgotPassword() {
         )}
 
         <Button type="submit" variant="primary" disabled={loading}>
-          {loading ? "Sending…" : "Send Reset Link"}
+          {loading ? "Sending…" : "Send Request"}
         </Button>
       </form>
 
       <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
-        Remember your password?{" "}
+        Back to{" "}
         <Link
-          to={`/${clubSlug}/public/login`}
+          to={`/${clubSlug}/public/login/`}
+          replace={true}
           style={{ color: "#2563eb", textDecoration: "underline" }}
         >
           Log in

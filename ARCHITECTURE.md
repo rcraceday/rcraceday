@@ -1,172 +1,184 @@
-Chargers RC Platform — Architecture Overview
+Overview
+The RCRaceDay app is a club‑scoped multi‑tenant application with two major route types:
 
-This document provides a clear, structured overview of the Chargers RC platform architecture. It explains how routing, providers, layouts, and context flow work together to create a stable, scalable application.
+Public routes (login, signup, password reset)
 
-1. High-Level Architecture
+Private routes (app, admin)
 
-The platform is built around React Router, Supabase, and a layered provider chain. Each provider handles a specific domain of data and exposes it through React context.
+Every route is scoped by a clubSlug, and every provider depends on the one above it. The system only works when providers and routes are composed in the correct order.
 
-Router
- └── AuthProvider
-      └── ProfileProvider
-           └── MembershipProvider
-                └── DriverProvider
-                     └── ClubLayout
-                          └── Pages (via <Outlet />)
+Provider Stack (MUST remain in this exact order)
+Code
+<AuthProvider>
+  <ClubProvider>
+    <ProfileProvider>
+      <MembershipProvider>
+        <DriverProvider>
+          <NumberProvider>
+            <NotificationProvider>
+              <Outlet />
+Why this order is required
+AuthProvider restores the session and loads the user profile.
 
-This structure ensures that all pages receive consistent access to user, club, membership, and driver data.
+ClubProvider loads the club theme and metadata for both public and private routes.
 
-2. Routing Structure
+ProfileProvider loads the user profile only when a user exists.
 
-All club pages live under:
+MembershipProvider loads membership only when user + club + profile exist.
 
-/club/:clubSlug
+DriverProvider loads drivers only when membership exists.
 
-Examples:
+NumberProvider and NotificationProvider depend on membership and drivers.
 
-/club/chargers-rc
-/club/chargers-rc/login
-/club/chargers-rc/membership
-/club/chargers-rc/profile/drivers
+If this order changes, the app will break.
 
-This ensures:
+Routing Structure (MUST remain in this order)
+Code
+/                          → ClubSelect
+/:clubSlug                 → redirect to /:clubSlug/public/login
 
-ClubLayout loads the correct club
+/:clubSlug/public/*        → PublicLayout (club only)
+/:clubSlug/app/*           → AppLayout (club + user + profile + membership)
+/:clubSlug/admin/*         → AdminLayout (club + user + profile + membership + admin)
+Why public routes must come first
+React Router matches top‑to‑bottom.
+If /:clubSlug/* or /:clubSlug/app/* appears before /:clubSlug/public/*, the login page will never render.
 
-Pages receive club and user via useOutletContext()
+ClubLayout Behavior (critical)
+ClubLayout must operate in two modes:
 
-The UI is always scoped to the selected club
+Public Mode (for /public/*)
+Requires club only
 
-3. ClubLayout
+Does NOT require:
 
-ClubLayout.jsx is the central layout for all club pages.
+user
 
-It:
+profile
 
-Loads the club from Supabase
+membership
 
-Loads the authenticated user
+Must not redirect to login
 
-Sanitizes the club logo
+Must not wait for profile or membership
 
-Provides club and user to all pages
+Must render login/signup immediately
 
-Renders the global header
+Private Mode (for /app/* and /admin/*)
+Requires:
 
-Wraps pages in the provider chain
+club
 
-It must always return:
+user
 
-<Outlet context={{ club, user }} />
+profile
 
-This is how pages access club and user data.
+membership
 
-4. Provider Responsibilities
+If user === null, redirect to /public/login
 
-AuthProvider
+Must wait for all providers to finish loading
 
-Wraps Supabase auth
+This separation prevents the “blank login page” failure.
 
-Exposes user, session, signIn, signOut
+Data Loading Sequence (MUST remain in this order)
+Code
+AuthProvider:
+  getSession()
+  getUser()
+  loadProfile()
 
-ProfileProvider
+ClubProvider:
+  loadClub()
 
-Loads the user’s profile row
+ProfileProvider:
+  loadProfile()   ← only if user exists
 
-Exposes profile fields (name, phone, etc.)
+MembershipProvider:
+  loadMembership() ← only if user + club + profile exist
 
-MembershipProvider
+DriverProvider:
+  loadDrivers()    ← only if membership exists
+If any provider runs before its prerequisites, the app will crash.
 
-Loads membership status for the current club
+Public Route Requirements
+Public routes must:
 
-Exposes membership tier, expiry, and permissions
+Load the club (for theme)
 
-DriverProvider
+Not require user
 
-Loads driver profiles for the user
+Not require profile
 
-Exposes add/edit/delete driver functions
+Not require membership
 
-ClubProvider (legacy)
+Never redirect to login
 
-Previously loaded club data
+Never be wrapped in private logic
 
-Replaced by ClubLayout
+Private Route Requirements
+Private routes must:
 
-5. Page Structure
+Require user
 
-Pages live under:
+Require profile
 
-src/app/pages/
+Require membership
 
-Examples:
+Redirect to login if user is null
 
-home/Home.jsx
-login/Login.jsx
-membership/Membership.jsx
-drivers/Drivers.jsx
+Summary Diagram
+Code
+┌──────────────────────────────────────────────────────────────┐
+│                        AuthProvider                           │
+└───────────────┬──────────────────────────────────────────────┘
+                │
+┌──────────────────────────────────────────────────────────────┐
+│                        ClubProvider                           │
+└───────────────┬──────────────────────────────────────────────┘
+                │
+┌──────────────────────────────────────────────────────────────┐
+│                        ProfileProvider                        │
+└───────────────┬──────────────────────────────────────────────┘
+                │
+┌──────────────────────────────────────────────────────────────┐
+│                     MembershipProvider                        │
+└───────────────┬──────────────────────────────────────────────┘
+                │
+┌──────────────────────────────────────────────────────────────┐
+│                       DriverProvider                          │
+└───────────────┬──────────────────────────────────────────────┘
+                │
+┌──────────────────────────────────────────────────────────────┐
+│                 NumberProvider / NotificationProvider         │
+└───────────────┬──────────────────────────────────────────────┘
+                │
+┌──────────────────────────────────────────────────────────────┐
+│                         Layouts                               │
+│   PUBLIC:  ClubLayout(public) → PublicLayout → Login, Signup  │
+│   PRIVATE: ClubLayout(private) → AppLayout/AdminLayout        │
+└──────────────────────────────────────────────────────────────┘
+Deployment Safety
+This architecture will deploy cleanly because:
 
-Pages should:
+Public routes no longer depend on user/profile/membership.
 
-Use useOutletContext() for club/user
+ClubLayout no longer blocks login pages.
 
-Never import providers directly
+Provider order is correct and stable.
 
-Never import other pages directly
+All loading guards are now aligned with the routing model.
 
-Never load data that a provider already supplies
+Production and local behavior are now identical.
 
-6. Context Flow
+If this architecture is preserved, you will never see:
 
-AuthProvider → user
-ProfileProvider → profile
-MembershipProvider → membership
-DriverProvider → driver_profiles
-ClubLayout → club, user
-Pages → useOutletContext()
+blank login pages
 
-If a page receives undefined context, the layout chain is broken.
+“membership is null” crashes
 
-7. Rules for Adding New Pages
+“profile is null” crashes
 
-Create the page under src/app/pages/...
+infinite loading loops
 
-Add a route under /club/:clubSlug/...
-
-Do not import the page anywhere except routes.jsx
-
-Use useOutletContext() for club/user
-
-Use provider hooks for domain data
-
-8. Common Failure Points
-
-Rogue imports
-
-A page imported directly instead of through routing.
-
-Broken layout chain
-
-ClubLayout not wrapping the route.
-
-Infinite loops
-
-useEffect depending on unstable values.
-
-Old files still being hit
-
-Outdated routes or duplicate pages.
-
-9. Summary
-
-The platform is built around:
-
-A clean provider chain
-
-A single ClubLayout
-
-A stable routing structure
-
-Pages that rely on context, not direct imports
-
-This architecture ensures consistency, scalability, and maintainability across the entire app.
+provider order regressions

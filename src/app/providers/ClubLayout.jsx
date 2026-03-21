@@ -27,6 +27,9 @@ export default function ClubLayout({ children, mode = "drivers" }) {
     isPublicRoute,
   });
 
+  // ⭐ NEW: Confirm support email is flowing through
+  console.log("Club support email:", club?.system_support_email);
+
   // Router hasn't stabilized yet
   if (!clubSlug) {
     return (

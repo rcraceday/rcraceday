@@ -17,6 +17,7 @@ import Signup from "@app/pages/public/Signup";
 import CheckEmail from "@app/pages/public/CheckEmail";
 import ForgotPassword from "@app/pages/public/ForgotPassword";
 import ResetPassword from "@app/pages/public/ResetPassword";
+import ForgotEmail from "@app/pages/public/ForgotEmail"; // ⭐ ADDED IMPORT
 
 // APP PAGES
 import Home from "@app/pages/home/Home";
@@ -91,6 +92,10 @@ export default function RoutesFile() {
           <Route path="check-email/*" element={<CheckEmail />} />
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="reset-password" element={<ResetPassword />} />
+
+          {/* ⭐ FIX: Forgot Email route added */}
+          <Route path="forgot-email" element={<ForgotEmail />} />
+
           <Route path="*" element={<Navigate to="login" replace />} />
         </Route>
 

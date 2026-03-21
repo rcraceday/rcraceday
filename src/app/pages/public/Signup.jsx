@@ -5,7 +5,7 @@ import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
-// 🔥 Import RC RaceDay global logo
+// RC RaceDay global logo
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
 
 export default function Signup() {
@@ -22,14 +22,19 @@ export default function Signup() {
 
   if (!club) return <div style={{ padding: 24, textAlign: "center" }}>Loading…</div>;
 
-  const logoSrc = club?.logo_url || club?.logo || null;
+  const logoSrc =
+    club?.logo_url ||
+    club?.logo ||
+    club?.theme?.hero?.logo ||
+    club?.branding?.logo ||
+    club?.assets?.logo ||
+    null;
 
   const isValidEmail = (value) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   async function handleSignup(e) {
     e.preventDefault();
-
     setErrorMsg("");
 
     if (!name.trim()) return setErrorMsg("Please enter your full name.");
@@ -82,7 +87,7 @@ export default function Signup() {
       },
     };
 
-    const { data, error } = await supabase.auth.signUp(payload);
+    const { error } = await supabase.auth.signUp(payload);
 
     if (error) {
       setErrorMsg(error.message);
@@ -100,121 +105,114 @@ export default function Signup() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <div
+    <div
+      style={{
+        padding: "32px 24px",
+        width: "100%",
+        maxWidth: "360px",
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
+    >
+      {logoSrc && (
+        <img
+          src={logoSrc}
+          alt={club?.name}
+          style={{
+            maxWidth: "160px",
+            width: "100%",
+            height: "auto",
+            display: "block",
+            marginBottom: "20px",
+          }}
+        />
+      )}
+
+      <h1
+        style={{
+          fontSize: "24px",
+          fontWeight: "bold",
+          marginBottom: "24px",
+          textAlign: "center",
+        }}
+      >
+        Create Account
+      </h1>
+
+      <form
+        onSubmit={handleSignup}
         style={{
           width: "100%",
           display: "flex",
-          justifyContent: "center",
-          paddingTop: 0,
-          paddingBottom: 0,
+          flexDirection: "column",
+          gap: "16px",
         }}
       >
-        <div
-          className="public-column"
-          style={{
-            width: "100%",
-            maxWidth: "320px",
-            marginLeft: "auto",
-            marginRight: "auto",
-            boxSizing: "border-box",
-          }}
-        >
-          {logoSrc && (
-            <img
-              src={logoSrc}
-              alt={club?.name}
-              style={{
-                height: 64,
-                width: "auto",
-                objectFit: "contain",
-                marginBottom: 16,
-                display: "block",
-                marginLeft: "auto",
-                marginRight: "auto",
-              }}
-            />
-          )}
+        <Input
+          label="Full Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
 
-          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24, textAlign: "center" }}>
-            Create Account
-          </h1>
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-          <form
-            onSubmit={handleSignup}
-            style={{ width: "100%", display: "flex", flexDirection: "column", gap: 16 }}
-          >
-            <Input
-              label="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+        <Input
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-            <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+        <Input
+          label="Confirm Password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
 
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-
-            <Input
-              label="Confirm Password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-
-            {errorMsg && (
-              <p style={{ color: "#dc2626", fontSize: 14, textAlign: "center" }}>
-                {errorMsg}
-              </p>
-            )}
-
-            <Button type="submit" variant="primary" disabled={loading}>
-              {loading ? "Creating account…" : "Sign Up"}
-            </Button>
-          </form>
-
-          <p style={{ textAlign: "center", marginTop: 24, color: "#6b7280" }}>
-            Already have an account?{" "}
-            <Link
-              to={`/${clubSlug}/public/login`}
-              style={{ color: "#0A66C2", textDecoration: "underline" }}
-            >
-              Log in
-            </Link>
+        {errorMsg && (
+          <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center" }}>
+            {errorMsg}
           </p>
+        )}
 
-          {/* 🔥 RC RaceDay global home link */}
-          <div style={{ marginTop: 40, display: "flex", justifyContent: "center" }}>
-            <img
-              src={rcracedayLogo}
-              alt="RC RaceDay"
-              onClick={() => navigate("/")}
-              style={{
-                width: 96,
-                cursor: "pointer",
-                transition: "transform 0.2s ease",
-                filter: "drop-shadow(0 0 0 transparent)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "scale(1.03)";
-                e.currentTarget.style.filter = "drop-shadow(0 4px 6px rgba(0,0,0,0.15))";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.filter = "drop-shadow(0 0 0 transparent)";
-              }}
-            />
-          </div>
-        </div>
+        <Button type="submit" variant="primary" disabled={loading}>
+          {loading ? "Creating account…" : "Sign Up"}
+        </Button>
+      </form>
+
+      <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
+        Already have an account?{" "}
+        <Link
+          to={`/${clubSlug}/public/login`}
+          style={{ color: "#2563eb", textDecoration: "underline" }}
+        >
+          Log in
+        </Link>
+      </p>
+
+      {/* RC RaceDay global home link */}
+      <div style={{ marginTop: "40px", display: "flex", justifyContent: "center" }}>
+        <img
+          src={rcracedayLogo}
+          alt="RC RaceDay"
+          onClick={() => navigate("/")}
+          style={{
+            width: "96px",
+            height: "auto",
+            cursor: "pointer",
+            transition: "transform 0.2s ease",
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
+          onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
+        />
       </div>
     </div>
   );
