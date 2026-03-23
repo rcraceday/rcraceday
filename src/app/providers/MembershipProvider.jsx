@@ -14,7 +14,7 @@ export function useMembership() {
 }
 
 export default function MembershipProvider({ children }) {
-  const { user } = useAuth();
+  const { user, loadingUser } = useAuth();            // ⭐ NEW
   const { club, loadingClub } = useClub();
   const { profile, loadingProfile } = useProfile();
 
@@ -28,10 +28,14 @@ export default function MembershipProvider({ children }) {
       user: user ? { id: user.id, email: user.email } : null,
       club: club ? { id: club.id, slug: club.slug } : null,
       profile: profile ? { id: profile.id, role: profile.role } : null,
+      loadingUser,                 // ⭐ NEW
       loadingClub,
       loadingProfile,
       started: startedRef.current,
     });
+
+    // ⭐ NEW: do NOT run until AuthProvider hydration is complete
+    if (loadingUser) return;
 
     if (!user || !club || !profile) return;
     if (loadingClub || loadingProfile) return;
@@ -40,7 +44,7 @@ export default function MembershipProvider({ children }) {
     startedRef.current = true;
 
     loadMembership();
-  }, [user, club, profile, loadingClub, loadingProfile]);
+  }, [user, club, profile, loadingUser, loadingClub, loadingProfile]);   // ⭐ NEW: loadingUser added
 
   async function loadMembership() {
     console.log("MembershipProvider.loadMembership start", {
@@ -161,7 +165,6 @@ export default function MembershipProvider({ children }) {
         membership,
         loadingMembership,
 
-        // Correct membership classification
         isNonMember,
         isMember: isPaidMember,
         isJunior: membership?.membership_type === "junior",

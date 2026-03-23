@@ -14,22 +14,27 @@ export function useProfile() {
 }
 
 export default function ProfileProvider({ children }) {
-  const { user } = useAuth();
+  const { user, loadingUser } = useAuth();   // ⭐ NEW
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
   async function loadProfile() {
-    // 🔥 FIX: If user is not ready yet, stay in loading state
+    // ⭐ NEW: Wait for AuthProvider hydration
+    if (loadingUser) {
+      setLoadingProfile(true);
+      return;
+    }
+
     if (!user?.id) {
       setProfile(null);
-      setLoadingProfile(true);
+      setLoadingProfile(false);
       return;
     }
 
     setLoadingProfile(true);
 
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
@@ -92,7 +97,7 @@ export default function ProfileProvider({ children }) {
 
   useEffect(() => {
     loadProfile();
-  }, [user?.id]);
+  }, [user?.id, loadingUser]);   // ⭐ NEW: wait for hydration
 
   return (
     <ProfileContext.Provider

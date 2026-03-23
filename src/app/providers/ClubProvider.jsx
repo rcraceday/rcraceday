@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
+import { useAuth } from "@/app/providers/AuthProvider";   // ⭐ NEW
 
 const ClubContext = createContext({
   club: null,
@@ -21,6 +22,7 @@ export function useClub() {
 
 export default function ClubProvider({ children }) {
   const location = useLocation();
+  const { loadingUser } = useAuth();   // ⭐ NEW — wait for auth hydration
 
   // Reserved top-level segments that are NOT club slugs
   const RESERVED_TOP_SEGMENTS = new Set([
@@ -52,8 +54,7 @@ export default function ClubProvider({ children }) {
       pathname: location.pathname,
     });
 
-    // 🚨 CRITICAL FIX:
-    // If slug is not ready, do NOT render children yet.
+    // If slug is not ready, do NOT load yet
     if (!clubSlug) {
       console.log("ClubProvider: slug not ready — staying in loading state", {
         clubSlug,
@@ -118,13 +119,20 @@ export default function ClubProvider({ children }) {
     console.log("ClubProvider useEffect triggered", {
       clubSlug,
       pathname: location.pathname,
+      loadingUser,
     });
-    loadClub();
-  }, [clubSlug, loadClub]);
 
-  // 🚨 CRITICAL FIX:
-  // Do NOT render children until clubSlug is known AND club loading has completed.
-  if (!clubSlug || loadingClub) {
+    // ⭐ NEW: do NOT load club until auth is hydrated
+    if (loadingUser) {
+      console.log("ClubProvider: waiting for AuthProvider hydration");
+      return;
+    }
+
+    loadClub();
+  }, [clubSlug, loadClub, loadingUser]);
+
+  // ⭐ NEW: block rendering until BOTH auth + club are ready
+  if (loadingUser || !clubSlug || loadingClub) {
     return (
       <ClubContext.Provider
         value={{

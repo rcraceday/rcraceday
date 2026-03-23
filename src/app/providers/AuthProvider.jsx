@@ -21,6 +21,7 @@ export default function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [hydrated, setHydrated] = useState(false);   // ⭐ NEW: hydration guard
   const [signupEmail, setSignupEmail] = useState("");
 
   async function loadProfile(userId) {
@@ -113,6 +114,11 @@ export default function AuthProvider({ children }) {
         console.log(">>> onAuthStateChange", { event, newSession });
         if (!mounted) return;
 
+        if (event === "INITIAL_SESSION") {
+          console.log(">>> INITIAL_SESSION hydration complete");
+          setHydrated(true);   // ⭐ hydration finished
+        }
+
         if (event === "SIGNED_OUT") {
           setSession(null);
           setProfile(null);
@@ -125,12 +131,24 @@ export default function AuthProvider({ children }) {
       }
     );
 
+    // ⭐ If Supabase already has a session, hydrate immediately
+    supabase.auth.getSession().then(() => {
+      console.log(">>> manual hydration complete");
+      setHydrated(true);
+    });
+
     return () => {
       mounted = false;
       console.log(">>> AuthProvider unmounting, unsubscribing listener");
       listener?.subscription?.unsubscribe?.();
     };
   }, []);
+
+  // ⭐ BLOCK THE APP until hydration is complete
+  if (!hydrated) {
+    console.log(">>> AuthProvider waiting for hydration…");
+    return <div style={{ padding: 24, textAlign: "center" }}>Loading…</div>;
+  }
 
   const mergedUser =
     session?.user && profile
