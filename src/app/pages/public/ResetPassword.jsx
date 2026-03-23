@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
-import TextInput from "@/components/ui/TextInput";
+import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
 export default function ResetPassword() {
@@ -90,99 +90,133 @@ export default function ResetPassword() {
   return (
     <div
       style={{
-        padding: "32px 24px",
         width: "100%",
-        maxWidth: "360px",
-        margin: "0 auto",
+        minHeight: "100vh",
         display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
+        justifyContent: "center",
+        padding: "32px 24px",
+        boxSizing: "border-box",
+        overflowX: "hidden",
       }}
     >
-      {logoSrc && (
-        <img
-          src={logoSrc}
-          alt={club.name}
-          style={{
-            maxWidth: "160px",
-            width: "100%",
-            height: "auto",
-            display: "block",
-            marginBottom: "20px",
-          }}
-        />
-      )}
-
-      <h1
+      <div
         style={{
-          fontSize: "24px",
-          fontWeight: "bold",
-          marginBottom: "24px",
-          textAlign: "center",
+          width: "100%",
+          maxWidth: "360px",
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          boxSizing: "border-box",
         }}
       >
-        Set New Password
-      </h1>
+        {logoSrc && (
+          <img
+            src={logoSrc}
+            alt={club.name}
+            style={{
+              maxWidth: "160px",
+              width: "100%",
+              height: "auto",
+              display: "block",
+              marginBottom: "20px",
+            }}
+          />
+        )}
 
-      {!token && (
-        <p style={{ color: "#dc2626", textAlign: "center", marginBottom: "24px" }}>
-          Invalid or expired reset link.
-        </p>
-      )}
-
-      {token && (
-        <form
-          onSubmit={handleReset}
+        <h1
           style={{
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
+            fontSize: "24px",
+            fontWeight: "bold",
+            marginBottom: "24px",
+            textAlign: "center",
           }}
         >
-          <TextInput
-            label="New Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={errorMsg.includes("Password") ? errorMsg : ""}
-          />
+          Set New Password
+        </h1>
 
-          <TextInput
-            label="Confirm Password"
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            error={errorMsg.includes("match") ? errorMsg : ""}
-          />
+        {!token && (
+          <p
+            style={{
+              color: "#dc2626",
+              textAlign: "center",
+              marginBottom: "24px",
+              wordBreak: "break-word",
+            }}
+          >
+            Invalid or expired reset link.
+          </p>
+        )}
 
-          {errorMsg && (
-            <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center" }}>
-              {errorMsg}
-            </p>
-          )}
+        {token && (
+          <form
+            onSubmit={handleReset}
+            style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+              boxSizing: "border-box",
+            }}
+          >
+            <Input
+              label="New Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
 
-          {message && (
-            <p style={{ color: "#059669", fontSize: "14px", textAlign: "center" }}>
-              {message}
-            </p>
-          )}
+            <Input
+              label="Confirm Password"
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
 
-          <Button type="submit" variant="primary" disabled={loading}>
-            {loading ? "Updating…" : "Update Password"}
-          </Button>
-        </form>
-      )}
+            {errorMsg && (
+              <p
+                style={{
+                  color: "#dc2626",
+                  fontSize: "14px",
+                  textAlign: "center",
+                  wordBreak: "break-word",
+                }}
+              >
+                {errorMsg}
+              </p>
+            )}
 
-      <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
-        Back to{" "}
-        <Link
-          to={`/${clubSlug}/public/login`}
-          style={{ color: "#2563eb", textDecoration: "underline" }}
-        >
-          Log in
-        </Link>
-      </p>
+            {message && (
+              <p
+                style={{
+                  color: "#059669",
+                  fontSize: "14px",
+                  textAlign: "center",
+                  wordBreak: "break-word",
+                }}
+              >
+                {message}
+              </p>
+            )}
+
+            <div style={{ width: "100%", maxWidth: "360px", margin: "0 auto" }}>
+              <Button type="submit" variant="primary" disabled={loading}>
+                {loading ? "Updating…" : "Update Password"}
+              </Button>
+            </div>
+          </form>
+        )}
+
+        <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
+          Back to{" "}
+          <Link
+            to={`/${clubSlug}/public/login`}
+            style={{ color: "#2563eb", textDecoration: "underline" }}
+          >
+            Log in
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

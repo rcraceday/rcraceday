@@ -367,3 +367,17 @@ a:hover {
   padding: 0;
   margin-bottom: 20px;
 }
+
+.public-column {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: left !important;
+  display: block !important;
+}
+
+#root {
+  width: 100% !important;
+  margin: 0 auto !important;
+  display: block !important;
+  text-align: left !important;
+}

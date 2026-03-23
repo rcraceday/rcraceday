@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
-import TextInput from "@/components/ui/TextInput";
+import TextInput from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
 // RC RaceDay global logo
@@ -68,6 +68,7 @@ export default function Login() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        boxSizing: "border-box",
       }}
     >
       {logoSrc && (
@@ -75,7 +76,7 @@ export default function Login() {
           src={logoSrc}
           alt={club.name}
           style={{
-            maxWidth: "160px", // 🔥 Hard cap so it NEVER explodes again
+            maxWidth: "160px",
             width: "100%",
             height: "auto",
             display: "block",
@@ -118,30 +119,6 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {/* Forgot password + forgot email */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: "-8px",
-            marginBottom: "4px",
-          }}
-        >
-          <Link
-            to={`/${clubSlug}/public/forgot-password`}
-            style={{ fontSize: "14px", color: "#2563eb" }}
-          >
-            Forgot password?
-          </Link>
-
-          <Link
-            to={`/${clubSlug}/public/forgot-email`}
-            style={{ fontSize: "14px", color: "#2563eb" }}
-          >
-            Forgot email?
-          </Link>
-        </div>
-
         {errorMsg && (
           <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center" }}>
             {errorMsg}
@@ -153,6 +130,7 @@ export default function Login() {
         </Button>
       </form>
 
+      {/* SIGNUP CTA */}
       <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
         Don’t have an account?{" "}
         <Link
@@ -162,6 +140,34 @@ export default function Login() {
           Sign up
         </Link>
       </p>
+
+      {/* ONE-LINE CENTERED LINKS BELOW CTA */}
+      <div
+        style={{
+          width: "100%",
+          marginTop: "6px",
+          textAlign: "center",
+          fontSize: "14px",
+          display: "flex",
+          justifyContent: "center",
+          gap: "12px",
+          flexWrap: "nowrap",
+        }}
+      >
+        <Link
+          to={`/${clubSlug}/public/forgot-email`}
+          style={{ color: "#2563eb", whiteSpace: "nowrap" }}
+        >
+          Forgot email?
+        </Link>
+
+        <Link
+          to={`/${clubSlug}/public/forgot-password`}
+          style={{ color: "#2563eb", whiteSpace: "nowrap" }}
+        >
+          Forgot password?
+        </Link>
+      </div>
 
       {/* RC RaceDay global home link */}
       <div style={{ marginTop: "40px", display: "flex", justifyContent: "center" }}>

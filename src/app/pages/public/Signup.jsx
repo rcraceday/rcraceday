@@ -114,6 +114,7 @@ export default function Signup() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        boxSizing: "border-box",
       }}
     >
       {logoSrc && (
@@ -178,7 +179,14 @@ export default function Signup() {
         />
 
         {errorMsg && (
-          <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center" }}>
+          <p
+            style={{
+              color: "#dc2626",
+              fontSize: "14px",
+              textAlign: "center",
+              wordBreak: "break-word",
+            }}
+          >
             {errorMsg}
           </p>
         )}

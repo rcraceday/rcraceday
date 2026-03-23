@@ -21,8 +21,10 @@ export default function PublicLayout() {
           width: "100%",
           display: "flex",
           justifyContent: "center",
+          alignItems: "center",        // ⭐ FIX: ensures proper centering on mobile
           paddingTop: "24px",
           paddingBottom: "24px",
+          boxSizing: "border-box",
         }}
       >
         <div

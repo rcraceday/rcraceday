@@ -91,88 +91,117 @@ export default function ForgotEmail() {
   return (
     <div
       style={{
-        padding: "32px 24px",
         width: "100%",
-        maxWidth: "360px",
-        margin: "0 auto",
+        minHeight: "100vh",
         display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
+        justifyContent: "center",
+        padding: "32px 24px",
+        boxSizing: "border-box",
+        overflowX: "hidden",
       }}
     >
-      {logoSrc && (
-        <img
-          src={logoSrc}
-          alt={club?.name}
-          style={{
-            maxWidth: "160px",
-            width: "100%",
-            height: "auto",
-            display: "block",
-            marginBottom: "20px",
-          }}
-        />
-      )}
-
-      <h1
-        style={{
-          fontSize: "24px",
-          fontWeight: "bold",
-          marginBottom: "24px",
-          textAlign: "center",
-        }}
-      >
-        Recover Email
-      </h1>
-
-      <form
-        onSubmit={handleSubmit}
+      <div
         style={{
           width: "100%",
+          maxWidth: "360px",
+          margin: "0 auto",
           display: "flex",
           flexDirection: "column",
-          gap: "16px",
+          alignItems: "center",
+          boxSizing: "border-box",
         }}
       >
-        <Input
-          label="Full Name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-        />
-
-        <Input
-          label="Message (optional)"
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-        />
-
-        {errorMsg && (
-          <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center" }}>
-            {errorMsg}
-          </p>
+        {logoSrc && (
+          <img
+            src={logoSrc}
+            alt={club?.name}
+            style={{
+              maxWidth: "160px",
+              width: "100%",
+              height: "auto",
+              display: "block",
+              marginBottom: "20px",
+            }}
+          />
         )}
 
-        {message && (
-          <p style={{ color: "#059669", fontSize: "14px", textAlign: "center" }}>
-            {message}
-          </p>
-        )}
-
-        <Button type="submit" variant="primary" disabled={loading}>
-          {loading ? "Sending…" : "Send Request"}
-        </Button>
-      </form>
-
-      <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
-        Back to{" "}
-        <Link
-          to={`/${clubSlug}/public/login/`}
-          replace={true}
-          style={{ color: "#2563eb", textDecoration: "underline" }}
+        <h1
+          style={{
+            fontSize: "24px",
+            fontWeight: "bold",
+            marginBottom: "24px",
+            textAlign: "center",
+          }}
         >
-          Log in
-        </Link>
-      </p>
+          Recover Email
+        </h1>
+
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            boxSizing: "border-box",
+          }}
+        >
+          <Input
+            label="Full Name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+
+          <Input
+            label="Message (optional)"
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+          />
+
+          {errorMsg && (
+            <p
+              style={{
+                color: "#dc2626",
+                fontSize: "14px",
+                textAlign: "center",
+                wordBreak: "break-word",
+              }}
+            >
+              {errorMsg}
+            </p>
+          )}
+
+          {message && (
+            <p
+              style={{
+                color: "#059669",
+                fontSize: "14px",
+                textAlign: "center",
+                wordBreak: "break-word",
+              }}
+            >
+              {message}
+            </p>
+          )}
+
+          <div style={{ width: "100%", maxWidth: "360px", margin: "0 auto" }}>
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? "Sending…" : "Send Request"}
+            </Button>
+          </div>
+        </form>
+
+        <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
+          Back to{" "}
+          <Link
+            to={`/${clubSlug}/public/login/`}
+            replace={true}
+            style={{ color: "#2563eb", textDecoration: "underline" }}
+          >
+            Log in
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

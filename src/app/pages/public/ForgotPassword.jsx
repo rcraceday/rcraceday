@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
-import TextInput from "@/components/ui/TextInput";
+import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
 export default function ForgotPassword() {
@@ -65,6 +65,7 @@ export default function ForgotPassword() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        boxSizing: "border-box",
       }}
     >
       {logoSrc && (
@@ -101,22 +102,21 @@ export default function ForgotPassword() {
           gap: "16px",
         }}
       >
-        <TextInput
+        <Input
           label="Email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          error={errorMsg.includes("email") ? errorMsg : ""}
         />
 
         {errorMsg && (
-          <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center" }}>
+          <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center", wordBreak: "break-word" }}>
             {errorMsg}
           </p>
         )}
 
         {message && (
-          <p style={{ color: "#059669", fontSize: "14px", textAlign: "center" }}>
+          <p style={{ color: "#059669", fontSize: "14px", textAlign: "center", wordBreak: "break-word" }}>
             {message}
           </p>
         )}
