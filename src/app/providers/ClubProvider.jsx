@@ -114,6 +114,7 @@ export default function ClubProvider({ children }) {
     }
   }, [clubSlug, location.pathname]);
 
+  // ⭐ FIXED EFFECT ⭐
   useEffect(() => {
     console.log("ClubProvider useEffect triggered", {
       clubSlug,
@@ -127,7 +128,7 @@ export default function ClubProvider({ children }) {
     }
 
     loadClub();
-  }, [clubSlug, loadClub, loadingUser]);
+  }, [clubSlug, loadingUser]); // ← FIXED
 
   if (loadingUser || !clubSlug || loadingClub) {
     return (
