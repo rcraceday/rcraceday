@@ -1,5 +1,5 @@
 // src/app/providers/AuthProvider.jsx
-// FINAL VERSION — prevents lock collisions during USER_UPDATED
+// FINAL FIXED VERSION — production safe, no hydration stalls
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/supabaseClient";
@@ -79,19 +79,15 @@ export default function AuthProvider({ children }) {
     init();
 
     /* ------------------------------------------------------------
-       Auth state listener — now with USER_UPDATED guard
+       Auth state listener — SAFE VERSION
        ------------------------------------------------------------ */
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (!mounted) return;
 
-        // ⭐ CRITICAL FIX ⭐
-        // Prevent MembershipProvider + DriverProvider + NotificationProvider
-        // from reloading during password update (USER_UPDATED).
-        //
-        // This stops the Supabase lock collision and prevents EditProfile
-        // from unmounting and wiping out the success message.
-        if (event === "USER_UPDATED") {
+        // Ignore only the password recovery event
+        // (prevents lock collision during password reset)
+        if (event === "PASSWORD_RECOVERY") {
           return;
         }
 
@@ -102,7 +98,8 @@ export default function AuthProvider({ children }) {
           return;
         }
 
-        // Supabase already includes the updated user in newSession
+        // All other events (SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION)
+        // must update the session — this fixes Cloudflare hydration.
         await handleSession(newSession);
         setLoadingUser(false);
       }
