@@ -1,202 +1,235 @@
 // src/app/pages/profile/DriverManager.jsx
-import React from "react";
-import { Link, useOutletContext } from "react-router-dom";
+
+import React, { useState } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
+import { supabase } from "@/supabaseClient";
+
 import { useDrivers } from "@/app/providers/DriverProvider";
-import { useNumbers } from "@/app/providers/NumberProvider";
-export { useMembership } from "@/app/providers/MembershipProvider";
+import { useMembership } from "@/app/providers/MembershipProvider";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
 
-function SimpleSpinner() {
-  return (
-    <div className="p-6 max-w-3xl mx-auto" aria-live="polite">
-      <p className="text-gray-600">Loading drivers…</p>
-    </div>
-  );
-}
+import {
+  UserCircleIcon,
+  UserPlusIcon,
+  PencilSquareIcon,
+  TrashIcon,
+} from "@heroicons/react/24/solid";
 
 export default function DriverManager() {
+  const navigate = useNavigate();
   const { club } = useOutletContext();
+  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+
+  const { drivers, loadingDrivers, refreshDrivers } = useDrivers();
+  const { membership } = useMembership();
+
+  const [driverToDelete, setDriverToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
   const clubSlug = club?.slug;
 
-  const { drivers = [], loadingDrivers = true, error } = useDrivers();
-  const {
-    numbers,
-    loadingNumbers,
-    assignNumber,
-    unassignNumber,
-  } = useNumbers();
-  const { loadingMembership, isFamily } = useMembership();
+  // ------------------------------------------------------------
+  // MEMBERSHIP-BASED DRIVER LIMIT (FIXED)
+  // ------------------------------------------------------------
+  const canAddDriver = (() => {
+    if (!membership) return true;
 
-  const hasDrivers = drivers.length > 0;
+    const type = membership.membership_type;
 
-  // Stable loading logic (no flip-flop on hasDrivers)
-  const isLoading =
-    loadingDrivers ||
-    loadingNumbers ||
-    loadingMembership;
+    if (type === "global_admin") return true;
+    if (type === "single") return drivers.length < 1;
+    if (type === "family") return drivers.length < 99;
 
-  if (isLoading) {
-    return <SimpleSpinner />;
-  }
+    return true;
+  })();
 
-  if (error) {
-    return (
-      <div className="p-6 max-w-3xl mx-auto">
-        <p className="text-red-600">Error loading drivers.</p>
-      </div>
-    );
-  }
+  const handleDeleteDriver = async (driverId) => {
+    setDeleting(true);
 
-  const canAddDrivers = isFamily;
+    const { error } = await supabase
+      .from("drivers")
+      .delete()
+      .eq("id", driverId);
 
-  const getDriverNumber = (driverId) => {
-    if (!numbers || numbers.length === 0) return null;
-    return numbers.find((n) => n.assigned_to_driver === driverId) || null;
+    setDeleting(false);
+
+    if (error) {
+      console.error("Delete driver error:", error);
+      alert("Failed to delete driver.");
+      return;
+    }
+
+    setDriverToDelete(null);
+    await refreshDrivers();
   };
 
-  const buildNumberOptions = (driverId) => {
-    const current = getDriverNumber(driverId);
-    const available = (numbers || []).filter(
-      (n) => n.status === "available"
-    );
-
-    const options = [];
-
-    if (current) {
-      options.push({
-        id: current.id,
-        number: current.number,
-        label: `${current.number} (current)`,
-      });
-    }
-
-    available.forEach((n) => {
-      options.push({
-        id: n.id,
-        number: n.number,
-        label: n.number.toString(),
-      });
-    });
-
-    return options;
+  const handleAddDriver = () => {
+    navigate(`/${clubSlug}/app/profile/drivers/add`);
   };
 
-  const handleNumberChange = async (driver, newNumberId) => {
-    const current = getDriverNumber(driver.id);
-
-    if (current && current.id === newNumberId) return;
-
-    if (current) {
-      await unassignNumber(current.id);
-    }
-
-    if (newNumberId) {
-      await assignNumber(newNumberId, driver);
-    }
+  const handleEditDriver = (driverId) => {
+    navigate(`/${clubSlug}/app/profile/drivers/${driverId}/edit`);
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl font-semibold">Driver Manager</h1>
-        {canAddDrivers && clubSlug && (
-          <Link to={`/${clubSlug}/profile/drivers/add`}>
-            <Button variant="primary">Add Driver</Button>
-          </Link>
-        )}
-      </div>
+    <div className="min-h-screen w-full bg-background text-text-base">
 
-      {!hasDrivers && (
-        <Card className="p-6 text-center space-y-3">
-          <p className="text-gray-600">You haven’t added any drivers yet.</p>
-          {canAddDrivers && clubSlug && (
-            <Link to={`/${clubSlug}/profile/drivers/add`}>
-              <Button variant="primary">Add Your First Driver</Button>
-            </Link>
-          )}
-        </Card>
-      )}
+      {/* HEADER */}
+      <section className="w-full border-b border-surfaceBorder bg-surface">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
+          <UserPlusIcon className="h-5 w-5" style={{ color: brand }} />
+          <h1 className="text-xl font-semibold tracking-tight">Driver Manager</h1>
+        </div>
+      </section>
 
-      {hasDrivers && (
+      {/* MAIN */}
+      <main className="max-w-3xl mx-auto px-4 py-8 space-y-10">
+
+        {/* DRIVER LIST */}
         <div className="space-y-4">
-          {drivers.map((driver) => {
-            const profile = driver.profile || {};
-            const avatar =
-              profile.avatar_url ||
-              driver.avatar_url ||
-              "/default-avatar.png";
-            const nickname = profile.nickname || driver.nickname;
-            const currentNumber = getDriverNumber(driver.id);
-            const options = buildNumberOptions(driver.id);
+          {loadingDrivers && (
+            <p className="text-gray-600">Loading drivers…</p>
+          )}
 
-            return (
+          {/* EMPTY STATE */}
+          {!loadingDrivers && drivers.length === 0 && (
+            <>
               <Card
-                key={driver.id}
-                className="p-4 flex items-center justify-between"
+                className="p-6 text-center space-y-4"
+                style={{ border: `2px solid ${brand}` }}
               >
-                <div className="flex items-center gap-4">
+                <p className="text-gray-700">You haven’t added any drivers yet.</p>
+
+                {canAddDriver && (
+                  <Button
+                    onClick={handleAddDriver}
+                    className="w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Add Driver
+                  </Button>
+                )}
+              </Card>
+
+              <Card className="p-6 shadow-md bg-white text-left space-y-3">
+                <p>
+                  Every racer in your household needs a driver profile. Adults create a
+                  profile for themselves. Parents create profiles for their junior
+                  racers. Family memberships can add multiple drivers so everyone in the
+                  household can race under one membership.
+                </p>
+                <p>
+                  Creating a driver profile ensures nominations, race numbers, and
+                  results are correctly linked to the right person.
+                </p>
+              </Card>
+            </>
+          )}
+
+          {/* DRIVER CARDS */}
+          {drivers.map((driver) => (
+            <Card
+              key={driver.id}
+              className="
+                p-4 
+                flex flex-col 
+                sm:flex-row sm:items-center sm:justify-between 
+                gap-4
+              "
+              style={{ border: `2px solid ${brand}` }}
+            >
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                {driver.profile?.avatar_url ? (
                   <img
-                    src={avatar}
-                    alt="Driver avatar"
-                    className="w-12 h-12 rounded-full object-cover"
+                    src={driver.profile.avatar_url}
+                    alt="Driver Avatar"
+                    className="h-12 w-12 rounded-full object-cover border"
                   />
-                  <div>
-                    <p className="font-medium">
-                      {driver.first_name} {driver.last_name}
+                ) : (
+                  <UserCircleIcon className="h-12 w-12 text-gray-400" />
+                )}
+
+                <div className="flex flex-col">
+                  <p className="font-semibold">
+                    {driver.first_name} {driver.last_name}
+                  </p>
+
+                  {driver.is_junior && (
+                    <p className="text-xs text-blue-600 font-medium">
+                      Junior Driver
                     </p>
-                    {nickname && (
-                      <p className="text-gray-600 text-sm">“{nickname}”</p>
-                    )}
-                    <div className="flex gap-2 mt-1">
-                      {driver.is_junior && <Badge color="blue">Junior</Badge>}
-                      {driver.driver_type && (
-                        <Badge color="gray">{driver.driver_type}</Badge>
-                      )}
-                    </div>
-
-                    <div className="mt-2">
-                      <select
-                        className="border rounded px-2 py-1 text-sm"
-                        value={currentNumber?.id || ""}
-                        onChange={(e) =>
-                          handleNumberChange(driver, e.target.value)
-                        }
-                      >
-                        <option value="">Select Number</option>
-                        {options.map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  {clubSlug && (
-                    <>
-                      <Link
-                        to={`/${clubSlug}/profile/drivers/${driver.id}/edit`}
-                      >
-                        <Button variant="secondary">Edit</Button>
-                      </Link>
-                      <Link
-                        to={`/${clubSlug}/profile/drivers/${driver.id}/delete`}
-                      >
-                        <Button variant="danger">Delete</Button>
-                      </Link>
-                    </>
                   )}
                 </div>
-              </Card>
-            );
-          })}
+              </div>
+
+              <div className="flex gap-3 w-full sm:w-auto">
+                <Button
+                  variant="secondary"
+                  onClick={() => handleEditDriver(driver.id)}
+                  className="flex items-center gap-1 w-full sm:w-auto justify-center"
+                >
+                  <PencilSquareIcon className="h-4 w-4" />
+                  Edit
+                </Button>
+
+                <Button
+                  variant="danger"
+                  onClick={() => setDriverToDelete(driver)}
+                  className="flex items-center gap-1 bg-red-600 text-white hover:bg-red-700 w-full sm:w-auto justify-center"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
+            </Card>
+          ))}
         </div>
-      )}
+
+        {/* ADD DRIVER BUTTON (BOTTOM) */}
+        {drivers.length > 0 && canAddDriver && (
+          <Button
+            onClick={handleAddDriver}
+            className="w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Add Driver
+          </Button>
+        )}
+
+        {/* DELETE MODAL */}
+        {driverToDelete && (
+          <Card
+            className="p-6 space-y-4 bg-red-50"
+            style={{ border: `2px solid ${brand}` }}
+          >
+            <h2 className="text-lg font-semibold text-red-700">Delete Driver</h2>
+
+            <p>
+              Are you sure you want to delete{" "}
+              <strong>
+                {driverToDelete.first_name} {driverToDelete.last_name}
+              </strong>
+              ?
+            </p>
+
+            <div className="flex gap-3">
+              <Button
+                className="bg-red-600 text-white hover:bg-red-700"
+                onClick={() => handleDeleteDriver(driverToDelete.id)}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={() => setDriverToDelete(null)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </Card>
+        )}
+      </main>
     </div>
   );
 }

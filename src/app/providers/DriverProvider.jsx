@@ -52,18 +52,24 @@ export default function DriverProvider({ children }) {
       typeof loadingUser !== "boolean" ||
       typeof loadingMembership !== "boolean"
     ) {
-      console.debug(
-        "[DriverProvider] loadDrivers deferred — loading flags not yet boolean",
-        { loadingUser, loadingMembership }
-      );
+      console.debug("[DriverProvider] loadDrivers deferred — loading flags not boolean");
       return;
     }
 
-    if (loadingUser === true || loadingMembership === true) {
-      console.debug(
-        "[DriverProvider] loadDrivers deferred — auth/membership still loading",
-        { loadingUser, loadingMembership }
-      );
+    if (loadingUser || loadingMembership) {
+      console.debug("[DriverProvider] loadDrivers deferred — still loading");
+      return;
+    }
+
+    if (!membership) {
+      console.debug("[DriverProvider] membership temporarily undefined — skipping load");
+      return;
+    }
+
+    if (!membership.id) {
+      console.debug("[DriverProvider] membership exists but has no id — clearing drivers");
+      setDrivers([]);
+      setLoadingDrivers(false);
       return;
     }
 
@@ -80,83 +86,55 @@ export default function DriverProvider({ children }) {
       membershipId: membership?.id,
       membershipType: membership?.membership_type,
       clubId: membership?.club_id,
-      loadingUser,
-      loadingMembership,
     });
-
-    if (!membership?.id) {
-      console.debug("[DriverProvider] no membership.id — clearing drivers");
-      setDrivers([]);
-      setLoadingDrivers(false);
-      inFlightRef.current = false;
-      clearWatchdog();
-      return;
-    }
 
     setLoadingDrivers(true);
 
     try {
-      let data;
-      let error;
-      let status;
+      let response;
 
-      // Global admin: load ALL drivers for the club
+      // ------------------------------------------------------------
+      // GLOBAL ADMIN — LOAD ALL DRIVERS IN CLUB
+      // ------------------------------------------------------------
       if (membership.membership_type === "global_admin") {
-        const response = await supabase
+        response = await supabase
           .from("drivers")
-          .select("*, driver_profiles(*)")
+          .select("*")
           .eq("club_id", membership.club_id)
           .order("created_at", { ascending: true });
 
-        data = response.data;
-        error = response.error;
-        status = response.status;
-
         console.debug("[DriverProvider] global admin load — by club_id", {
           clubId: membership.club_id,
-          status,
-          error,
-          rows: Array.isArray(data) ? data.length : data ? 1 : 0,
-        });
-      } else {
-        // Normal user: load drivers for this membership only
-        const response = await supabase
-          .from("drivers")
-          .select("*, driver_profiles(*)")
-          .eq("membership_id", membership.id)
-          .order("created_at", { ascending: true });
-
-        data = response.data;
-        error = response.error;
-        status = response.status;
-
-        console.debug("[DriverProvider] normal load — by membership_id", {
-          membershipId: membership.id,
-          status,
-          error,
-          rows: Array.isArray(data) ? data.length : data ? 1 : 0,
+          status: response.status,
+          error: response.error,
+          rows: response.data?.length || 0,
         });
       }
 
-      if (error) {
-        console.warn("[DriverProvider] supabase returned error", error);
+      // ------------------------------------------------------------
+      // NORMAL USER — LOAD BY membership_id
+      // ------------------------------------------------------------
+      else {
+        response = await supabase
+          .from("drivers")
+          .select("*")
+          .eq("membership_id", membership.id)
+          .order("created_at", { ascending: true });
+
+        console.debug("[DriverProvider] normal load — by membership_id", {
+          membershipId: membership.id,
+          status: response.status,
+          error: response.error,
+          rows: response.data?.length || 0,
+        });
+      }
+
+      if (response.error) {
+        console.warn("[DriverProvider] supabase returned error", response.error);
         setDrivers([]);
       } else {
-        const normalized = (data || []).map((driverRow) => {
-          const profile = Array.isArray(driverRow.driver_profiles)
-            ? driverRow.driver_profiles[0] || null
-            : driverRow.driver_profiles || null;
-
-          const { driver_profiles: _ignore, ...driverFields } = driverRow;
-
-          return {
-            ...driverFields,
-            profile,
-          };
-        });
-
-        setDrivers(normalized);
-        console.debug("[DriverProvider] drivers state", normalized);
+        setDrivers(response.data || []);
+        console.debug("[DriverProvider] drivers state", response.data);
       }
     } catch (err) {
       console.error("[DriverProvider] loadDrivers caught", err);
@@ -170,36 +148,35 @@ export default function DriverProvider({ children }) {
       });
     }
   }, [
-    membership?.id ?? null,
-    membership?.membership_type ?? null,
-    membership?.club_id ?? null,
-    user?.id ?? null,
+    membership,
+    membership?.id,
+    membership?.membership_type,
+    membership?.club_id,
+    user?.id,
     loadingUser,
     loadingMembership,
   ]);
 
+  // ------------------------------------------------------------
+  // EFFECT: TRIGGER LOAD WHEN MEMBERSHIP OR USER CHANGES
+  // ------------------------------------------------------------
   useEffect(() => {
     if (
       typeof loadingUser !== "boolean" ||
       typeof loadingMembership !== "boolean"
     ) {
-      console.debug(
-        "[DriverProvider] waiting for loading flags to become boolean",
-        { loadingUser, loadingMembership }
-      );
       return;
     }
 
-    if (loadingUser === true || loadingMembership === true) {
-      console.debug(
-        "[DriverProvider] waiting for loadingUser/loadingMembership to finish",
-        { loadingUser, loadingMembership }
-      );
+    if (loadingUser || loadingMembership) {
       return;
     }
 
-    if (!membership?.id) {
-      console.debug("[DriverProvider] no membership.id — clearing drivers (useEffect)");
+    if (!membership) {
+      return;
+    }
+
+    if (!membership.id) {
       setDrivers([]);
       setLoadingDrivers(false);
       return;
@@ -213,17 +190,17 @@ export default function DriverProvider({ children }) {
       }
     })();
   }, [
-    membership?.id ?? null,
-    membership?.membership_type ?? null,
-    membership?.club_id ?? null,
+    membership,
+    membership?.id,
+    membership?.membership_type,
+    membership?.club_id,
     loadingUser,
     loadingMembership,
     loadDrivers,
   ]);
 
-  // 🚨 FIXED: Do NOT block on !membership
   if (!user || loadingUser || loadingMembership) {
-    return children; // still booting
+    return children;
   }
 
   return (

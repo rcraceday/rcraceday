@@ -1,137 +1,264 @@
-import { Link, useParams } from "react-router-dom";
-import {
-  IdentificationIcon,
-  CalendarDaysIcon,
-  TrophyIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline";
+// src/app/pages/admin/AdminDashboard.jsx
+
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+
+import { useClub } from "@/app/providers/ClubProvider";
+import { supabase } from "@/supabaseClient";
 
 import Card from "@/components/ui/Card";
-import { useProfile } from "@/app/providers/ProfileProvider";
-import { useMembership } from "@/app/providers/MembershipProvider";
+import Button from "@/components/ui/Button";
+
+import {
+  Cog6ToothIcon,
+  UsersIcon,
+  UserGroupIcon,
+  CalendarDaysIcon,
+  TrophyIcon,
+} from "@heroicons/react/24/solid";
 
 export default function AdminDashboard() {
   const { clubSlug } = useParams();
-  const { profile, loadingProfile } = useProfile();
-  const { membership, loadingMembership } = useMembership();
+  const navigate = useNavigate();
+  const { club } = useClub();
 
-  const isGlobalAdmin = profile?.role === "admin";
-  const isClubAdmin = membership?.isAdmin === true;
+  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
 
-  // While loading, avoid flicker
-  if (loadingProfile || loadingMembership) {
-    return <div className="text-gray-500">Loading…</div>;
-  }
+  const [stats, setStats] = useState({
+    members: 0,
+    drivers: 0,
+    eventsThisYear: 0,
+    upcomingEvent: null,
+    nominations: 0,
+  });
 
-  // Permission check
-  if (!isGlobalAdmin && !isClubAdmin) {
-    return (
-      <div className="p-6 text-center text-gray-600">
-        <h2 className="text-xl font-semibold mb-2">Not Authorized</h2>
-        <p className="text-sm">
-          You do not have permission to access this admin area.
-        </p>
-      </div>
-    );
-  }
+  const [loading, setLoading] = useState(true);
+
+  /* ===========================
+     LOAD ADMIN STATS
+     =========================== */
+
+  useEffect(() => {
+    async function loadStats() {
+      if (!club?.id) return;
+
+      setLoading(true);
+
+      const year = new Date().getFullYear();
+
+      // Members
+      const { count: memberCount } = await supabase
+        .from("memberships")
+        .select("*", { count: "exact", head: true })
+        .eq("club_id", club.id);
+
+      // Drivers
+      const { count: driverCount } = await supabase
+        .from("drivers")
+        .select("*", { count: "exact", head: true })
+        .eq("club_id", club.id);
+
+      // Events this year
+      const { count: eventsThisYear } = await supabase
+        .from("events")
+        .select("*", { count: "exact", head: true })
+        .eq("club_id", club.id)
+        .gte("event_date", `${year}-01-01`)
+        .lte("event_date", `${year}-12-31`);
+
+      // Upcoming event
+      const { data: upcoming } = await supabase
+        .from("events")
+        .select("*")
+        .eq("club_id", club.id)
+        .gte("event_date", new Date().toISOString())
+        .order("event_date", { ascending: true })
+        .limit(1);
+
+      let upcomingEvent = upcoming?.[0] || null;
+
+      let nominations = 0;
+
+      if (upcomingEvent) {
+        const { count: nomCount } = await supabase
+          .from("nominations")
+          .select("*", { count: "exact", head: true })
+          .eq("event_id", upcomingEvent.id);
+
+        nominations = nomCount || 0;
+      }
+
+      setStats({
+        members: memberCount || 0,
+        drivers: driverCount || 0,
+        eventsThisYear: eventsThisYear || 0,
+        upcomingEvent,
+        nominations,
+      });
+
+      setLoading(false);
+    }
+
+    loadStats();
+  }, [club?.id]);
+
+  /* ===========================
+     RENDER
+     =========================== */
 
   return (
-    <>
-      {/* PAGE HEADER */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Admin Dashboard
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Manage your club operations and settings
-        </p>
-      </header>
+    <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* ========================= */}
-      {/*   QUICK STATS ROW        */}
-      {/* ========================= */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
-        <StatCard
-          label="Active Members"
-          value="—"
-          description="Members with valid memberships"
-        />
-
-        <StatCard
-          label="Upcoming Events"
-          value="—"
-          description="Events scheduled in the calendar"
-        />
-
-        <StatCard
-          label="Current Event Nominations"
-          value="—"
-          description="Nominations for the next upcoming event"
-        />
-      </section>
-
-      {/* ========================= */}
-      {/*   MAIN ACTION GRID       */}
-      {/* ========================= */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <AdminCard
-          title="Memberships"
-          description="Manage member records, renewals, and upgrades"
-          to={`/${clubSlug}/admin/memberships`}
-          icon={IdentificationIcon}
-        />
-
-        <AdminCard
-          title="Events"
-          description="Create, edit, and manage club events"
-          to={`/${clubSlug}/admin/events`}
-          icon={CalendarDaysIcon}
-        />
-
-        <AdminCard
-          title="Championships"
-          description="Manage championship seasons and scoring"
-          to={`/${clubSlug}/admin/championships`}
-          icon={TrophyIcon}
-        />
-
-        <AdminCard
-          title="Drivers"
-          description="Manage driver profiles and linked accounts"
-          to={`/${clubSlug}/admin/drivers`}
-          icon={UserGroupIcon}
-        />
-      </section>
-    </>
-  );
-}
-
-/* ========================= */
-/*   COMPONENTS              */
-/* ========================= */
-
-function StatCard({ label, value, description }) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="text-3xl font-semibold mt-1">{value}</p>
-      <p className="text-xs text-gray-400 mt-1">{description}</p>
-    </div>
-  );
-}
-
-function AdminCard({ title, description, to, icon: Icon }) {
-  return (
-    <Link to={to} className="block no-underline">
-      <Card>
-        <div className="flex items-center gap-4">
-          <Icon className="h-7 w-7 text-[#C62828]" />
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-            <p className="text-sm text-gray-500 mt-1">{description}</p>
-          </div>
+      {/* HEADER */}
+      <section className="w-full border-b border-surfaceBorder bg-surface">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
+          <Cog6ToothIcon className="h-5 w-5" style={{ color: brand }} />
+          <h1 className="text-xl font-semibold tracking-tight">Admin Dashboard</h1>
         </div>
-      </Card>
-    </Link>
+      </section>
+
+      {/* MAIN */}
+      <main className="max-w-4xl mx-auto px-4 py-10 space-y-12">
+
+        {/* ===========================
+            STATS CARD
+            =========================== */}
+        <Card
+          className="rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
+          style={{ border: `2px solid ${brand}`, background: "white", padding: 0 }}
+        >
+          {/* BLUE HEADER BAR */}
+          <div
+            className="px-5 py-3"
+            style={{ background: brand, color: "white" }}
+          >
+            <h2 className="text-base font-semibold">Club Overview</h2>
+          </div>
+
+          {/* BODY */}
+          <div className="p-6 space-y-8">
+
+            {loading && <p className="text-text-muted">Loading stats…</p>}
+
+            {!loading && (
+              <>
+                {/* ===========================
+                    ROW 1: Members / Drivers / Events This Year
+                    =========================== */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+                  <div>
+                    <p className="text-sm text-text-muted">Members</p>
+                    <p className="text-2xl font-semibold">{stats.members}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-text-muted">Drivers</p>
+                    <p className="text-2xl font-semibold">{stats.drivers}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-text-muted">Events This Year</p>
+                    <p className="text-2xl font-semibold">{stats.eventsThisYear}</p>
+                  </div>
+                </div>
+
+                {/* ===========================
+                    ROW 2: Upcoming Event + Nominations
+                    =========================== */}
+                {stats.upcomingEvent && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-center">
+
+                    {/* Upcoming Event */}
+                    <div>
+                      <p className="text-sm text-text-muted">Upcoming Event</p>
+                      <p className="text-lg font-semibold">
+                        {stats.upcomingEvent.name}
+                      </p>
+                      <p className="text-sm text-text-muted">
+                        {new Date(stats.upcomingEvent.event_date).toLocaleDateString("en-AU", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+
+                    {/* Nominations */}
+                    <div>
+                      <p className="text-sm text-text-muted">Nominations</p>
+                      <p className="text-2xl font-semibold">{stats.nominations}</p>
+                    </div>
+
+                  </div>
+                )}
+              </>
+            )}
+
+          </div>
+        </Card>
+
+        {/* ===========================
+            ADMIN ACTIONS
+            =========================== */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+          <Button
+            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
+            style={{ background: brand }}
+            onClick={() => navigate(`/${clubSlug}/app/admin/events`)}
+          >
+            <CalendarDaysIcon className="w-6 h-6 text-white" />
+            <span className="text-white font-medium">Manage Events</span>
+          </Button>
+
+          <Button
+            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
+            style={{ background: brand }}
+            onClick={() => navigate(`/${clubSlug}/app/admin/drivers`)}
+          >
+            <UsersIcon className="w-6 h-6 text-white" />
+            <span className="text-white font-medium">Manage Drivers</span>
+          </Button>
+
+          <Button
+            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
+            style={{ background: brand }}
+            onClick={() => navigate(`/${clubSlug}/app/admin/memberships`)}
+          >
+            <UserGroupIcon className="w-6 h-6 text-white" />
+            <span className="text-white font-medium">Manage Memberships</span>
+          </Button>
+
+          <Button
+            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
+            style={{ background: brand }}
+            onClick={() => navigate(`/${clubSlug}/app/admin/households`)}
+          >
+            <UserGroupIcon className="w-6 h-6 text-white" />
+            <span className="text-white font-medium">Manage Households</span>
+          </Button>
+
+          <Button
+            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
+            style={{ background: brand }}
+            onClick={() => navigate(`/${clubSlug}/app/admin/championships`)}
+          >
+            <TrophyIcon className="w-6 h-6 text-white" />
+            <span className="text-white font-medium">Manage Championships</span>
+          </Button>
+
+          <Button
+            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
+            style={{ background: brand }}
+            onClick={() => navigate(`/${clubSlug}/app/admin/settings`)}
+          >
+            <Cog6ToothIcon className="w-6 h-6 text-white" />
+            <span className="text-white font-medium">Club Settings</span>
+          </Button>
+
+        </section>
+
+      </main>
+    </div>
   );
 }

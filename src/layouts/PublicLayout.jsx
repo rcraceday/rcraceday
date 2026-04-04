@@ -13,15 +13,15 @@ export default function PublicLayout() {
         background: "white",
         display: "flex",
         flexDirection: "column",
-        flex: 1,
       }}
     >
+      {/* CONTENT AREA */}
       <div
         style={{
+          flex: 1,                     // ⭐ pushes footer to bottom
           width: "100%",
           display: "flex",
           justifyContent: "center",
-          alignItems: "center",        // ⭐ FIX: ensures proper centering on mobile
           paddingTop: "24px",
           paddingBottom: "24px",
           boxSizing: "border-box",
@@ -40,6 +40,9 @@ export default function PublicLayout() {
           <Outlet context={{ club }} />
         </div>
       </div>
+
+      {/* FOOTER (already exists globally) */}
+      {/* It will now sit flush at the bottom with no white gap */}
     </main>
   );
 }

@@ -1,266 +1,357 @@
-import { useEffect, useState } from "react";
+// =========================
+// 1. IMPORTS
+// =========================
 
-const TRACK_OPTIONS = ["Dirt Track", "SIC Surface"];
+import { useEffect, useState } from "react";
+import { supabase } from "@/supabaseClient";
+import { useParams } from "react-router-dom";
+
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+
+import SortableItem from "@/components/ui/SortableItem";
+
+import {
+  InformationCircleIcon,
+  PencilIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
+
+import { useClub } from "@/app/providers/ClubProvider";
+
+// =========================
+// 2. COMPONENT
+// =========================
 
 export default function AdminClassManager() {
+  const { clubSlug } = useParams();
+  const { club } = useClub();
+  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+
   const [classes, setClasses] = useState([]);
-  const [tracksByClass, setTracksByClass] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({
-    class_name: "",
-    tracks: [],
-  });
+  const [showForm, setShowForm] = useState(false);
+  const [editingClass, setEditingClass] = useState(null);
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  const [tooltipId, setTooltipId] = useState(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    })
+  );
+
+  // ===========================
+  // LOAD CLUB CLASSES
+  // ===========================
 
   useEffect(() => {
-    loadClasses();
-  }, []);
+    async function loadClasses() {
+      setLoading(true);
 
-  async function loadClasses() {
-    setLoading(true);
-
-    const { data: classRows } = await window.supabase
-      .from("event_classes")
-      .select("*")
-      .order("class_name", { ascending: true });
-
-    const { data: trackRows } = await window.supabase
-      .from("class_tracks")
-      .select("*");
-
-    const map = {};
-    (trackRows || []).forEach((t) => {
-      if (!map[t.class_id]) map[t.class_id] = [];
-      map[t.class_id].push(t.track);
-    });
-
-    setClasses(classRows || []);
-    setTracksByClass(map);
-    setLoading(false);
-  }
-
-  function resetForm() {
-    setEditingId(null);
-    setForm({ class_name: "", tracks: [] });
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.class_name) return;
-
-    let classId = editingId;
-
-    if (editingId) {
-      await window.supabase
-        .from("event_classes")
-        .update({ class_name: form.class_name })
-        .eq("id", editingId);
-    } else {
-      const { data: newClass } = await window.supabase
-        .from("event_classes")
-        .insert({
-          class_name: form.class_name,
-          is_active: true,
-        })
+      const { data, error } = await supabase
+        .from("club_classes")
         .select("*")
-        .single();
+        .eq("club_id", club.id)
+        .order("order_index", { ascending: true });
 
-      classId = newClass.id;
+      if (!error && data) setClasses(data);
+
+      setLoading(false);
     }
 
-    await window.supabase.from("class_tracks").delete().eq("class_id", classId);
+    if (club?.id) loadClasses();
+  }, [club]);
 
-    const rows = form.tracks.map((track) => ({
-      class_id: classId,
-      track,
-    }));
+  // ===========================
+  // SAVE CLASS (ADD OR EDIT)
+  // ===========================
 
-    if (rows.length > 0) {
-      await window.supabase.from("class_tracks").insert(rows);
+  async function saveClass() {
+    if (!name.trim()) return;
+
+    if (editingClass) {
+      await supabase
+        .from("club_classes")
+        .update({
+          name,
+          description,
+        })
+        .eq("id", editingClass.id);
+    } else {
+      await supabase.from("club_classes").insert({
+        club_id: club.id,
+        name,
+        description,
+        order_index: classes.length + 1, // 1-based
+      });
     }
 
-    resetForm();
-    await loadClasses();
+    setShowForm(false);
+    setEditingClass(null);
+    setName("");
+    setDescription("");
+
+    const { data } = await supabase
+      .from("club_classes")
+      .select("*")
+      .eq("club_id", club.id)
+      .order("order_index", { ascending: true });
+
+    setClasses(data);
   }
 
-  function startEdit(cls) {
-    setEditingId(cls.id);
-    setForm({
-      class_name: cls.class_name,
-      tracks: tracksByClass[cls.id] || [],
-    });
+  // ===========================
+  // DELETE CLASS
+  // ===========================
+
+  async function deleteClass(cls) {
+    const confirmDelete = window.confirm(
+      `Delete "${cls.name}"?\n\nThis will permanently delete this class from your club.\nIt will also remove this class from all future events.\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    await supabase.from("club_classes").delete().eq("id", cls.id);
+
+    const { data } = await supabase
+      .from("club_classes")
+      .select("*")
+      .eq("club_id", club.id)
+      .order("order_index", { ascending: true });
+
+    setClasses(data);
   }
 
-  async function deleteClass(id) {
-    if (!window.confirm("Delete this class?")) return;
-    await window.supabase.from("event_classes").delete().eq("id", id);
-    await loadClasses();
+  // ===========================
+  // DRAG & DROP REORDER
+  // ===========================
+
+  async function handleDragEnd(event) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = classes.findIndex((c) => c.id === active.id);
+    const newIndex = classes.findIndex((c) => c.id === over.id);
+
+    const newOrder = arrayMove(classes, oldIndex, newIndex);
+    setClasses(newOrder);
+
+    await Promise.all(
+      newOrder.map((cls, index) =>
+        supabase
+          .from("club_classes")
+          .update({ order_index: index + 1 }) // 1-based
+          .eq("id", cls.id)
+      )
+    );
   }
 
-  async function toggleActive(cls) {
-    await window.supabase
-      .from("event_classes")
-      .update({ is_active: !cls.is_active })
-      .eq("id", cls.id);
-    await loadClasses();
+  // ===========================
+  // OPEN EDIT FORM
+  // ===========================
+
+  function openEditForm(cls) {
+    setEditingClass(cls);
+    setName(cls.name);
+    setDescription(cls.description || "");
+    setShowForm(true);
   }
 
-  function toggleTrack(track) {
-    setForm((prev) => {
-      const exists = prev.tracks.includes(track);
-      return {
-        ...prev,
-        tracks: exists
-          ? prev.tracks.filter((t) => t !== track)
-          : [...prev.tracks, track],
-      };
-    });
-  }
+  // ===========================
+  // UI
+  // ===========================
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <div className="h-6 w-6 rounded-full border-2 border-slate-700 border-t-emerald-400 animate-spin" />
-          <p className="text-slate-300 text-sm">Loading classes…</p>
-        </div>
+      <div className="p-6 text-text-muted">
+        Loading classes…
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 px-4 py-10">
-      <div className="max-w-4xl mx-auto space-y-10">
+    <div className="max-w-4xl mx-auto p-6 space-y-8">
 
-        {/* PAGE HEADER */}
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
-          Class Manager
-        </h1>
+      {/* PAGE HEADER */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Club Classes</h1>
+        <p className="text-text-muted">
+          Manage your club’s racing classes, descriptions, and display order.
+        </p>
+      </div>
 
-        {/* ADD / EDIT FORM */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-slate-50">
-            {editingId ? "Edit Class" : "Add Class"}
-          </h2>
+      {/* ACTION BAR */}
+      <div className="flex justify-end">
+        <Button
+          style={{ backgroundColor: brand }}
+          className="text-white"
+          onClick={() => {
+            setEditingClass(null);
+            setName("");
+            setDescription("");
+            setShowForm(true);
+          }}
+        >
+          Add Class
+        </Button>
+      </div>
+
+      {/* ADD / EDIT FORM */}
+      {showForm && (
+        <Card
+          className="p-6 space-y-6"
+          style={{ border: `2px solid ${brand}` }}
+        >
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">
+              {editingClass ? "Edit Class" : "Add Class"}
+            </h2>
+            <p className="text-text-muted text-sm">
+              Class name and description will appear on event nomination pages.
+            </p>
+          </div>
 
           <div className="space-y-4">
-            {/* CLASS NAME */}
-            <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">
-                Class Name
-              </label>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Class Name</label>
               <input
-                type="text"
-                value={form.class_name}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, class_name: e.target.value }))
-                }
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                className="w-full p-2 border rounded-md"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. 2WD Stock Buggy"
               />
             </div>
 
-            {/* TRACKS */}
-            <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">
-                Tracks
-              </label>
-              <div className="space-y-2">
-                {TRACK_OPTIONS.map((track) => (
-                  <label
-                    key={track}
-                    className="flex items-center gap-2 text-slate-200"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={form.tracks.includes(track)}
-                      onChange={() => toggleTrack(track)}
-                      className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <span className="text-sm">{track}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* ACTION BUTTONS */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleSubmit}
-                className="rounded-full bg-emerald-500 text-slate-950 px-4 py-2 text-sm font-semibold hover:bg-emerald-400 transition-colors"
-              >
-                {editingId ? "Save Changes" : "Add Class"}
-              </button>
-
-              {editingId && (
-                <button
-                  onClick={resetForm}
-                  className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800 transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                className="w-full p-2 border rounded-md"
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional description"
+              />
             </div>
           </div>
-        </div>
 
-        {/* CLASS LIST */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-4">
-          <h2 className="text-xl font-semibold text-slate-50">All Classes</h2>
+          <div className="flex gap-3 pt-2">
+            <Button
+              style={{ backgroundColor: brand }}
+              className="text-white"
+              onClick={saveClass}
+            >
+              Save
+            </Button>
 
-          {classes.length === 0 ? (
-            <p className="text-sm text-slate-400">No classes defined yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {classes.map((cls) => (
-                <div
-                  key={cls.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950 px-4 py-3"
-                >
-                  <div className="space-y-1">
-                    <div className="font-medium text-slate-100">
-                      {cls.class_name}
+            <Button
+              className="bg-gray-200"
+              onClick={() => setShowForm(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* CLASS LIST */}
+      <Card
+        className="p-6 space-y-4"
+        style={{ border: `2px solid ${brand}` }}
+      >
+        <h2 className="text-lg font-semibold">Class List</h2>
+
+        {classes.length === 0 && (
+          <p className="text-text-muted">No classes yet.</p>
+        )}
+
+        {classes.length > 0 && (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={classes.map((c) => c.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-3">
+                {classes.map((cls) => (
+                  <SortableItem key={cls.id} id={cls.id}>
+                    <div className="flex items-center justify-between p-3 border rounded-md bg-white">
+
+                      {/* LEFT SIDE */}
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{cls.name}</span>
+
+                        <div className="relative">
+                          <InformationCircleIcon
+                            className="h-5 w-5 cursor-pointer"
+                            style={{ color: brand }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTooltipId(
+                                tooltipId === cls.id ? null : cls.id
+                              );
+                            }}
+                          />
+
+                          {tooltipId === cls.id && cls.description && (
+                            <div
+                              className="absolute z-50 text-white text-xs p-2 rounded shadow-lg"
+                              style={{
+                                backgroundColor: brand,
+                                top: "120%",
+                                left: 0,
+                                width: "220px",
+                                lineHeight: "1.3",
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {cls.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ACTIONS */}
+                      <div className="flex items-center gap-3">
+                        <PencilIcon
+                          className="h-5 w-5 cursor-pointer text-gray-600"
+                          onClick={() => openEditForm(cls)}
+                        />
+
+                        <TrashIcon
+                          className="h-5 w-5 cursor-pointer text-red-600"
+                          onClick={() => deleteClass(cls)}
+                        />
+                      </div>
                     </div>
-
-                    <div className="text-xs text-slate-400">
-                      Tracks:{" "}
-                      {(tracksByClass[cls.id] || []).join(", ") || "None"}
-                    </div>
-
-                    {!cls.is_active && (
-                      <div className="text-xs text-red-400">Inactive</div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => toggleActive(cls)}
-                      className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 transition-colors"
-                    >
-                      {cls.is_active ? "Disable" : "Enable"}
-                    </button>
-
-                    <button
-                      onClick={() => startEdit(cls)}
-                      className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 transition-colors"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => deleteClass(cls.id)}
-                      className="rounded-full bg-red-500 text-slate-950 px-3 py-1 text-xs font-semibold hover:bg-red-400 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-      </div>
+                  </SortableItem>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </Card>
     </div>
   );
 }

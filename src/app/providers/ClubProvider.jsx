@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
-import { useAuth } from "@/app/providers/AuthProvider";   // ⭐ NEW
+import { useAuth } from "@/app/providers/AuthProvider";
 
 const ClubContext = createContext({
   club: null,
@@ -22,9 +22,8 @@ export function useClub() {
 
 export default function ClubProvider({ children }) {
   const location = useLocation();
-  const { loadingUser } = useAuth();   // ⭐ NEW — wait for auth hydration
+  const { loadingUser } = useAuth();
 
-  // Reserved top-level segments that are NOT club slugs
   const RESERVED_TOP_SEGMENTS = new Set([
     "home",
     "public",
@@ -36,7 +35,6 @@ export default function ClubProvider({ children }) {
     "assets",
   ]);
 
-  // Derive the top-level slug deterministically from the pathname
   const clubSlug = (() => {
     const parts = (location.pathname || "").split("/").filter(Boolean);
     const first = parts.length > 0 ? parts[0] : null;
@@ -54,7 +52,6 @@ export default function ClubProvider({ children }) {
       pathname: location.pathname,
     });
 
-    // If slug is not ready, do NOT load yet
     if (!clubSlug) {
       console.log("ClubProvider: slug not ready — staying in loading state", {
         clubSlug,
@@ -95,12 +92,14 @@ export default function ClubProvider({ children }) {
         const loadedClub = {
           ...data,
           theme,
+          member_badge_url: data.member_badge_url || null,
         };
 
         console.log("ClubProvider: club loaded", {
           slug: clubSlug,
           id: data.id,
         });
+
         setClub(loadedClub);
       } else {
         console.log("ClubProvider: no club found for slug", { clubSlug });
@@ -122,7 +121,6 @@ export default function ClubProvider({ children }) {
       loadingUser,
     });
 
-    // ⭐ NEW: do NOT load club until auth is hydrated
     if (loadingUser) {
       console.log("ClubProvider: waiting for AuthProvider hydration");
       return;
@@ -131,7 +129,6 @@ export default function ClubProvider({ children }) {
     loadClub();
   }, [clubSlug, loadClub, loadingUser]);
 
-  // ⭐ NEW: block rendering until BOTH auth + club are ready
   if (loadingUser || !clubSlug || loadingClub) {
     return (
       <ClubContext.Provider

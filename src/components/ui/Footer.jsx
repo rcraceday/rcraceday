@@ -3,7 +3,7 @@ import rcracedayLogo from "@/assets/RCRaceday_logo_300x300_Powered.png";
 
 export default function Footer() {
   return (
-    <footer className="w-full border-t border-slate-200 bg-white mt-12">
+    <footer className="w-full border-t border-slate-200 bg-white mt-0">
       <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col items-center gap-4">
 
         {/* Logo */}

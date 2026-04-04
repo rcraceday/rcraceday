@@ -381,3 +381,31 @@ a:hover {
   display: block !important;
   text-align: left !important;
 }
+.member-badge {
+  width: 192px;   /* desktop size */
+  height: 192px;
+}
+
+@media (max-width: 768px) {
+  .member-badge {
+    width: 120px;  /* mobile size */
+    height: 120px;
+  }
+}
+/* Desktop default — top right */
+.member-badge {
+  width: 192px;
+  height: 192px;
+  top: 16px;
+  bottom: auto;
+}
+
+/* Mobile override — bottom right */
+@media (max-width: 768px) {
+  .member-badge {
+    width: 120px;
+    height: 120px;
+    top: auto;
+    bottom: 16px;
+  }
+}

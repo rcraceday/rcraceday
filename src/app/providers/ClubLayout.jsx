@@ -39,7 +39,7 @@ export default function ClubLayout({ children, mode = "drivers" }) {
 
     return (
       <ThemeProvider mode={mode} clubTheme={club.theme}>
-        <div className="w-full flex justify-center">
+        <div className="w-full flex justify-center overflow-x-visible">
           <div className="w-full max-w-5xl px-4">
             {children}
           </div>
@@ -70,7 +70,7 @@ export default function ClubLayout({ children, mode = "drivers" }) {
 
   return (
     <ThemeProvider mode={mode} clubTheme={club.theme}>
-      <div className="w-full flex justify-center">
+      <div className="w-full flex justify-center overflow-x-visible">
         <div className="w-full max-w-5xl px-4">
           {children}
         </div>

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/app/providers/AuthProvider";
-import { useMembership } from "@/app/providers/MembershipProvider";
+import { useProfile } from "@/app/providers/ProfileProvider";
 
 import DesktopDropdown from "@/components/ui/DesktopDropdown";
 import MobileDrawer from "@/components/ui/MobileDrawer";
@@ -13,8 +13,10 @@ export default function HamburgerMenu({ clubSlug }) {
   const [isMobile, setIsMobile] = useState(false);
 
   const { user } = useAuth();
-  const { membership } = useMembership();
-  const isAdmin = membership?.role === "admin";
+  const { profile } = useProfile();
+
+  // ⭐ Correct admin source of truth
+  const isAdmin = profile?.role === "admin";
 
   const items = buildMenuItems({ clubSlug, isAdmin, user });
 

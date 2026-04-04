@@ -1,15 +1,8 @@
 // src/app/providers/AuthProvider.jsx
-// AuthProvider: restores session, loads profile, and exposes auth state via context.
-
-console.log(">>> AUTH PROVIDER MODULE LOADED", import.meta.url);
+// FINAL VERSION — prevents lock collisions during USER_UPDATED
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/supabaseClient";
-
-console.log(">>> SUPABASE CLIENT (module) READY", {
-  supabaseUrlPresent: !!import.meta.env.VITE_SUPABASE_URL,
-  anonKeyPresent: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
-});
 
 const AuthContext = createContext();
 
@@ -21,62 +14,39 @@ export default function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
-
-  // ⭐ The critical hydration flag
-  const [hydrated, setHydrated] = useState(false);
-
   const [signupEmail, setSignupEmail] = useState("");
 
+  /* ------------------------------------------------------------
+     Load profile
+     ------------------------------------------------------------ */
   async function loadProfile(userId) {
-    console.log(">>> loadProfile", { userId });
     if (!userId) {
       setProfile(null);
       return;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
 
-      if (error) {
-        console.error(">>> loadProfile error", error);
-        setProfile(null);
-        return;
-      }
-
-      console.log(">>> loadProfile result", { data });
-      setProfile(data || null);
-    } catch (err) {
-      console.error(">>> loadProfile exception", err);
+    if (error) {
+      console.error(">>> loadProfile error", error);
       setProfile(null);
+      return;
     }
+
+    setProfile(data || null);
   }
 
-  async function refreshUser() {
-    console.log(">>> refreshUser: calling supabase.auth.getUser()");
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error(">>> refreshUser error", error);
-        return null;
-      }
-      console.log(">>> refreshUser result", { user: data?.user ?? null });
-      return data?.user ?? null;
-    } catch (err) {
-      console.error(">>> refreshUser exception", err);
-      return null;
-    }
-  }
-
+  /* ------------------------------------------------------------
+     Handle session
+     ------------------------------------------------------------ */
   async function handleSession(newSession) {
-    console.log(">>> handleSession", { newSession });
-    setSession(newSession ?? null);
+    setSession(newSession);
 
-    const user = newSession?.user ?? (await refreshUser());
-    console.log(">>> handleSession resolved user", { user });
+    const user = newSession?.user ?? null;
 
     if (user?.id) {
       await loadProfile(user.id);
@@ -85,72 +55,68 @@ export default function AuthProvider({ children }) {
     }
   }
 
+  /* ------------------------------------------------------------
+     Mount: ONE getSession call
+     ------------------------------------------------------------ */
   useEffect(() => {
     let mounted = true;
-    console.log(">>> AuthProvider useEffect mount (browser?)", {
-      isBrowser: typeof window !== "undefined",
-    });
 
-    async function loadInitial() {
-      console.log(">>> loadInitial: calling supabase.auth.getSession()");
+    async function init() {
       try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) console.error(">>> getSession error", error);
-
-        console.log(">>> getSession result", { session: data?.session ?? null });
+        const { data: sessionData } = await supabase.auth.getSession();
+        const initialSession = sessionData?.session ?? null;
 
         if (!mounted) return;
 
-        await handleSession(data?.session ?? null);
-
-        // ⭐ Hydration completes here
-        setHydrated(true);
-        setLoadingUser(false);
+        await handleSession(initialSession);
       } catch (err) {
-        console.error(">>> loadInitial exception", err);
-        if (mounted) {
-          setHydrated(true);
-          setLoadingUser(false);
-        }
+        console.error(">>> AuthProvider init error", err);
+      } finally {
+        if (mounted) setLoadingUser(false);
       }
     }
 
-    loadInitial();
+    init();
 
+    /* ------------------------------------------------------------
+       Auth state listener — now with USER_UPDATED guard
+       ------------------------------------------------------------ */
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log(">>> onAuthStateChange", { event, newSession });
         if (!mounted) return;
+
+        // ⭐ CRITICAL FIX ⭐
+        // Prevent MembershipProvider + DriverProvider + NotificationProvider
+        // from reloading during password update (USER_UPDATED).
+        //
+        // This stops the Supabase lock collision and prevents EditProfile
+        // from unmounting and wiping out the success message.
+        if (event === "USER_UPDATED") {
+          return;
+        }
 
         if (event === "SIGNED_OUT") {
           setSession(null);
           setProfile(null);
-          setHydrated(true);
           setLoadingUser(false);
           return;
         }
 
+        // Supabase already includes the updated user in newSession
         await handleSession(newSession);
-
-        // ⭐ Hydration also completes on ANY auth event
-        setHydrated(true);
         setLoadingUser(false);
       }
     );
 
     return () => {
       mounted = false;
-      console.log(">>> AuthProvider unmounting, unsubscribing listener");
       listener?.subscription?.unsubscribe?.();
     };
   }, []);
 
-  // ⭐ BLOCK THE APP until hydration is complete
-  if (!hydrated) {
-    console.log(">>> AuthProvider waiting for hydration…");
-    return <div style={{ padding: 24, textAlign: "center" }}>Loading…</div>;
-  }
-
+  /* ------------------------------------------------------------
+     Merged user
+     ------------------------------------------------------------ */
   const mergedUser =
     session?.user && profile
       ? { ...session.user, ...profile }

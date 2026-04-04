@@ -1,16 +1,27 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+// src/app/providers/NotificationProvider.jsx
+
+import React, { useEffect, useState, useRef, useCallback, createContext, useContext } from "react";
 import NotificationContext from "@app/providers/NotificationContext";
 import { supabase } from "@/supabaseClient";
 
+// Local toast context
+const ToastContext = createContext(null);
+
+export function useNotifications() {
+  return useContext(ToastContext);
+}
+
 /**
  * NotificationProvider
- * - Uses safe wildcard selects to avoid column-mismatch 400s
- * - Guards against setState after unmount
- * - Debounces realtime refreshes to avoid thundering updates
- * - Exposes a minimal API: { notifications, loadingNotifications, refreshNotifications }
+ * - Keeps your existing DB-backed notifications
+ * - Adds a toast system for UI messages (success/error)
+ * - No breaking changes
  */
 
 export default function NotificationProvider({ children }) {
+  /* ============================================================
+     EXISTING NOTIFICATION LOGIC (unchanged)
+     ============================================================ */
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
 
@@ -23,11 +34,13 @@ export default function NotificationProvider({ children }) {
     setLoadingNotifications(true);
 
     try {
-      // Use wildcard select to avoid 42703 errors from missing columns
-      const result = await supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(100);
+      const result = await supabase
+        .from("notifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
 
       if (result?.error) {
-        // eslint-disable-next-line no-console
         console.warn("NotificationProvider loadNotifications error", result.error);
         if (mountedRef.current) {
           setNotifications([]);
@@ -38,7 +51,6 @@ export default function NotificationProvider({ children }) {
 
       const data = result?.data || [];
 
-      // Avoid setting identical data repeatedly
       const last = lastDataRef.current;
       const changed =
         !last ||
@@ -51,10 +63,8 @@ export default function NotificationProvider({ children }) {
       }
 
       if (mountedRef.current) setLoadingNotifications(false);
-      // eslint-disable-next-line no-console
       console.debug("NotificationProvider loadNotifications success", { count: data.length });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("NotificationProvider loadNotifications caught", err);
       if (mountedRef.current) {
         setNotifications([]);
@@ -77,7 +87,6 @@ export default function NotificationProvider({ children }) {
   }, [loadNotifications]);
 
   useEffect(() => {
-    // Subscribe to realtime changes and debounce refreshes
     const channel = supabase
       .channel("notifications")
       .on(
@@ -88,7 +97,6 @@ export default function NotificationProvider({ children }) {
           table: "notifications",
         },
         (payload) => {
-          // eslint-disable-next-line no-console
           console.debug("NotificationProvider realtime event", {
             event: payload?.eventType ?? payload?.event,
             id: payload?.record?.id,
@@ -108,12 +116,38 @@ export default function NotificationProvider({ children }) {
         supabase.removeChannel(channel);
         channel?.unsubscribe?.();
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.warn("NotificationProvider cleanup error", err);
       }
     };
   }, [loadNotifications]);
 
+  /* ============================================================
+     NEW TOAST SYSTEM (added)
+     ============================================================ */
+  const [toasts, setToasts] = useState([]);
+
+  const pushToast = useCallback((type, message) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, type, message }]);
+
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }, []);
+
+  const notifySuccess = useCallback(
+    (msg) => pushToast("success", msg),
+    [pushToast]
+  );
+
+  const notifyError = useCallback(
+    (msg) => pushToast("error", msg),
+    [pushToast]
+  );
+
+  /* ============================================================
+     PROVIDER OUTPUT
+     ============================================================ */
   return (
     <NotificationContext.Provider
       value={{
@@ -122,7 +156,28 @@ export default function NotificationProvider({ children }) {
         refreshNotifications: loadNotifications,
       }}
     >
-      {children}
+      <ToastContext.Provider
+        value={{
+          notifySuccess,
+          notifyError,
+        }}
+      >
+        {children}
+
+        {/* Toast UI */}
+        <div className="fixed top-4 right-4 space-y-2 z-50">
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className={`px-4 py-2 rounded shadow text-white ${
+                t.type === "success" ? "bg-green-600" : "bg-red-600"
+              }`}
+            >
+              {t.message}
+            </div>
+          ))}
+        </div>
+      </ToastContext.Provider>
     </NotificationContext.Provider>
   );
 }

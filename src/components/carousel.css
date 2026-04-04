@@ -1,0 +1,110 @@
+
+
+/* FORCE MOBILE FIRST */
+.carousel-wrapper {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+/* MOBILE LAYOUT */
+.carousel-mobile {
+  display: block !important;
+  width: 100% !important;
+}
+
+.carousel-mobile-card {
+  width: 90% !important;
+  margin: 0 auto !important;
+}
+
+/* DESKTOP HIDDEN ON MOBILE */
+.carousel-desktop {
+  display: none !important;
+}
+
+/* DESKTOP LAYOUT */
+@media (min-width: 640px) {
+  .carousel-mobile {
+    display: none !important;
+  }
+
+  .carousel-desktop {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: 700px !important;
+    height: 300px !important;
+    margin: 0 auto !important;
+  }
+
+  .carousel-card {
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    cursor: pointer !important;
+    transition: all 0.25s ease !important;
+  }
+
+  /* CENTER CARD — 70% */
+  .carousel-card.center {
+    width: 80% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) scale(1) !important;
+    z-index: 10 !important;
+  }
+
+  /* SIDE CARDS — 50% */
+  .carousel-card.ghost-left {
+    width: 80% !important;
+    left: 15% !important;
+    transform: translate(-50%, -50%) scale(0.85) !important;
+    opacity: 0.7 !important;
+  }
+
+  .carousel-card.ghost-right {
+    width: 80% !important;
+    right: 15% !important;
+    transform: translate(50%, -50%) scale(0.85) !important;
+    opacity: 0.7 !important;
+  }
+}
+
+/* CARD INTERNALS */
+.news-card {
+  overflow: hidden !important;
+  background: white !important;
+  border-radius: 8px !important;
+}
+
+.news-card-image {
+  height: 150px !important;
+  background: #e5e5e5 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 600 !important;
+  color: #666 !important;
+}
+
+.news-card-body {
+  padding: 8px !important;
+}
+
+.line {
+  height: 8px !important;
+  background: #e5e5e5 !important;
+  border-radius: 4px !important;
+  margin-bottom: 6px !important;
+}
+
+.line.short {
+  width: 60% !important;
+}
+
+.line.full {
+  width: 100% !important;
+}
+
+.line.medium {
+  width: 75% !important;
+}

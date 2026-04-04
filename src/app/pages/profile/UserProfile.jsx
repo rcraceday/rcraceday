@@ -103,41 +103,43 @@ export default function UserProfile() {
           </div>
         </Card>
 
-        {/* DRIVERS */}
-        <Card
-          className="p-6 space-y-4 w-full text-center"
-          style={{ border: `2px solid ${brand}` }}
-        >
-          <h2 className="text-lg font-semibold flex items-center justify-center gap-2">
-            <UsersIcon className="h-5 w-5" style={{ color: brand }} />
-            Drivers on Account
-          </h2>
+{/* DRIVERS */}
+<Card
+  className="p-6 space-y-4 w-full text-center"
+  style={{ border: `2px solid ${brand}` }}
+>
+  <h2 className="text-lg font-semibold flex items-center justify-center gap-2">
+    <UsersIcon className="h-5 w-5" style={{ color: brand }} />
+    Drivers on Account
+  </h2>
 
-          {drivers?.length > 0 ? (
-            <ul className="space-y-1">
-              {drivers.map((d) => (
-                <li key={d.id} className="text-sm text-text-base">
-                  {d.first_name} {d.last_name}
-                  {d.is_junior && (
-                    <span className="text-text-muted"> (Junior)</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-text-muted">No drivers added yet.</p>
+  {drivers?.length > 0 ? (
+    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+      {drivers.map((d) => (
+        <li key={d.id} style={{ fontSize: "14px", color: "var(--text-base)" }}>
+          {d.first_name} {d.last_name}
+          {d.is_junior && (
+            <span style={{ color: "var(--text-muted)" }}> (Junior)</span>
           )}
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
+      No drivers added yet.
+    </p>
+  )}
 
-          <div className="pt-2 flex justify-center">
-            <Button
-              variant="primary"
-              className="!w-auto !px-6 !py-1.5 !text-sm !rounded-md"
-              onClick={() => navigate(`/${clubSlug}/app/profile/drivers`)}
-            >
-              Manage Drivers
-            </Button>
-          </div>
-        </Card>
+  <div className="pt-2 flex justify-center">
+    <Button
+      variant="primary"
+      className="!w-auto !px-6 !py-1.5 !text-sm !rounded-md"
+      onClick={() => navigate(`/${clubSlug}/app/profile/drivers`)}
+    >
+      Manage Drivers
+    </Button>
+  </div>
+</Card>
 
         {/* LOGOUT REMOVED */}
       </main>

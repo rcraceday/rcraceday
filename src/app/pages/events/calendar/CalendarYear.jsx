@@ -23,10 +23,7 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
         width: "100%",
         border: `3px solid ${brand}`,
         borderRadius: "16px",
-
-        /* ⭐ FIX: remove horizontal padding */
         padding: "20px 0",
-
         overflow: "hidden",
         boxSizing: "border-box",
       }}
@@ -35,16 +32,11 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
         style={{
           width: "100%",
           display: "grid",
-
-          /* ⭐ FIX: center items on mobile */
           justifyItems: "center",
-
-          /* ⭐ FIX: allow grid to shrink properly */
           gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-
           gap: "24px",
+          padding: "0 12px 20px",
           boxSizing: "border-box",
-          padding: "0 12px 20px", // bottom padding only
         }}
       >
         {MONTHS.map((label, monthIndex) => {
@@ -56,72 +48,70 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
           return (
             <div
               key={monthIndex}
+              className="rounded-xl shadow-sm overflow-hidden"
               style={{
                 width: "100%",
-                maxWidth: "420px", // ⭐ keeps cards centered and prevents drift
-
+                maxWidth: "420px",
+                border: `2px solid ${brand}`,
+                background: "white",
                 display: "flex",
                 flexDirection: "column",
-                gap: "16px",
-
-                background: "white",
-                borderRadius: "12px",
-                padding: "16px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                boxSizing: "border-box",
               }}
             >
+              {/* BLUE HEADER BAR */}
               <div
                 style={{
-                  fontSize: "20px",
-                  fontWeight: 700,
-                  color: "#222",
+                  background: brand,
+                  color: "white",
+                  padding: "12px 16px",
+                  fontSize: "16px",
+                  fontWeight: 600,
                 }}
               >
                 {label}
               </div>
 
-              {monthEvents.length === 0 && (
-                <div
-                  style={{
-                    fontSize: "14px",
-                    color: "#999",
-                    padding: "8px 0",
-                  }}
-                >
-                  No events
-                </div>
-              )}
-
-              {monthEvents.map((event) => (
-                <div
-                  key={event.id}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-
-                    /* ⭐ FIX: align date + card */
-                    paddingLeft: "4px",
-                  }}
-                >
+              {/* CARD BODY */}
+              <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                {monthEvents.length === 0 && (
                   <div
                     style={{
                       fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#333",
+                      color: "#999",
+                      padding: "4px 0",
                     }}
                   >
-                    {formatDate(event.event_date)}
+                    No events
                   </div>
+                )}
 
-                  <CalendarEventCard
-                    event={event}
-                    brand={brand}
-                    onNavigate={() => onEventClick?.(event)} // ⭐ works once Calendar.jsx passes it
-                  />
-                </div>
-              ))}
+                {monthEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        color: "#333",
+                      }}
+                    >
+                      {formatDate(event.event_date)}
+                    </div>
+
+                    <CalendarEventCard
+                      event={event}
+                      brand={brand}
+                      onNavigate={() => onEventClick?.(event)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
-import { useTheme } from "@/app/providers/ThemeProvider";
+import { useClub } from "@/app/providers/ClubProvider";
 
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 import AdminSearchBar from "@/components/admin/AdminSearchBar.jsx";
-import AdminPanel from "@/components/admin/AdminPanel.jsx";
-import AdminCard from "@/components/admin/AdminCard.jsx";
+
+import { CalendarDaysIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 
 function formatDate(dateString) {
   if (!dateString) return "";
@@ -30,7 +32,9 @@ function isNominationsOpen(event) {
 
 export default function AdminEvents() {
   const { clubSlug } = useParams();
-  const { palette } = useTheme();
+  const { club } = useClub();
+
+  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +44,8 @@ export default function AdminEvents() {
   const [trackFilter, setTrackFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("asc");
+
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -81,7 +87,7 @@ export default function AdminEvents() {
     return list.filter((e) => {
       const q = query.toLowerCase();
       const name = (e.name || "").toLowerCase();
-      const track = (e.track_type || e.track || "").toLowerCase();
+      const track = (e.track || "").toLowerCase();
       const dateStr = formatDate(e.event_date).toLowerCase();
       const open = isNominationsOpen(e);
 
@@ -121,14 +127,9 @@ export default function AdminEvents() {
     const payload = {
       name: `${event.name || "Event"} (Copy)`,
       event_date: event.event_date,
-      track_type: event.track_type,
-      open_at: event.open_at,
-      close_at: event.close_at,
-      logourl: event.logourl,
-      logoUrl: event.logoUrl,
       track: event.track,
-      classes: event.classes,
       description: event.description,
+      logoUrl: event.logoUrl,
       nominations_open: null,
       nominations_close: null,
       member_price: event.member_price,
@@ -152,210 +153,208 @@ export default function AdminEvents() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[linear-gradient(135deg,#d4d4d4,#f0f0f0,#c8c8c8)]">
-      <div className="max-w-6xl mx-auto px-4 py-10 space-y-10">
+    <div className="min-h-screen w-full bg-background text-text-base">
 
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold text-gray-900">Events</h1>
+      {/* ADMIN HEADER */}
+      <section className="w-full border-b border-surfaceBorder bg-surface">
+  <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
 
-          <Link
-            to={`/${clubSlug}/admin/events/new`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm font-medium transition no-underline"
-            style={{ textDecoration: "none" }}
+    {/* LEFT: ICON + TITLE */}
+    <div className="flex items-center gap-2">
+      <CalendarDaysIcon className="h-5 w-5" style={{ color: brand }} />
+      <h1 className="text-xl font-semibold tracking-tight">Manage Events</h1>
+    </div>
+
+    {/* RIGHT: BACK TO DASHBOARD (DESKTOP ONLY) */}
+    <Link to={`/${clubSlug}/app/admin`}>
+      <Button
+        variant="secondary"
+        className="!rounded-md !px-3 !py-1.5 !text-sm"
+      >
+        Back to Dashboard
+      </Button>
+    </Link>
+
+  </div>
+</section>
+
+
+      {/* ADD EVENT BUTTON */}
+      <div className="max-w-3xl mx-auto px-4 pt-6 flex justify-end">
+        <Link
+          to={`/${clubSlug}/app/admin/events/new`}
+          className="no-underline"
+        >
+          <Button
+            className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium text-white"
+            style={{ backgroundColor: brand }}
           >
-            ➕ <span>Add Event</span>
-          </Link>
-        </div>
+            ➕ Add Event
+          </Button>
+        </Link>
+      </div>
 
-        <div className="flex flex-wrap gap-3">
+      {/* MAIN CONTENT */}
+      <div className="max-w-3xl mx-auto px-4 py-10 space-y-10">
 
-          <AdminSearchBar
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search…"
-          />
+        {/* BLUE FILTER BAR */}
+<button
+  onClick={() => setShowFilters(!showFilters)}
+  className="w-full flex items-center justify-between px-4 py-3 rounded-md text-white font-medium"
+  style={{ backgroundColor: brand }}
+>
+  <span>Filters</span>
+  <ChevronDownIcon
+    className={`h-5 w-5 transition-transform ${
+      showFilters ? "rotate-180" : ""
+    }`}
+  />
+</button>
 
-          <select
-            value={trackFilter}
-            onChange={(e) => setTrackFilter(e.target.value)}
-            className="w-full sm:w-40 text-sm"
-            style={{
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              background: "white",
-              padding: "6px 10px",
-              boxSizing: "border-box",
-            }}
-          >
-            <option value="all">All Tracks</option>
-            <option value="dirt">Dirt</option>
-            <option value="sic">SIC</option>
-          </select>
+{/* COLLAPSIBLE FILTERS */}
+{showFilters && (
+  <div className="space-y-4 p-4 border border-gray-200 rounded-md bg-white">
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-48 text-sm"
-            style={{
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              background: "white",
-              padding: "6px 10px",
-              boxSizing: "border-box",
-            }}
-          >
-            <option value="all">All Status</option>
-            <option value="open">Nominations Open</option>
-            <option value="closed">Nominations Closed</option>
-          </select>
+    {/* SEARCH BAR — FULL WIDTH */}
+    <AdminSearchBar
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Search…"
+      className="w-full"
+    />
 
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            className="w-full sm:w-40 text-sm"
-            style={{
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              background: "white",
-              padding: "6px 10px",
-              boxSizing: "border-box",
-            }}
-          >
-            <option value="asc">Date ↑</option>
-            <option value="desc">Date ↓</option>
-          </select>
+    {/* DROPDOWNS + CLEAR BUTTON */}
+<div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
 
-          <button
-            onClick={clearFilters}
-            className="text-sm"
-            style={{
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              background: "#e5e7eb",
-              padding: "6px 14px",
-              boxSizing: "border-box",
-            }}
-          >
-            Clear
-          </button>
-        </div>
+  <select
+    value={trackFilter}
+    onChange={(e) => setTrackFilter(e.target.value)}
+    className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
+  >
+    <option value="all">All Tracks</option>
+    <option value="dirt">Dirt</option>
+    <option value="sic">SIC</option>
+  </select>
 
-        {loading && <p className="text-gray-500">Loading events…</p>}
+  <select
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+    className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
+  >
+    <option value="all">All Status</option>
+    <option value="open">Nominations Open</option>
+    <option value="closed">Nominations Closed</option>
+  </select>
 
-        <div className="space-y-6">
-          {filteredEvents.map((event) => {
+  <select
+    value={sortOrder}
+    onChange={(e) => setSortOrder(e.target.value)}
+    className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
+  >
+    <option value="asc">Date ↑</option>
+    <option value="desc">Date ↓</option>
+  </select>
+
+  <Button
+    variant="secondary"
+    className="w-full !rounded-md !px-3 !py-1.5 !text-sm"
+    onClick={clearFilters}
+  >
+    Clear
+  </Button>
+
+</div>
+  </div>
+)}
+
+        {/* EVENT LIST — EXACT public Events card layout */}
+        {loading && <p className="text-text-muted">Loading events…</p>}
+
+        {!loading && filteredEvents.length === 0 && (
+          <p className="text-text-muted">No events found.</p>
+        )}
+
+        {!loading &&
+          filteredEvents.map((event) => {
+            const logo = event.logoUrl || event.logourl;
+            const track = event.track;
             const open = isNominationsOpen(event);
-            const logoSrc = event.logoUrl || event.logourl || null;
             const isBusy = savingId === event.id;
 
             return (
-              <div
+              <Card
                 key={event.id}
-                className="p-5 rounded-lg border"
-                style={{
-                  borderColor: "#dc2626",
-                  borderWidth: "2px",
-                  background: "white",
-                }}
+                className="p-0 rounded-lg bg-white"
+                style={{ border: `2px solid ${brand}` }}
               >
-                <div className="flex items-start gap-6 bg-transparent">
+                <div className="p-4 flex flex-col md:flex-row gap-4 items-start">
 
-                  <div className="flex gap-4 flex-grow min-w-0 bg-transparent">
+                  {/* LOGO */}
+                  {logo && (
+                    <div className="w-24 h-24 bg-white border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                      <img
+                        src={logo}
+                        alt="Event Logo"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  )}
 
-                    {logoSrc && (
-                      <div className="w-16 h-16 rounded-md overflow-hidden flex items-center justify-center border border-gray-300 bg-white">
-                        <img
-                          src={logoSrc}
-                          alt="Event Logo"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    )}
+                  {/* TEXT */}
+                  <div className="flex-1 space-y-2">
+                    <div className="text-lg font-semibold leading-snug">
+                      {event.name}
+                    </div>
 
-                    <div className="space-y-1">
-                      <p className="text-lg font-semibold text-gray-900 truncate">
-                        {event.name}
-                      </p>
-
-                      <p className="text-sm text-gray-500">
-                        {event.event_date ? formatDate(event.event_date) : "No date set"}
-                      </p>
-
-                      {event.track_type && (
-                        <p className="text-xs text-gray-500">
-                          Track: {event.track_type}
-                        </p>
-                      )}
-
-                      <p className="text-xs text-gray-500">
-                        Nominations:{" "}
-                        <span className="font-semibold text-gray-900">
-                          {event.nomination_count}
-                        </span>
-                      </p>
+                    <div className="text-sm text-text-muted leading-tight space-y-0.5">
+                      <div><strong>Event Date:</strong> {formatDate(event.event_date)}</div>
+                      <div><strong>Track:</strong> {track}</div>
+                      <div><strong>Nominations:</strong> {event.nomination_count}</div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2 text-xs flex-shrink-0 min-w-[240px]">
+                  {/* ACTIONS */}
+                  <div className="flex flex-col gap-2 w-full md:w-auto">
 
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
-                        open
-                          ? "bg-green-100 text-green-700 border-green-300"
-                          : "bg-red-100 text-red-700 border-red-300"
-                      }`}
+                    <Link
+                      to={`/${clubSlug}/app/admin/events/${event.id}`}
+                      className="no-underline"
                     >
-                      {open ? "Nominations Open" : "Nominations Closed"}
-                    </span>
-
-                    <div className="text-[11px] text-gray-500 text-right leading-tight">
-                      {event.nominations_open && (
-                        <div>Opens: {formatDate(event.nominations_open)}</div>
-                      )}
-                      {event.nominations_close && (
-                        <div>Closes: {formatDate(event.nominations_close)}</div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap justify-end gap-2 pt-1">
-
-                      <Link
-                        to={`/${clubSlug}/admin/events/${event.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border bg-white hover:bg-gray-100"
+                      <Button
+                        className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium"
+                        style={{ backgroundColor: brand }}
                       >
-                        ✏️ Edit
-                      </Link>
+                        Edit Event
+                      </Button>
+                    </Link>
 
-                      <Link
-                        to={`/${clubSlug}/admin/events/${event.id}/nominations`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border bg-white hover:bg-gray-100"
+                    <Link
+                      to={`/${clubSlug}/app/admin/events/${event.id}/nominations`}
+                      className="no-underline"
+                    >
+                      <Button
+                        variant="secondary"
+                        className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium"
                       >
-                        📝 Nominations
-                      </Link>
+                        View Nominations
+                      </Button>
+                    </Link>
 
-                      <Link
-                        to={`/${clubSlug}/admin/events/${event.id}/classes`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border bg-white hover:bg-gray-100"
-                      >
-                        📦 Classes
-                      </Link>
+                    <Button
+                      variant="secondary"
+                      disabled={isBusy}
+                      onClick={() => handleDuplicate(event)}
+                      className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium"
+                    >
+                      {isBusy ? "Duplicating…" : "Duplicate"}
+                    </Button>
 
-                      <button
-                        onClick={() => handleDuplicate(event)}
-                        disabled={isBusy}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border bg-white hover:bg-gray-100 disabled:opacity-60"
-                      >
-                        📄 {isBusy ? "Duplicating…" : "Duplicate"}
-                      </button>
-
-                    </div>
                   </div>
+
                 </div>
-              </div>
+              </Card>
             );
           })}
-        </div>
-
       </div>
     </div>
   );

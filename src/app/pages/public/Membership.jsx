@@ -1,13 +1,22 @@
 // src/app/pages/public/Membership.jsx
 import { useOutletContext, Link } from "react-router-dom";
-import { useMembership } from "@/app/providers/MembershipProvider";
 import ClubHero from "@/components/ui/ClubHero";
 
 export default function Membership() {
   const { club } = useOutletContext();
-  const clubSlug = club?.slug;
 
-  // ✅ Use the hook — do NOT use useContext(MembershipContext)
+  // â­ Prevent 400 errors â€” wait for club to load
+  if (!club) {
+    return (
+      <div className="min-h-screen w-full bg-background text-text-base flex items-center justify-center">
+        <p className="text-text-muted text-sm">Loading clubâ€¦</p>
+      </div>
+    );
+  }
+
+  const clubSlug = club.slug;
+
+  // MembershipProvider (correct source of truth)
   const { membership, loadingMembership } = useMembership();
 
   const now = new Date();
@@ -15,16 +24,16 @@ export default function Membership() {
     membership?.endDateObj ??
     (membership?.end_date ? new Date(membership.end_date) : null);
 
+  // â­ NEW LOGIC â€” membership exists = member
+  const isMember = !!membership;
+
   const isActive =
-    membership &&
-    !loadingMembership &&
-    membership.status?.toLowerCase() === "active" &&
+    isMember &&
     endDate &&
     endDate >= now;
 
   const isExpired =
-    membership &&
-    !loadingMembership &&
+    isMember &&
     endDate &&
     endDate < now;
 
@@ -50,13 +59,13 @@ export default function Membership() {
 
           <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-2">
             {loadingMembership && (
-              <p className="text-text-muted text-sm">Loading membership…</p>
+              <p className="text-text-muted text-sm">Loading membershipâ€¦</p>
             )}
 
-            {!loadingMembership && !membership && (
+            {!loadingMembership && !isMember && (
               <>
                 <p className="font-medium text-text-base">
-                  You’re not currently a member.
+                  Youâ€™re not currently a member.
                 </p>
                 <p className="text-sm text-text-muted">
                   Support the club and unlock full access to events, nominations, and member benefits.
@@ -64,26 +73,26 @@ export default function Membership() {
               </>
             )}
 
-            {!loadingMembership && membership && isActive && (
+            {!loadingMembership && isMember && isActive && (
               <>
                 <p className="font-medium text-emerald-700">
-                  You’re an active member — thank you for supporting the club.
+                  Youâ€™re an active member â€” thank you for supporting the club.
                 </p>
                 <p className="text-sm text-text-muted">
-                  <strong>Membership type:</strong> {prettyType} •{" "}
+                  <strong>Membership type:</strong> {prettyType} â€¢{" "}
                   <strong>Valid until:</strong>{" "}
                   {endDate?.toLocaleDateString()}
                 </p>
               </>
             )}
 
-            {!loadingMembership && membership && isExpired && (
+            {!loadingMembership && isMember && isExpired && (
               <>
                 <p className="font-medium text-amber-700">
                   Your membership has expired.
                 </p>
                 <p className="text-sm text-text-muted">
-                  <strong>Last membership type:</strong> {prettyType} •{" "}
+                  <strong>Last membership type:</strong> {prettyType} â€¢{" "}
                   <strong>Expired on:</strong>{" "}
                   {endDate?.toLocaleDateString()}
                 </p>
@@ -93,7 +102,7 @@ export default function Membership() {
         </section>
 
         {/* BENEFITS */}
-        {(!membership || isExpired) && (
+        {(!isMember || isExpired) && (
           <section className="space-y-4">
             <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
               Member benefits
@@ -105,7 +114,7 @@ export default function Membership() {
                 <li>Insurance coverage</li>
                 <li>Junior members race free</li>
                 <li>Access to RCRA sanctioned events</li>
-                <li>Helps increase the club’s profile for council and government investment</li>
+                <li>Helps increase the clubâ€™s profile for council and government investment</li>
                 <li>Voting rights at AGM</li>
               </ul>
             </div>
@@ -121,20 +130,20 @@ export default function Membership() {
           <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4 text-sm text-text-muted">
             <div>
               <h3 className="font-semibold text-text-base mb-1">
-                Full Year (Jan – Dec)
+                Full Year (Jan â€“ Dec)
               </h3>
-              <p>Single: $80 • Family: $110 • Junior: $40</p>
+              <p>Single: $80 â€¢ Family: $110 â€¢ Junior: $40</p>
             </div>
 
             <div>
               <h3 className="font-semibold text-text-base mb-1">
-                Half Year (Jan – Jun / Jul – Dec)
+                Half Year (Jan â€“ Jun / Jul â€“ Dec)
               </h3>
-              <p>Single: $50 • Family: $70</p>
+              <p>Single: $50 â€¢ Family: $70</p>
             </div>
 
             <div className="text-xs space-y-1">
-              <p>* A family includes 1–2 parents/guardians and their children under 16.</p>
+              <p>* A family includes 1â€“2 parents/guardians and their children under 16.</p>
               <p>** Junior members must be aged 16 or under at the time of application.</p>
             </div>
           </div>
@@ -144,7 +153,7 @@ export default function Membership() {
         <section className="space-y-3">
 
           {/* Non-member */}
-          {!loadingMembership && !membership && (
+          {!loadingMembership && !isMember && (
             <Link
               to={`/${clubSlug}/membership/join`}
               className="block text-center py-3 rounded-md font-semibold"
@@ -155,7 +164,7 @@ export default function Membership() {
           )}
 
           {/* Active member */}
-          {!loadingMembership && membership && isActive && (
+          {!loadingMembership && isMember && isActive && (
             <>
               <Link
                 to={`/${clubSlug}/membership/renew`}
@@ -177,7 +186,7 @@ export default function Membership() {
           )}
 
           {/* Expired member */}
-          {!loadingMembership && membership && isExpired && (
+          {!loadingMembership && isMember && isExpired && (
             <>
               <Link
                 to={`/${clubSlug}/membership/renew`}

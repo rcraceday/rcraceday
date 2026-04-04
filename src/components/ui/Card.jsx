@@ -1,9 +1,16 @@
 // src/components/ui/Card.jsx
-export default function Card({ children, className = "", style = {}, ...props }) {
+export default function Card({
+  children,
+  className = "",
+  style = {},
+  noPadding = false,
+  ...props
+}) {
+  // Base style with optional padding removal
   const baseStyle = {
     background: "#FFFFFF",
     borderRadius: "16px",
-    padding: "18px",
+    padding: noPadding ? "0px" : "12px",   // ⭐ FIX: padding can now be removed
     boxShadow: "0 4px 10px rgba(0,0,0,0.12)",
     transition: "all 0.25s ease",
     ...style,

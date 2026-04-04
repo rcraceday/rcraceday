@@ -1,6 +1,7 @@
 ﻿// src/components/ui/Header.jsx
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { useProfile } from "@/app/providers/ProfileProvider";
 import AvatarMenu from "@/components/ui/AvatarMenu";
 import HamburgerMenu from "@/components/ui/HamburgerMenu";
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
@@ -8,6 +9,9 @@ import rcracedayLogo from "@/assets/rcraceday_logo.png";
 export default function Header({ club, hideMenu }) {
   const { clubSlug } = useParams();
   const { user } = useAuth();
+  const { profile } = useProfile();
+
+  const isAdmin = profile?.role === "admin";
 
   const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
   const logoSrc =
@@ -22,7 +26,6 @@ export default function Header({ club, hideMenu }) {
   return (
     <header className="w-full bg-white">
       <div className="w-full" style={{ borderBottom: `4px solid ${brand}` }}>
-        {/* MOBILE = flex row, DESKTOP = grid */}
         <div
           className="
             w-full max-w-screen-lg mx-auto px-4 py-3
@@ -30,8 +33,6 @@ export default function Header({ club, hideMenu }) {
             md:grid md:grid-cols-3 md:items-center md:py-0 md:h-24
           "
         >
-
-          {/* LEFT — RC RaceDay logo → link to ClubSelect */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <img
@@ -42,7 +43,6 @@ export default function Header({ club, hideMenu }) {
             </Link>
           </div>
 
-          {/* CENTER — Club logo */}
           <div className="flex items-center justify-center md:justify-center px-1 md:px-0">
             {logoSrc && (
               <Link to={`/${clubSlug}/app`} className="flex items-center">
@@ -55,22 +55,18 @@ export default function Header({ club, hideMenu }) {
             )}
           </div>
 
-          {/* RIGHT — Menus */}
           {!hideMenu && user && (
             <>
-              {/* Desktop */}
               <div className="hidden md:flex items-center justify-end gap-4">
-                <AvatarMenu />
+                <AvatarMenu isAdmin={isAdmin} />
                 <HamburgerMenu clubSlug={clubSlug} />
               </div>
 
-              {/* Mobile */}
               <div className="flex md:hidden items-center justify-end pr-4">
                 <HamburgerMenu clubSlug={clubSlug} showAvatarInside />
               </div>
             </>
           )}
-
         </div>
       </div>
     </header>

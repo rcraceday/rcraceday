@@ -85,7 +85,6 @@ export default function Events() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("asc");
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [pastOpen, setPastOpen] = useState(false);
 
   /* ===========================
@@ -170,28 +169,6 @@ export default function Events() {
   filteredPast = sortList(filteredPast);
 
   /* ===========================
-     GROUP BY YEAR → MONTH
-     =========================== */
-
-  function groupByYearMonth(list) {
-    const groups = {};
-    list.forEach((event) => {
-      const d = new Date(event.event_date);
-      const year = d.getFullYear();
-      const month = d.toLocaleString("en-GB", { month: "long" });
-
-      if (!groups[year]) groups[year] = {};
-      if (!groups[year][month]) groups[year][month] = [];
-
-      groups[year][month].push(event);
-    });
-    return groups;
-  }
-
-  const upcomingGroups = groupByYearMonth(filteredUpcoming);
-  const pastGroups = groupByYearMonth(filteredPast);
-
-  /* ===========================
      CLEAR FILTERS
      =========================== */
 
@@ -224,317 +201,258 @@ export default function Events() {
       </section>
 
       {/* ===========================
-          FILTERS BUTTON
+          MAIN CONTENT
           =========================== */}
-      <div className="max-w-6xl mx-auto px-4">
-        <Button
-          className="!rounded-md !px-4 !py-2 flex items-center gap-2"
-          style={{ backgroundColor: brand }}
-          onClick={() => setFiltersOpen(!filtersOpen)}
+      <main className="max-w-3xl mx-auto px-4 py-10 space-y-12">
+
+        {/* ===========================
+            UPCOMING EVENTS CARD
+            =========================== */}
+        <div
+          className="rounded-xl shadow-sm overflow-hidden"
+          style={{ border: `2px solid ${brand}`, background: "white" }}
         >
-          <FunnelIcon className="w-5 h-5 text-white" />
-          <span className="text-white text-sm font-medium">Filters</span>
-          {filtersOpen ? (
-            <ChevronUpIcon className="w-5 h-5 text-white" />
-          ) : (
-            <ChevronDownIcon className="w-5 h-5 text-white" />
-          )}
-        </Button>
-      </div>
+          {/* CARD HEADER */}
+          <div
+            className="px-5 py-3"
+            style={{ background: brand, color: "white" }}
+          >
+            <h2 className="text-base font-semibold">Upcoming Events</h2>
+          </div>
 
-      {/* ===========================
-          FILTER PANEL
-          =========================== */}
-      <div
-        className={`overflow-hidden transition-all duration-300 ${
-          filtersOpen ? "max-h-96" : "max-h-0"
-        }`}
-      >
-        <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-          <div className="flex gap-3 flex-wrap">
+          {/* CARD BODY */}
+          <div className="p-5 space-y-8">
 
-            <input
-              type="text"
-              placeholder="Search…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full sm:w-64 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
-            />
+{/* FILTERS */}
+<div className="space-y-4">
+  <div className="flex gap-3 flex-wrap">
 
-            <select
-              value={trackFilter}
-              onChange={(e) => setTrackFilter(e.target.value)}
-              className="w-full sm:w-40 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
-            >
-              <option value="all">All Tracks</option>
-              <option value="dirt">Dirt</option>
-              <option value="sic">SIC</option>
-            </select>
+    <select
+      value={trackFilter}
+      onChange={(e) => setTrackFilter(e.target.value)}
+      className="w-full sm:w-40 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
+    >
+      <option value="all">All Tracks</option>
+      <option value="dirt">Dirt</option>
+      <option value="sic">SIC</option>
+    </select>
 
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full sm:w-48 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
-            >
-              <option value="all">All Types</option>
-              <option value="racing">Racing</option>
-              <option value="practice">Practice</option>
-              <option value="club_meet">Club Meet</option>
-              <option value="championship_round">Championship Round</option>
-              <option value="state_titles">State Titles</option>
-              <option value="national_titles">National Titles</option>
-            </select>
+    <select
+      value={typeFilter}
+      onChange={(e) => setTypeFilter(e.target.value)}
+      className="w-full sm:w-48 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
+    >
+      <option value="all">All Types</option>
+      <option value="racing">Racing</option>
+      <option value="practice">Practice</option>
+      <option value="club_meet">Club Meet</option>
+      <option value="championship_round">Championship Round</option>
+      <option value="state_titles">State Titles</option>
+      <option value="national_titles">National Titles</option>
+    </select>
 
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className="w-full sm:w-40 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
-            >
-              <option value="asc">Date ↑</option>
-              <option value="desc">Date ↓</option>
-            </select>
+    <select
+      value={sortOrder}
+      onChange={(e) => setSortOrder(e.target.value)}
+      className="w-full sm:w-40 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
+    >
+      <option value="asc">Date ↑</option>
+      <option value="desc">Date ↓</option>
+    </select>
 
-            <Button
-              className="!rounded-md !px-4 !py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300"
-              onClick={clearFilters}
-            >
-              Clear
-            </Button>
+  </div>
+</div>
+
+            {/* UPCOMING EVENTS LIST */}
+            {loading && <p className="text-text-muted">Loading events…</p>}
+
+            {!loading && filteredUpcoming.length === 0 && (
+              <p className="text-text-muted">No upcoming events.</p>
+            )}
+
+            {!loading &&
+              filteredUpcoming.map((event) => {
+                const logo = event.logoUrl || event.logourl;
+                const track = event.track_type || event.track;
+                const type = (event.event_type || "racing").toLowerCase();
+                const typeLabel = TYPE_LABELS[type];
+
+                return (
+                  <Card
+                    key={event.id}
+                    className="p-0 rounded-lg bg-white"
+                    style={{ border: `2px solid ${brand}` }}
+                  >
+                    <div className="p-4 flex flex-col md:flex-row gap-4 items-start">
+
+                      {/* LOGO */}
+                      {logo && (
+                        <div className="w-24 h-24 bg-white border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                          <img
+                            src={logo}
+                            alt="Event Logo"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      )}
+
+                      {/* TEXT */}
+                      <div className="flex-1 space-y-2">
+                        <div className="text-lg font-semibold leading-snug">
+                          {event.name}
+                        </div>
+
+                        <div className="text-sm text-text-muted leading-tight space-y-0.5">
+                          <div><strong>Event Date:</strong> {formatDate(event.event_date)}</div>
+                          <div><strong>Event Type:</strong> {typeLabel}</div>
+                          <div><strong>Track:</strong> {track}</div>
+                        </div>
+                      </div>
+
+                      {/* ACTIONS */}
+                      <div className="flex flex-col gap-2 w-full md:w-auto">
+
+                        <Link
+                          to={`/${clubSlug}/app/events/${event.id}`}
+                          className="no-underline"
+                        >
+                          <Button
+                            className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium"
+                            style={{ backgroundColor: brand }}
+                          >
+                            View Event
+                          </Button>
+                        </Link>
+
+                        {isNominationsOpen(event) && (
+                          <Link
+                            to={`/${clubSlug}/app/nominate?eventId=${event.id}`}
+                            className="no-underline"
+                          >
+                            <Button
+                              variant="success"
+                              className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium"
+                            >
+                              Nominate
+                            </Button>
+                          </Link>
+                        )}
+
+                      </div>
+
+                    </div>
+                  </Card>
+                );
+              })}
 
           </div>
         </div>
-      </div>
-
-      {/* ===========================
-          UPCOMING EVENTS
-          =========================== */}
-      <main className="max-w-6xl mx-auto px-4 pt-10 pb-12 space-y-12">
-
-        <section>
-          <h2 className="text-sm font-semibold tracking-wide uppercase text-text-muted mb-4">
-            Upcoming Events
-          </h2>
-
-          {loading && <p className="text-text-muted">Loading events…</p>}
-
-          {!loading && filteredUpcoming.length === 0 && (
-            <p className="text-text-muted">No upcoming events.</p>
-          )}
-
-          {!loading &&
-            Object.keys(upcomingGroups).map((year) => (
-              <div key={year} className="space-y-6 mb-10">
-
-                <h3 className="text-lg font-semibold">{year}</h3>
-
-                {Object.keys(upcomingGroups[year]).map((month) => (
-                  <div key={month} className="space-y-4">
-
-                    <h4 className="text-base font-medium text-text-muted">{month}</h4>
-
-                    {upcomingGroups[year][month].map((event) => {
-                      const logo = event.logoUrl || event.logourl;
-                      const track = event.track_type || event.track;
-                      const type = (event.event_type || "racing").toLowerCase();
-                      const typeLabel = TYPE_LABELS[type];
-
-                      return (
-<Card
-  key={event.id}
-  className="p-0 rounded-lg bg-white"
-  style={{ border: `2px solid ${brand}` }}
->
-  <div className="p-4 flex flex-col md:flex-row gap-4 items-start">
-
-    {/* LOGO */}
-    {logo && (
-      <div className="w-24 h-24 bg-white border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
-        <img
-          src={logo}
-          alt="Event Logo"
-          className="w-full h-full object-contain"
-        />
-      </div>
-    )}
-
-    {/* TEXT + METADATA */}
-    <div className="flex-1 space-y-2">
-      <div className="text-lg font-semibold leading-snug">
-        {event.name}
-      </div>
-
-      <div className="text-sm text-text-muted leading-tight space-y-0.5">
-        <div><strong>Event Date:</strong> {formatDate(event.event_date)}</div>
-        <div><strong>Event Type:</strong> {typeLabel}</div>
-        <div><strong>Track:</strong> {track}</div>
-      </div>
-    </div>
-
-    {/* ACTION BUTTONS */}
-    <div className="flex flex-col gap-2 w-full md:w-auto">
-
-      {/* VIEW EVENT */}
-      <Link
-        to={`/${clubSlug}/app/events/${event.id}`}
-        className="no-underline"
-      >
-        <Button
-          className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium self-start md:self-auto"
-          style={{ backgroundColor: brand }}
-        >
-          View Event
-        </Button>
-      </Link>
-
-      {/* NOMINATE — only if nominations are open */}
-      {isNominationsOpen(event) && (
-        <Link
-          to={`/${clubSlug}/app/nominate?eventId=${event.id}`}
-          className="no-underline"
-        >
-          <Button
-  variant="success"
-  className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium self-start md:self-auto"
->
-  Nominate
-</Button>
-        </Link>
-      )}
-
-    </div>
-
-  </div>
-</Card>
-                      );
-                    })}
-
-                  </div>
-                ))}
-
-              </div>
-            ))}
-        </section>
 
         {/* ===========================
-            PAST EVENTS
+            PAST EVENTS CARD
             =========================== */}
-        <section className="space-y-6">
-
-          <Button
-            className="!rounded-md !px-4 !py-2 flex items-center gap-2"
-            style={{ backgroundColor: brand }}
+        <div
+          className="rounded-xl shadow-sm overflow-hidden"
+          style={{ border: `2px solid ${brand}`, background: "white" }}
+        >
+          {/* CARD HEADER */}
+          <div
+            className="px-5 py-3 flex items-center justify-between cursor-pointer"
+            style={{ background: brand, color: "white" }}
             onClick={() => setPastOpen(!pastOpen)}
           >
-            <ArchiveBoxIcon className="w-5 h-5 text-white" />
-            <span className="text-white text-sm font-medium">
-              {pastOpen ? "Hide Past Events" : "View Past Events"}
-            </span>
+            <h2 className="text-base font-semibold">Past Events</h2>
             {pastOpen ? (
               <ChevronUpIcon className="w-5 h-5 text-white" />
             ) : (
               <ChevronDownIcon className="w-5 h-5 text-white" />
             )}
-          </Button>
+          </div>
 
+          {/* CARD BODY */}
           {pastOpen && (
-            <div className="space-y-10 pt-4">
+            <div className="p-5 space-y-8">
 
               {!loading && filteredPast.length === 0 && (
                 <p className="text-text-muted">No past events.</p>
               )}
 
               {!loading &&
-                Object.keys(pastGroups).map((year) => (
-                  <div key={year} className="space-y-6">
+                filteredPast.map((event) => {
+                  const logo = event.logoUrl || event.logourl;
+                  const track = event.track_type || event.track;
+                  const type = (event.event_type || "racing").toLowerCase();
+                  const typeLabel = TYPE_LABELS[type];
 
-                    <h3 className="text-lg font-semibold">{year}</h3>
+                  return (
+                    <Card
+                      key={event.id}
+                      className="p-0 rounded-lg bg-white opacity-80"
+                      style={{ border: `2px solid ${brand}` }}
+                    >
+                      <div className="p-4 flex flex-col md:flex-row gap-4 items-start">
 
-                    {Object.keys(pastGroups[year]).map((month) => (
-                      <div key={month} className="space-y-4">
+                        {/* LOGO */}
+                        {logo && (
+                          <div className="w-20 h-20 bg-white border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                            <img
+                              src={logo}
+                              alt="Event Logo"
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        )}
 
-                        <h4 className="text-base font-medium text-text-muted">{month}</h4>
+                        {/* TEXT */}
+                        <div className="flex-1 space-y-2">
+                          <div className="text-lg font-semibold leading-snug">
+                            {event.name}
+                          </div>
 
-                        {pastGroups[year][month].map((event) => {
-                          const logo = event.logoUrl || event.logourl;
-                          const track = event.track_type || event.track;
-                          const type = (event.event_type || "racing").toLowerCase();
-                          const typeLabel = TYPE_LABELS[type];
+                          <div className="text-sm text-text-muted leading-tight space-y-0.5">
+                            <div><strong>Event Date:</strong> {formatDate(event.event_date)}</div>
+                            <div><strong>Event Type:</strong> {typeLabel}</div>
+                            <div><strong>Track:</strong> {track}</div>
+                          </div>
+                        </div>
 
-                          return (
-                            <Card
-                              key={event.id}
-                              className="p-0 rounded-lg bg-white opacity-80"
-                              style={{ border: `2px solid ${brand}` }}
+                        {/* ACTIONS */}
+                        <div className="flex flex-col gap-2 w-full md:w-auto">
+
+                          <Link
+                            to={`/${clubSlug}/app/events/${event.id}`}
+                            className="no-underline"
+                          >
+                            <Button
+                              className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium"
+                              style={{ backgroundColor: brand }}
                             >
-                              <div className="p-4 flex flex-col md:flex-row gap-4 items-start">
+                              View Event
+                            </Button>
+                          </Link>
 
-                                {/* LOGO */}
-                                {logo && (
-                                  <div className="w-20 h-20 bg-white border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
-                                    <img
-                                      src={logo}
-                                      alt="Event Logo"
-                                      className="w-full h-full object-contain"
-                                    />
-                                  </div>
-                                )}
+                          <Link
+                            to={`/${clubSlug}/app/events/${event.id}/results`}
+                            className="no-underline"
+                          >
+                            <Button
+                              className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium"
+                              style={{ backgroundColor: brand }}
+                            >
+                              View Results
+                            </Button>
+                          </Link>
 
-                                {/* TEXT + METADATA */}
-                                <div className="flex-1 space-y-2">
-                                  <div className="text-lg font-semibold leading-snug">
-                                    {event.name}
-                                  </div>
-
-                                  <div className="text-sm text-text-muted leading-tight space-y-0.5">
-                                    <div><strong>Event Date:</strong> {formatDate(event.event_date)}</div>
-                                    <div><strong>Event Type:</strong> {typeLabel}</div>
-                                    <div><strong>Track:</strong> {track}</div>
-                                  </div>
-                                </div>
-
-                                {/* ACTION BUTTONS */}
-                                <div className="flex flex-col gap-2 w-full md:w-auto">
-
-                                  <Link
-                                    to={`/${clubSlug}/app/events/${event.id}`}
-                                    className="no-underline"
-                                  >
-                                    <Button
-                                      className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium self-start md:self-auto"
-                                      style={{ backgroundColor: brand }}
-                                    >
-                                      View Event
-                                    </Button>
-                                  </Link>
-
-                                  <Link
-                                    to={`/${clubSlug}/app/events/${event.id}/results`}
-                                    className="no-underline"
-                                  >
-                                    <Button
-                                      className="!rounded-md !px-3 !py-1.5 !text-sm !font-medium self-start md:self-auto"
-                                      style={{ backgroundColor: brand }}
-                                    >
-                                      View Results
-                                    </Button>
-                                  </Link>
-
-                                </div>
-
-                              </div>
-                            </Card>
-                          );
-                        })}
+                        </div>
 
                       </div>
-                    ))}
+                    </Card>
+                  );
+                })}
 
-                  </div>
-                ))}
             </div>
           )}
-
-        </section>
+        </div>
 
       </main>
     </div>

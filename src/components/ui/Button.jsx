@@ -41,11 +41,9 @@ export default function Button({
       text: brand,
       border: brand,
     },
-
-    // ⭐ NEW SUCCESS VARIANT (GREEN BUTTON)
     success: {
-      bg: "#16A34A",       // Green
-      hover: "#15803D",    // Darker green on hover
+      bg: "#16A34A",
+      hover: "#15803D",
       text: "#FFFFFF",
       border: "#15803D",
     },
@@ -58,13 +56,10 @@ export default function Button({
       {...props}
       disabled={disabled}
       className={`
-        block
-        w-full
-        py-3
+        inline-flex
+        items-center
+        justify-center
         rounded-md
-        text-[15px]
-        font-medium
-        text-center
         transition-colors
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${className}
@@ -73,6 +68,7 @@ export default function Button({
         backgroundColor: style.bg,
         color: style.text,
         border: `1px solid ${style.border}`,
+        ...(props.style || {}),
       }}
       onMouseEnter={(e) => {
         if (!disabled) {

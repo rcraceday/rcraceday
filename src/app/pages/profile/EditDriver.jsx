@@ -1,233 +1,345 @@
 // src/app/pages/profile/EditDriver.jsx
-import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
+
+import { useMembership } from "@/app/providers/MembershipProvider";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import Label from "@/components/ui/Label";
-import Textarea from "@/components/ui/Textarea";
 
-import { useDrivers } from "@/app/providers/DriverProvider";
+import { COUNTRIES } from "../../../data/countries";
+
+import DriverProfileCard from "@/components/driver/DriverProfileCard";
+
+import { IdentificationIcon } from "@heroicons/react/24/solid";
 
 export default function EditDriver() {
-  const { driverId, clubSlug } = useParams();
   const navigate = useNavigate();
+  const { id } = useParams();
+  const { club } = useOutletContext();
+  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
 
-  const { drivers, loadingDrivers } = useDrivers();
+  const { membership } = useMembership();
+  const isMember =
+    membership &&
+    membership.membership_type &&
+    membership.membership_type !== "non_member";
 
+  const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [teamName, setTeamName] = useState("");
-  const [manufacturer, setManufacturer] = useState("");
-  const [about, setAbout] = useState("");
-  const [isJunior, setIsJunior] = useState(false);
-  const [visible, setVisible] = useState(true);
-
+  // ------------------------------------------------------------
+  // LOAD DRIVER (UNIFIED TABLE)
+  // ------------------------------------------------------------
   useEffect(() => {
-    if (loadingDrivers) return;
+    async function load() {
+      const { data, error } = await supabase
+        .from("drivers")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-    const driver = drivers.find((d) => String(d.id) === String(driverId));
+      if (error) {
+        console.error(error);
+        setLoading(false);
+        return;
+      }
 
-    if (!driver) {
-      setError("Driver not found.");
+      setDriver(data);
       setLoading(false);
+    }
+
+    load();
+  }, [id]);
+
+  // ------------------------------------------------------------
+  // UPDATE ANY FIELD IN drivers TABLE
+  // ------------------------------------------------------------
+  const update = async (field, value) => {
+    if (!driver) return;
+
+    console.log("Updating field", field, "value", value, "driver.id", driver.id);
+
+
+    setDriver((prev) => ({ ...prev, [field]: value }));
+
+    const { error } = await supabase
+      .from("drivers")
+      .update({ [field]: value })
+      .eq("id", driver.id);
+
+    if (error) console.error("Update error:", error);
+  };
+
+  // ------------------------------------------------------------
+  // PHONETIC NAME
+  // ------------------------------------------------------------
+  const generatePhoneticName = (d) => {
+    const num = d.permanent_number ? d.permanent_number.toString() : "";
+    const first = d.first_name?.trim() || "";
+    const last = d.last_name?.trim() || "";
+
+    if (num) return `${num} ${first} ${last}`.trim();
+    return `${first} ${last}`.trim();
+  };
+
+  // ------------------------------------------------------------
+  // AVATAR UPLOAD + CROP
+  // ------------------------------------------------------------
+  const handleAvatarSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    update("avatar_url", previewUrl);
+
+    const croppedBlob = await cropToSquare(file);
+    await uploadAvatarBlob(croppedBlob);
+  };
+
+  const cropToSquare = (file) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const size = Math.min(img.width, img.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(
+          img,
+          (img.width - size) / 2,
+          (img.height - size) / 2,
+          size,
+          size,
+          0,
+          0,
+          size,
+          size
+        );
+
+        canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.9);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const uploadAvatarBlob = async (blob) => {
+    const fileName = `${driver.id}.jpg`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("driver-avatars")
+      .upload(fileName, blob, {
+        upsert: true,
+        contentType: "image/jpeg",
+      });
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
       return;
     }
 
-    const profile = driver.profile || {};
+    const { data: urlData } = supabase.storage
+      .from("driver-avatars")
+      .getPublicUrl(fileName);
 
-    setFirstName(driver.first_name || "");
-    setLastName(driver.last_name || "");
-    setNickname(profile.nickname || "");
-    setTeamName(profile.team_name || "");
-    setManufacturer(profile.manufacturer || "");
-    setAbout(profile.about || "");
-    setIsJunior(!!driver.is_junior);
-    setVisible(
-      typeof profile.visible_in_directory === "boolean"
-        ? profile.visible_in_directory
-        : true
-    );
+    const publicUrl = urlData.publicUrl;
 
-    setLoading(false);
-  }, [driverId, drivers, loadingDrivers]);
+    await update("avatar_url", publicUrl);
+  };
 
-  const handleSave = useCallback(
-    async (e) => {
-      e.preventDefault();
-      if (saving) return;
+  const handleRemoveAvatar = async () => {
+    const fileName = `${driver.id}.jpg`;
 
-      setSaving(true);
-      setError("");
+    await supabase.storage.from("driver-avatars").remove([fileName]);
 
-      try {
-        const driverPayload = {
-          first_name: firstName,
-          last_name: lastName,
-          is_junior: isJunior,
-        };
+    await update("avatar_url", null);
+  };
 
-        const { error: driverUpdateError } = await supabase
-          .from("drivers")
-          .update(driverPayload)
-          .eq("id", driverId);
+  // ------------------------------------------------------------
+  // SAVE DRIVER (ONLY DRIVER FIELDS)
+  // ------------------------------------------------------------
+  async function save() {
+    if (!driver) return;
 
-        if (driverUpdateError) {
-          setError("Failed to save driver.");
-          setSaving(false);
-          return;
-        }
+    setSaving(true);
 
-        const profilePayload = {
-          driver_id: driverId,
-          nickname,
-          team_name: teamName,
-          manufacturer,
-          about,
-          visible_in_directory: visible,
-        };
+    const phonetic = generatePhoneticName(driver);
 
-        const { error: profileUpsertError } = await supabase
-          .from("driver_profiles")
-          .upsert(profilePayload, { onConflict: "driver_id" });
+    const { error } = await supabase
+  .from("drivers")
+  .update({
+    first_name: driver.first_name,
+    last_name: driver.last_name,
+    gender: driver.gender,
+    country: driver.country,
+    permanent_number: driver.permanent_number,
+  })
+  .eq("id", id);
 
-        if (profileUpsertError) {
-          setError("Failed to save profile.");
-          setSaving(false);
-          return;
-        }
 
-        navigate(`/${clubSlug}/profile/drivers`);
-      } catch (err) {
-        console.error("Save error:", err);
-        setError("Unexpected error saving driver.");
-      } finally {
-        setSaving(false);
-      }
-    },
-    [
-      driverId,
-      firstName,
-      lastName,
-      isJunior,
-      nickname,
-      teamName,
-      manufacturer,
-      about,
-      visible,
-      navigate,
-      clubSlug,
-      saving,
-    ]
-  );
+    if (error) console.error("Save error:", error);
 
-  if (loading) {
-    return (
-      <div className="p-6 max-w-3xl mx-auto">
-        <p className="text-gray-600">Loading driver…</p>
-      </div>
-    );
+    setSaving(false);
+    navigate(-1);
   }
 
+  // ------------------------------------------------------------
+  // LOADING GUARD
+  // ------------------------------------------------------------
+  if (loading || !driver) {
+    return <div className="p-6 text-center text-gray-600">Loading…</div>;
+  }
+
+  // ------------------------------------------------------------
+  // LIVE PREVIEW COLORS
+  // ------------------------------------------------------------
+  const primaryColor = driver.primary_color || "#000000";
+  const secondaryColor = driver.secondary_color || "#ffffff";
+  const previewNumber =
+    driver.permanent_number !== null && driver.permanent_number !== undefined
+      ? driver.permanent_number
+      : "";
+
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <Card className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-xl font-semibold">Edit Driver</h1>
-          <Button
-            variant="secondary"
-            onClick={() => navigate(`/${clubSlug}/profile/drivers`)}
-          >
-            Back
-          </Button>
+    <div className="min-h-screen w-full bg-background text-text-base">
+
+      {/* HEADER */}
+      <section className="w-full border-b border-surfaceBorder bg-surface">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-2">
+          <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
+          <h1 className="text-xl font-semibold tracking-tight">Edit Driver</h1>
         </div>
+      </section>
 
-        {error && <p className="text-red-600 font-medium">{error}</p>}
+      <main className="max-w-3xl mx-auto px-4 py-8 space-y-10">
 
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="First name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-            />
-
-            <Input
-              label="Last name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-            />
+        {/* BASIC INFO CARD */}
+        <Card
+          className="p-0"
+          style={{
+            border: `2px solid ${brand}`,
+            borderRadius: "14px",
+            padding: 0,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: brand,
+              color: "white",
+              padding: "20px 24px",
+              fontWeight: 600,
+              fontSize: "1.1rem",
+            }}
+          >
+            Basic Info
           </div>
 
-          <Input
-            label="Nickname"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-          />
-
-          <Input
-            label="Team name"
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-          />
-
-          <Input
-            label="Manufacturer"
-            value={manufacturer}
-            onChange={(e) => setManufacturer(e.target.value)}
-          />
-
-          <div>
-            <Label>About</Label>
-            <Textarea
-              rows={5}
-              value={about}
-              onChange={(e) => setAbout(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-6">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isJunior}
-                onChange={(e) => setIsJunior(e.target.checked)}
+          <div style={{ backgroundColor: "white", padding: "24px" }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="First Name"
+                value={driver.first_name || ""}
+                onChange={(e) => update("first_name", e.target.value)}
               />
-              Junior
-            </label>
 
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={visible}
-                onChange={(e) => setVisible(e.target.checked)}
+              <Input
+                label="Last Name"
+                value={driver.last_name || ""}
+                onChange={(e) => update("last_name", e.target.value)}
               />
-              Visible in directory
-            </label>
+
+              <Input
+                label="Nickname"
+                value={driver.nickname || ""}
+                onChange={(e) => update("nickname", e.target.value)}
+              />
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Gender</label>
+                <select
+                  value={driver.gender || ""}
+                  onChange={(e) => update("gender", e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm"
+                >
+                  <option value="">Select gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Non-Binary">Non-Binary</option>
+                  <option value="Prefer Not To Say">Prefer Not To Say</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Country</label>
+                <select
+                  value={driver.country || ""}
+                  onChange={(e) => update("country", e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm"
+                >
+                  <option value="">Select country</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.name}>
+                      {c.flag} {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
+        </Card>
 
-          <div className="flex gap-4">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
+        {/* FULL DRIVER PROFILE CARD */}
+        <DriverProfileCard
+          driver={driver}
+          update={update}
+          isMember={isMember}
+          brand={brand}
+          navigate={navigate}
+          club={club}
+          primaryColor={primaryColor}
+          secondaryColor={secondaryColor}
+          previewNumber={previewNumber}
+          handleAvatarSelect={handleAvatarSelect}
+          handleRemoveAvatar={handleRemoveAvatar}
+        />
 
+        {!isMember && (
+          <Card className="p-6 space-y-4 bg-blue-50 border border-blue-200">
+            <h3 className="font-semibold text-blue-700">
+              Become a Member to Unlock Full Driver Profile
+            </h3>
+            <p className="text-sm text-blue-700">
+              Members can set permanent numbers, car details, sponsors, team
+              info, and more.
+            </p>
             <Button
-              type="button"
-              variant="secondary"
-              onClick={() => navigate(`/${clubSlug}/profile/drivers`)}
+              className="w-full bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => navigate(`/${club.slug}/app/membership`)}
             >
-              Cancel
+              Join as a Member
             </Button>
-          </div>
-        </form>
-      </Card>
+          </Card>
+        )}
+
+        <Button
+          className={`w-full py-3 ${
+            isMember
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-gray-300 text-gray-600 cursor-not-allowed"
+          }`}
+          disabled={!isMember || saving}
+          onClick={save}
+        >
+          {saving ? "Saving…" : "Save Changes"}
+        </Button>
+      </main>
     </div>
   );
 }

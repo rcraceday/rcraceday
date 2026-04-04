@@ -1,13 +1,14 @@
+// src/app/pages/events/EventDetails.jsx
+
 /* ===========================
    IMPORTS
    =========================== */
 
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/supabaseClient";
 import Card from "@/components/ui/Card";
 import { useClub } from "@/app/providers/ClubProvider";
-import { useNavigate } from "react-router-dom";
 import {
   CalendarDaysIcon,
   ArrowLeftIcon,
@@ -189,6 +190,12 @@ export default function EventDetails() {
   const nominationsOpen = isNominationsOpen(event);
   const isPast = new Date(event.event_date) < new Date();
 
+  const nominationCount = attending.length;
+  const nominationSuffix =
+    !loadingAttending && nominationCount >= 0
+      ? ` — ${nominationCount} nomination${nominationCount === 1 ? "" : "s"}`
+      : "";
+
   /* ===========================
      ICS DOWNLOAD
      =========================== */
@@ -237,13 +244,9 @@ END:VCALENDAR
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* ===========================
-          PAGE HEADER
-          =========================== */}
-
+      {/* PAGE HEADER */}
       <section className="w-full border-b border-surfaceBorder bg-surface">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-
           <div className="flex items-center gap-2">
             <CalendarDaysIcon className="h-5 w-5" style={{ color: brand }} />
             <h1 className="text-xl font-semibold tracking-tight">Event Details</h1>
@@ -260,16 +263,10 @@ END:VCALENDAR
         </div>
       </section>
 
-      {/* ===========================
-          MAIN CONTENT
-          =========================== */}
-
+      {/* MAIN CONTENT */}
       <main className="max-w-6xl mx-auto px-4 pb-16 space-y-12">
 
-        {/* ===========================
-            EVENT CARD
-            =========================== */}
-
+        {/* EVENT CARD */}
         <section>
           <Card className="p-6" style={{ border: `2px solid ${brand}` }}>
             <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -277,34 +274,55 @@ END:VCALENDAR
               {/* LOGO */}
               <div className="w-32 h-32 bg-white border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
                 {logo && (
-                  <img src={logo} alt="Event Logo" className="w-full h-full object-contain" />
+                  <img
+                    src={logo}
+                    alt="Event Logo"
+                    className="w-full h-full object-contain"
+                  />
                 )}
               </div>
 
               {/* METADATA */}
               <div className="flex-1 space-y-3">
-                <div className="text-lg font-semibold leading-snug">{event.name}</div>
-
-                <div className="text-sm text-text-muted leading-tight space-y-1">
-                  <div><strong>Event Date:</strong> {formatDate(event.event_date)}</div>
-                  <div><strong>Event Type:</strong> {typeLabel}</div>
-                  <div><strong>Track:</strong> {track}</div>
+                <div className="text-lg font-semibold leading-snug">
+                  {event.name}
+                  {nominationSuffix}
                 </div>
 
-                {/* ⭐ NEW — EVENT SCHEDULE */}
+                <div className="text-sm text-text-muted leading-tight space-y-1">
+                  <div>
+                    <strong>Event Date:</strong> {formatDate(event.event_date)}
+                  </div>
+                  <div>
+                    <strong>Event Type:</strong> {typeLabel}
+                  </div>
+                  <div>
+                    <strong>Track:</strong> {track}
+                  </div>
+                </div>
+
+                {/* EVENT SCHEDULE */}
                 <div className="mt-4">
                   <h3 className="font-semibold mb-1">Event Schedule</h3>
                   <ul className="text-sm text-text-muted leading-tight space-y-1">
-                    <li><strong>Event Opens:</strong> {formatTime12(event.event_opens_at)}</li>
-                    <li><strong>Drivers Briefing:</strong> {formatTime12(event.drivers_briefing_at)}</li>
-                    <li><strong>Event Closes:</strong> {formatTime12(event.event_closes_at)}</li>
+                    <li>
+                      <strong>Event Opens:</strong>{" "}
+                      {formatTime12(event.event_opens_at)}
+                    </li>
+                    <li>
+                      <strong>Drivers Briefing:</strong>{" "}
+                      {formatTime12(event.drivers_briefing_at)}
+                    </li>
+                    <li>
+                      <strong>Event Closes:</strong>{" "}
+                      {formatTime12(event.event_closes_at)}
+                    </li>
                   </ul>
                 </div>
               </div>
 
               {/* ACTIONS */}
               <div className="flex flex-col gap-2 md:flex-shrink-0 w-full md:w-auto">
-
                 {!isPast && (
                   <button
                     onClick={downloadICS}
@@ -316,7 +334,10 @@ END:VCALENDAR
                 )}
 
                 {isPast && (
-                  <Link to={`/${clubSlug}/app/events/${event.id}/results`} className="no-underline">
+                  <Link
+                    to={`/${clubSlug}/app/events/${event.id}/results`}
+                    className="no-underline"
+                  >
                     <button
                       className="px-3 py-1.5 rounded-md font-semibold text-white text-sm self-start md:self-auto"
                       style={{ background: brand }}
@@ -340,17 +361,16 @@ END:VCALENDAR
           </Card>
         </section>
 
-        {/* ===========================
-            DRIVERS ATTENDING
-            =========================== */}
-
+        {/* DRIVERS ATTENDING */}
         <section>
           <h2 className="text-sm font-semibold tracking-wide uppercase text-text-muted mb-3">
             Drivers Attending
           </h2>
 
           <Card className="p-4" style={{ border: `2px solid ${brand}` }}>
-            {loadingAttending && <p className="text-text-muted">Loading drivers…</p>}
+            {loadingAttending && (
+              <p className="text-text-muted">Loading drivers…</p>
+            )}
 
             {!loadingAttending && attending.length === 0 && (
               <p className="text-text-muted">No nominations yet.</p>
@@ -393,10 +413,7 @@ END:VCALENDAR
           </Card>
         </section>
 
-        {/* ===========================
-            EVENT RESULTS
-            =========================== */}
-
+        {/* EVENT RESULTS */}
         <section>
           <h2 className="text-sm font-semibold tracking-wide uppercase text-text-muted mb-3">
             Event Results
@@ -407,14 +424,11 @@ END:VCALENDAR
           </Card>
         </section>
 
-        {/* ===========================
-            NOMINATION BUTTON
-            =========================== */}
-
+        {/* NOMINATION BUTTON */}
         <section>
           {nominationsOpen ? (
             <Link
-              to={`/${clubSlug}/app/nominate?eventId=${event.id}`}
+              to={`/${clubSlug}/app/events/${event.id}/nominate`}
               className="block text-center py-3 rounded-md font-semibold text-white"
               style={{ background: "#16A34A" }}
             >

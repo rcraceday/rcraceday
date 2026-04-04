@@ -5,9 +5,6 @@ import { supabase } from "@/supabaseClient";
 import TextInput from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
-// RC RaceDay global logo
-import rcracedayLogo from "@/assets/rcraceday_logo.png";
-
 export default function Login() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
@@ -61,7 +58,7 @@ export default function Login() {
   return (
     <div
       style={{
-        padding: "32px 24px",
+        padding: "32px 24px 0 24px",   // no bottom padding
         width: "100%",
         maxWidth: "360px",
         margin: "0 auto",
@@ -69,6 +66,8 @@ export default function Login() {
         flexDirection: "column",
         alignItems: "center",
         boxSizing: "border-box",
+        minHeight: "100vh",            // forces scroll on mobile
+        justifyContent: "flex-start",
       }}
     >
       {logoSrc && (
@@ -169,22 +168,23 @@ export default function Login() {
         </Link>
       </div>
 
-      {/* RC RaceDay global home link */}
-      <div style={{ marginTop: "40px", display: "flex", justifyContent: "center" }}>
-        <img
-          src={rcracedayLogo}
-          alt="RC RaceDay"
-          onClick={() => navigate("/")}
-          style={{
-            width: "96px",
-            height: "auto",
-            cursor: "pointer",
-            transition: "transform 0.2s ease",
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
-          onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
-        />
-      </div>
+      {/* 🔴 BACK TO CLUBS BUTTON */}
+      <div
+  style={{
+    marginTop: "16px",
+    width: "100%",
+    display: "flex",
+    justifyContent: "center",
+  }}
+>
+  <Button
+    onClick={() => navigate("/")}
+    className="w-full py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700"
+  >
+    ← Back to Clubs
+  </Button>
+</div>
+
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { supabase } from "@/supabaseClient";
 import { useAuth } from "@/app/providers/AuthProvider";
 
 const ProfileContext = createContext({
+  user: null,              // ⭐ ADDED
   profile: null,
   loadingProfile: true,
   refreshProfile: async () => {},
@@ -14,12 +15,12 @@ export function useProfile() {
 }
 
 export default function ProfileProvider({ children }) {
-  const { user, loadingUser } = useAuth();   // ⭐ NEW
+  const { user, loadingUser } = useAuth();   // ⭐ AuthProvider user
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
   async function loadProfile() {
-    // ⭐ NEW: Wait for AuthProvider hydration
+    // ⭐ Wait for AuthProvider hydration
     if (loadingUser) {
       setLoadingProfile(true);
       return;
@@ -49,6 +50,7 @@ export default function ProfileProvider({ children }) {
         return;
       }
 
+      // Create profile if missing
       const meta = user.user_metadata || {};
 
       const firstName =
@@ -97,11 +99,12 @@ export default function ProfileProvider({ children }) {
 
   useEffect(() => {
     loadProfile();
-  }, [user?.id, loadingUser]);   // ⭐ NEW: wait for hydration
+  }, [user?.id, loadingUser]);
 
   return (
     <ProfileContext.Provider
       value={{
+        user,              // ⭐ FIX — expose the real user
         profile,
         loadingProfile,
         refreshProfile: loadProfile,

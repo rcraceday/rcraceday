@@ -37,7 +37,7 @@ export default function EditProfile() {
   const [passwordError, setPasswordError] = useState("");
 
   /* ============================================================
-     EMAIL + PASSWORD LOGIC
+     EMAIL UPDATE
      ============================================================ */
 
   const handleUpdateEmail = async () => {
@@ -64,19 +64,20 @@ export default function EditProfile() {
       return;
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      email: newEmail,
-    });
-
-    if (updateError) {
-      setEmailError("Unable to update email.");
-      return;
-    }
+    await supabase.auth.updateUser({ email: newEmail });
 
     setEmailMessage(
       "A confirmation email has been sent to your new address. Your email will update once confirmed."
     );
+
+    setOldEmail("");
+    setNewEmail("");
+    setEmailPassword("");
   };
+
+  /* ============================================================
+     PASSWORD UPDATE
+     ============================================================ */
 
   const handleChangePassword = async () => {
     setPasswordError("");
@@ -102,16 +103,12 @@ export default function EditProfile() {
       return;
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (updateError) {
-      setPasswordError("Unable to update password.");
-      return;
-    }
+    await supabase.auth.updateUser({ password: newPassword });
 
     setPasswordMessage("Password updated successfully.");
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
   };
 
   return (
@@ -126,111 +123,136 @@ export default function EditProfile() {
 
       {/* MAIN */}
       <main className="max-w-3xl mx-auto px-4 pt-6 pb-10 flex flex-col items-center">
+
+        {/* FIXED CARD — BLUE HEADER FLUSH */}
         <Card
-          className="w-full max-w-[500px] p-6 space-y-8"
-          style={{ border: `2px solid ${brand}` }}
+          className="w-full max-w-[500px] rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
+          style={{
+            border: `2px solid ${brand}`,
+            background: "white",
+            padding: 0, // override internal padding
+          }}
         >
-          {/* USER DETAILS */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Account Details</h2>
-
-            <div className="space-y-4">
-              <Input label="First Name" value={firstName} readOnly />
-              <Input label="Last Name" value={lastName} readOnly />
-            </div>
+          {/* BLUE HEADER BAR */}
+          <div
+            className="px-5 py-3"
+            style={{ background: brand, color: "white" }}
+          >
+            <h2 className="text-base font-semibold">Account Details</h2>
           </div>
 
-          {/* UPDATE EMAIL */}
-          <div className="pt-6 border-t border-surfaceBorder space-y-4">
-            <h2 className="text-lg font-semibold">Update Email</h2>
+          {/* CARD BODY */}
+          <div className="p-6 space-y-10">
 
-            <div className="space-y-4">
-              <Input
-                label="Old Email"
-                value={oldEmail}
-                onChange={(e) => setOldEmail(e.target.value)}
-              />
+            {/* USER DETAILS */}
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold tracking-wide uppercase text-text-muted">
+                Profile Information
+              </h3>
 
-              <Input
-                label="New Email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-              />
+              <div className="space-y-4">
+                <Input label="First Name" value={firstName} readOnly />
+                <Input label="Last Name" value={lastName} readOnly />
+              </div>
+            </section>
 
-              <Input
-                label="Current Password"
-                type="password"
-                value={emailPassword}
-                onChange={(e) => setEmailPassword(e.target.value)}
-              />
+            {/* UPDATE EMAIL */}
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold tracking-wide uppercase text-text-muted">
+                Update Email
+              </h3>
+
+              <div className="space-y-4">
+                <Input
+                  label="Old Email"
+                  value={oldEmail}
+                  onChange={(e) => setOldEmail(e.target.value)}
+                />
+
+                <Input
+                  label="New Email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                />
+
+                <Input
+                  label="Current Password"
+                  type="password"
+                  value={emailPassword}
+                  onChange={(e) => setEmailPassword(e.target.value)}
+                />
+              </div>
+
+              {emailError && <p className="text-sm text-red-500">{emailError}</p>}
+              {emailMessage && (
+                <p className="text-sm text-green-600">{emailMessage}</p>
+              )}
+
+              <Button
+                variant="primary"
+                className="w-full !py-2.5 !text-sm"
+                onClick={handleUpdateEmail}
+              >
+                Update Email
+              </Button>
+            </section>
+
+            {/* CHANGE PASSWORD */}
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold tracking-wide uppercase text-text-muted">
+                Change Password
+              </h3>
+
+              <div className="space-y-4">
+                <Input
+                  label="Old Password"
+                  type="password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                />
+
+                <Input
+                  label="New Password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+
+                <Input
+                  label="Confirm New Password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+
+              {passwordError && (
+                <p className="text-sm text-red-500">{passwordError}</p>
+              )}
+              {passwordMessage && (
+                <p className="text-sm text-green-600">{passwordMessage}</p>
+              )}
+
+              <Button
+                variant="primary"
+                className="w-full !py-2.5 !text-sm"
+                onClick={handleChangePassword}
+              >
+                Change Password
+              </Button>
+            </section>
+
+            {/* BACK TO PROFILE */}
+            <div className="pt-2 flex justify-center">
+              <Button
+                variant="secondary"
+                className="!py-2 !px-4 !text-sm"
+                onClick={() => navigate(`/${clubSlug}/app/profile`)}
+              >
+                Back to Profile
+              </Button>
             </div>
 
-            {emailError && <p className="text-sm text-red-500">{emailError}</p>}
-            {emailMessage && (
-              <p className="text-sm text-green-600">{emailMessage}</p>
-            )}
-
-            <Button
-              variant="primary"
-              className="w-full !py-2.5 !text-sm"
-              onClick={handleUpdateEmail}
-            >
-              Update Email
-            </Button>
-          </div>
-
-          {/* CHANGE PASSWORD */}
-          <div className="pt-6 border-t border-surfaceBorder space-y-4">
-            <h2 className="text-lg font-semibold">Change Password</h2>
-
-            <div className="space-y-4">
-              <Input
-                label="Old Password"
-                type="password"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-              />
-
-              <Input
-                label="New Password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-
-              <Input
-                label="Confirm New Password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-
-            {passwordError && (
-              <p className="text-sm text-red-500">{passwordError}</p>
-            )}
-            {passwordMessage && (
-              <p className="text-sm text-green-600">{passwordMessage}</p>
-            )}
-
-            <Button
-              variant="primary"
-              className="w-full !py-2.5 !text-sm"
-              onClick={handleChangePassword}
-            >
-              Change Password
-            </Button>
-          </div>
-
-          {/* BACK TO PROFILE */}
-          <div className="pt-4 flex justify-center">
-            <Button
-              variant="secondary"
-              className="!py-2 !px-4 !text-sm"
-              onClick={() => navigate(`/${clubSlug}/app/profile`)}
-            >
-              Back to Profile
-            </Button>
           </div>
         </Card>
       </main>

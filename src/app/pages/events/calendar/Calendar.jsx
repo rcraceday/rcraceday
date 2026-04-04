@@ -66,17 +66,15 @@ export default function Calendar() {
 
       {/* HEADER */}
       <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">Calendar</h1>
-        </div>
-      </section>
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
 
-      {/* MAIN */}
-      <main className="max-w-6xl mx-auto px-4 pt-4 pb-10 space-y-4">
+          {/* LEFT: Icon + Title */}
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" style={{ color: brand }} />
+            <h1 className="text-xl font-semibold tracking-tight">Calendar</h1>
+          </div>
 
-        {/* YEAR SELECTOR */}
-        <section className="flex items-center">
+          {/* RIGHT: Year Selector */}
           <select
             className="border border-surfaceBorder rounded-md p-1.5 bg-white shadow-sm text-sm"
             value={year}
@@ -91,21 +89,26 @@ export default function Calendar() {
               );
             })}
           </select>
-        </section>
+
+        </div>
+      </section>
+
+      {/* MAIN */}
+      <main className="max-w-3xl mx-auto px-4 space-y-12 pb-10 flex flex-col">
 
         {/* YEAR VIEW */}
         <section className="transition-all duration-300">
           {loading && <p className="text-text-muted">Loading calendar…</p>}
 
           {!loading && (
-<CalendarYear
-  year={year}
-  events={events}
-  brand={brand}
-  onEventClick={(event) =>
-    navigate(`/${clubSlug}/app/events/${event.id}`)
-  }
-/>
+            <CalendarYear
+              year={year}
+              events={events}
+              brand={brand}
+              onEventClick={(event) =>
+                navigate(`/${clubSlug}/app/events/${event.id}`)
+              }
+            />
           )}
         </section>
 
