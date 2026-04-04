@@ -1,11 +1,5 @@
 // src/app/providers/ClubProvider.jsx
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -46,17 +40,14 @@ export default function ClubProvider({ children }) {
   const [club, setClub] = useState(null);
   const [loadingClub, setLoadingClub] = useState(true);
 
-  const loadClub = useCallback(async () => {
+  // ⭐ FIXED — no useCallback, no stale closures
+  async function loadClub() {
     console.log("ClubProvider.loadClub start", {
       clubSlug,
       pathname: location.pathname,
     });
 
     if (!clubSlug) {
-      console.log("ClubProvider: slug not ready — staying in loading state", {
-        clubSlug,
-        pathname: location.pathname,
-      });
       setClub(null);
       setLoadingClub(true);
       return;
@@ -89,20 +80,12 @@ export default function ClubProvider({ children }) {
         theme.colors = theme.colors || {};
         theme.hero = theme.hero || {};
 
-        const loadedClub = {
+        setClub({
           ...data,
           theme,
           member_badge_url: data.member_badge_url || null,
-        };
-
-        console.log("ClubProvider: club loaded", {
-          slug: clubSlug,
-          id: data.id,
         });
-
-        setClub(loadedClub);
       } else {
-        console.log("ClubProvider: no club found for slug", { clubSlug });
         setClub(null);
       }
     } catch (err) {
@@ -112,9 +95,9 @@ export default function ClubProvider({ children }) {
       setLoadingClub(false);
       console.log("ClubProvider.loadClub finished", { clubSlug });
     }
-  }, [clubSlug, location.pathname]);
+  }
 
-  // ⭐ FIXED EFFECT ⭐
+  // ⭐ FIXED EFFECT — always re-runs when loadingUser flips
   useEffect(() => {
     console.log("ClubProvider useEffect triggered", {
       clubSlug,
@@ -128,7 +111,7 @@ export default function ClubProvider({ children }) {
     }
 
     loadClub();
-  }, [clubSlug, loadingUser]); // ← FIXED
+  }, [clubSlug, loadingUser]);
 
   if (loadingUser || !clubSlug || loadingClub) {
     return (
