@@ -29,9 +29,7 @@ export default function MembershipProvider({ children }) {
 
   const inFlightRef = useRef(false);
 
-  /* ------------------------------------------------------------
-     REAL FIX: Freeze during USER_UPDATED
-     ------------------------------------------------------------ */
+  // Freeze during USER_UPDATED
   const lastAuthEvent = supabase.auth._state?.event;
 
   const loadMembership = useCallback(async () => {
@@ -40,7 +38,6 @@ export default function MembershipProvider({ children }) {
       clubId: user?.club_id,
     });
 
-    // ⭐ Prevent reload during password update
     if (lastAuthEvent === "USER_UPDATED") {
       console.debug(
         "[MembershipProvider] freeze — USER_UPDATED in progress, skipping reload"
@@ -49,6 +46,7 @@ export default function MembershipProvider({ children }) {
     }
 
     if (inFlightRef.current) return;
+
     if (!user?.id) {
       setMembership(null);
       setLoadingMembership(false);
@@ -78,11 +76,9 @@ export default function MembershipProvider({ children }) {
       inFlightRef.current = false;
       setLoadingMembership(false);
     }
-  }, [user?.id, lastAuthEvent]);
+  }, [user?.id, user?.club_id, lastAuthEvent]);
 
-  /* ------------------------------------------------------------
-     Trigger reload when user changes
-     ------------------------------------------------------------ */
+  // Trigger reload when user or club changes
   useEffect(() => {
     if (loadingUser) return;
 
@@ -93,7 +89,7 @@ export default function MembershipProvider({ children }) {
     }
 
     loadMembership();
-  }, [user?.id, loadingUser, loadMembership]);
+  }, [user?.id, user?.club_id, loadingUser, loadMembership]);
 
   return (
     <MembershipContext.Provider

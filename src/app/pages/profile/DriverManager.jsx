@@ -1,6 +1,6 @@
 // src/app/pages/profile/DriverManager.jsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 
@@ -31,7 +31,20 @@ export default function DriverManager() {
   const clubSlug = club?.slug;
 
   // ------------------------------------------------------------
-  // MEMBERSHIP-BASED DRIVER LIMIT (FIXED)
+  // FIRST-TIME ONBOARDING REDIRECT
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (loadingDrivers) return;
+    if (!drivers) return;
+
+    // If user has zero drivers → onboarding page
+    if (drivers.length === 0) {
+      navigate(`/${clubSlug}/app/profile/drivers/welcome`);
+    }
+  }, [loadingDrivers, drivers, clubSlug, navigate]);
+
+  // ------------------------------------------------------------
+  // MEMBERSHIP-BASED DRIVER LIMIT
   // ------------------------------------------------------------
   const canAddDriver = (() => {
     if (!membership) return true;
@@ -91,40 +104,6 @@ export default function DriverManager() {
         <div className="space-y-4">
           {loadingDrivers && (
             <p className="text-gray-600">Loading drivers…</p>
-          )}
-
-          {/* EMPTY STATE */}
-          {!loadingDrivers && drivers.length === 0 && (
-            <>
-              <Card
-                className="p-6 text-center space-y-4"
-                style={{ border: `2px solid ${brand}` }}
-              >
-                <p className="text-gray-700">You haven’t added any drivers yet.</p>
-
-                {canAddDriver && (
-                  <Button
-                    onClick={handleAddDriver}
-                    className="w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    Add Driver
-                  </Button>
-                )}
-              </Card>
-
-              <Card className="p-6 shadow-md bg-white text-left space-y-3">
-                <p>
-                  Every racer in your household needs a driver profile. Adults create a
-                  profile for themselves. Parents create profiles for their junior
-                  racers. Family memberships can add multiple drivers so everyone in the
-                  household can race under one membership.
-                </p>
-                <p>
-                  Creating a driver profile ensures nominations, race numbers, and
-                  results are correctly linked to the right person.
-                </p>
-              </Card>
-            </>
           )}
 
           {/* DRIVER CARDS */}

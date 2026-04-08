@@ -19,8 +19,8 @@ export default function Input({
 
   const brand = theme?.hero?.backgroundColor || "#0A66C2";
 
+  // ⭐ FIX: remove width control — let parent decide
   const baseInputStyle = {
-    width: "100%",
     padding: "10px 14px",
     fontSize: "14px",
     borderRadius: "6px",
@@ -29,12 +29,13 @@ export default function Input({
     color: "#1A1A1A",
     transition: "all 0.2s ease",
     outline: "none",
+    boxSizing: "border-box",   // ⭐ ensures consistent sizing
     ...style,
   };
 
   const handleFocus = (e) => {
     e.target.style.border = `1px solid ${brand}`;
-    e.target.style.boxShadow = `0 0 0 3px ${brand}33`; // subtle brand glow
+    e.target.style.boxShadow = `0 0 0 3px ${brand}33`;
   };
 
   const handleBlur = (e) => {
@@ -43,7 +44,14 @@ export default function Input({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
+        width: "100%",          // ⭐ parent controls width
+      }}
+    >
       {label && (
         <label
           style={{

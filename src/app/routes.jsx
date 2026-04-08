@@ -38,6 +38,9 @@ import AddDriver from "@app/pages/profile/AddDriver";
 import EditDriver from "@app/pages/profile/EditDriver";
 import ChooseNumber from "@app/pages/profile/ChooseNumber";
 
+// ⭐ NEW — ONBOARDING PAGE
+import WelcomeAddDrivers from "@app/pages/profile/WelcomeAddDrivers";
+
 // ADMIN PAGES
 import AdminDashboard from "@app/pages/admin/AdminDashboard";
 import ChampionshipsList from "@app/pages/admin/championships/ChampionshipsList";
@@ -145,6 +148,8 @@ export default function RoutesFile() {
           {/* PROFILE */}
           <Route path="profile" element={<UserProfile />} />
           <Route path="profile/edit" element={<EditProfile />} />
+
+          {/* DRIVER MANAGEMENT */}
           <Route path="profile/drivers" element={<DriverManager />} />
           <Route path="profile/drivers/add" element={<AddDriver />} />
           <Route path="profile/drivers/:id/edit" element={<EditDriver />} />
@@ -153,6 +158,12 @@ export default function RoutesFile() {
             element={<ChooseNumber />}
           />
           <Route path="profile/drivers/:id" element={<DriverProfile />} />
+
+          {/* ⭐ NEW ONBOARDING ROUTE */}
+          <Route
+            path="profile/drivers/welcome"
+            element={<WelcomeAddDrivers />}
+          />
 
           {/* LOGOUT */}
           <Route path="logout" element={<Logout />} />

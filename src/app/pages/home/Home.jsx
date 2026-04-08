@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import { useDrivers } from "@/app/providers/DriverProvider";
 
 import { supabase } from "@/supabaseClient";
 
@@ -27,6 +28,7 @@ export default function Home() {
   const { club, loadingClub } = useClub();
   const { profile } = useProfile();
   const { membership } = useMembership();
+  const { drivers, loadingDrivers } = useDrivers();
 
   const navigate = useNavigate();
 
@@ -44,9 +46,25 @@ export default function Home() {
     { title: "News 5" },
   ];
 
-  // ⭐ Correct admin detection
   const isAdmin = profile?.role === "admin";
 
+  // ------------------------------------------------------------
+  // FIRST-TIME USER REDIRECT → ADD DRIVERS
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (!clubSlug) return;
+    if (loadingDrivers) return;
+    if (!drivers) return;
+
+    // First login → no drivers → onboarding
+    if (drivers.length === 0) {
+      navigate(`/${clubSlug}/app/profile/drivers/welcome`, { replace: true });
+    }
+  }, [clubSlug, loadingDrivers, drivers, navigate]);
+
+  // ------------------------------------------------------------
+  // FETCH NEXT EVENT
+  // ------------------------------------------------------------
   useEffect(() => {
     if (!club?.id) return;
 
@@ -240,7 +258,7 @@ export default function Home() {
 
           </div>
 
-          {/* ADMIN BUTTON — FULL WIDTH */}
+          {/* ADMIN BUTTON */}
           {isAdmin && (
             <div className="mt-6">
               <Button
