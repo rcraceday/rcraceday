@@ -41,9 +41,6 @@ export default function WelcomeAddDrivers() {
   const [clubMembers, setClubMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  const capitalise = (str) =>
-    str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-
   const membershipType = membership?.membership_type;
   const membershipId = membership?.id;
   const isNonMember = membershipType === "non_member";
@@ -102,8 +99,9 @@ export default function WelcomeAddDrivers() {
         return;
       }
 
-      const trimmedFirst = capitalise(firstName.trim());
-      const trimmedLast = capitalise(lastName.trim());
+      // ⭐ NO CAPITALISATION — user controls exact name
+      const trimmedFirst = firstName.trim();
+      const trimmedLast = lastName.trim();
 
       if (!trimmedFirst || !trimmedLast) {
         setError("First and last name are required.");
@@ -352,14 +350,14 @@ export default function WelcomeAddDrivers() {
             <Input
               label="First Name"
               value={firstName}
-              onChange={(e) => setFirstName(capitalise(e.target.value))}
+              onChange={(e) => setFirstName(e.target.value)}
               required
             />
 
             <Input
               label="Last Name"
               value={lastName}
-              onChange={(e) => setLastName(capitalise(e.target.value))}
+              onChange={(e) => setLastName(e.target.value)}
               required
             />
 
