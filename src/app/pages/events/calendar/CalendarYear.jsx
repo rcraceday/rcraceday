@@ -23,11 +23,25 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
         width: "100%",
         border: `3px solid ${brand}`,
         borderRadius: "16px",
-        padding: "20px 0",
         overflow: "hidden",
         boxSizing: "border-box",
       }}
     >
+      {/* BLUE HEADER FOR THE YEAR */}
+      <div
+        style={{
+          background: brand,
+          color: "white",
+          padding: "16px 20px",
+          fontSize: "20px",
+          fontWeight: 700,
+          borderBottom: `3px solid ${brand}`,
+        }}
+      >
+        {year}
+      </div>
+
+      {/* MONTH GRID (unchanged) */}
       <div
         style={{
           width: "100%",
@@ -35,7 +49,7 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
           justifyItems: "center",
           gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
           gap: "24px",
-          padding: "0 12px 20px",
+          padding: "20px 12px 24px",
           boxSizing: "border-box",
         }}
       >
@@ -48,7 +62,7 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
           return (
             <div
               key={monthIndex}
-              className="rounded-xl shadow-sm overflow-hidden"
+              className="rounded-md shadow-sm overflow-hidden"
               style={{
                 width: "100%",
                 maxWidth: "420px",
@@ -58,7 +72,7 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
                 flexDirection: "column",
               }}
             >
-              {/* BLUE HEADER BAR */}
+              {/* BLUE HEADER BAR FOR MONTH */}
               <div
                 style={{
                   background: brand,
@@ -72,7 +86,14 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
               </div>
 
               {/* CARD BODY */}
-              <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div
+                style={{
+                  padding: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                }}
+              >
                 {monthEvents.length === 0 && (
                   <div
                     style={{

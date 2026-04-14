@@ -8,6 +8,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/supabaseClient";
 import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 import { useClub } from "@/app/providers/ClubProvider";
 import {
   CalendarDaysIcon,
@@ -65,9 +66,6 @@ export default function EventDetails() {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [attending, setAttending] = useState([]);
-  const [loadingAttending, setLoadingAttending] = useState(true);
-
   /* ===========================
      FETCH EVENT
      =========================== */
@@ -88,45 +86,6 @@ export default function EventDetails() {
     }
 
     loadEvent();
-  }, [id]);
-
-  /* ===========================
-     FETCH ATTENDING DRIVERS
-     =========================== */
-
-  useEffect(() => {
-    async function loadAttending() {
-      setLoadingAttending(true);
-
-      const { data, error } = await supabase
-        .from("nominations")
-        .select(`
-          id,
-          driver_id,
-          drivers (
-            id,
-            first_name,
-            last_name,
-            number,
-            driver_type,
-            is_junior
-          )
-        `)
-        .eq("event_id", id);
-
-      if (!error && data) {
-        setAttending(
-          data
-            .map((n) => n.drivers)
-            .filter(Boolean)
-            .sort((a, b) => (a.number || 9999) - (b.number || 9999))
-        );
-      }
-
-      setLoadingAttending(false);
-    }
-
-    loadAttending();
   }, [id]);
 
   /* ===========================
@@ -190,12 +149,6 @@ export default function EventDetails() {
   const nominationsOpen = isNominationsOpen(event);
   const isPast = new Date(event.event_date) < new Date();
 
-  const nominationCount = attending.length;
-  const nominationSuffix =
-    !loadingAttending && nominationCount >= 0
-      ? ` — ${nominationCount} nomination${nominationCount === 1 ? "" : "s"}`
-      : "";
-
   /* ===========================
      ICS DOWNLOAD
      =========================== */
@@ -252,19 +205,20 @@ END:VCALENDAR
             <h1 className="text-xl font-semibold tracking-tight">Event Details</h1>
           </div>
 
-          <button
-            onClick={() => navigate(`/${clubSlug}/app/events`)}
-            className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-md border shadow-sm bg-white"
-            style={{ borderColor: brand }}
-          >
-            <ArrowLeftIcon className="h-4 w-4" style={{ color: brand }} />
-            Events
-          </button>
+          <Button
+  variant="secondary"
+  className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
+  onClick={() => navigate(`/${clubSlug}/app/events`)}
+>
+  <ArrowLeftIcon className="h-3 w-3" />
+  Back
+</Button>
         </div>
       </section>
 
       {/* MAIN CONTENT */}
-      <main className="max-w-6xl mx-auto px-4 pb-16 space-y-12">
+                  <main className="max-w-3xl mx-auto px-4 flex-col items-center">
+
 
         {/* EVENT CARD */}
         <section>
@@ -286,7 +240,6 @@ END:VCALENDAR
               <div className="flex-1 space-y-3">
                 <div className="text-lg font-semibold leading-snug">
                   {event.name}
-                  {nominationSuffix}
                 </div>
 
                 <div className="text-sm text-text-muted leading-tight space-y-1">
@@ -321,31 +274,59 @@ END:VCALENDAR
                 </div>
               </div>
 
-              {/* ACTIONS */}
+              {/* ACTIONS — UPDATED */}
               <div className="flex flex-col gap-2 md:flex-shrink-0 w-full md:w-auto">
-                {!isPast && (
-                  <button
-                    onClick={downloadICS}
-                    className="px-3 py-1.5 rounded-md font-semibold text-white text-sm self-start md:self-auto"
-                    style={{ background: brand }}
-                  >
-                    Add to Calendar
-                  </button>
-                )}
 
-                {isPast && (
+                {/* NOMINATE BUTTON (TOP RIGHT) */}
+                {nominationsOpen && (
                   <Link
-                    to={`/${clubSlug}/app/events/${event.id}/results`}
-                    className="no-underline"
+                    to={`/${clubSlug}/app/events/${event.id}/nominate`}
+                    className="no-underline min-w-[120px]"
                   >
-                    <button
-                      className="px-3 py-1.5 rounded-md font-semibold text-white text-sm self-start md:self-auto"
-                      style={{ background: brand }}
+                    <Button
+                      variant="success"
+                      className="!py-1.5 !text-xs w-full"
                     >
-                      View Results
-                    </button>
+                      Nominate
+                    </Button>
                   </Link>
                 )}
+
+                {/* ADD TO CALENDAR — SECONDARY */}
+                <Button
+                  variant="secondary"
+                  onClick={downloadICS}
+                  className="!py-1.5 !text-xs w-full min-w-[120px]"
+                >
+                  Add to Calendar
+                </Button>
+
+                {/* VIEW NOMINATIONS — PRIMARY */}
+                <Link
+                  to={`/${clubSlug}/app/events/${event.id}/nominations`}
+                  className="no-underline min-w-[120px]"
+                >
+                  <Button
+                    variant="primary"
+                    className="!py-1.5 !text-xs w-full"
+                  >
+                    View Nominations
+                  </Button>
+                </Link>
+
+                {/* SEND NOTIFICATION — SECONDARY */}
+                <Link
+                  to={`/${clubSlug}/app/events/${event.id}/notify`}
+                  className="no-underline min-w-[120px]"
+                >
+                  <Button
+                    variant="secondary"
+                    className="!py-1.5 !text-xs w-full"
+                  >
+                    Send Notification
+                  </Button>
+                </Link>
+
               </div>
             </div>
 
@@ -361,88 +342,9 @@ END:VCALENDAR
           </Card>
         </section>
 
-        {/* DRIVERS ATTENDING */}
-        <section>
-          <h2 className="text-sm font-semibold tracking-wide uppercase text-text-muted mb-3">
-            Drivers Attending
-          </h2>
-
-          <Card className="p-4" style={{ border: `2px solid ${brand}` }}>
-            {loadingAttending && (
-              <p className="text-text-muted">Loading drivers…</p>
-            )}
-
-            {!loadingAttending && attending.length === 0 && (
-              <p className="text-text-muted">No nominations yet.</p>
-            )}
-
-            {!loadingAttending && attending.length > 0 && (
-              <div className="space-y-3">
-                {attending.map((d) => (
-                  <div
-                    key={d.id}
-                    className="flex items-center justify-between border-b border-gray-200 pb-2"
-                  >
-                    <div className="flex items-center gap-3">
-                      {d.number && (
-                        <div
-                          className="w-10 h-10 rounded-md flex items-center justify-center text-white font-bold"
-                          style={{ background: brand }}
-                        >
-                          {d.number}
-                        </div>
-                      )}
-
-                      <div className="text-text-base font-medium">
-                        {d.first_name} {d.last_name}
-                      </div>
-                    </div>
-
-                    {d.is_junior && (
-                      <span
-                        className="px-2 py-1 rounded-md text-xs font-semibold"
-                        style={{ background: "#8A0043", color: "white" }}
-                      >
-                        Junior
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        </section>
-
-        {/* EVENT RESULTS */}
-        <section>
-          <h2 className="text-sm font-semibold tracking-wide uppercase text-text-muted mb-3">
-            Event Results
-          </h2>
-
-          <Card className="p-4" style={{ border: `2px solid ${brand}` }}>
-            <p className="text-text-muted">No results posted yet.</p>
-          </Card>
-        </section>
-
-        {/* NOMINATION BUTTON */}
-        <section>
-          {nominationsOpen ? (
-            <Link
-              to={`/${clubSlug}/app/events/${event.id}/nominate`}
-              className="block text-center py-3 rounded-md font-semibold text-white"
-              style={{ background: "#16A34A" }}
-            >
-              Nominate for this Event
-            </Link>
-          ) : (
-            <div
-              className="text-center py-3 rounded-md font-semibold"
-              style={{ background: "#d1d5db", color: "#374151" }}
-            >
-              Nominations Closed
-            </div>
-          )}
-        </section>
+        {/* REMOVED: DRIVERS ATTENDING */}
+        {/* REMOVED: EVENT RESULTS */}
+        {/* REMOVED: NOMINATION BUTTON */}
 
       </main>
     </div>

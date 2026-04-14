@@ -10,23 +10,32 @@ export default function MembershipFeesCard({ brand }) {
       style={{ border: `2px solid ${brand}`, background: "white" }}
     >
       {/* BLUE HEADER */}
-<div
-  className="px-5 py-3"
-  style={{ background: brand, color: "white" }}
->
-  <h2 className="text-base font-semibold tracking-tight">Membership Fees</h2>
-</div>
+      <div
+        className="px-5 py-3"
+        style={{ background: brand, color: "white" }}
+      >
+        <h2 className="text-base font-semibold tracking-tight">
+          Membership Fees
+        </h2>
+      </div>
 
+      {/* BODY */}
       <div className="p-6 text-sm space-y-2">
+
+        {/* FULL YEAR */}
         <p className="font-semibold">FULL YEAR MEMBERSHIP (Jan–Dec)</p>
         <p>Single — $80</p>
         <p>Family* — $110</p>
         <p>Junior** — $40</p>
 
-        <p className="font-semibold pt-3">HALF YEAR MEMBERSHIP (Jan–Jun / Jul–Dec)</p>
+        {/* HALF YEAR */}
+        <p className="font-semibold pt-3">
+          HALF YEAR MEMBERSHIP (Jan–Jun / Jul–Dec)
+        </p>
         <p>Single — $50</p>
         <p>Family* — $70</p>
 
+        {/* FOOTNOTES */}
         <p className="text-xs text-text-muted pt-3">
           * A family includes 1–2 parents (or guardians) and their children under 16.
         </p>

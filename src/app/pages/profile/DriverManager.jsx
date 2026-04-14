@@ -125,11 +125,11 @@ export default function DriverManager() {
 
       {/* CENTERED CONTENT */}
       <div className="w-full flex justify-center">
-        <main className="max-w-[720px] w-full px-4 py-10 flex flex-col gap-10">
+        <main className="max-w-[720px] w-full px-4 flex flex-col gap-10">
 
           {/* DRIVERS */}
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold">Drivers</h2>
+            <h2 className="text-base font-semibold">Drivers</h2>
 
             {loadingDrivers && (
               <p className="text-sm text-text-muted">Loading drivers…</p>

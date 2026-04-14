@@ -1,7 +1,15 @@
+// src/app/pages/membership/UpgradeMembership.jsx
+
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { IdentificationIcon } from "@heroicons/react/24/solid";
+
+import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { useNotifications } from "@app/hooks/useNotifications";
+
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 
 const PRICING = {
   single: { full: 80, half: 50 },
@@ -12,8 +20,11 @@ const PRICING = {
 export default function UpgradeMembership() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
+  const { club } = useClub();
   const { membership, loadingMembership } = useMembership();
   const { notify } = useNotifications();
+
+  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
 
   const [duration, setDuration] = useState("full");
   const [processing, setProcessing] = useState(false);
@@ -29,13 +40,11 @@ export default function UpgradeMembership() {
   if (!membership) {
     return (
       <div className="min-h-screen w-full bg-background text-text-base flex items-center justify-center px-4">
-        <div className="max-w-md w-full space-y-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-sm text-text-muted">
-              You don’t currently have a membership to upgrade.
-            </p>
-          </div>
-        </div>
+        <Card className="p-4 w-full max-w-md" style={{ border: `2px solid ${brand}` }}>
+          <p className="text-sm text-text-muted">
+            You don’t currently have a membership to upgrade.
+          </p>
+        </Card>
       </div>
     );
   }
@@ -43,13 +52,11 @@ export default function UpgradeMembership() {
   if (membership.membership_type === "family") {
     return (
       <div className="min-h-screen w-full bg-background text-text-base flex items-center justify-center px-4">
-        <div className="max-w-md w-full space-y-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-sm text-text-muted">
-              You already have a Family Membership.
-            </p>
-          </div>
-        </div>
+        <Card className="p-4 w-full max-w-md" style={{ border: `2px solid ${brand}` }}>
+          <p className="text-sm text-text-muted">
+            You already have a Family Membership.
+          </p>
+        </Card>
       </div>
     );
   }
@@ -66,7 +73,7 @@ export default function UpgradeMembership() {
     setProcessing(true);
     try {
       notify("Upgrade recorded (simulated).", "success");
-      navigate(`/${clubSlug}/membership`);
+      navigate(`/${clubSlug}/app/membership`);
     } catch (e) {
       notify("There was a problem upgrading your membership.", "error");
     } finally {
@@ -74,108 +81,109 @@ export default function UpgradeMembership() {
     }
   };
 
-  const handleCancel = () => navigate(`/${clubSlug}/membership`);
+  const handleCancel = () => navigate(`/${clubSlug}/app/membership`);
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
-      {/* HERO */}
-      <section className="w-full bg-surface">
-        <div className="max-w-6xl mx-auto px-4 pt-10 pb-10">
-          <div
-            className="rounded-lg"
-            style={{
-              padding: "3px",
-              background:
-                "linear-gradient(315deg, #2e3192, #00aeef, #2e3192)",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
-            }}
-          >
-            <div
-              className="rounded-md text-center"
-              style={{
-                background: "#00438A",
-                padding: "28px 16px",
-              }}
-            >
-              <h1
-                className="text-3xl font-semibold tracking-tight"
-                style={{ color: "white" }}
-              >
-                Upgrade to Family Membership
-              </h1>
-            </div>
-          </div>
+
+      {/* HEADER — MATCHES JOIN MEMBERSHIP */}
+      <section className="w-full border-b border-surfaceBorder bg-surface">
+        <div className="w-full mx-auto px-4 py-4 flex items-center gap-2">
+          <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
+          <h1 className="text-xl font-semibold tracking-tight">
+            Upgrade Membership
+          </h1>
         </div>
       </section>
 
       {/* MAIN */}
-      <main className="max-w-6xl mx-auto px-4 pt-10 pb-12 space-y-8">
-        {/* Step title */}
-        <h2 className="text-lg font-semibold text-text-base">
-          Review upgrade details
-        </h2>
+      <main className="max-w-[720px] mx-auto px-4 py-10 space-y-8">
 
-        <p className="text-sm text-text-muted">
-          Current membership type:{" "}
-          <strong>{currentType.charAt(0).toUpperCase() + currentType.slice(1)}</strong>
-        </p>
+        {/* CARD — EXACT JOIN MEMBERSHIP STYLE */}
+        <Card
+          noPadding
+          className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
+          style={{
+            border: `2px solid ${brand}`,
+            background: "white",
+          }}
+        >
+          {/* BLUE HEADER BAR */}
+          <div
+            className="px-5 py-3"
+            style={{ background: brand, color: "white" }}
+          >
+            <h2 className="text-base font-semibold">
+              Upgrade to Family Membership
+            </h2>
+          </div>
 
-        {/* Duration selection */}
-        <div className="space-y-3">
-          {["full", "half"].map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDuration(d)}
-              className="w-full text-left"
-            >
-              <div
-                className={`rounded-xl border p-4 transition-colors ${
-                  duration === d
-                    ? "border-blue-600 bg-blue-50"
-                    : "border-gray-300 bg-white"
-                } hover:border-blue-500 hover:bg-blue-50`}
+          {/* BODY */}
+          <div className="p-6 space-y-6">
+
+            {/* CURRENT MEMBERSHIP TYPE */}
+            <div className="space-y-1">
+              <p className="text-sm text-text-muted">Current membership type:</p>
+              <p className="text-base font-semibold capitalize">
+                {currentType}
+              </p>
+            </div>
+
+            {/* UPGRADE OPTIONS — MATCH JOIN MEMBERSHIP BUTTON STYLE */}
+            <div className="space-y-4">
+              {["full", "half"].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDuration(d)}
+                  className="w-full text-left rounded-md px-5 py-4 transition"
+                  style={{
+                    background: "#FFFFFF",
+                    border: `2px solid ${
+                      duration === d ? brand : "rgba(0,0,0,0.08)"
+                    }`,
+                    boxShadow:
+                      duration === d
+                        ? `0 0 0 3px ${brand}22`
+                        : "0 1px 2px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-text-base">
+                      {d === "full"
+                        ? "Full Year (Jan – Dec)"
+                        : "Half Year (Jan – Jun / Jul – Dec)"}
+                    </span>
+
+                    <span className="text-text-muted text-sm">
+                      Difference: ${difference}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="flex justify-between pt-2">
+              <Button
+                variant="secondary"
+                className="px-5 py-2"
+                disabled={processing}
+                onClick={handleCancel}
               >
-                <h4 className="font-semibold text-text-base">
-                  {d === "full"
-                    ? "Full Year (Jan – Dec)"
-                    : "Half Year (Jan – Jun / Jul – Dec)"}
-                </h4>
+                Cancel
+              </Button>
 
-                <p className="text-sm text-text-muted">
-                  Current: ${currentPrice} • Family: ${familyPrice} • Difference: ${difference}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
+              <Button
+                className="px-5 py-2"
+                disabled={processing}
+                onClick={handleComplete}
+              >
+                {processing ? "Processing…" : "Confirm Upgrade"}
+              </Button>
+            </div>
 
-        <p className="text-xs text-text-muted">
-          Payment processing and upgrade logic will be wired to the backend.
-        </p>
-
-        {/* CTA buttons */}
-        <div className="flex justify-between pt-4">
-          <button
-            onClick={handleCancel}
-            disabled={processing}
-            className="rounded-md px-5 py-2.5 text-sm font-semibold border border-gray-200 bg-white text-text-base"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={handleComplete}
-            disabled={processing}
-            className="rounded-md px-5 py-2.5 text-sm font-semibold"
-            style={{
-              background: processing ? "#9ca3af" : "#00438A",
-              color: "white",
-            }}
-          >
-            {processing ? "Processing…" : "Confirm upgrade"}
-          </button>
-        </div>
+          </div>
+        </Card>
       </main>
     </div>
   );

@@ -32,10 +32,15 @@ export default function MemberView({ brand, club, membership }) {
   const primaryMember = members?.[0];
   const firstName = primaryMember?.first_name;
 
+  // Determine if user is Single or Junior
+  const isSingleOrJunior =
+    membership?.membership_type === "single" ||
+    membership?.membership_type === "junior";
+
   return (
     <main className="max-w-[720px] mx-auto px-4 py-6 flex flex-col gap-8">
 
-      {/* STATUS CARD (NOW JUST BADGE + THANK YOU) */}
+      {/* STATUS CARD */}
       <Card
         noPadding
         className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
@@ -45,7 +50,6 @@ export default function MemberView({ brand, club, membership }) {
           padding: 0,
         }}
       >
-
         {/* BLUE HEADER BAR */}
         <div
           className="px-5 py-3"
@@ -54,22 +58,22 @@ export default function MemberView({ brand, club, membership }) {
           <h2 className="text-base font-semibold">Membership</h2>
         </div>
 
-        {/* EVERYTHING CENTERED BELOW HEADER */}
+        {/* CENTERED CONTENT */}
         <div className="p-6 flex flex-col items-center text-center space-y-6">
 
           {/* CLUB MEMBER BADGE */}
-<img
-  src={
-    club?.member_badge_url ||
-    "https://mvcttnmclrvaatdgzhpb.supabase.co/storage/v1/object/public/club-assets/Chargers/chargers-member-badge-01.png"
-  }
-  alt={`${club?.name} Member Badge`}
-  style={{
-    height: "200px",
-    width: "200px",
-    objectFit: "contain",
-  }}
-/>
+          <img
+            src={
+              club?.member_badge_url ||
+              "https://mvcttnmclrvaatdgzhpb.supabase.co/storage/v1/object/public/club-assets/Chargers/chargers-member-badge-01.png"
+            }
+            alt={`${club?.name} Member Badge`}
+            style={{
+              height: "200px",
+              width: "200px",
+              objectFit: "contain",
+            }}
+          />
 
           {/* THANK YOU MESSAGE */}
           {firstName && (
@@ -96,7 +100,6 @@ export default function MemberView({ brand, club, membership }) {
         style={{
           border: `2px solid ${brand}`,
           background: "white",
-          padding: 0,
         }}
       >
         <div
@@ -134,13 +137,38 @@ export default function MemberView({ brand, club, membership }) {
               </div>
             ))}
 
+          {/* PRIMARY BUTTON — Edit Members & Drivers */}
           <Button
-            className="w-full !py-2.5 !text-sm mt-2"
+            className="w-full !py-2.5 !text-sm"
             onClick={() => {
-              window.location.href = `/${club.slug}/app/drivers`;
+              window.location.href = `/${club.slug}/app/profile/drivers`;
             }}
           >
             Edit Members &amp; Drivers
+          </Button>
+
+          {/* SECONDARY BUTTON — Change Membership Type */}
+          {isSingleOrJunior && (
+            <Button
+              variant="secondary"
+              className="w-full !py-2.5 !text-sm"
+              onClick={() => {
+                window.location.href = `/${club.slug}/app/membership/renew`;
+              }}
+            >
+              Change Membership Type
+            </Button>
+          )}
+
+          {/* RENEW MEMBERSHIP BUTTON */}
+          <Button
+            variant="secondary"
+            className="w-full !py-2.5 !text-sm"
+            onClick={() => {
+              window.location.href = `/${club.slug}/app/membership/renew`;
+            }}
+          >
+            Renew Membership
           </Button>
         </div>
       </Card>

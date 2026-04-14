@@ -28,9 +28,16 @@ export default function Membership() {
 
       {/* ROUTING */}
       {isMember ? (
-        <MemberView brand={brand} club={club} membership={membership} />
+        <MemberView
+          brand={brand}
+          club={club}
+          membership={membership}
+        />
       ) : (
-        <NonMemberView brand={brand} club={club} />
+        <NonMemberView
+          brand={brand}
+          club={club}
+        />
       )}
     </div>
   );

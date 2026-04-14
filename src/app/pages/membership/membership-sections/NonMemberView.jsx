@@ -19,11 +19,11 @@ export default function NonMemberView({ brand, club }) {
         <RaceFeesCard brand={brand} />
       </div>
 
-      {/* CTA BUTTON */}
+      {/* CTA BUTTON — updated to dynamic JoinMembership */}
       <Button
-        className="w-full bg-blue-600 text-white hover:bg-blue-700"
+        className="w-full !py-2.5 !text-sm"
         onClick={() =>
-          window.location.assign(`/${club.slug}/app/membership/join`)
+          window.location.href = `/${club.slug}/app/membership/join`
         }
       >
         Join Membership

@@ -1,4 +1,4 @@
-// src/app/pages/profile/EditUser.jsx
+// src/app/pages/profile/EditProfile.jsx
 
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -36,6 +36,10 @@ export default function EditProfile() {
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
+  /* ============================================================
+     EMAIL UPDATE
+     ============================================================ */
+
   const handleUpdateEmail = async () => {
     setEmailError("");
     setEmailMessage("");
@@ -70,6 +74,10 @@ export default function EditProfile() {
     setNewEmail("");
     setEmailPassword("");
   };
+
+  /* ============================================================
+     PASSWORD UPDATE
+     ============================================================ */
 
   const handleChangePassword = async () => {
     setPasswordError("");
@@ -114,13 +122,15 @@ export default function EditProfile() {
       </section>
 
       {/* MAIN */}
-<main className="max-w-3xl mx-auto px-4 pt-6 pb-10 flex flex-col space-y-10">
+      <main className="max-w-3xl mx-auto px-4 pt-6 pb-10 flex flex-col items-center">
 
+        {/* FIXED CARD — BLUE HEADER FLUSH */}
         <Card
-          className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
+          className="w-full max-w-[500px] rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
           style={{
             border: `2px solid ${brand}`,
             background: "white",
+            padding: 0, // override internal padding
           }}
         >
           {/* BLUE HEADER BAR */}

@@ -96,7 +96,7 @@ export default function DriverProfile() {
       </section>
 
       {/* MAIN CONTENT */}
-      <main className="max-w-3xl mx-auto px-4 py-10">
+      <main className="max-w-3xl mx-auto px-4 flex-col items-center">
         <DriverProfileCard
           driver={driver}
           club={club}
