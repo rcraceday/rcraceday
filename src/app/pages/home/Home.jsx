@@ -49,22 +49,25 @@ export default function Home() {
   const isAdmin = profile?.role === "admin";
 
   // ------------------------------------------------------------
-  // ⭐ SAFE FIRST-TIME USER REDIRECT (NO LOOPS)
+  // ⭐ FIXED: SAFE FIRST-TIME USER REDIRECT
   // ------------------------------------------------------------
   useEffect(() => {
     if (!clubSlug) return;
-    if (loadingMembership) return;          // ⭐ wait for membership to finish loading
-    if (!membership?.id) return;            // ⭐ membership must be real
-    if (loadingDrivers) return;             // wait for drivers to load
+
+    // Wait for all loading states
+    if (loadingMembership) return;
+    if (loadingDrivers) return;
+
+    // Drivers must be loaded
     if (!Array.isArray(drivers)) return;
 
+    // Redirect ONLY if user truly has no drivers
     if (drivers.length === 0) {
       navigate(`/${clubSlug}/app/profile/drivers/welcome`, { replace: true });
     }
   }, [
     clubSlug,
-    loadingMembership,   // ⭐ added
-    membership?.id,      // ⭐ added
+    loadingMembership,
     loadingDrivers,
     drivers,
     navigate,
@@ -120,7 +123,7 @@ export default function Home() {
       </section>
 
       {/* MAIN */}
-      <main className="max-w-3xl mx-auto px-4 space-y-12 pb-10 flex flex-col">
+      <main className="max-w-[720px] mx-auto px-4 space-y-12 pb-10 flex flex-col">
 
         {/* NEWS */}
         <section>

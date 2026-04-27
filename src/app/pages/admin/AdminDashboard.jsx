@@ -1,264 +1,303 @@
-// src/app/pages/admin/AdminDashboard.jsx
-
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-
-import { useClub } from "@/app/providers/ClubProvider";
+import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 
-import Card from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
-
 import {
-  Cog6ToothIcon,
-  UsersIcon,
-  UserGroupIcon,
   CalendarDaysIcon,
-  TrophyIcon,
+  UserPlusIcon,
+  IdentificationIcon,
+  UserGroupIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/24/solid";
+
+import { cmsStyles } from "@cms/styles";
+
+function StatCard({ label, value }) {
+  return (
+    <div
+      style={{
+        backgroundColor: "#FFFFFF",
+        borderRadius: "8px",
+        border: "1px solid #E5E7EB",
+        padding: "16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px",
+      }}
+    >
+      <span
+        style={{
+          fontSize: "12px",
+          textTransform: "uppercase",
+          letterSpacing: "0.12em",
+          color: "#6B7280",
+          fontWeight: 600,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontSize: "22px",
+          fontWeight: 700,
+          color: "#111827",
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function QuickAction({ to, icon: Icon, label }) {
+  const content = (
+    <div
+      style={{
+        backgroundColor: "#FFFFFF",
+        borderRadius: "8px",
+        border: "1px solid #E5E7EB",
+        padding: "14px 16px",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        cursor: "pointer",
+        transition: "background-color 0.15s ease",
+      }}
+    >
+      <Icon
+        style={{
+          width: "18px",
+          height: "18px",
+          color: "#4B5563",
+        }}
+      />
+      <span
+        style={{
+          fontSize: "14px",
+          fontWeight: 500,
+          color: "#111827",
+        }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+
+  if (to) {
+    return (
+      <Link to={to} style={{ textDecoration: "none" }}>
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
+}
 
 export default function AdminDashboard() {
   const { clubSlug } = useParams();
-  const navigate = useNavigate();
-  const { club } = useClub();
-
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
-
   const [stats, setStats] = useState({
-    members: 0,
+    totalEvents: 0,
+    upcomingEvents: 0,
+    pendingNominations: 0,
+    activeMembers: 0,
     drivers: 0,
-    eventsThisYear: 0,
-    upcomingEvent: null,
-    nominations: 0,
   });
 
-  const [loading, setLoading] = useState(true);
-
-  /* ===========================
-     LOAD ADMIN STATS
-     =========================== */
-
   useEffect(() => {
-    async function loadStats() {
-      if (!club?.id) return;
+    async function loadMetrics() {
+      const { data: club } = await supabase
+        .from("clubs")
+        .select("id")
+        .eq("slug", clubSlug)
+        .single();
 
-      setLoading(true);
+      const clubId = club?.id || null;
 
-      const year = new Date().getFullYear();
+      const [
+        totalEventsRes,
+        upcomingEventsRes,
+        pendingNominationsRes,
+        activeMembersRes,
+        driversRes,
+      ] = await Promise.all([
+        supabase
+          .from("events")
+          .select("id", { count: "exact" })
+          .eq("club_id", clubId),
 
-      // Members
-      const { count: memberCount } = await supabase
-        .from("memberships")
-        .select("*", { count: "exact", head: true })
-        .eq("club_id", club.id);
+        supabase
+          .from("events")
+          .select("id", { count: "exact" })
+          .eq("club_id", clubId)
+          .gte("event_date", new Date().toISOString()),
 
-      // Drivers
-      const { count: driverCount } = await supabase
-        .from("drivers")
-        .select("*", { count: "exact", head: true })
-        .eq("club_id", club.id);
-
-      // Events this year
-      const { count: eventsThisYear } = await supabase
-        .from("events")
-        .select("*", { count: "exact", head: true })
-        .eq("club_id", club.id)
-        .gte("event_date", `${year}-01-01`)
-        .lte("event_date", `${year}-12-31`);
-
-      // Upcoming event
-      const { data: upcoming } = await supabase
-        .from("events")
-        .select("*")
-        .eq("club_id", club.id)
-        .gte("event_date", new Date().toISOString())
-        .order("event_date", { ascending: true })
-        .limit(1);
-
-      let upcomingEvent = upcoming?.[0] || null;
-
-      let nominations = 0;
-
-      if (upcomingEvent) {
-        const { count: nomCount } = await supabase
+        supabase
           .from("nominations")
-          .select("*", { count: "exact", head: true })
-          .eq("event_id", upcomingEvent.id);
+          .select("id", { count: "exact" })
+          .eq("club_id", clubId)
+          .eq("status", "pending"),
 
-        nominations = nomCount || 0;
-      }
+        supabase
+          .from("club_members")
+          .select("id", { count: "exact" }),
+
+        supabase
+          .from("drivers")
+          .select("id", { count: "exact" }),
+      ]);
 
       setStats({
-        members: memberCount || 0,
-        drivers: driverCount || 0,
-        eventsThisYear: eventsThisYear || 0,
-        upcomingEvent,
-        nominations,
+        totalEvents: totalEventsRes.count || 0,
+        upcomingEvents: upcomingEventsRes.count || 0,
+        pendingNominations: pendingNominationsRes.count || 0,
+        activeMembers: activeMembersRes.count || 0,
+        drivers: driversRes.count || 0,
       });
-
-      setLoading(false);
     }
 
-    loadStats();
-  }, [club?.id]);
-
-  /* ===========================
-     RENDER
-     =========================== */
+    loadMetrics();
+  }, [clubSlug]);
 
   return (
-    <div className="min-h-screen w-full bg-background text-text-base">
+    <div style={cmsStyles.pageContainer}>
+      <div style={cmsStyles.pageContent}>
 
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
-          <Cog6ToothIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">Admin Dashboard</h1>
+        {/* CANONICAL HEADER */}
+        <div style={cmsStyles.sectionHeader}>
+          <h1 style={cmsStyles.sectionHeaderTitle}>Admin Dashboard</h1>
+          <p style={cmsStyles.sectionHeaderSubtitle}>
+            Overview of events, nominations, membership, and drivers across your club.
+          </p>
         </div>
-      </section>
 
-      {/* MAIN */}
-      <main className="max-w-4xl mx-auto px-4 py-10 space-y-12">
+        {/* KEY METRICS */}
+        <section>
+          <h2
+            style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.16em",
+              color: "#6B7280",
+              marginBottom: "10px",
+            }}
+          >
+            Key Metrics
+          </h2>
 
-        {/* ===========================
-            STATS CARD
-            =========================== */}
-        <Card
-          className="rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
-          style={{ border: `2px solid ${brand}`, background: "white", padding: 0 }}
-        >
-          {/* BLUE HEADER BAR */}
           <div
-            className="px-5 py-3"
-            style={{ background: brand, color: "white" }}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",   // ⭐ 3‑wide
+              gap: "12px",
+            }}
           >
-            <h2 className="text-base font-semibold">Club Overview</h2>
+            <StatCard label="Total Events" value={stats.totalEvents} />
+            <StatCard label="Upcoming Events" value={stats.upcomingEvents} />
+            <StatCard label="Pending Nominations" value={stats.pendingNominations} />
+            <StatCard label="Active Members" value={stats.activeMembers} />
+            <StatCard label="Drivers" value={stats.drivers} />
           </div>
-
-          {/* BODY */}
-          <div className="p-6 space-y-8">
-
-            {loading && <p className="text-text-muted">Loading stats…</p>}
-
-            {!loading && (
-              <>
-                {/* ===========================
-                    ROW 1: Members / Drivers / Events This Year
-                    =========================== */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
-                  <div>
-                    <p className="text-sm text-text-muted">Members</p>
-                    <p className="text-2xl font-semibold">{stats.members}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-text-muted">Drivers</p>
-                    <p className="text-2xl font-semibold">{stats.drivers}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-text-muted">Events This Year</p>
-                    <p className="text-2xl font-semibold">{stats.eventsThisYear}</p>
-                  </div>
-                </div>
-
-                {/* ===========================
-                    ROW 2: Upcoming Event + Nominations
-                    =========================== */}
-                {stats.upcomingEvent && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-center">
-
-                    {/* Upcoming Event */}
-                    <div>
-                      <p className="text-sm text-text-muted">Upcoming Event</p>
-                      <p className="text-lg font-semibold">
-                        {stats.upcomingEvent.name}
-                      </p>
-                      <p className="text-sm text-text-muted">
-                        {new Date(stats.upcomingEvent.event_date).toLocaleDateString("en-AU", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-
-                    {/* Nominations */}
-                    <div>
-                      <p className="text-sm text-text-muted">Nominations</p>
-                      <p className="text-2xl font-semibold">{stats.nominations}</p>
-                    </div>
-
-                  </div>
-                )}
-              </>
-            )}
-
-          </div>
-        </Card>
-
-        {/* ===========================
-            ADMIN ACTIONS
-            =========================== */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-
-          <Button
-            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
-            style={{ background: brand }}
-            onClick={() => navigate(`/${clubSlug}/app/admin/events`)}
-          >
-            <CalendarDaysIcon className="w-6 h-6 text-white" />
-            <span className="text-white font-medium">Manage Events</span>
-          </Button>
-
-          <Button
-            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
-            style={{ background: brand }}
-            onClick={() => navigate(`/${clubSlug}/app/admin/drivers`)}
-          >
-            <UsersIcon className="w-6 h-6 text-white" />
-            <span className="text-white font-medium">Manage Drivers</span>
-          </Button>
-
-          <Button
-            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
-            style={{ background: brand }}
-            onClick={() => navigate(`/${clubSlug}/app/admin/memberships`)}
-          >
-            <UserGroupIcon className="w-6 h-6 text-white" />
-            <span className="text-white font-medium">Manage Memberships</span>
-          </Button>
-
-          <Button
-            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
-            style={{ background: brand }}
-            onClick={() => navigate(`/${clubSlug}/app/admin/households`)}
-          >
-            <UserGroupIcon className="w-6 h-6 text-white" />
-            <span className="text-white font-medium">Manage Households</span>
-          </Button>
-
-          <Button
-            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
-            style={{ background: brand }}
-            onClick={() => navigate(`/${clubSlug}/app/admin/championships`)}
-          >
-            <TrophyIcon className="w-6 h-6 text-white" />
-            <span className="text-white font-medium">Manage Championships</span>
-          </Button>
-
-          <Button
-            className="!rounded-lg !py-4 flex items-center gap-3 text-left"
-            style={{ background: brand }}
-            onClick={() => navigate(`/${clubSlug}/app/admin/settings`)}
-          >
-            <Cog6ToothIcon className="w-6 h-6 text-white" />
-            <span className="text-white font-medium">Club Settings</span>
-          </Button>
-
         </section>
 
-      </main>
+        {/* QUICK ACTIONS */}
+        <section>
+          <h2
+            style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.16em",
+              color: "#6B7280",
+              marginBottom: "10px",
+            }}
+          >
+            Quick Actions
+          </h2>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "12px",
+            }}
+          >
+            <QuickAction to="events" icon={CalendarDaysIcon} label="Manage Events" />
+            <QuickAction to="nominations" icon={UserPlusIcon} label="Manage Nominations" />
+            <QuickAction to="membership" icon={IdentificationIcon} label="Manage Membership" />
+            <QuickAction to="drivers" icon={UserGroupIcon} label="Manage Drivers" />
+            <QuickAction to="settings" icon={Cog6ToothIcon} label="Admin Settings" />
+          </div>
+        </section>
+
+        {/* PANELS — ⭐ ADDED SPACING */}
+        <section
+          style={{
+            marginTop: "24px",   // ⭐ FIX: proper breathing room
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1.4fr)",
+            gap: "16px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "8px",
+              border: "1px solid #E5E7EB",
+              padding: "16px",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "14px",
+                fontWeight: 600,
+                marginBottom: "6px",
+                color: "#111827",
+              }}
+            >
+              Recent Activity
+            </h3>
+            <p
+              style={{
+                fontSize: "13px",
+                color: "#6B7280",
+              }}
+            >
+              Activity feed will appear here once wired to events, nominations, and membership changes.
+            </p>
+          </div>
+
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "8px",
+              border: "1px solid #E5E7EB",
+              padding: "16px",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "14px",
+                fontWeight: 600,
+                marginBottom: "6px",
+                color: "#111827",
+              }}
+            >
+              System Notices
+            </h3>
+            <p
+              style={{
+                fontSize: "13px",
+                color: "#6B7280",
+              }}
+            >
+              Warnings about unpublished events, missing configuration, or expiring memberships will appear here.
+            </p>
+          </div>
+        </section>
+
+      </div>
     </div>
   );
 }

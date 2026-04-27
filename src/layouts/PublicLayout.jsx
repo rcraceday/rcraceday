@@ -15,10 +15,9 @@ export default function PublicLayout() {
         flexDirection: "column",
       }}
     >
-      {/* CONTENT AREA */}
       <div
         style={{
-          flex: 1,                     // ⭐ pushes footer to bottom
+          flex: 1,
           width: "100%",
           display: "flex",
           justifyContent: "center",
@@ -31,7 +30,7 @@ export default function PublicLayout() {
           className="public-column"
           style={{
             width: "100%",
-            maxWidth: "320px",
+            maxWidth: "720px",   // ⭐ FIXED
             marginLeft: "auto",
             marginRight: "auto",
             boxSizing: "border-box",
@@ -40,9 +39,6 @@ export default function PublicLayout() {
           <Outlet context={{ club }} />
         </div>
       </div>
-
-      {/* FOOTER (already exists globally) */}
-      {/* It will now sit flush at the bottom with no white gap */}
     </main>
   );
 }

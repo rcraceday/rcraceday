@@ -46,6 +46,7 @@ export default defineConfig({
       "@components": path.resolve(__dirname, "src/components"),
       "@context": path.resolve(__dirname, "src/context"),
       "@utils": path.resolve(__dirname, "src/utils"),
+"@cms": path.resolve(__dirname, "src/app/pages/admin/cms")
     },
     extensions: [".mjs", ".js", ".ts", ".jsx", ".tsx", ".json"],
   },

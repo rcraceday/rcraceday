@@ -29,20 +29,22 @@ export function buildMenuItems({ clubSlug, isAdmin, user }) {
       to: `/${clubSlug}/app/calendar`,
     },
     {
-      label: "Membership",
-      icon: IdentificationIcon,
-      to: `/${clubSlug}/app/membership`,
-    },
-    {
-      label: "Profile",
-      icon: UserCircleIcon,
-      to: `/${clubSlug}/app/profile`,
-    },
-    {
       label: "Manage Drivers",
       icon: UsersIcon,
       to: `/${clubSlug}/app/profile/drivers`,
     },
+        {
+      label: "Membership",
+      icon: IdentificationIcon,
+      to: `/${clubSlug}/app/membership`,
+    },
+
+        {
+      label: "User Account",
+      icon: UserCircleIcon,
+      to: `/${clubSlug}/app/profile`,
+    },
+
     {
       label: "Settings",
       icon: Cog6ToothIcon,

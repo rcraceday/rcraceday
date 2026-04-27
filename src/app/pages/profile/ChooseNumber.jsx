@@ -141,7 +141,7 @@ export default function ChooseNumber() {
         </div>
       </section>
 
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+      <main className="max-w-[720px] mx-auto px-4 py-8 space-y-8">
 
         {/* SEARCH */}
         <Input

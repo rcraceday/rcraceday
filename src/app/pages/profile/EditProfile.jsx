@@ -11,6 +11,8 @@ import Button from "@/components/ui/Button";
 
 import EditDriverProfileCard from "@/components/driver/EditDriverProfileCard";
 
+import { PencilSquareIcon } from "@heroicons/react/24/solid";
+
 import { supabase } from "@/supabaseClient";
 
 export default function EditProfile() {
@@ -166,29 +168,29 @@ export default function EditProfile() {
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight">
-              Edit Driver Profile
-            </h1>
-          </div>
+<section className="w-full border-b border-surfaceBorder bg-surface">
+  <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+<div className="flex items-center gap-2">
+  <PencilSquareIcon className="w-5 h-5" style={{ color: brand }} />
+  <h1 className="text-xl font-semibold tracking-tight">
+    Edit Driver Profile
+  </h1>
+</div>
 
-          <Button
-            variant="secondary"
-            className="!py-1 !px-3 !text-xs !rounded-sm"
-            onClick={() =>
-              requestNavigate(`/${club.slug}/app/profile/drivers`)
-            }
-          >
-            Back
-          </Button>
-        </div>
-      </section>
+    <Button
+      variant="secondary"
+      className="!py-1 !px-3 !text-xs !rounded-sm"
+      onClick={() =>
+        requestNavigate(`/${club.slug}/app/profile/drivers`)
+      }
+    >
+      Back
+    </Button>
+  </div>
+</section>
 
       {/* MAIN */}
-      <main className="max-w-3xl mx-auto px-4 py-10">
+      <main className="max-w-[720px] mx-auto px-4 py-4">
         <EditDriverProfileCard
           driver={driver}
           update={update}

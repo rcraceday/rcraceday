@@ -306,7 +306,7 @@ export default function WelcomeAddDrivers() {
         </div>
       </section>
 
-      <main className="max-w-3xl mx-auto px-4 space-y-12 pb-10 flex flex-col">
+      <main className="max-w-[720px] mx-auto px-4 space-y-12 pb-10 flex flex-col">
 
         <Card
           className="p-6 space-y-4"

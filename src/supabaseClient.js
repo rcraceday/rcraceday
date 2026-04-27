@@ -14,7 +14,6 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 // Ensure a browser storage adapter when running in the browser.
-// This forces the client to use localStorage for session persistence.
 const browserStorage =
   typeof window !== "undefined" && window.localStorage ? window.localStorage : undefined;
 
@@ -23,10 +22,15 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true,
     storage: browserStorage,
   },
+  global: {
+    headers: {
+      // ⭐ REQUIRED: ensures count=exact works for ALL tables
+      Prefer: "count=exact",
+    },
+  },
 });
 
-// Debug exposure for diagnosis (remove after issue resolved).
-// Expose a single clearly-named global to inspect runtime state from DevTools.
+// Debug exposure for diagnosis
 if (typeof window !== "undefined") {
   window.__supabase = supabase;
   window.__SUPABASE_DEBUG = {

@@ -1,0 +1,73 @@
+import { useOutletContext } from "react-router-dom";
+import Card from "@/components/ui/Card";
+import { cmsStyles } from "../cms/styles";
+
+export default function TracksClassesSettings() {
+  const { club } = useOutletContext();
+  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        backgroundColor: "#F5F5F5",
+        color: "#111827",
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "20px 16px 32px",
+          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          gap: "24px",
+        }}
+      >
+        <header
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+          }}
+        >
+          <h1
+            style={{
+              fontSize: "22px",
+              fontWeight: 600,
+              margin: 0,
+            }}
+          >
+            Tracks & Classes Settings
+          </h1>
+
+          <p
+            style={{
+              fontSize: "13px",
+              color: "#6B7280",
+              margin: 0,
+            }}
+          >
+            Manage tracks, classes, and class assignments.
+          </p>
+        </header>
+
+        <Card
+          style={{
+            ...cmsStyles.card,
+            borderLeft: `4px solid ${brand}`,
+          }}
+        >
+          <div style={cmsStyles.cardBody}>
+            <TracksClassesSettingsCard />
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}

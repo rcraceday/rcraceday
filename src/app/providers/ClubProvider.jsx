@@ -14,6 +14,30 @@ export function useClub() {
   return useContext(ClubContext);
 }
 
+/**
+ * Check if a user already belongs to a given club.
+ * This is safe to use in routing logic (e.g. ClubSelect).
+ */
+export async function userBelongsToClub(userId, clubId) {
+  if (!userId || !clubId) return false;
+
+  // Check for an existing household_membership for this user + club
+  const { data: membership, error } = await supabase
+    .from("household_memberships")
+    .select("id, status, membership_type")
+    .eq("club_id", clubId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("userBelongsToClub error:", error);
+    return false;
+  }
+
+  // You can tighten this if you only want active members/admins
+  return !!membership;
+}
+
 export default function ClubProvider({ children }) {
   const location = useLocation();
   const { user, loadingUser } = useAuth();
@@ -136,6 +160,7 @@ export default function ClubProvider({ children }) {
 
   /* ------------------------------------------------------------
      Ensure membership exists for this club
+     (multi-club safe: we DO NOT auto-create new memberships here)
      ------------------------------------------------------------ */
   async function ensureMembership(profile) {
     if (!user?.id || !club) return;
@@ -195,26 +220,9 @@ export default function ClubProvider({ children }) {
       return;
     }
 
-    // 4️⃣ No membership exists → create new inactive non_member
-    if (!emailMembership) {
-      const { error: createErr } = await supabase
-        .from("household_memberships")
-        .insert({
-          club_id: club.id,
-          user_id: user.id,
-          email: userEmail,
-          membership_type: "non_member",
-          status: "inactive",
-          primary_first_name: firstName,
-          primary_last_name: lastName,
-        });
-
-      if (createErr) {
-        console.error("Membership creation error:", createErr);
-      }
-
-      return;
-    }
+    // 4️⃣ No membership exists → DO NOTHING
+    // Multi-club safe: we do not auto-create a membership row just
+    // because a logged-in user visited this club.
   }
 
   /* ------------------------------------------------------------

@@ -1,30 +1,76 @@
-// src/app/pages/admin/settings/DriverSettings.jsx
-
-import { useClub } from "@/app/providers/ClubProvider";
-import { WrenchScrewdriverIcon } from "@heroicons/react/24/solid";
+import { useOutletContext } from "react-router-dom";
+import Card from "@/components/ui/Card";
+import { cmsStyles } from "../cms/styles";
 
 export default function DriverSettings() {
-  return <div>Driver Settings</div>;
-  const { club } = useClub();
+  const { club } = useOutletContext();
   const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
 
   return (
-    <div className="min-h-screen w-full bg-background text-text-base">
+    <div
+      style={{
+        width: "100%",
+        backgroundColor: "#F5F5F5",
+        color: "#111827",
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* PAGE CONTAINER — SAME AS AdminEvents */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "20px 16px 32px",
+          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          gap: "24px",
+        }}
+      >
+        {/* HEADER */}
+        <header
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+          }}
+        >
+          <h1
+            style={{
+              fontSize: "22px",
+              fontWeight: 600,
+              margin: 0,
+            }}
+          >
+            Driver Settings
+          </h1>
 
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
-          <WrenchScrewdriverIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">Driver Settings</h1>
-        </div>
-      </section>
+          <p
+            style={{
+              fontSize: "13px",
+              color: "#6B7280",
+              margin: 0,
+            }}
+          >
+            Configure driver defaults, junior age rules, required fields, and visibility options.
+          </p>
+        </header>
 
-      {/* MAIN */}
-      <main className="max-w-4xl mx-auto px-4 py-10">
-        <p className="text-text-muted">
-          Configure driver rules, license requirements, and related settings.
-        </p>
-      </main>
+        {/* CARD — USING cmsStyles + canonical Card */}
+        <Card
+          style={{
+            ...cmsStyles.card,
+            borderLeft: `4px solid ${brand}`,
+          }}
+        >
+          <div style={cmsStyles.cardBody}>
+            <DriverSettingsCard />
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

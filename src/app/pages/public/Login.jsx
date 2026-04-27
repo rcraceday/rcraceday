@@ -1,9 +1,10 @@
 // src/app/pages/public/Login.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import TextInput from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { userBelongsToClub } from "@/app/providers/ClubProvider";
 
 export default function Login() {
   const { club } = useOutletContext();
@@ -15,7 +16,11 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!club) return <div style={{ padding: "24px", textAlign: "center" }}>Loading…</div>;
+  const [checkingExistingSession, setCheckingExistingSession] = useState(true);
+
+  if (!club) {
+    return <div style={{ padding: "24px", textAlign: "center" }}>Loading…</div>;
+  }
 
   const logoSrc =
     club?.logoUrl ||
@@ -26,6 +31,43 @@ export default function Login() {
     club?.assets?.logo ||
     null;
 
+  /* ------------------------------------------------------------
+     1️⃣ If user is already logged in, check if they belong to this club
+     ------------------------------------------------------------ */
+  useEffect(() => {
+    async function checkSession() {
+      const { data } = await supabase.auth.getUser();
+      const existingUser = data?.user;
+
+      if (!existingUser) {
+        setCheckingExistingSession(false);
+        return;
+      }
+
+      const belongs = await userBelongsToClub(existingUser.id, club.id);
+
+      if (belongs) {
+        navigate(`/${clubSlug}/app/`);
+      } else {
+        // User logged in but NOT a member of this club
+        setErrorMsg(
+          "You are logged in with an account that does not belong to this club. Please log in with a different account."
+        );
+      }
+
+      setCheckingExistingSession(false);
+    }
+
+    checkSession();
+  }, [club, clubSlug, navigate]);
+
+  if (checkingExistingSession) {
+    return <div style={{ padding: "24px", textAlign: "center" }}>Checking session…</div>;
+  }
+
+  /* ------------------------------------------------------------
+     2️⃣ Handle login
+     ------------------------------------------------------------ */
   async function handleLogin(e) {
     e.preventDefault();
     setErrorMsg("");
@@ -37,7 +79,7 @@ export default function Login() {
 
     setLoading(true);
 
-    // 1️⃣ LOGIN
+    // LOGIN
     const { data: loginData, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
@@ -53,7 +95,7 @@ export default function Login() {
       return;
     }
 
-    // 2️⃣ GET USER
+    // GET USER
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -67,25 +109,7 @@ export default function Login() {
     const userId = user.id;
     const userEmail = user.email?.toLowerCase();
 
-    // 3️⃣ ENSURE PROFILE EXISTS
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (!existingProfile) {
-      await supabase.from("profiles").insert({
-        id: userId,
-        email: userEmail,
-        full_name: user.user_metadata?.full_name || "",
-        first_name: user.user_metadata?.first_name || "",
-        last_name: user.user_metadata?.last_name || "",
-        club_id: club.id,
-      });
-    }
-
-    // 4️⃣ LOOK UP MEMBERSHIP BY EMAIL + CLUB
+    // CHECK MEMBERSHIP FOR THIS CLUB
     const { data: membership } = await supabase
       .from("household_memberships")
       .select("*")
@@ -93,55 +117,42 @@ export default function Login() {
       .ilike("email", userEmail)
       .maybeSingle();
 
-    // 5️⃣ IF NO MEMBERSHIP → CREATE ONE
     if (!membership) {
-      const { data: newMembership, error: createError } = await supabase
-        .from("household_memberships")
-        .insert({
-          club_id: club.id,
-          email: userEmail,
-          user_id: userId,
-          membership_type: "non_member",
-          status: "active",
-          primary_first_name: user.user_metadata?.first_name || "",
-          primary_last_name: user.user_metadata?.last_name || "",
-        })
-        .select()
-        .single();
+      // ❌ DO NOT auto-create membership
+      setErrorMsg(
+        "This email is not registered with this club. Please contact the club or use a different account."
+      );
+      setLoading(false);
+      return;
+    }
 
-      if (!createError && newMembership) {
-        await supabase
-          .from("profiles")
-          .update({ membership_id: newMembership.id })
-          .eq("id", userId);
-      }
-    } else {
-      // 6️⃣ MEMBERSHIP EXISTS → UPDATE IT
+    // LINK MEMBERSHIP TO USER IF NEEDED
+    if (!membership.user_id) {
       await supabase
         .from("household_memberships")
         .update({
           user_id: userId,
-          primary_first_name:
-            user.user_metadata?.first_name || membership.primary_first_name,
-          primary_last_name:
-            user.user_metadata?.last_name || membership.primary_last_name,
           status: "active",
         })
         .eq("id", membership.id);
-
-      // 7️⃣ UPDATE PROFILE WITH MEMBERSHIP ID
-      await supabase
-        .from("profiles")
-        .update({
-          membership_id: membership.id,
-        })
-        .eq("id", userId);
     }
 
-    // 8️⃣ NAVIGATE INTO APP
+    // UPDATE PROFILE WITH MEMBERSHIP ID
+    await supabase
+      .from("profiles")
+      .update({
+        membership_id: membership.id,
+        club_id: club.id,
+      })
+      .eq("id", userId);
+
+    // SUCCESS → ENTER APP
     navigate(`/${clubSlug}/app/`);
   }
 
+  /* ------------------------------------------------------------
+     3️⃣ UI
+     ------------------------------------------------------------ */
   return (
     <div
       style={{
@@ -182,6 +193,12 @@ export default function Login() {
         Log In
       </h1>
 
+      {errorMsg && (
+        <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center", marginBottom: "16px" }}>
+          {errorMsg}
+        </p>
+      )}
+
       <form
         onSubmit={handleLogin}
         style={{
@@ -204,12 +221,6 @@ export default function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-
-        {errorMsg && (
-          <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center" }}>
-            {errorMsg}
-          </p>
-        )}
 
         <Button type="submit" variant="primary" disabled={loading}>
           {loading ? "Logging in…" : "Log In"}

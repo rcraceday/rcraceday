@@ -128,7 +128,7 @@ export default function EditMember() {
 
       {/* CENTERED CONTENT */}
       <div className="w-full flex justify-center">
-        <main className="max-w-[720px] w-full px-4 py-10 flex flex-col gap-8">
+        <main className="max-w-3xl w-full px-4 py-10 flex flex-col gap-8">
 
           {/* EDIT MEMBER CARD */}
           <Card

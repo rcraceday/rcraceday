@@ -1,7 +1,15 @@
 // src/app/providers/NotificationProvider.jsx
 
-import React, { useEffect, useState, useRef, useCallback, createContext, useContext } from "react";
-import NotificationContext from "@app/providers/NotificationContext";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  createContext,
+  useContext,
+} from "react";
+
+import NotificationContext from "@/app/providers/NotificationContext";
 import { supabase } from "@/supabaseClient";
 
 // Local toast context

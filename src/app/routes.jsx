@@ -7,6 +7,8 @@ import AppLayout from "@/layouts/AppLayout";
 import PublicLayout from "@/layouts/PublicLayout";
 import AdminLayout from "@app/pages/admin/AdminLayout";
 
+import ProtectedAppRoute from "@/app/routes/ProtectedAppRoute";
+
 // GLOBAL
 import ClubSelect from "@/app/pages/global/ClubSelect";
 
@@ -30,8 +32,8 @@ import CalendarItemDetails from "@app/pages/events/calendar/CalendarItemDetails"
 
 // PROFILE
 import UserProfile from "@app/pages/profile/UserProfile";
-import EditUser from "@app/pages/profile/EditUser";          // UPDATED
-import EditProfile from "@app/pages/profile/EditProfile";    // DRIVER EDITOR
+import EditUser from "@app/pages/profile/EditUser";
+import EditProfile from "@app/pages/profile/EditProfile";
 import DriverManager from "@app/pages/profile/DriverManager";
 import DriverProfile from "@app/pages/profile/DriverProfile";
 import AddDriver from "@app/pages/profile/AddDriver";
@@ -43,22 +45,16 @@ import DriverProvider from "@/app/providers/DriverProvider";
 
 // ADMIN PAGES
 import AdminDashboard from "@app/pages/admin/AdminDashboard";
-import ChampionshipsList from "@app/pages/admin/championships/ChampionshipsList";
-import CreateChampionship from "@app/pages/admin/championships/CreateChampionship";
-import AdminEvents from "@app/pages/admin/AdminEvents";
-import AdminEventEdit from "@app/pages/admin/AdminEventEdit";
+
+// EVENTS
+import AdminEvents from "@app/pages/admin/events/AdminEvents";
+import AdminEventEdit from "@app/pages/admin/events/eventsedit/AdminEventEdit";
 import AdminEventNominations from "@app/pages/admin/nominations/AdminEventNominations";
 import NominationsExport from "@app/pages/admin/NominationsExport";
 
-// ADMIN SETTINGS
-import ClubSettings from "@app/pages/admin/settings/ClubSettings";
-import MembershipSettings from "@app/pages/admin/settings/MembershipSettings";
-import EventDefaultsSettings from "@app/pages/admin/settings/EventDefaultsSettings";
-import DriverSettings from "@app/pages/admin/settings/DriverSettings";
-import SystemSettings from "@app/pages/admin/settings/SystemSettings";
-import TracksAndClasses from "@app/pages/admin/settings/TracksAndClasses";
-import ClassEditor from "@app/pages/admin/settings/ClassEditor";
-import ClubInfoSettings from "@app/pages/admin/settings/ClubInfoSettings";
+// CHAMPIONSHIPS
+import ChampionshipsList from "@app/pages/admin/championships/ChampionshipsList";
+import CreateChampionship from "@app/pages/admin/championships/CreateChampionship";
 
 // MEMBERSHIP
 import Membership from "@app/pages/membership/Membership";
@@ -75,24 +71,32 @@ import Logout from "@app/pages/Logout";
 // FALLBACK
 import NotFound from "@app/pages/NotFound";
 
+// SETTINGS
+import AdminSettingsIndex from "@app/pages/admin/settings/AdminSettingsIndex";
+import ClubInfoSettings from "@app/pages/admin/settings/ClubInfoSettings";
+import BrandingSettings from "@app/pages/admin/settings/BrandingSettings";
+import SystemSettings from "@app/pages/admin/settings/SystemSettings";
+import CMSSettings from "@app/pages/admin/settings/CMSSettings";
+import UserSettings from "@app/pages/admin/settings/UserSettings";
+import MembershipSettings from "@app/pages/admin/settings/MembershipSettings";
+import EventDefaultsSettings from "@app/pages/admin/settings/EventDefaultsSettings";
+import DriverSettings from "@app/pages/admin/settings/DriverSettings";
+import TracksClassesSettings from "@app/pages/admin/settings/TracksClassesSettings";
+
 function ClubRootRedirect() {
   const { clubSlug } = useParams();
-  if (!clubSlug) return null;
-  return <Navigate to={`/${clubSlug}/public/login`} replace />;
+  return clubSlug ? <Navigate to={`/${clubSlug}/public/login`} replace /> : null;
 }
 
 function PublicRootRedirect() {
   const { clubSlug } = useParams();
-  if (!clubSlug) return null;
-  return <Navigate to={`/${clubSlug}/public/login`} replace />;
+  return clubSlug ? <Navigate to={`/${clubSlug}/public/login`} replace /> : null;
 }
 
 export default function RoutesFile() {
   return (
     <Routes>
       <Route path="/" element={<ClubSelect />} />
-
-      <Route path="/:clubSlug" element={<ClubRootRedirect />} />
 
       <Route element={<AppProviders />}>
         {/* PUBLIC */}
@@ -114,12 +118,14 @@ export default function RoutesFile() {
           <Route path="*" element={<Navigate to="login" replace />} />
         </Route>
 
-        {/* APP */}
+        {/* APP (PROTECTED) */}
         <Route
           path="/:clubSlug/app/*"
           element={
             <ClubLayout>
-              <AppLayout />
+              <ProtectedAppRoute>
+                <AppLayout />
+              </ProtectedAppRoute>
             </ClubLayout>
           }
         >
@@ -145,75 +151,101 @@ export default function RoutesFile() {
 
           {/* PROFILE */}
           <Route path="profile" element={<UserProfile />} />
-          <Route path="profile/edit" element={<EditUser />} /> {/* UPDATED */}
+          <Route path="profile/edit" element={<EditUser />} />
 
           {/* DRIVER MANAGEMENT */}
           <Route
             path="profile/drivers/*"
             element={
               <DriverProvider>
-                <Routes>
-                  <Route index element={<DriverManager />} />
-                  <Route path="add" element={<AddDriver />} />
-                  <Route path=":id/edit" element={<EditProfile />} /> {/* UPDATED */}
-                  <Route path=":id/choose-number" element={<ChooseNumber />} />
-                  <Route path=":id" element={<DriverProfile />} />
-                  <Route path="welcome" element={<WelcomeAddDrivers />} />
-                </Routes>
+                <DriverManager />
+              </DriverProvider>
+            }
+          />
+          <Route
+            path="profile/drivers/add"
+            element={
+              <DriverProvider>
+                <AddDriver />
+              </DriverProvider>
+            }
+          />
+          <Route
+            path="profile/drivers/:id/edit"
+            element={
+              <DriverProvider>
+                <EditProfile />
+              </DriverProvider>
+            }
+          />
+          <Route
+            path="profile/drivers/:id/choose-number"
+            element={
+              <DriverProvider>
+                <ChooseNumber />
+              </DriverProvider>
+            }
+          />
+          <Route
+            path="profile/drivers/:id"
+            element={
+              <DriverProvider>
+                <DriverProfile />
+              </DriverProvider>
+            }
+          />
+          <Route
+            path="profile/drivers/welcome"
+            element={
+              <DriverProvider>
+                <WelcomeAddDrivers />
               </DriverProvider>
             }
           />
 
           {/* LOGOUT */}
           <Route path="logout" element={<Logout />} />
-
-          <Route path="*" element={<Navigate to="" replace />} />
         </Route>
 
-        {/* ADMIN */}
+        {/* ADMIN (PROTECTED) */}
         <Route
           path="/:clubSlug/app/admin/*"
           element={
             <ClubLayout mode="admin">
-              <AdminLayout />
+              <ProtectedAppRoute>
+                <AdminLayout />
+              </ProtectedAppRoute>
             </ClubLayout>
           }
         >
           <Route index element={<AdminDashboard />} />
 
-          <Route path="settings" element={<ClubSettings />} />
+          {/* SETTINGS */}
+          <Route path="settings" element={<AdminSettingsIndex />} />
           <Route path="settings/club-info" element={<ClubInfoSettings />} />
-          <Route path="settings/memberships" element={<MembershipSettings />} />
-          <Route
-            path="settings/event-defaults"
-            element={<EventDefaultsSettings />}
-          />
-          <Route path="settings/drivers" element={<DriverSettings />} />
+          <Route path="settings/branding" element={<BrandingSettings />} />
           <Route path="settings/system" element={<SystemSettings />} />
+          <Route path="settings/cms" element={<CMSSettings />} />
+          <Route path="settings/users" element={<UserSettings />} />
+          <Route path="settings/membership" element={<MembershipSettings />} />
+          <Route path="settings/event-defaults" element={<EventDefaultsSettings />} />
+          <Route path="settings/driver" element={<DriverSettings />} />
+          <Route path="settings/tracks-classes" element={<TracksClassesSettings />} />
 
-          <Route path="settings/classes">
-            <Route index element={<TracksAndClasses />} />
-            <Route path="new" element={<ClassEditor mode="create" />} />
-            <Route path=":classId" element={<ClassEditor mode="edit" />} />
-          </Route>
-
+          {/* EVENTS */}
           <Route path="events" element={<AdminEvents />} />
           <Route path="events/new" element={<AdminEventEdit />} />
           <Route path="events/:id" element={<AdminEventEdit />} />
-          <Route
-            path="events/:id/nominations"
-            element={<AdminEventNominations />}
-          />
-          <Route
-            path="events/:id/nominations/export"
-            element={<NominationsExport />}
-          />
+          <Route path="events/:id/nominations" element={<AdminEventNominations />} />
+          <Route path="events/:id/nominations/export" element={<NominationsExport />} />
 
+          {/* CHAMPIONSHIPS */}
           <Route path="championships" element={<ChampionshipsList />} />
           <Route path="championships/create" element={<CreateChampionship />} />
-
-          <Route path="*" element={<Navigate to="" replace />} />
         </Route>
+
+        {/* CLUB ROOT REDIRECT */}
+        <Route path="/:clubSlug" element={<ClubRootRedirect />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

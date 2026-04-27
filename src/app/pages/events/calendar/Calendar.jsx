@@ -94,7 +94,7 @@ export default function Calendar() {
       </section>
 
       {/* MAIN */}
-      <main className="max-w-3xl mx-auto px-4 space-y-12 pb-10 flex flex-col">
+      <main className="max-w-[720px] mx-auto px-4 space-y-12 pb-10 flex flex-col">
 
         {/* YEAR VIEW */}
         <section className="transition-all duration-300">

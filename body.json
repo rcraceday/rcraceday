@@ -1,0 +1,7 @@
+{
+  "email": "test@example.com",
+  "password": "123456",
+  "metadata": {
+    "club_id": 1
+  }
+}

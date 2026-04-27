@@ -1,10 +1,23 @@
 // src/layouts/AppLayout.jsx
 import { Outlet, Navigate, useParams } from "react-router-dom";
+import { useEffect } from "react";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import Header from "@/components/ui/Header";
+
+// ⭐ Theme injector for club pages
+function applyClubTheme(club) {
+  if (!club) return;
+
+  const root = document.documentElement;
+
+  root.style.setProperty("--primary", club.primary_color || "#005BBB");
+  root.style.setProperty("--button-bg", club.button_color || club.primary_color || "#005BBB");
+  root.style.setProperty("--button-text", club.button_text_color || "#FFFFFF");
+  root.style.setProperty("--header-text", club.header_text_color || "#FFFFFF");
+}
 
 export default function AppLayout() {
   const { club } = useClub();
@@ -18,6 +31,11 @@ export default function AppLayout() {
     loadingProfile ||
     loadingMembership ||
     !club; // club loads async too
+
+  // ⭐ Apply club theme when club loads
+  useEffect(() => {
+    if (club) applyClubTheme(club);
+  }, [club?.id]);
 
   if (loading) {
     return (
