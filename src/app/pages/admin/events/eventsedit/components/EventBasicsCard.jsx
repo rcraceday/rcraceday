@@ -1,12 +1,14 @@
+// src/app/pages/admin/events/eventsedit/components/EventBasicsCard.jsx
+import { useEffect } from "react";
 import CMSInput from "@cms/CMSInput";
 import CMSSelect from "@cms/CMSSelect";
 import CMSTextarea from "@cms/CMSTextarea";
-import CMSImageUpload from "@cms/CMSImageUpload";
 import CMSToggle from "@cms/CMSToggle";
 
 import { AddButton, DeleteButton } from "@cms/CMSButtonSet";
 import { cmsLayout } from "@cms/layout";
-import { supabase } from "@/supabaseClient";
+import LogoPicker from "../../../components/LogoPicker";
+
 
 export default function EventBasicsCard({
   event,
@@ -17,10 +19,17 @@ export default function EventBasicsCard({
   const isMulti = !!event.is_multi_day;
 
   const days = Array.isArray(event.days)
-    ? event.days.map((d) =>
-        typeof d === "string" ? { date: d, label: "" } : d
-      )
+    ? event.days.map((d) => (typeof d === "string" ? { date: d, label: "" } : d))
     : [];
+
+  useEffect(() => {
+    // If there's exactly one track available and the event has no track set,
+    // ensure the track is present in the form immediately.
+    if (tracks.length === 1 && (event.track == null || event.track === "")) {
+      onChange("track", tracks[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks]);
 
   const addDay = () => {
     onChange("days", [...days, { date: "", label: "" }]);
@@ -57,35 +66,15 @@ export default function EventBasicsCard({
     value: t.id,
   }));
 
-  // Upload logo to Supabase
-  const uploadLogo = async (file, clubId) => {
-    if (!file || !clubId) return null;
+  // helper to render label text with a red asterisk when required
+  const requiredLabel = (text) => (
+    <span>
+      {text} <span style={{ color: "#DC2626" }}>*</span>
+    </span>
+  );
 
-    const path = `${clubId}/event-logos/${file.name}`;
-
-    const { error } = await supabase.storage
-      .from("club-assets")
-      .upload(path, file, { upsert: true });
-
-    if (error) {
-      console.error("UPLOAD ERROR:", error);
-      return null;
-    }
-
-    const { data } = supabase.storage
-      .from("club-assets")
-      .getPublicUrl(path);
-
-    return data.publicUrl;
-  };
-
-  // 🔍 Debug: see exactly what EventBasicsCard is getting for the logo
-  console.log("EventBasicsCard LOGO DEBUG:", {
-    logourl: event.logourl,
-    logo_file: event.logo_file,
-    valueProp: event.logourl || null,
-    filePreviewProp: event.logo_file || null,
-  });
+  // Build prefix for logos so each club's logos are grouped
+  const logoPrefix = event.club_id ? `${event.club_id}/event-logos` : "";
 
   return (
     <div
@@ -96,9 +85,10 @@ export default function EventBasicsCard({
       }}
     >
       <CMSInput
-        label="Event Name"
+        label={requiredLabel("Event Name")}
         value={event.name || ""}
         onChange={(value) => onChange("name", value)}
+        required
       />
 
       <CMSToggle
@@ -113,20 +103,18 @@ export default function EventBasicsCard({
             onChange("days", []);
           } else {
             const first = event.event_date || "";
-            onChange(
-              "days",
-              first ? [{ date: first, label: "" }] : []
-            );
+            onChange("days", first ? [{ date: first, label: "" }] : []);
           }
         }}
       />
 
       {!isMulti && (
         <CMSInput
-          label="Event Date"
+          label={requiredLabel("Event Date")}
           type="date"
           value={event.event_date || ""}
           onChange={(value) => onChange("event_date", value)}
+          required
         />
       )}
 
@@ -144,18 +132,17 @@ export default function EventBasicsCard({
         >
           <div style={{ fontWeight: 600 }}>Event Days</div>
 
-          {days.length === 0 && (
-            <div style={cmsLayout.muted}>No days added yet.</div>
-          )}
+          {days.length === 0 && <div style={cmsLayout.muted}>No days added yet.</div>}
 
           {days.map((day, i) => (
             <div key={i} style={cmsLayout.row}>
               <div style={cmsLayout.column}>
                 <CMSInput
-                  label={`Day ${i + 1} Date`}
+                  label={requiredLabel(`Day ${i + 1} Date`)}
                   type="date"
                   value={day.date || ""}
                   onChange={(value) => updateDayDate(i, value)}
+                  required
                 />
 
                 <CMSInput
@@ -165,9 +152,7 @@ export default function EventBasicsCard({
                 />
               </div>
 
-              <DeleteButton onClick={() => removeDay(i)}>
-                Remove
-              </DeleteButton>
+              <DeleteButton onClick={() => removeDay(i)}>Remove</DeleteButton>
             </div>
           ))}
 
@@ -176,7 +161,7 @@ export default function EventBasicsCard({
       )}
 
       <CMSSelect
-        label="Event Type"
+        label={requiredLabel("Event Type")}
         value={event.event_type || ""}
         onChange={(value) => onChange("event_type", value)}
         options={eventTypes.map((t) => ({
@@ -184,15 +169,39 @@ export default function EventBasicsCard({
           value: t.value,
         }))}
         placeholder="Select type..."
+        required
       />
 
-      <CMSSelect
-        label="Track"
-        value={event.track || ""}
-        options={trackOptions}
-        placeholder="Select track..."
-        onChange={(value) => onChange("track", value)}
-      />
+      {/* Track: always visible. If only one track, ensure it's selected and show as read-only */}
+      {tracks.length === 1 ? (
+        <div>
+          <label style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            {requiredLabel("Track")}
+          </label>
+          <div
+            style={{
+              padding: "8px 12px",
+              border: "1px solid #E5E7EB",
+              borderRadius: "6px",
+              background: "#F9FAFB",
+              color: "#111827",
+            }}
+          >
+            {trackOptions[0]?.label || "Track"}
+          </div>
+          {/* Hidden input to ensure form libraries/readers can see the value */}
+          <input type="hidden" value={event.track || trackOptions[0]?.value || ""} />
+        </div>
+      ) : (
+        <CMSSelect
+          label={requiredLabel("Track")}
+          value={event.track || ""}
+          options={trackOptions}
+          placeholder="Select track..."
+          onChange={(value) => onChange("track", value)}
+          required
+        />
+      )}
 
       <CMSTextarea
         label="Description"
@@ -200,20 +209,25 @@ export default function EventBasicsCard({
         onChange={(value) => onChange("description", value)}
       />
 
-      {/* ⭐ Correct props for CMSImageUpload */}
-      <CMSImageUpload
-        label="Event Logo"
-        value={event.logourl || null}          // ⭐ REQUIRED
-        filePreview={event.logo_file || null}  // ⭐ ONLY File objects
-        onChange={async (file) => {
-          onChange("logo_file", file);
-
-          if (file === null) return;
-
-          const url = await uploadLogo(file, event.club_id);
-          if (url) onChange("logourl", url);
-        }}
-      />
+      {/* Shared LogoPicker (lists bucket files and supports upload) */}
+      <div>
+        <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>Event Logo</label>
+        <LogoPicker
+          bucketName="club-assets"
+          prefix={logoPrefix}
+          value={event.logourl || ""}
+          useSignedUrls={false}
+          onSelect={(filePath, publicUrl) => {
+            // store the storage path in logourl; keep preview url separately if desired
+            onChange("logourl", filePath);
+            onChange("logo_preview_url", publicUrl || null);
+          }}
+          onUpload={(filePath, publicUrl) => {
+            onChange("logourl", filePath);
+            onChange("logo_preview_url", publicUrl || null);
+          }}
+        />
+      </div>
     </div>
   );
 }

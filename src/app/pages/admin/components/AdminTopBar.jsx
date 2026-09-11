@@ -35,21 +35,28 @@ export default function AdminTopBar() {
   // Load admin logo + club theme colour
   useEffect(() => {
     async function loadClub() {
-      const { data } = await supabase
-        .from("clubs")
-        .select("admin_logo_url, theme")
-        .eq("slug", clubSlug)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from("clubs")
+          .select("admin_logo_url, theme")
+          .eq("slug", clubSlug)
+          .maybeSingle();
 
-      const logorl = data?.admin_logo_url
-        ? `${data.admin_logo_url}?v=${Date.now()}`
-        : "https://mvcttnmclrvaatdgzhpb.supabase.co/storage/v1/object/public/club-assets/chargers/DriverPortal_Admin_Logo_512x512.png";
+        if (error) {
+          console.error("AdminTopBar loadClub error", error);
+          return;
+        }
 
-      setAdminLogo(logoUrl);
+        const adminLogoUrl = data?.admin_logo_url
+          ? `${data.admin_logo_url}?v=${Date.now()}`
+          : "https://mvcttnmclrvaatdgzhpb.supabase.co/storage/v1/object/public/club-assets/chargers/DriverPortal_Admin_Logo_512x512.png";
 
-      setClubColor(
-        data?.theme?.hero?.backgroundColor || "#0A66C2"
-      );
+        setAdminLogo(adminLogoUrl);
+
+        setClubColor(data?.theme?.hero?.backgroundColor ?? "#0A66C2");
+      } catch (ex) {
+        console.error("AdminTopBar unexpected error loading club", ex);
+      }
     }
 
     loadClub();

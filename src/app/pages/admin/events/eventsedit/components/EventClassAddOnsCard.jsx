@@ -1,16 +1,20 @@
-// src/app/pages/admin/events/eventsedit/components/EventMerchandiseCard.jsx
 import React, { useState } from "react";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import { supabase } from "@/supabaseClient";
 
-import MerchEditor from "./MerchEditor";
+import ClassAddOnEditor from "./ClassAddOnEditor";
 
-export default function EventMerchandiseCard({ event = {}, onChange = () => {} }) {
+export default function EventClassAddOnsCard({
+  event = {},
+  onChange = () => {},
+}) {
   const [editingItem, setEditingItem] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const merchandise = Array.isArray(event.merchandise) ? event.merchandise : [];
+  const addOns = Array.isArray(event.class_add_ons)
+    ? event.class_add_ons
+    : [];
 
   const openNewItemDrawer = () => {
     setEditingItem({
@@ -18,13 +22,13 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
       name: "",
       description: "",
       price: 0,
-      included: false,
-      compulsory: false,
+      required: false,
       max_qty: 1,
       photo_file: null,
       photo_url: null,
       options: [],
-      classes: [], // merch has no classes
+      classes: [],
+      class_rules: {},
     });
     setDrawerOpen(true);
   };
@@ -34,6 +38,7 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
       ...item,
       photo_file: null,
       options: item.options || [],
+      class_rules: item.class_rules || {},
     });
     setDrawerOpen(true);
   };
@@ -42,10 +47,9 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
     const copy = {
       ...item,
       id: crypto.randomUUID(),
-      classes: [], // clear classes for merch
     };
-    const updated = [...merchandise, copy];
-    onChange("merchandise", updated);
+    const updated = [...addOns, copy];
+    onChange("class_add_ons", updated);
   };
 
   const uploadPhoto = async (file, pathSuffix) => {
@@ -56,7 +60,7 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
       .replace(/\s+/g, "_")
       .replace(/[^a-zA-Z0-9_.-]/g, "");
     const timestamp = Date.now();
-    const baseId = editingItem?.id || "item";
+    const baseId = editingItem?.id || "addon";
     const path = `${event.club_id}/merch/${baseId}_${pathSuffix}_${timestamp}_${safeName}`;
 
     const { error } = await supabase.storage
@@ -111,57 +115,59 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
       photo_url: photoUrl || null,
       photo_file: null,
       options: optionsWithPhotos,
-      classes: [], // merch has no classes
     };
 
-    const updated = merchandise.filter((m) => m.id !== cleanItem.id);
+    const updated = addOns.filter((m) => m.id !== cleanItem.id);
     updated.push(cleanItem);
-    onChange("merchandise", updated);
+    onChange("class_add_ons", updated);
 
     setEditingItem(null);
     setDrawerOpen(false);
   };
 
   const deleteItem = (id) => {
-    const updated = merchandise.filter((m) => m.id !== id);
-    onChange("merchandise", updated);
+    const updated = addOns.filter((m) => m.id !== id);
+    onChange("class_add_ons", updated);
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <div style={{ fontWeight: 700 }}>Event Merchandise</div>
-        <CMSButton onClick={openNewItemDrawer}>Add Merchandise Item</CMSButton>
+        <div style={{ fontWeight: 700 }}>Class Add‑Ons</div>
+        <CMSButton type="button" onClick={openNewItemDrawer}>
+          Add Class Add‑On
+        </CMSButton>
       </div>
 
-      {merchandise.length === 0 && (
+      {addOns.length === 0 && (
         <div style={{ padding: "8px 0", color: "#666" }}>
-          No merchandise configured.
+          No class add‑ons configured.
         </div>
       )}
 
-      {merchandise.map((item) => (
+      {addOns.map((item) => (
         <CMSCard key={item.id} title={item.name}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div>{item.description}</div>
-            <div>
-              {item.included
-                ? "Included in Entry"
-                : `Price: $${item.price ?? 0}`}
-            </div>
+            <div>Price: ${item.price ?? 0}</div>
             <div>Max Qty: {item.max_qty ?? 1}</div>
-            {item.compulsory && (
-              <div style={{ color: "#b91c1c", fontSize: 13 }}>
-                Compulsory item – nomination cannot be submitted without this.
-              </div>
-            )}
 
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <CMSButton onClick={() => openEditDrawer(item)}>Edit</CMSButton>
-              <CMSButton variant="secondary" onClick={() => duplicateItem(item)}>
+              <CMSButton type="button" onClick={() => openEditDrawer(item)}>
+                Edit
+              </CMSButton>
+              <CMSButton
+                type="button"
+                variant="secondary"
+                onClick={() => duplicateItem(item)}
+              >
                 Duplicate
               </CMSButton>
-              <CMSButton variant="danger" onClick={() => deleteItem(item.id)}>
+              <CMSButton
+                type="button"
+                variant="danger"
+                onClick={() => deleteItem(item.id)}
+              >
                 Remove
               </CMSButton>
             </div>
@@ -180,21 +186,19 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
             zIndex: 50,
           }}
         >
-<div
-  style={{
-    width: "420px",
-    maxWidth: "100%",
-    backgroundColor: "#fff",
-    padding: "16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-
-    // FIXED SCROLLING
-    overflowY: "auto",
-    maxHeight: "100vh",
-  }}
->
+          <div
+            style={{
+              width: "420px",
+              maxWidth: "100%",
+              backgroundColor: "#fff",
+              padding: "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+              overflowY: "auto",
+              maxHeight: "100vh",
+            }}
+          >
             <div
               style={{
                 display: "flex",
@@ -202,8 +206,9 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
                 alignItems: "center",
               }}
             >
-              <h2 style={{ margin: 0, fontSize: 18 }}>Edit Merchandise Item</h2>
+              <h2 style={{ margin: 0, fontSize: 18 }}>Edit Class Add‑On</h2>
               <CMSButton
+                type="button"
                 variant="secondary"
                 onClick={() => {
                   setEditingItem(null);
@@ -214,10 +219,15 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
               </CMSButton>
             </div>
 
-            <MerchEditor item={editingItem} setItem={setEditingItem} />
+            <ClassAddOnEditor
+              item={editingItem}
+              event={event}
+              setItem={setEditingItem}
+            />
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
               <CMSButton
+                type="button"
                 variant="secondary"
                 onClick={() => {
                   setEditingItem(null);
@@ -226,8 +236,12 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
               >
                 Cancel
               </CMSButton>
-              <CMSButton variant="primary" onClick={() => saveItem(editingItem)}>
-                Save Item
+              <CMSButton
+                type="button"
+                variant="primary"
+                onClick={() => saveItem(editingItem)}
+              >
+                Save Add‑On
               </CMSButton>
             </div>
           </div>
