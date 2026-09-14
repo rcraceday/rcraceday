@@ -1,0 +1,113 @@
+{
+  club_id: number | null,
+  name: string,
+  description: string | null,
+  event_type: string | null,
+  track: string | null,
+  logourl: string | null,
+
+  is_multi_day: boolean,
+
+  event_date: string | null, // single-day only
+
+  days: [
+    {
+      date: string | null, // YYYY-MM-DD
+      label: string,
+      gates_open_at: string | null,
+      practice_at: string | null,
+      drivers_brief_at: string | null,
+      race_start_at: string | null
+    }
+  ],
+
+  nominations_open: string | null,
+  nominations_close: string | null,
+
+  classes_by_day: [
+    {
+      date: string | null,
+      label: string,
+      classes: [string] // class IDs
+    }
+  ],
+
+  classes: [string], // legacy single-day only
+
+  merchandise: [
+    {
+      id: string,
+      name: string,
+      description: string,
+      price: number,
+      included: boolean,
+      compulsory: boolean,
+      max_qty: number,
+      photo_url: string | null,
+      options: [
+        {
+          name: string,
+          values: [
+            { label: string, price: number, photo_url: string | null }
+          ]
+        }
+      ],
+      classes: []
+    }
+  ],
+
+  class_add_ons: [
+    {
+      id: string,
+      name: string,
+      description: string,
+      price: number,
+      required: boolean,
+      max_qty: number,
+      photo_url: string | null,
+      options: [
+        {
+          name: string,
+          values: [
+            { label: string, price: number, photo_url: string | null }
+          ]
+        }
+      ],
+      classes: [string],
+      class_rules: object
+    }
+  ],
+
+  pricing: {
+    mode: "per_entry" | "tiered" | "per_class",
+
+    global: {
+      free: boolean,
+      member: number,
+      non_member: number,
+      junior: number
+    },
+
+    tiered: {
+      member: { first_class: number, additional_class: number },
+      non_member: { first_class: number, additional_class: number },
+      junior: { first_class: number, additional_class: number }
+    },
+
+    class_prices: {
+      [classId: string]: {
+        free: boolean,
+        member: number,
+        non_member: number,
+        junior: number
+      }
+    },
+
+    charge_preferences: boolean,
+    late_fee: number
+  },
+
+  is_published: boolean,
+  class_limit: number,
+  preference_enabled: boolean
+}

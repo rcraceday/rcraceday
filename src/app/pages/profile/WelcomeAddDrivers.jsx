@@ -1,12 +1,13 @@
 // src/app/pages/profile/WelcomeAddDrivers.jsx
 
 import React, { useState, useEffect } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
+import { useClub } from "@/app/providers/ClubProvider";   // ⭐ FIXED — YOU FORGOT THIS
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -22,7 +23,7 @@ function SimpleSpinner() {
 
 export default function WelcomeAddDrivers() {
   const navigate = useNavigate();
-  const { club } = useOutletContext();
+  const { club } = useClub();            // ⭐ FIXED — now works
   const clubSlug = club?.slug;
 
   const { membership, loadingMembership } = useMembership();
@@ -48,7 +49,6 @@ export default function WelcomeAddDrivers() {
   const maxAdults = club?.max_adults ?? 0;
   const maxJuniors = club?.max_juniors ?? 0;
 
-  // Load club_members for paid members
   useEffect(() => {
     if (isNonMember) return;
     if (!membershipId) return;
@@ -99,7 +99,6 @@ export default function WelcomeAddDrivers() {
         return;
       }
 
-      // ⭐ NO CAPITALISATION — user controls exact name
       const trimmedFirst = firstName.trim();
       const trimmedLast = lastName.trim();
 
@@ -108,9 +107,6 @@ export default function WelcomeAddDrivers() {
         return;
       }
 
-      // ------------------------------------------------------------
-      // ⭐ NON-MEMBER FLOW — drivers only, no club_members
-      // ------------------------------------------------------------
       if (isNonMember) {
         const { data: existingDrivers } = await supabase
           .from("drivers")
@@ -140,16 +136,11 @@ export default function WelcomeAddDrivers() {
         return;
       }
 
-      // ------------------------------------------------------------
-      // ⭐ PAID MEMBER FLOW — must insert into club_members
-      // ------------------------------------------------------------
-
       if (!membershipId) {
         setError("Your membership is not active. Cannot add drivers.");
         return;
       }
 
-      // Family membership limits
       if (membershipType === "family") {
         if (!isJunior && adultCount >= maxAdults) {
           setError(
@@ -166,7 +157,6 @@ export default function WelcomeAddDrivers() {
         }
       }
 
-      // Check if club_member already exists
       const { data: existingMembers } = await supabase
         .from("club_members")
         .select("*")
@@ -179,7 +169,6 @@ export default function WelcomeAddDrivers() {
           ? existingMembers[0]
           : null;
 
-      // Check if driver exists globally
       const { data: existingDrivers } = await supabase
         .from("drivers")
         .select("id")
@@ -235,7 +224,6 @@ export default function WelcomeAddDrivers() {
         return newDriver;
       };
 
-      // Update or insert club_member
       if (memberRow) {
         if (memberRow.is_junior !== isJunior) {
           await supabase

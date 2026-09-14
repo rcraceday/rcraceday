@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import CMSInput from "@cms/CMSInput";
 import CMSSelect from "@cms/CMSSelect";
-import CMSTextarea from "@cms/CMSTextarea";
+import CMSRichTextEditor from "@/components/ui/CMSRichTextEditor";
 import CMSToggle from "@cms/CMSToggle";
 
 import { AddButton, DeleteButton } from "@cms/CMSButtonSet";
@@ -202,12 +202,17 @@ export default function EventBasicsCard({
           required
         />
       )}
+      
+<div>
+  <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
+    Description
+  </label>
 
-      <CMSTextarea
-        label="Description"
-        value={safeDescription}
-        onChange={(value) => onChange("description", value)}
-      />
+  <CMSRichTextEditor
+    value={safeDescription}
+    onChange={(value) => onChange("description", value)}
+  />
+</div>
 
       {/* Shared LogoPicker (lists bucket files and supports upload) */}
       <div>

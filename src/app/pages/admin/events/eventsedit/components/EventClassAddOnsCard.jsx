@@ -110,11 +110,34 @@ export default function EventClassAddOnsCard({
       })
     );
 
+    // ⭐⭐⭐ FIX: CLASS RULES WERE NOT BEING SAVED ⭐⭐⭐
+    const classRulesWithPhotos = {};
+    for (const cid of item.classes || []) {
+      const rule = item.class_rules?.[cid];
+      if (!rule) continue;
+
+      let rPhotoUrl = rule.photo_url;
+
+      if (rule.photo_file instanceof File) {
+        const url = await uploadPhoto(rule.photo_file, `class_${cid}`);
+        if (url) rPhotoUrl = url;
+      }
+
+      classRulesWithPhotos[cid] = {
+        ...rule,
+        photo_url: rPhotoUrl || null,
+        photo_file: null,
+      };
+    }
+
     const cleanItem = {
       ...item,
       photo_url: photoUrl || null,
       photo_file: null,
       options: optionsWithPhotos,
+
+      // ⭐ REQUIRED ⭐
+      class_rules: classRulesWithPhotos,
     };
 
     const updated = addOns.filter((m) => m.id !== cleanItem.id);

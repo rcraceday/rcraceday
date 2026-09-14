@@ -1,0 +1,78 @@
+/* Remove CMS card-like styling inside EventDetails */
+.event-details-content section {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.event-details-content h2 {
+  margin: 0 0 0.75rem 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.event-details-content > * {
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+.event-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  gap: 24px;
+}
+
+/* LEFT COLUMN */
+.event-details-left {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* RIGHT COLUMN */
+.event-details-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* BUTTON ROW (open nominations) */
+.event-details-right-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+/* CLOSED nominations layout (stacked) */
+.event-details-right-closed {
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* MOBILE STACKING */
+@media (max-width: 640px) {
+  .event-details {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .event-details-right {
+    align-items: flex-start;
+  }
+
+  .event-details-right-buttons {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .event-details-right-closed {
+    align-items: flex-start;
+  }
+}

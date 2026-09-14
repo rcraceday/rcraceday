@@ -31,6 +31,23 @@ export default function Events() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // -----------------------------
+  // Multi‑day aware date helpers
+  // -----------------------------
+  function getEventStartDate(event) {
+    if (event.is_multi_day && Array.isArray(event.days) && event.days.length > 0) {
+      return new Date(event.days[0].date);
+    }
+    return new Date(event.event_date);
+  }
+
+  function getEventEndDate(event) {
+    if (event.is_multi_day && Array.isArray(event.days) && event.days.length > 0) {
+      return new Date(event.days[event.days.length - 1].date);
+    }
+    return new Date(event.event_date);
+  }
+
   useEffect(() => {
     async function loadEvents() {
       setLoading(true);
@@ -47,20 +64,33 @@ export default function Events() {
     loadEvents();
   }, []);
 
-  const years = extractYearsFromEvents(events);
+  // Extract years from start dates
+  const years = extractYearsFromEvents(
+    events.map((e) => getEventStartDate(e))
+  );
 
   const now = new Date();
-  let upcoming = events.filter((e) => new Date(e.event_date) >= now);
-  let past = events.filter((e) => new Date(e.event_date) < now);
 
+  // Multi‑day aware upcoming/past classification
+  let upcoming = events.filter((e) => getEventEndDate(e) >= now);
+  let past = events.filter((e) => getEventEndDate(e) < now);
+
+  // -----------------------------
+  // Filtering
+  // -----------------------------
   function applyFilters(list) {
     return list.filter((e) => {
       const q = query.toLowerCase();
       const name = (e.name || "").toLowerCase();
-      const track = (e.track_type || e.track || "").toLowerCase();
-      const type = (e.event_type || "racing").toLowerCase();
-      const dateStr = formatDate(e.event_date).toLowerCase();
-      const year = new Date(e.event_date).getFullYear().toString();
+
+      // AdminEventEdit uses "track"
+      const track = (e.track || "").toLowerCase();
+
+      const type = (e.event_type || "").toLowerCase();
+
+      const startDate = getEventStartDate(e);
+      const dateStr = formatDate(startDate).toLowerCase();
+      const year = startDate.getFullYear().toString();
 
       const matchesQuery =
         !q || name.includes(q) || track.includes(q) || dateStr.includes(q);
@@ -77,10 +107,13 @@ export default function Events() {
     });
   }
 
+  // -----------------------------
+  // Sorting
+  // -----------------------------
   function sortList(list) {
     return [...list].sort((a, b) => {
-      const da = new Date(a.event_date);
-      const db = new Date(b.event_date);
+      const da = getEventStartDate(a);
+      const db = getEventStartDate(b);
       return sortOrder === "asc" ? da - db : db - da;
     });
   }

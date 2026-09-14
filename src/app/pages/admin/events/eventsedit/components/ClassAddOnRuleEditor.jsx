@@ -82,22 +82,32 @@ export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event })
           onChange={(v) => updateRule("description", v)}
         />
 
-        {/* Photo Override */}
-        <CMSImageUpload
-          label="Photo Override"
-          value={rule.photo_url}
-          filePreview={rule.photo_file}
-          onChange={(fileOrNull) => {
-            if (fileOrNull === null) {
-              updateRule("photo_file", null);
-              updateRule("photo_url", null);
-            } else if (fileOrNull instanceof File) {
-              updateRule("photo_file", fileOrNull);
-            } else {
-              updateRule("photo_url", fileOrNull);
-            }
-          }}
-        />
+{/* Photo Override */}
+<CMSImageUpload
+  label="Photo Override"
+  value={rule.photo_url}
+  filePreview={rule.photo_file}
+  onChange={async (fileOrNull) => {
+    if (fileOrNull === null) {
+      updateRule("photo_file", null);
+      updateRule("photo_url", null);
+      return;
+    }
+
+    if (fileOrNull instanceof File) {
+      updateRule("photo_file", fileOrNull);
+
+      // Upload immediately for class‑specific override
+      const url = await uploadPhoto(fileOrNull);
+      if (url) updateRule("photo_url", url);
+
+      return;
+    }
+
+    // Existing URL
+    updateRule("photo_url", fileOrNull);
+  }}
+/>
       </div>
     </CMSCard>
   );

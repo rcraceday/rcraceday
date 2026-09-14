@@ -9,7 +9,7 @@ import { supabase } from "@/supabaseClient";
 
 import OptionGroupEditor from "./OptionGroupEditor";
 
-export default function ClassAddOnEditor({ item, event, setItem }) {
+export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
   const update = (field, value) => {
     setItem((prev) => ({ ...prev, [field]: value }));
   };
@@ -39,14 +39,15 @@ export default function ClassAddOnEditor({ item, event, setItem }) {
     }));
   };
 
-  const uploadPhoto = async (file, classId = null) => {
+  const uploadPhoto = async (file, pathSuffix = "main") => {
     if (!file || !event?.club_id) return null;
 
-    const safeName = file.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_.-]/g, "");
+    const safeName = file.name
+      .replace(/\s+/g, "_")
+      .replace(/[^a-zA-Z0-9_.-]/g, "");
     const timestamp = Date.now();
     const baseId = item.id || "item";
-    const suffix = classId ? `_${classId}` : "";
-    const path = `${event.club_id}/merch/${baseId}${suffix}_${timestamp}_${safeName}`;
+    const path = `${event.club_id}/merch/${baseId}_${pathSuffix}_${timestamp}_${safeName}`;
 
     const { error } = await supabase.storage
       .from("club-assets")
@@ -58,10 +59,82 @@ export default function ClassAddOnEditor({ item, event, setItem }) {
     return res?.publicURL ?? res?.data?.publicUrl ?? null;
   };
 
+  const saveItem = async () => {
+    let photoUrl = item.photo_url;
+
+    // Main photo
+    if (item.photo_file instanceof File) {
+      const url = await uploadPhoto(item.photo_file, "main");
+      if (url) photoUrl = url;
+    }
+
+    // Option photos
+    const optionsWithPhotos = await Promise.all(
+      (item.options || []).map(async (group, gi) => {
+        const values = await Promise.all(
+          (group.values || []).map(async (val, vi) => {
+            let vPhotoUrl = val.photo_url;
+
+            if (val.photo_file instanceof File) {
+              const url = await uploadPhoto(val.photo_file, `opt_${gi}_${vi}`);
+              if (url) vPhotoUrl = url;
+            }
+
+            return {
+              ...val,
+              photo_url: vPhotoUrl || null,
+              photo_file: null,
+            };
+          })
+        );
+
+        return {
+          ...group,
+          values,
+        };
+      })
+    );
+
+    // ⭐ FIX: class_rules were NOT being saved before
+    const classRulesWithPhotos = {};
+    for (const cid of item.classes || []) {
+      const rule = item.class_rules?.[cid];
+      if (!rule) continue;
+
+      let rPhotoUrl = rule.photo_url;
+
+      if (rule.photo_file instanceof File) {
+        const url = await uploadPhoto(rule.photo_file, `class_${cid}`);
+        if (url) rPhotoUrl = url;
+      }
+
+      classRulesWithPhotos[cid] = {
+        ...rule,
+        photo_url: rPhotoUrl || null,
+        photo_file: null,
+      };
+    }
+
+    const cleanItem = {
+      ...item,
+      photo_url: photoUrl || null,
+      photo_file: null,
+      options: optionsWithPhotos,
+
+      // ⭐ REQUIRED FIX
+      class_rules: classRulesWithPhotos,
+    };
+
+    if (typeof onSave === "function") {
+      onSave(cleanItem);
+    } else {
+      setItem(cleanItem);
+    }
+  };
+
   return (
     <CMSCard title="Add‑on Options">
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Helper text under the Add-on Options heading */}
         <div style={{ fontSize: 12, color: "#666", marginTop: -8 }}>
           Use descriptive group names (e.g. Tire Compund, Wheel Colour). Add option values and optional photos here.
         </div>
@@ -133,20 +206,35 @@ export default function ClassAddOnEditor({ item, event, setItem }) {
             <OptionGroupEditor
               key={gi}
               group={group}
+              event={event}
+              item={item}
               onRename={(name) => {
                 const updated = [...(item.options || [])];
                 updated[gi].name = name;
                 update("options", updated);
               }}
-onAddValue={(val) => {
-  const updated = [...(item.options || [])];
-  updated[gi].values.push({
-    label: val,
-    photo_url: null,
-    photo_file: null,
-  });
-  update("options", updated);
-}}
+              onAddValue={(val) => {
+                const updated = [...(item.options || [])];
+                updated[gi].values.push({
+                  label: val,
+                  photo_url: null,
+                  photo_file: null,
+                });
+                update("options", updated);
+              }}
+              onUpdateValue={(vi, label) => {
+                const updated = [...(item.options || [])];
+                updated[gi].values[vi].label = label;
+                update("options", updated);
+              }}
+              onUpdateValuePhoto={(vi, payload) => {
+                const updated = [...(item.options || [])];
+                updated[gi].values[vi] = {
+                  ...updated[gi].values[vi],
+                  ...payload,
+                };
+                update("options", updated);
+              }}
               onRemoveValue={(vi) => {
                 const updated = [...(item.options || [])];
                 updated[gi].values.splice(vi, 1);
@@ -163,10 +251,13 @@ onAddValue={(val) => {
 
         <CMSCard title="Apply to Classes">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ color: "#444", fontSize: 13 }}>Select classes this add‑on applies to</div>
+            <div style={{ color: "#444", fontSize: 13 }}>
+              Select classes this add‑on applies to
+            </div>
 
             {(event?.available_classes || []).map((c) => {
-              const checked = Array.isArray(item.classes) && item.classes.includes(c.id);
+              const checked =
+                Array.isArray(item.classes) && item.classes.includes(c.id);
               return (
                 <label
                   key={c.id}
@@ -189,7 +280,9 @@ onAddValue={(val) => {
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     <div style={{ fontSize: 14 }}>{c.name}</div>
                     {c.short_description && (
-                      <div style={{ fontSize: 12, color: "#666" }}>{c.short_description}</div>
+                      <div style={{ fontSize: 12, color: "#666" }}>
+                        {c.short_description}
+                      </div>
                     )}
                   </div>
                 </label>
@@ -201,6 +294,12 @@ onAddValue={(val) => {
             )}
           </div>
         </CMSCard>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <CMSButton variant="primary" type="button" onClick={saveItem}>
+            Save Add‑On
+          </CMSButton>
+        </div>
       </div>
     </CMSCard>
   );
