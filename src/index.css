@@ -1,4 +1,42 @@
 /* ===========================
+   GLOBAL PWA + SAFE AREA
+   =========================== */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;                 /* REQUIRED for full-screen splash */
+  background-color: #000;       /* match manifest background_color */
+  overflow-x: hidden;
+
+  font-family:
+    'Poppins',
+    "Segoe UI Emoji",
+    "Apple Color Emoji",
+    "Noto Color Emoji",
+    sans-serif;
+
+  /* REQUIRED for iPhone notch + full-screen splash */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ===========================
+   GLOBAL LINK RESET
+   =========================== */
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+/* ===========================
    GLOBAL HEADER STYLES
    =========================== */
 
@@ -7,7 +45,7 @@
   background: white;
   border-bottom: 1px solid #e5e5e5;
   position: relative;
-  z-index: 1000; /* ensure header is above page content */
+  z-index: 1000;
 }
 
 .header-inner {
@@ -71,43 +109,49 @@
   margin-right: 0.75rem;
   color: #555;
   flex-shrink: 0;
+  opacity: 0.8;
 }
 
 /* ===========================
-   DESKTOP DROPDOWN (HOVER)
+   DESKTOP DROPDOWN
    =========================== */
 
 .desktop-dropdown {
   position: absolute;
-  top: 100%; /* FIXED: no gap so hover doesn't break */
-  left: 50%;
-  transform: translateX(-50%);
+  top: 100%;
+  left: 0;
+  width: 220px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
-  padding: 0.5rem 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease;
-  z-index: 9999;
-  white-space: nowrap;
+  transform: translateY(6px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 50;
 }
 
 .desktop-dropdown.open {
   opacity: 1;
   pointer-events: auto;
+  transform: translateY(0);
 }
 
 .desktop-dropdown nav a {
   display: flex;
   align-items: center;
-  padding: 0.5rem 1.25rem;
-  color: #333;
+  gap: 10px;
+  padding: 10px 14px;
   text-decoration: none;
+  color: #222;
+  font-size: 15px;
+  border-left: 4px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .desktop-dropdown nav a:hover {
-  background: #f5f5f5;
+  background: rgba(0,0,0,0.04);
+  border-left-color: var(--brand-color, #0A66C2);
 }
 
 /* ===========================
@@ -124,43 +168,43 @@
 .mobile-drawer {
   position: fixed;
   top: 0;
-  right: -260px;
+  right: 0;
   width: 260px;
-  height: 100%;
+  height: 100vh;
   background: white;
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
-  transition: right 0.25s ease;
-  z-index: 9500;
+  box-shadow: -4px 0 16px rgba(0,0,0,0.15);
+  padding: 20px;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  z-index: 100;
   display: flex;
   flex-direction: column;
 }
 
 .mobile-drawer.open {
-  right: 0;
+  transform: translateX(0);
 }
 
-.drawer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-}
-
-.drawer-close-icon {
-  width: 24px;
-  height: 24px;
-}
-
-.drawer-nav a {
+.mobile-drawer nav a {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
-  color: #333;
+  gap: 12px;
+  padding: 14px 0;
   text-decoration: none;
+  color: #222;
+  font-size: 17px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 
-.drawer-nav a:hover {
-  background: #f5f5f5;
+.mobile-drawer nav a:last-child {
+  border-bottom: none;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 20px;
 }
 
 /* ===========================
@@ -171,7 +215,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  cursor: default !important; /* FIXED: removes clickable link feel */
+  cursor: default !important;
 }
 
 .avatar-dropdown {
@@ -236,49 +280,18 @@
 }
 
 /* ===========================
-   GLOBAL FONT
+   PUBLIC COLUMN
    =========================== */
 
-:root {
-  --site-font: 'Poppins', sans-serif;
-}
-
-html, body {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  font-family:
-  'Poppins',
-  "Segoe UI Emoji",
-  "Apple Color Emoji",
-  "Noto Color Emoji",
-  sans-serif;
-
-}
-
-/* ===========================
-   GLOBAL LINK RESET
-   =========================== */
-
-a {
-  text-decoration: none;
-  color: inherit;
-}
-
-a:hover {
-  text-decoration: none;
-}
-
-/* public column authoritative layout */
 .public-column {
   width: 320px;
   max-width: 320px;
-  margin-left: auto;
-  margin-right: auto;
-  box-sizing: border-box;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: left !important;
+  display: block !important;
 }
 
-/* ensure inputs and buttons fill the column */
 .public-column input,
 .public-column textarea,
 .public-column button {
@@ -286,99 +299,9 @@ a:hover {
   width: 100%;
 }
 
-/* DESKTOP DROPDOWN */
-.desktop-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0; /* left-align under trigger */
-  width: 220px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(6px); /* only vertical movement */
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 50;
-}
-
-.desktop-dropdown.open {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0); /* open state */
-}
-
-.desktop-dropdown nav a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  text-decoration: none;
-  color: #222;
-  font-size: 15px;
-  border-left: 4px solid transparent;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.desktop-dropdown nav a:hover {
-  background: rgba(0,0,0,0.04);
-  border-left-color: var(--brand-color, #0A66C2);
-}
-
-.menu-icon {
-  width: 20px;
-  height: 20px;
-  opacity: 0.8;
-}
-
-.mobile-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 260px;
-  height: 100vh;
-  background: white;
-  box-shadow: -4px 0 16px rgba(0,0,0,0.15);
-  padding: 20px;
-  transform: translateX(100%);
-  transition: transform 0.25s ease;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-}
-
-.mobile-drawer.open {
-  transform: translateX(0);
-}
-
-.mobile-drawer nav a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 0;
-  text-decoration: none;
-  color: #222;
-  font-size: 17px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-}
-
-.mobile-drawer nav a:last-child {
-  border-bottom: none;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  margin-bottom: 20px;
-}
-
-.public-column {
-  margin-left: auto !important;
-  margin-right: auto !important;
-  text-align: left !important;
-  display: block !important;
-}
+/* ===========================
+   ROOT WRAPPER
+   =========================== */
 
 #root {
   width: 100% !important;
@@ -387,19 +310,10 @@ a:hover {
   text-align: left !important;
 }
 
-.member-badge {
-  width: 192px;   /* desktop size */
-  height: 192px;
-}
+/* ===========================
+   MEMBER BADGE
+   =========================== */
 
-@media (max-width: 768px) {
-  .member-badge {
-    width: 120px;  /* mobile size */
-    height: 120px;
-  }
-}
-
-/* Desktop default — top right */
 .member-badge {
   width: 192px;
   height: 192px;
@@ -407,7 +321,6 @@ a:hover {
   bottom: auto;
 }
 
-/* Mobile override — bottom right */
 @media (max-width: 768px) {
   .member-badge {
     width: 120px;
@@ -416,7 +329,11 @@ a:hover {
     bottom: 16px;
   }
 }
-/* TipTap editor base */
+
+/* ===========================
+   TIPTAP EDITOR
+   =========================== */
+
 .tiptap {
   min-height: 150px;
   outline: none;
@@ -440,4 +357,3 @@ a:hover {
   color: #2563eb;
   text-decoration: underline;
 }
-

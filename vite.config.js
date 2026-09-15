@@ -13,29 +13,84 @@ export default defineConfig({
 
     VitePWA({
       registerType: "autoUpdate",
-      manifest: {
-        id: "/",
-        name: "RC RaceDay",
-        short_name: "RaceDay",
-        start_url: "/",
-        scope: "/",
-        display: "standalone",
-        orientation: "portrait",
-        background_color: "#000000",
-        theme_color: "#000000",
-        icons: [
-          {
-            src: "/pwa-192x192.png",
-            sizes: "192x192",
-            type: "image/png"
-          },
-          {
-            src: "/pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png"
-          }
-        ]
-      }
+manifest: {
+  id: "/",
+  name: "RC RaceDay",
+  short_name: "RaceDay",
+  description: "Race day management for Chargers RC",
+  start_url: "/",
+  scope: "/",
+  display: "standalone",
+  orientation: "portrait",
+  background_color: "#000000",
+  theme_color: "#000000",
+
+  icons: [
+    {
+      src: "/pwa/icon-192.png",
+      sizes: "192x192",
+      type: "image/png",
+      purpose: "any"
+    },
+    {
+      src: "/pwa/icon-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any"
+    },
+    {
+      src: "/pwa/icon-512-maskable.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "maskable"
+    }
+  ],
+
+  screenshots: [
+    {
+      src: "/splash/splash-640x1136.png",
+      sizes: "640x1136",
+      type: "image/png",
+      form_factor: "narrow"
+    },
+    {
+      src: "/splash/splash-750x1334.png",
+      sizes: "750x1334",
+      type: "image/png",
+      form_factor: "narrow"
+    },
+    {
+      src: "/splash/splash-1125x2436.png",
+      sizes: "1125x2436",
+      type: "image/png",
+      form_factor: "wide"
+    },
+    {
+      src: "/splash/splash-1242x2688.png",
+      sizes: "1242x2688",
+      type: "image/png",
+      form_factor: "wide"
+    },
+    {
+      src: "/splash/splash-1536x2048.png",
+      sizes: "1536x2048",
+      type: "image/png",
+      form_factor: "tablet"
+    },
+    {
+      src: "/splash/splash-1668x2224.png",
+      sizes: "1668x2224",
+      type: "image/png",
+      form_factor: "tablet"
+    },
+    {
+      src: "/splash/splash-2048x2732.png",
+      sizes: "2048x2732",
+      type: "image/png",
+      form_factor: "tablet"
+    }
+  ]
+}
     })
   ],
 
