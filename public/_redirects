@@ -1,5 +1,8 @@
 /registerSW.js                 /registerSW.js                 200
 /chargers-rc/registerSW.js     /chargers-rc/registerSW.js     200
+
+/chargers-rc/login             /chargers-rc/index.html        200
+/chargers-rc/*                 /chargers-rc/index.html        200
 /assets/*    /assets/:splat    200
 /*.png       /:splat           200
 /*.jpg       /:splat           200
