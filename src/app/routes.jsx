@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 
-import ClubLayout from "@/app/providers/ClubLayout";
+import ClubLayout from "@/app/layouts/ClubLayout";
 
 import AppLayout from "@/layouts/AppLayout";
 import PublicLayout from "@/layouts/PublicLayout";
