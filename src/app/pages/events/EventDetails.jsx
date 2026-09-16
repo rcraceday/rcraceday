@@ -349,21 +349,6 @@ return (
     }}
   >
 
-    {/* ⭐ REAL GRADIENT LAYER — inset 8px, tall, bottom only */}
-    <div
-      style={{
-        position: "absolute",
-        left: "8px",
-        right: "8px",
-        bottom: "8px",
-        height: "180px",               // how far up the card it goes
-        background: "linear-gradient(0deg, #003366 0%, #ffffff 85%)",
-        borderRadius: "8px",
-        pointerEvents: "none",
-        zIndex: 0,
-      }}
-    />
-
     {/* ⭐ ALL EXISTING CONTENT ABOVE THE GRADIENT */}
     <div style={{ position: "relative", zIndex: 1 }}>
       {/* your entire card content stays exactly the same */}
