@@ -3,6 +3,8 @@ import { Navigate, useParams, useLocation, Outlet } from "react-router-dom";
 import ThemeProvider from "@/app/providers/ThemeProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useClub } from "@/app/providers/ClubProvider";
+import Header from "@/components/ui/Header";
+import PublicHeader from "@/components/ui/PublicHeader";
 import Footer from "@/components/ui/Footer";
 
 export default function ClubLayout({ mode = "drivers" }) {
@@ -17,6 +19,7 @@ export default function ClubLayout({ mode = "drivers" }) {
   if (!clubSlug) {
     return (
       <ThemeProvider mode={mode}>
+        <Header />
         <div className="w-full flex justify-center overflow-x-visible">
           <div className="w-full max-w-5xl px-4">
             <Outlet />
@@ -39,6 +42,7 @@ export default function ClubLayout({ mode = "drivers" }) {
 
     return (
       <ThemeProvider mode={mode} clubTheme={club?.theme}>
+        <PublicHeader club={club} />
         <div className="w-full flex justify-center overflow-x-visible">
           <div className="w-full max-w-5xl px-4">
             <Outlet context={{ club }} />
@@ -62,9 +66,10 @@ export default function ClubLayout({ mode = "drivers" }) {
     );
   }
 
-  // PRIVATE ROUTES — THEME COMES FROM ClubProvider
+  // PRIVATE ROUTES — ALWAYS wrap in ThemeProvider + Header + Footer
   return (
     <ThemeProvider mode={mode} clubTheme={club?.theme}>
+      <Header club={club} />
       <div className="w-full flex justify-center overflow-x-visible">
         <div className="w-full max-w-5xl px-4">
           <Outlet context={{ club }} />

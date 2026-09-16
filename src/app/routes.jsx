@@ -1,14 +1,14 @@
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 
+import ClubSelect from "@/app/pages/global/ClubSelect.jsx";   // ⭐ FIXED
+
 import ClubLayout from "@/layouts/ClubLayout";
 import AppLayout from "@/layouts/AppLayout";
 import PublicLayout from "@/layouts/PublicLayout";
 import AdminLayout from "@app/pages/admin/AdminLayout";
 
 import ProtectedAppRoute from "@/app/routes/ProtectedAppRoute";
-
-// GLOBAL
-import ClubSelect from "@/app/pages/global/ClubSelect";
+import ClubProvider from "@/app/providers/ClubProvider";
 
 // PUBLIC PAGES
 import Login from "@app/pages/public/Login";
@@ -95,16 +95,16 @@ function PublicRootRedirect() {
 export default function RoutesFile() {
   return (
     <Routes>
-      {/* ROOT */}
       <Route path="/" element={<ClubSelect />} />
 
-      {/* PUBLIC */}
       <Route
         path="/:clubSlug/public/*"
         element={
-          <ClubLayout>
-            <PublicLayout />
-          </ClubLayout>
+          <ClubProvider>
+            <ClubLayout>
+              <PublicLayout />
+            </ClubLayout>
+          </ClubProvider>
         }
       >
         <Route index element={<PublicRootRedirect />} />
@@ -117,42 +117,31 @@ export default function RoutesFile() {
         <Route path="*" element={<Navigate to="login" replace />} />
       </Route>
 
-      {/* APP (PROTECTED) */}
       <Route
         path="/:clubSlug/app/*"
         element={
-          <ClubLayout>
-            <ProtectedAppRoute>
-              <AppLayout />
-            </ProtectedAppRoute>
-          </ClubLayout>
+          <ClubProvider>
+            <ClubLayout>
+              <ProtectedAppRoute>
+                <AppLayout />
+              </ProtectedAppRoute>
+            </ClubLayout>
+          </ClubProvider>
         }
       >
         <Route index element={<Home />} />
-
-        {/* MEMBERSHIP */}
         <Route path="membership" element={<Membership />} />
         <Route path="membership/join" element={<JoinMembership />} />
         <Route path="membership/renew" element={<RenewMembership />} />
         <Route path="membership/upgrade" element={<UpgradeMembership />} />
-
-        {/* STYLE GUIDE */}
         <Route path="style-guide" element={<StyleGuidePage />} />
-
-        {/* CALENDAR */}
         <Route path="calendar" element={<Calendar />} />
         <Route path="calendar/:id" element={<CalendarItemDetails />} />
-
-        {/* EVENTS */}
         <Route path="events" element={<Events />} />
         <Route path="events/:id" element={<EventDetails />} />
         <Route path="events/:eventId/nominate" element={<EventNominate />} />
-
-        {/* PROFILE */}
         <Route path="profile" element={<UserProfile />} />
         <Route path="profile/edit" element={<EditUser />} />
-
-        {/* DRIVER MANAGEMENT */}
         <Route
           path="profile/drivers/*"
           element={
@@ -201,25 +190,22 @@ export default function RoutesFile() {
             </DriverProvider>
           }
         />
-
-        {/* LOGOUT */}
         <Route path="logout" element={<Logout />} />
       </Route>
 
-      {/* ADMIN (PROTECTED) */}
       <Route
         path="/:clubSlug/app/admin/*"
         element={
-          <ClubLayout mode="admin">
-            <ProtectedAppRoute>
-              <AdminLayout />
-            </ProtectedAppRoute>
-          </ClubLayout>
+          <ClubProvider>
+            <ClubLayout mode="admin">
+              <ProtectedAppRoute>
+                <AdminLayout />
+              </ProtectedAppRoute>
+            </ClubLayout>
+          </ClubProvider>
         }
       >
         <Route index element={<AdminDashboard />} />
-
-        {/* SETTINGS */}
         <Route path="settings" element={<AdminSettingsIndex />} />
         <Route path="settings/club-info" element={<ClubInfoSettings />} />
         <Route path="settings/branding" element={<BrandingSettings />} />
@@ -230,23 +216,16 @@ export default function RoutesFile() {
         <Route path="settings/event-defaults" element={<EventDefaultsSettings />} />
         <Route path="settings/driver" element={<DriverSettings />} />
         <Route path="settings/tracks-and-classes" element={<TracksClassesSettings />} />
-
-        {/* EVENTS */}
         <Route path="events" element={<AdminEvents />} />
         <Route path="events/new" element={<AdminEventEdit />} />
         <Route path="events/:id" element={<AdminEventEdit />} />
         <Route path="events/:id/nominations" element={<AdminEventNominations />} />
         <Route path="events/:id/nominations/export" element={<NominationsExport />} />
-
-        {/* CHAMPIONSHIPS */}
         <Route path="championships" element={<ChampionshipsList />} />
         <Route path="championships/create" element={<CreateChampionship />} />
       </Route>
 
-      {/* CLUB ROOT REDIRECT */}
       <Route path="/:clubSlug" element={<ClubRootRedirect />} />
-
-      {/* FALLBACK */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

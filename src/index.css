@@ -6,7 +6,7 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;                 /* REQUIRED for full-screen splash */
-  background-color: #000;       /* match manifest background_color */
+  background-color: #ffff;       /* match manifest background_color */
   overflow-x: hidden;
 
   font-family:

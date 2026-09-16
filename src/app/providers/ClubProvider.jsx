@@ -17,7 +17,6 @@ export function useClub() {
 
 /**
  * ✔ REQUIRED BY ClubSelect.jsx
- * ✔ This export MUST exist
  */
 export async function userBelongsToClub(userId, clubId) {
   if (!userId || !clubId) return false;
@@ -52,11 +51,18 @@ export default function ClubProvider({ children }) {
     "assets",
   ]);
 
+  // ⭐ FIXED SLUG DETECTION
   const clubSlug = (() => {
     const parts = (location.pathname || "").split("/").filter(Boolean);
-    const first = parts.length > 0 ? parts[0] : null;
+    const [first, second] = parts;
+
     if (!first) return null;
-    if (RESERVED_TOP_SEGMENTS.has(first.toLowerCase())) return null;
+
+    // If first segment is reserved, slug is the second segment
+    if (RESERVED_TOP_SEGMENTS.has(first.toLowerCase())) {
+      return second || null;
+    }
+
     return first;
   })();
 

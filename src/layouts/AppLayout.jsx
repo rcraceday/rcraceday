@@ -26,6 +26,7 @@ export default function AppLayout() {
   const { membership, loadingMembership } = useMembership();
   const { clubSlug } = useParams();
 
+  // ⭐ FIX: Do NOT redirect until club is loaded
   const loading =
     loadingUser ||
     loadingProfile ||
@@ -37,16 +38,17 @@ export default function AppLayout() {
     if (club) applyClubTheme(club);
   }, [club?.id]);
 
+  // ⭐ FIX: Only redirect AFTER club + user loading is complete
+  if (!loadingUser && club && !user) {
+    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-white">
         <div className="p-6 text-center">Loading…</div>
       </div>
     );
-  }
-
-  if (!user) {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
   }
 
   return (
