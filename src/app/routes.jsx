@@ -1,14 +1,15 @@
+// src/app/routes.jsx
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 
 import ClubSelect from "@/app/pages/global/ClubSelect.jsx";
 
-import ClubLayout from "@/layouts/ClubLayout";
 import AppLayout from "@/layouts/AppLayout";
 import PublicLayout from "@/layouts/PublicLayout";
 import AdminLayout from "@/layouts/AdminLayout";
 
 import ProtectedAppRoute from "@/app/routes/ProtectedAppRoute";
 import ClubProvider from "@/app/providers/ClubProvider";
+import ThemeProvider from "@/app/providers/ThemeProvider";
 
 // PUBLIC PAGES
 import Login from "@app/pages/public/Login";
@@ -18,7 +19,7 @@ import ForgotPassword from "@app/pages/public/ForgotPassword";
 import ResetPassword from "@app/pages/public/ResetPassword";
 import ForgotEmail from "@app/pages/public/ForgotEmail";
 
-// APP PAGES (USER)
+// USER PAGES
 import Home from "@app/pages/home/Home";
 import Events from "@app/pages/events/Events";
 import EventDetails from "@app/pages/events/EventDetails";
@@ -38,7 +39,6 @@ import AddDriver from "@app/pages/profile/AddDriver";
 import ChooseNumber from "@app/pages/profile/ChooseNumber";
 import WelcomeAddDrivers from "@app/pages/profile/WelcomeAddDrivers";
 
-// DRIVER PROVIDER
 import DriverProvider from "@/app/providers/DriverProvider";
 
 // ADMIN PAGES
@@ -79,18 +79,12 @@ import EventDefaultsSettings from "@app/pages/admin/settings/EventDefaultsSettin
 import DriverSettings from "@app/pages/admin/settings/DriverSettings";
 import TracksClassesSettings from "@app/pages/admin/settings/TracksClassesSettings";
 
-
 function ClubRootRedirect() {
   const { clubSlug } = useParams();
   return clubSlug ? <Navigate to={`/${clubSlug}/public/login`} replace /> : null;
 }
 
-function PublicRootRedirect() {
-  const { clubSlug } = useParams();
-  return clubSlug ? <Navigate to={`/${clubSlug}/public/login`} replace /> : null;
-}
-
-export default function RoutesFile() {
+export default function AppRoutes() {
   return (
     <Routes>
       {/* ROOT */}
@@ -101,13 +95,13 @@ export default function RoutesFile() {
         path="/:clubSlug/public/*"
         element={
           <ClubProvider>
-            <ClubLayout>
+            <ThemeProvider>
               <PublicLayout />
-            </ClubLayout>
+            </ThemeProvider>
           </ClubProvider>
         }
       >
-        <Route index element={<PublicRootRedirect />} />
+        <Route index element={<ClubRootRedirect />} />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />
         <Route path="check-email/*" element={<CheckEmail />} />
@@ -122,11 +116,11 @@ export default function RoutesFile() {
         path="/:clubSlug/app/*"
         element={
           <ClubProvider>
-            <ClubLayout>
+            <ThemeProvider>
               <ProtectedAppRoute>
                 <AppLayout />
               </ProtectedAppRoute>
-            </ClubLayout>
+            </ThemeProvider>
           </ClubProvider>
         }
       >
@@ -201,14 +195,16 @@ export default function RoutesFile() {
         <Route path="logout" element={<Logout />} />
       </Route>
 
-      {/* ADMIN ROUTES — FIXED (NO ClubLayout) */}
+      {/* ADMIN ROUTES */}
       <Route
         path="/:clubSlug/app/admin/*"
         element={
           <ClubProvider>
-            <ProtectedAppRoute>
-              <AdminLayout />
-            </ProtectedAppRoute>
+            <ThemeProvider mode="admin">
+              <ProtectedAppRoute admin>
+                <AdminLayout />
+              </ProtectedAppRoute>
+            </ThemeProvider>
           </ClubProvider>
         }
       >

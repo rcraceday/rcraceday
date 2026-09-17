@@ -1,203 +1,269 @@
-layouts.md
-RCRaceDay Layout Architecture — Developer Reference
-1. Purpose
-This document defines the layout system used across RCRaceDay.
-It explains:
+developer.md — Layout & Routing Architecture
+This document explains how the layout system works across the entire RC RaceDay application. It describes how public pages, authenticated user pages, and admin CMS pages are structured, themed, and routed.
 
-What each layout does
+The goal is to make the layout architecture predictable, maintainable, and easy to reason about.
 
-Where each layout lives
+🧩 1. Providers Overview
+The app relies on two global providers for every route section:
 
-Which routes use which layout
+ClubProvider
+Loads the club based on /:clubSlug and provides:
 
-How layouts must be nested
+club
 
-How to safely add new pages
+loadingClub
 
-How to restore layout integrity if anything breaks
+club metadata (name, logo, theme overrides)
 
-This prevents layout crossover issues such as:
+ThemeProvider
+Applies the club’s branding:
 
-Admin pages inheriting user layout
+colors
 
-User pages inheriting admin layout
+hero background
 
-Public pages inheriting club layout incorrectly
+admin/drivers palette
 
-Theme bleed between sections
+theme overrides
 
-2. Layout Components (Actual Files)
-Your project contains four layout components:
+ThemeProvider replaces all manual theme injection.
 
-Code
-src/layouts/AppLayout.jsx
-src/layouts/ClubLayout.jsx
-src/layouts/PublicLayout.jsx
-src/layouts/AdminLayout.jsx
-These are the only layout components in the system.
+🧱 2. Layouts Overview
+The app uses three layouts, each responsible for a different part of the product.
 
-Each layout has a specific responsibility and must only be used in its correct routing layer.
+PublicLayout
+Used for unauthenticated public pages:
 
-3. Layout Responsibilities
-A. ClubLayout.jsx
-Location: src/layouts/ClubLayout.jsx  
-Used for: Public + User App routes
-Provides:
+Login
 
-Club theme injection
+Signup
 
-Club header (user header)
+Forgot password
 
-Public header (for /public/*)
+Reset password
 
-Global page wrapper
+Check email
 
-Footer
-
-Club context
-
-Public/private route branching
-
-Never used for admin routes.
-
-B. AppLayout.jsx
-Location: src/layouts/AppLayout.jsx  
-Used for: Authenticated user app pages
-Provides:
-
-User header
-
-User theme
-
-User spacing
-
-User wrappers
-
-<Outlet context={{ club }}>
-
-Auth gating (via ProtectedAppRoute)
-
-Never used for admin or public routes.
-
-C. PublicLayout.jsx
-Location: src/layouts/PublicLayout.jsx  
-Used for: Public pages (login, signup, password reset)
-Provides:
-
-Public header
+Responsibilities
+Centered column (maxWidth: 720px)
 
 Public spacing
 
-Public wrappers
+No header
 
-Public theme
+No footer
 
-Never used for user or admin routes.
+Receives club via Outlet context
 
-D. AdminLayout.jsx
-Location: src/layouts/AdminLayout.jsx  
-Used for: Admin dashboard + CMS
-Provides:
+AppLayout
+Used for authenticated user pages:
 
-<AdminTopBar />
+Home
 
-Admin background
+Events
+
+Calendar
+
+Membership
+
+Profile
+
+Drivers
+
+Style Guide
+
+Responsibilities
+Global header
+
+Global footer
+
+Centered column (maxWidth: 720px)
+
+Theme‑aware background/text
+
+Auth gating handled by ProtectedAppRoute
+
+Club context forwarded to pages
+
+Loading screens for user/profile/membership/club
+
+AdminLayout
+Used for admin CMS pages:
+
+Dashboard
+
+Events
+
+Nominations
+
+Championships
+
+Settings
+
+Tracks & Classes
+
+Membership admin
+
+Responsibilities
+Admin top bar
 
 Admin spacing
 
-Admin maxWidth (720px)
+Admin background
 
-Admin theme isolation
+Centered column (maxWidth: 720px)
 
-<Outlet context={ctx}> forwarding club context
+Club context forwarded to pages
 
-Never wrapped in ClubLayout.  
-Never used for user or public routes.
+Admin theme mode (mode="admin")
 
-4. Correct Layout Nesting (Canonical)
-Public Pages
+Auth gating handled by ProtectedAppRoute admin
+
+🔐 3. ProtectedAppRoute
+This component ensures only authenticated users can access:
+
+AppLayout
+
+AdminLayout
+
+Responsibilities
+Redirect unauthenticated users to /public/login
+
+Wait for user loading
+
+Support admin mode for admin‑only routes
+
+🛣️ 4. Routing Architecture (routes.jsx)
+Routing is divided into three sections:
+
+Public
 Code
-ClubProvider
-  ClubLayout
-    PublicLayout
-      Public pages
-User App Pages
+/:clubSlug/public/*
+User App
 Code
-ClubProvider
-  ClubLayout
-    ProtectedAppRoute
-      AppLayout
-        User pages
-Admin Pages
+/:clubSlug/app/*
+Admin CMS
 Code
+/:clubSlug/app/admin/*
+Each section is wrapped with:
+
 ClubProvider
-  ProtectedAppRoute
-    AdminLayout
-      Admin pages
-This is the only correct layout structure.
 
-5. Routing Rules (Critical)
-Rule 1 — Admin routes must NOT use ClubLayout
-If admin is wrapped in ClubLayout:
+ThemeProvider
 
-Admin header disappears
+(for authenticated sections) ProtectedAppRoute
 
-Admin spacing breaks
+Public Routes Structure
+jsx
+<ClubProvider>
+  <ThemeProvider>
+    <PublicLayout>
+      <Outlet />
+    </PublicLayout>
+  </ThemeProvider>
+</ClubProvider>
+User App Routes Structure
+jsx
+<ClubProvider>
+  <ThemeProvider>
+    <ProtectedAppRoute>
+      <AppLayout>
+        <Outlet />
+      </AppLayout>
+    </ProtectedAppRoute>
+  </ThemeProvider>
+</ClubProvider>
+Admin Routes Structure
+jsx
+<ClubProvider>
+  <ThemeProvider mode="admin">
+    <ProtectedAppRoute admin>
+      <AdminLayout>
+        <Outlet />
+      </AdminLayout>
+    </ProtectedAppRoute>
+  </ThemeProvider>
+</ClubProvider>
+🎨 5. Theme System
+ThemeProvider merges:
 
-Admin CMS styles break
+base palette
 
-Admin pages look like user pages
+club theme overrides
 
-This was the root cause of the previous failure.
+admin/drivers palette
 
-Rule 2 — AdminLayout must be the top-level admin wrapper
-AdminLayout is the admin equivalent of AppLayout and PublicLayout.
+hero background
 
-Rule 3 — ClubLayout is ONLY for public + user routes
-Never admin.
+Pages access theme via:
 
-Rule 4 — ProtectedAppRoute wraps both user + admin
-But only user routes get ClubLayout.
+jsx
+const { palette } = useTheme();
+No layout sets CSS variables manually.
 
-Rule 5 — All layouts must render <Outlet />
-This ensures nested pages render correctly.
+🧭 6. Layout Width Rules
+All layouts use:
 
-6. Safe Pattern for Adding New Pages
-Public page
-Add under:
-/:clubSlug/public/*  
-Uses:
-PublicLayout inside ClubLayout
+Code
+maxWidth: 720px
+margin: 0 auto
+This ensures:
 
-User app page
-Add under:
-/:clubSlug/app/*  
-Uses:
-AppLayout inside ClubLayout
+consistent spacing
 
-Admin page
-Add under:
-/:clubSlug/app/admin/*  
-Uses:
-AdminLayout directly
-Never wrap in ClubLayout.
+predictable page structure
 
-7. How to Restore Layout Integrity if Broken
-Symptom: Admin looks like user pages
-Fix: Remove ClubLayout from admin routes
+no full‑width drift
 
-Symptom: Admin header missing
-Fix: Ensure AdminLayout is top-level wrapper
+🧩 7. Club Context Forwarding
+Every layout forwards club context:
 
-Symptom: Admin pages full width
-Fix: Ensure AdminLayout is applied
+jsx
+<Outlet context={{ club }} />
+Pages access it via:
 
-Symptom: Public pages show user header
-Fix: Ensure PublicLayout is inside ClubLayout
+jsx
+const { club } = useOutletContext();
+🧩 8. Loading Behavior
+PublicLayout
+Only waits for club load.
 
-Symptom: User pages show admin header
-Fix: Ensure AppLayout is used for /app/*
+AppLayout
+Waits for:
 
-8. Version Tag
-Layouts Architecture v1.2 — 2026‑09‑17  
-Updated after moving AdminLayout.jsx into /src/layouts.
+club
+
+user
+
+profile
+
+membership
+
+AdminLayout
+Waits for:
+
+club
+
+user (admin)
+
+🧱 9. Summary
+The layout architecture is built around three clear layers:
+
+PublicLayout
+Unauthenticated, simple, centered.
+
+AppLayout
+Authenticated, full app structure, header + footer.
+
+AdminLayout
+Admin CMS, admin top bar, admin theme.
+
+All layouts are wrapped by:
+
+ClubProvider
+
+ThemeProvider
+
+ProtectedAppRoute (for authenticated sections)
+
+This creates a clean, predictable, multi‑tenant layout system.
