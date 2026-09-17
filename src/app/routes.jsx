@@ -1,11 +1,11 @@
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 
-import ClubSelect from "@/app/pages/global/ClubSelect.jsx";   // ⭐ FIXED
+import ClubSelect from "@/app/pages/global/ClubSelect.jsx";
 
 import ClubLayout from "@/layouts/ClubLayout";
 import AppLayout from "@/layouts/AppLayout";
 import PublicLayout from "@/layouts/PublicLayout";
-import AdminLayout from "@app/pages/admin/AdminLayout";
+import AdminLayout from "@/layouts/AdminLayout";
 
 import ProtectedAppRoute from "@/app/routes/ProtectedAppRoute";
 import ClubProvider from "@/app/providers/ClubProvider";
@@ -18,7 +18,7 @@ import ForgotPassword from "@app/pages/public/ForgotPassword";
 import ResetPassword from "@app/pages/public/ResetPassword";
 import ForgotEmail from "@app/pages/public/ForgotEmail";
 
-// APP PAGES
+// APP PAGES (USER)
 import Home from "@app/pages/home/Home";
 import Events from "@app/pages/events/Events";
 import EventDetails from "@app/pages/events/EventDetails";
@@ -43,8 +43,6 @@ import DriverProvider from "@/app/providers/DriverProvider";
 
 // ADMIN PAGES
 import AdminDashboard from "@app/pages/admin/AdminDashboard";
-
-// EVENTS
 import AdminEvents from "@app/pages/admin/events/AdminEvents";
 import AdminEventEdit from "@app/pages/admin/events/eventsedit/AdminEventEdit";
 import AdminEventNominations from "@app/pages/admin/nominations/AdminEventNominations";
@@ -95,8 +93,10 @@ function PublicRootRedirect() {
 export default function RoutesFile() {
   return (
     <Routes>
+      {/* ROOT */}
       <Route path="/" element={<ClubSelect />} />
 
+      {/* PUBLIC ROUTES */}
       <Route
         path="/:clubSlug/public/*"
         element={
@@ -117,6 +117,7 @@ export default function RoutesFile() {
         <Route path="*" element={<Navigate to="login" replace />} />
       </Route>
 
+      {/* USER APP ROUTES */}
       <Route
         path="/:clubSlug/app/*"
         element={
@@ -142,6 +143,7 @@ export default function RoutesFile() {
         <Route path="events/:eventId/nominate" element={<EventNominate />} />
         <Route path="profile" element={<UserProfile />} />
         <Route path="profile/edit" element={<EditUser />} />
+
         <Route
           path="profile/drivers/*"
           element={
@@ -150,6 +152,7 @@ export default function RoutesFile() {
             </DriverProvider>
           }
         />
+
         <Route
           path="profile/drivers/add"
           element={
@@ -158,6 +161,7 @@ export default function RoutesFile() {
             </DriverProvider>
           }
         />
+
         <Route
           path="profile/drivers/:id/edit"
           element={
@@ -166,6 +170,7 @@ export default function RoutesFile() {
             </DriverProvider>
           }
         />
+
         <Route
           path="profile/drivers/:id/choose-number"
           element={
@@ -174,6 +179,7 @@ export default function RoutesFile() {
             </DriverProvider>
           }
         />
+
         <Route
           path="profile/drivers/:id"
           element={
@@ -182,6 +188,7 @@ export default function RoutesFile() {
             </DriverProvider>
           }
         />
+
         <Route
           path="profile/drivers/welcome"
           element={
@@ -190,18 +197,18 @@ export default function RoutesFile() {
             </DriverProvider>
           }
         />
+
         <Route path="logout" element={<Logout />} />
       </Route>
 
+      {/* ADMIN ROUTES — FIXED (NO ClubLayout) */}
       <Route
         path="/:clubSlug/app/admin/*"
         element={
           <ClubProvider>
-            <ClubLayout mode="admin">
-              <ProtectedAppRoute>
-                <AdminLayout />
-              </ProtectedAppRoute>
-            </ClubLayout>
+            <ProtectedAppRoute>
+              <AdminLayout />
+            </ProtectedAppRoute>
           </ClubProvider>
         }
       >
@@ -225,6 +232,7 @@ export default function RoutesFile() {
         <Route path="championships/create" element={<CreateChampionship />} />
       </Route>
 
+      {/* FALLBACKS */}
       <Route path="/:clubSlug" element={<ClubRootRedirect />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

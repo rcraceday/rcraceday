@@ -1,5 +1,5 @@
 import { Outlet, useOutletContext } from "react-router-dom";
-import AdminTopBar from "./components/AdminTopBar";
+import AdminTopBar from "@app/pages/admin/components/AdminTopBar";
 
 export default function AdminLayout() {
   // Receive context from ClubLayout
