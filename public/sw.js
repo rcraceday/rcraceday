@@ -1,29 +1,38 @@
-const CACHE_NAME = "app-cache-v1";
+// 🚀 Always bump version on deploy
+const CACHE_VERSION = "v" + Date.now();
+const CACHE_NAME = "app-cache-" + CACHE_VERSION;
 
+// 🚀 Install: skip waiting + pre-cache nothing (HTML must be fresh)
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(["/"]);
-    })
-  );
 });
 
+// 🚀 Activate: delete ALL old caches
 self.addEventListener("activate", (event) => {
-  clients.claim();
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
+          if (!key.includes(CACHE_VERSION)) {
+            return caches.delete(key);
+          }
         })
       )
     )
   );
+
+  self.clients.claim();
 });
 
+// 🚀 Fetch: network-first for EVERYTHING
 self.addEventListener("fetch", (event) => {
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request)
+      .then((response) => {
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });
