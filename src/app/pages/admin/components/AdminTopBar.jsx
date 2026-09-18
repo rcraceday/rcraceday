@@ -28,8 +28,6 @@ export default function AdminTopBar() {
 
       setAdminLogo(adminLogoUrl);
 
-      // Keep the admin navigation red, independently of the club theme.
-      setAccentColor("#c20a0a");
     }
 
     loadClub();
