@@ -87,7 +87,7 @@ export default function Home() {
   return (
     <>
       {/* HEADER */}
-      <header className="flex items-center gap-2 mb-8">
+<header className="flex items-center gap-2 mb-4 sm:mb-8">
         <HomeIcon className="h-5 w-5" style={{ color: brand }} />
         <h1 className="text-xl font-semibold tracking-tight">Home</h1>
       </header>

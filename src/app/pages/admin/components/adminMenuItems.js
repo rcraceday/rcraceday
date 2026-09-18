@@ -1,4 +1,3 @@
-// src/app/pages/admin/components/adminMenuItems.js
 import {
   Squares2X2Icon,
   CalendarDaysIcon,
@@ -44,7 +43,7 @@ export function buildAdminMenuItems({ clubSlug }) {
     {
       label: "Home",
       icon: HomeIcon,
-      to: `/${clubSlug}/app`,   // ⭐ NEW HOME LINK
+      to: `/${clubSlug}/app`,
     },
   ];
 }

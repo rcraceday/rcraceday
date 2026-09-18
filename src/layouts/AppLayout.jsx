@@ -1,7 +1,6 @@
 // src/layouts/AppLayout.jsx
-import { Outlet, Navigate, useParams } from "react-router-dom";
-import { useEffect } from "react";
 
+import { Outlet, Navigate, useParams, useLocation } from "react-router-dom";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
@@ -14,19 +13,21 @@ import Footer from "@/components/ui/Footer";
 export default function AppLayout() {
   const { club } = useClub();
   const { user, loadingUser } = useAuth();
-  const { profile, loadingProfile } = useProfile();
-  const { membership, loadingMembership } = useMembership();
+  const { loadingProfile } = useProfile();
+  const { loadingMembership } = useMembership();
   const { clubSlug } = useParams();
   const { palette } = useTheme() || {};
+  const location = useLocation();
 
-  // keep the same loading gate logic
+  // ⭐ Detect admin routes
+  const isAdminRoute = location.pathname.includes(`/${clubSlug}/admin`);
+
   const loading =
     loadingUser ||
     loadingProfile ||
     loadingMembership ||
     !club;
 
-  // redirect once club + user loading is done
   if (!loadingUser && club && !user) {
     return <Navigate to={`/${clubSlug}/public/login`} replace />;
   }
@@ -47,8 +48,15 @@ export default function AppLayout() {
     );
   }
 
+  // ⭐ WRAP ADMIN PAGES IN admin-root
+  const Wrapper = isAdminRoute ? "div" : "div";
+  const wrapperProps = isAdminRoute
+    ? { className: "admin-root" }
+    : {};
+
   return (
-    <div
+    <Wrapper
+      {...wrapperProps}
       style={{
         minHeight: "100vh",
         width: "100%",
@@ -58,36 +66,21 @@ export default function AppLayout() {
         color: palette?.text || "#111827",
       }}
     >
-      {/* global header (what ClubLayout used to wrap) */}
       <Header club={club} />
 
       <main
         style={{
           flex: 1,
           width: "100%",
-          display: "flex",
-          justifyContent: "center",
-          paddingTop: "24px",
-          paddingBottom: "32px",
           boxSizing: "border-box",
         }}
       >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "720px",
-            marginLeft: "auto",
-            marginRight: "auto",
-            boxSizing: "border-box",
-          }}
-        >
-          {/* pass club down like ClubLayout used to */}
+        <div className="app-column">
           <Outlet context={{ club }} />
         </div>
       </main>
 
-      {/* global footer (if you had one in ClubLayout) */}
       <Footer club={club} />
-    </div>
+    </Wrapper>
   );
 }

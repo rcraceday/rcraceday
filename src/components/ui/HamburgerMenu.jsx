@@ -1,4 +1,3 @@
-// src/components/ui/HamburgerMenu.jsx
 import { useState, useEffect } from "react";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -8,17 +7,24 @@ import DesktopDropdown from "@/components/ui/DesktopDropdown";
 import MobileDrawer from "@/components/ui/MobileDrawer";
 import { buildMenuItems } from "@/components/ui/menuItems.js";
 
-export default function HamburgerMenu({ clubSlug }) {
+export default function HamburgerMenu({
+  clubSlug,
+  adminItems = null,
+  accentColor = "#0A66C2",
+  isAdmin = false,   // ⭐ NEW: explicit admin mode
+}) {
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   const { user } = useAuth();
   const { profile } = useProfile();
 
-  // ⭐ Correct admin source of truth
-  const isAdmin = profile?.role === "admin";
+  const isAdminUser = profile?.role === "admin";
 
-  const items = buildMenuItems({ clubSlug, isAdmin, user });
+  // If adminItems are provided (admin header) use them,
+  // otherwise fall back to the normal user menu.
+  const items =
+    adminItems ?? buildMenuItems({ clubSlug, isAdmin: isAdminUser, user });
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -29,7 +35,8 @@ export default function HamburgerMenu({ clubSlug }) {
 
   return (
     <div
-      className="menu-wrapper"
+      className={`menu-wrapper ${isAdmin ? "admin-menu" : ""}`}
+      style={{ color: "inherit" }}
       onMouseEnter={() => !isMobile && setOpen(true)}
       onMouseLeave={() => !isMobile && setOpen(false)}
     >
@@ -37,13 +44,31 @@ export default function HamburgerMenu({ clubSlug }) {
         className="menu-button"
         onClick={() => isMobile && setOpen(true)}
       >
-        <Bars3Icon className="hamburger-icon" />
+        <Bars3Icon
+          className="hamburger-icon"
+          style={isAdmin ? { color: "var(--admin-accent)" } : {}}
+        />
         <span>Menu</span>
       </button>
 
-      {!isMobile && <DesktopDropdown open={open} items={items} />}
+      {!isMobile && (
+        <DesktopDropdown
+          open={open}
+          items={items}
+          onClose={() => setOpen(false)}
+          accentColor={accentColor}
+          isAdmin={isAdmin}
+        />
+      )}
+
       {isMobile && (
-        <MobileDrawer open={open} onClose={() => setOpen(false)} items={items} />
+        <MobileDrawer
+          open={open}
+          onClose={() => setOpen(false)}
+          items={items}
+          accentColor={accentColor}
+          isAdmin={isAdmin}
+        />
       )}
     </div>
   );

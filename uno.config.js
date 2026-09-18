@@ -4,7 +4,7 @@ import { defineConfig, presetUno, presetIcons, presetTypography } from 'unocss'
 export default defineConfig({
   content: [
     './index.html',
-    './src/**/*.{html,js,jsx,ts,tsx}',   // ⭐ FIXED: UnoCSS now scans your actual files
+    './src/**/*.{html,js,jsx,ts,tsx}',
   ],
 
   presets: [
@@ -15,30 +15,25 @@ export default defineConfig({
 
   theme: {
     colors: {
-      brand: {
-        primary: 'var(--brand-primary, #0072CE)',
-        secondary: 'var(--brand-secondary, #0A1A2F)',
-        accent: 'var(--brand-accent, #FFC300)',
+      /* ============================================================
+         ADMIN-ONLY COLORS (SAFE)
+         ============================================================ */
+      admin: {
+        accent: 'var(--admin-accent)',
       },
+
+      /* ============================================================
+         SYSTEM COLORS (SAFE)
+         ============================================================ */
       surface: {
-        base: 'var(--brand-surface, #FFFFFF)',
-        alt: 'var(--brand-surface-alt, #F5F7FA)',
+        base: 'var(--surface-base, #FFFFFF)',
+        alt: 'var(--surface-alt, #F5F7FA)',
       },
       text: {
-        base: 'var(--brand-text, #0A1A2F)',
-        muted: 'var(--brand-text-muted, #4B5563)',
+        base: 'var(--text-base, #0A1A2F)',
+        muted: 'var(--text-muted, #4B5563)',
       },
-      border: 'var(--brand-border, #E5E7EB)',
-
-      header: {
-        bg: 'var(--header-bg)',
-        text: 'var(--header-text)',
-        muted: 'var(--header-text-muted)',
-        link: 'var(--header-link)',
-        linkHover: 'var(--header-link-hover)',
-        linkActive: 'var(--header-link-active)',
-        accent: 'var(--header-accent)',
-      },
+      border: 'var(--border-color, #E5E7EB)',
     },
 
     spacing: {
@@ -68,14 +63,9 @@ export default defineConfig({
 
   safelist: [
     'input',
-    'bg-[var(--brand-primary)]',
-    'bg-[var(--brand-surface)]',
-    'text-[var(--brand-text)]',
-    'text-[var(--brand-text-muted)]',
-
-    'text-header-link',
-    'hover:text-header-link-hover',
-    'text-header-link-active',
+    'bg-[var(--surface-base)]',
+    'text-[var(--text-base)]',
+    'text-[var(--text-muted)]',
   ],
 
   shortcuts: {
@@ -84,14 +74,11 @@ export default defineConfig({
     card: 'bg-surface-base rounded-lg shadow-card p-md border border-border',
     'card-hover': 'hover:shadow-cardHover transition-shadow',
 
-    btn: 'px-md py-sm rounded-md font-semibold text-white bg-brand-primary active:scale-95 transition-all',
-    'btn-secondary': 'px-md py-sm rounded-md font-semibold bg-brand-secondary text-white active:scale-95 transition-all',
-    'btn-outline': 'px-md py-sm rounded-md font-semibold border border-brand-primary text-brand-primary bg-transparent active:scale-95 transition-all',
-    'btn-subtle': 'px-md py-sm rounded-md font-semibold bg-surface-alt text-text-base border border-border active:scale-95 transition-all',
+    btn: 'px-md py-sm rounded-md font-semibold text-white bg-admin-accent active:scale-95 transition-all',
 
     input:
       'w-full px-md py-md rounded-lg border border-border bg-white text-text-base ' +
-      'focus:(border-brand-primary ring-2 ring-brand-primary/20 outline-none) transition-all',
+      'focus:(border-admin-accent ring-2 ring-admin-accent/20 outline-none) transition-all',
 
     'section-title': 'text-xl font-bold text-text-base mb-sm',
     'nav-item': 'flex flex-col items-center text-sm text-text-muted',

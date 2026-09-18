@@ -96,6 +96,7 @@ function QuickAction({ to, icon: Icon, label }) {
 
 export default function AdminDashboard() {
   const { clubSlug } = useParams();
+
   const [stats, setStats] = useState({
     totalEvents: 0,
     upcomingEvents: 0,
@@ -106,14 +107,21 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function loadMetrics() {
-      const { data: club } = await supabase
+      // Load club ID first
+      const { data: club, error: clubErr } = await supabase
         .from("clubs")
         .select("id")
         .eq("slug", clubSlug)
         .single();
 
-      const clubId = club?.id || null;
+      if (clubErr || !club?.id) {
+        console.error("Failed to load club:", clubErr);
+        return;
+      }
 
+      const clubId = club.id;
+
+      // Fetch all metrics safely
       const [
         totalEventsRes,
         upcomingEventsRes,
@@ -189,8 +197,10 @@ export default function AdminDashboard() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",   // ⭐ 3‑wide
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
               gap: "12px",
+              width: "100%",
+              minWidth: 0,
             }}
           >
             <StatCard label="Total Events" value={stats.totalEvents} />
@@ -231,10 +241,10 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        {/* PANELS — ⭐ ADDED SPACING */}
+        {/* PANELS */}
         <section
           style={{
-            marginTop: "24px",   // ⭐ FIX: proper breathing room
+            marginTop: "24px",
             display: "grid",
             gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1.4fr)",
             gap: "16px",

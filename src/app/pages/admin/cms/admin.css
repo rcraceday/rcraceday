@@ -1,0 +1,103 @@
+/* ============================================================
+   ADMIN NAMESPACE ROOT — defines admin-only variables
+   ============================================================ */
+
+.admin-root {
+  --admin-accent: #c20a0a; /* Default admin red */
+}
+
+/* ============================================================
+   ADMIN‑ONLY STYLES — fully isolated under .admin-root
+   ============================================================ */
+
+.admin-root .admin-column {
+  width: 100%;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
+}
+
+/* Dashboard grids */
+.admin-root .cms-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.admin-root .cms-grid-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.admin-root .cms-grid-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .admin-root .cms-grid-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Stat cards */
+.admin-root .admin-stat-card {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-root .admin-stat-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #6B7280;
+  font-weight: 600;
+}
+
+.admin-root .admin-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* ============================================================
+   ADMIN HEADER + MENU ISOLATION
+   ============================================================ */
+
+.admin-root .admin-header-border {
+  border-bottom: 4px solid var(--admin-accent) !important;
+}
+
+
+.admin-root .hamburger-menu {
+  border-color: var(--admin-accent) !important;
+}
+
+.admin-root .hamburger-dropdown {
+  border-color: var(--admin-accent) !important;
+}
+
+.admin-root .admin-dropdown {
+  border-color: var(--admin-accent) !important;
+}
+
+
+.admin-root .admin-dropdown-item:hover {
+  border-left-color: var(--admin-accent) !important;
+}
+
+.admin-root .admin-drawer {
+  border-color: var(--admin-accent) !important;
+}
+

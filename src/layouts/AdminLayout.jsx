@@ -1,19 +1,22 @@
-import { Outlet, useOutletContext } from "react-router-dom";
+import { Outlet } from "react-router-dom";
+import { useClub } from "@/app/providers/ClubProvider";
 import AdminTopBar from "@app/pages/admin/components/AdminTopBar";
+import Footer from "@/components/ui/Footer";
+import "@app/pages/admin/cms/admin.css";
 
 export default function AdminLayout() {
-  // Receive context from ClubLayout
-  const ctx = useOutletContext(); // this contains { club }
+  const { club } = useClub();
 
   return (
     <div
+      className="admin-root"
       style={{
         minHeight: "100vh",
         width: "100%",
-        backgroundColor: "#F5F5F5",
-        color: "#111827",
         display: "flex",
         flexDirection: "column",
+        backgroundColor: "#ffffff",
+        color: "#111827",
       }}
     >
       <AdminTopBar />
@@ -22,15 +25,15 @@ export default function AdminLayout() {
         style={{
           flex: 1,
           width: "100%",
-          maxWidth: "720px",
-          margin: "0 auto",
-          padding: "24px 0 32px",
           boxSizing: "border-box",
         }}
       >
-        {/* Forward context to all admin pages */}
-        <Outlet context={ctx} />
+        <div className="app-column">
+          <Outlet context={{ club }} />
+        </div>
       </main>
+
+      <Footer club={club} />
     </div>
   );
 }
