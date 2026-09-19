@@ -1,125 +1,79 @@
 // src/app/providers/ThemeProvider.jsx
-import { createContext, useContext, useMemo } from "react";
 
-export const ThemeContext = createContext(null);
+import { createContext, useContext, useEffect, useMemo } from "react";
+import { useClub } from "@/app/providers/ClubProvider";
 
-export default function ThemeProvider({ mode = "drivers", clubTheme = {}, children }) {
-  //
-  // 1. Base neutral palette (global)
-  //
-  const base = {
-    background: "#ffffff",
-    backgroundImage: null,
-    backgroundMode: "full",
+const DEFAULT_PALETTE = {
+  logoUrl: null,
+  primary: "#00438a",
+  primarySoft: "#0a5bb8",
+  text: "#1f2937",
+  textMuted: "#6b7280",
+  button: "#00438a",
+  buttonText: "#ffffff",
+  background: "#ffffff",
+  surface: "#ffffff",
+  surfaceAlt: "#f9fafb",
+  surfaceBorder: "#e5e7eb",
+  headerAccent: "#00438a",
+  headerText: "#ffffff",
+};
 
-    text: "#1f2937",
-    textMuted: "#6b7280",
+export const ThemeContext = createContext({
+  palette: DEFAULT_PALETTE,
+  mode: "drivers",
+});
 
-    surface: "#ffffff",
-    surfaceAlt: "#f9fafb",
-    surfaceBorder: "#e5e7eb",
+export default function ThemeProvider({
+  mode = "drivers",
+  clubTheme = {},
+  children,
+}) {
+  const { club } = useClub();
 
-    // Header defaults
-    headerAccent: "#e5e7eb",
-    headerLink: "#1f2937",
-    headerLinkHover: "#00438a",
-    headerLinkActive: "#00438a",
-    headerText: "#1f2937",
-    headerTextMuted: "#6b7280",
-
-    // Default hero (clubs override this)
-    hero: {
-      backgroundColor: "#0a4dbf",
-      backgroundImage: null,
-      logo: null,
-      tagline: "",
-      taglineColor: "#ffffff",
-    },
-  };
-
-  //
-  // 2. Drivers Portal palette
-  //
-  const drivers = {
-    primary: "#00438a",
-    primarySoft: "#0a5bb8",
-
-    brandPrimary: "#00438a",
-    brandSecondary: "#0a5bb8",
-
-    cardBorder: "rgba(46, 49, 146, 0.35)",
-    cardGlow: `
-      0 0 12px rgba(46, 49, 146, 0.45),
-      0 0 22px rgba(0, 174, 239, 0.35)
-    `,
-
-    cardGradient: "linear-gradient(135deg, #2e3192, #00aeef, #2e3192)",
-    cardGradientHover: "linear-gradient(135deg, #3a3db8, #14c8ff, #3a3db8)",
-    cardInnerHover: "#e6f4ff",
-
-    headerAccent: "#00438a",
-    headerLink: "#1f2937",
-    headerLinkHover: "#0a5bb8",
-    headerLinkActive: "#00438a",
-    headerText: "#1f2937",
-    headerTextMuted: "#6b7280",
-  };
-
-  //
-  // 3. Admin Portal palette
-  //
-  const admin = {
-    primary: "#b91c1c",
-    primarySoft: "#ef4444",
-
-    brandPrimary: "#b91c1c",
-    brandSecondary: "#ef4444",
-
-    cardBorder: "rgba(185, 28, 28, 0.35)",
-    cardGlow: `
-      0 0 12px rgba(185, 28, 28, 0.45),
-      0 0 22px rgba(239, 68, 68, 0.35)
-    `,
-
-    cardGradient: "linear-gradient(135deg, #C62828, #E53935, #C62828)",
-    cardGradientHover: "linear-gradient(135deg, #D32F2F, #EF5350, #D32F2F)",
-    cardInnerHover: "#ffe6e6",
-
-    headerAccent: "#b91c1c",
-    headerLink: "#1f2937",
-    headerLinkHover: "#ef4444",
-    headerLinkActive: "#b91c1c",
-    headerText: "#1f2937",
-    headerTextMuted: "#6b7280",
-  };
-
-  //
-  // 4. Select palette
-  //
-  const modePalette = mode === "admin" ? admin : drivers;
-
-  //
-  // 5. Merge everything WITHOUT losing hero
-  //
   const theme = useMemo(() => {
-    const mergedHero = {
-      ...base.hero,
-      ...(modePalette.hero || {}),
-      ...(clubTheme.hero || {}),
+    const primary = club?.primary_color || DEFAULT_PALETTE.primary;
+    const button = club?.button_color || primary;
+    const palette = {
+      ...DEFAULT_PALETTE,
+      ...clubTheme,
+      logoUrl: club?.logo_url || DEFAULT_PALETTE.logoUrl,
+      primary,
+      primarySoft: club?.accent_color || primary,
+      text: club?.header_text_color || DEFAULT_PALETTE.text,
+      button,
+      buttonText: club?.button_text_color || DEFAULT_PALETTE.buttonText,
+      headerAccent: primary,
+      headerText: club?.header_text_color || DEFAULT_PALETTE.headerText,
+      background: club?.background_color || DEFAULT_PALETTE.background,
+      surface: club?.card_color || DEFAULT_PALETTE.surface,
+      surfaceBorder: club?.border_color || DEFAULT_PALETTE.surfaceBorder,
+      hero: {
+        ...(clubTheme.hero || {}),
+        ...(club?.theme?.hero || {}),
+        logo: club?.logo_url || null,
+      },
     };
 
     return {
-      palette: {
-        ...base,
-        ...modePalette,
-        ...clubTheme,
-        hero: mergedHero, // <- keep hero after spreading clubTheme
-      },
+      palette,
       mode,
     };
-  }, [mode, clubTheme]);
+  }, [club, clubTheme, mode]);
 
-  return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--theme-primary", theme.palette.primary);
+    root.style.setProperty("--theme-text", theme.palette.text);
+    root.style.setProperty("--theme-button", theme.palette.button);
+    root.style.setProperty("--theme-button-text", theme.palette.buttonText);
+  }, [theme]);
+
+  return (
+    <ThemeContext.Provider value={theme}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {

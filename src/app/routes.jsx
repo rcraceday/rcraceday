@@ -95,9 +95,7 @@ export default function AppRoutes() {
         path="/:clubSlug/public/*"
         element={
           <ClubProvider>
-            <ThemeProvider>
-              <PublicLayout />
-            </ThemeProvider>
+            <PublicLayout />
           </ClubProvider>
         }
       >
@@ -200,11 +198,9 @@ export default function AppRoutes() {
         path="/:clubSlug/app/admin/*"
         element={
           <ClubProvider>
-            <ThemeProvider mode="admin">
-              <ProtectedAppRoute admin>
-                <AdminLayout />
-              </ProtectedAppRoute>
-            </ThemeProvider>
+            <ProtectedAppRoute admin>
+              <AdminLayout />
+            </ProtectedAppRoute>
           </ClubProvider>
         }
       >
