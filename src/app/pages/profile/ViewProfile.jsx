@@ -5,6 +5,7 @@ import { useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 
 import DriverProfileCard from "@/components/driver/DriverProfileCard";
+import PageTitle from "@/components/ui/PageTitle";
 
 import { IdentificationIcon } from "@heroicons/react/24/solid";
 
@@ -50,15 +51,11 @@ export default function ViewProfile() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* PAGE HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="w-full mx-auto px-4 py-4 flex items-center gap-2">
-          <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Driver Profile
-          </h1>
-        </div>
-      </section>
+      <PageTitle
+        icon={IdentificationIcon}
+        title="Driver Profile"
+        style={{ color: brand }}
+      />
 
       {/* CENTERED CONTENT */}
       <div className="w-full flex justify-center">

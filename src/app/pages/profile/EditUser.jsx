@@ -8,6 +8,7 @@ import { useClub } from "@/app/providers/ClubProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 
 import Card from "@/components/ui/Card";
+import PageTitle from "@/components/ui/PageTitle";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { supabase } from "@/supabaseClient";
@@ -105,13 +106,7 @@ export default function EditProfile() {
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
-          <UserIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">Edit Profile</h1>
-        </div>
-      </section>
+      <PageTitle icon={UserIcon} title="Edit Profile" style={{ color: brand }} />
 
       {/* MAIN */}
 <main className="max-w-[720px] mx-auto px-4 pt-6 pb-10 flex flex-col space-y-10">

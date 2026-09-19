@@ -6,6 +6,7 @@ import { supabase } from "@/supabaseClient";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 import Input from "@/components/ui/Input";
 
 import { IdentificationIcon } from "@heroicons/react/24/solid";
@@ -118,13 +119,11 @@ export default function EditMember() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* PAGE HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="w-full mx-auto px-4 py-4 flex items-center gap-2">
-          <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">Edit Member</h1>
-        </div>
-      </section>
+      <PageTitle
+        icon={IdentificationIcon}
+        title="Edit Member"
+        style={{ color: brand }}
+      />
 
       {/* CENTERED CONTENT */}
       <div className="w-full flex justify-center">
@@ -133,7 +132,6 @@ export default function EditMember() {
           {/* EDIT MEMBER CARD */}
           <Card
             className="w-full rounded-xl shadow-sm overflow-hidden p-6 space-y-6 bg-white"
-            style={{ border: `2px solid ${brand}` }}
           >
             <Input
               label="First Name"
@@ -170,7 +168,6 @@ export default function EditMember() {
           {/* ACTIONS: ADD AS DRIVER + DELETE MEMBER */}
           <Card
             className="p-6 space-y-4 bg-red-50"
-            style={{ border: `2px solid ${brand}` }}
           >
             <h3 className="text-lg font-semibold">Member Actions</h3>
 

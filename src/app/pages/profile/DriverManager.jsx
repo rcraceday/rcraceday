@@ -9,6 +9,7 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import DriverListCard from "@/components/driver/DriverListCard";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 
 import { supabase } from "@/supabaseClient";
 import { UserPlusIcon, TrashIcon } from "@heroicons/react/24/solid";
@@ -115,13 +116,11 @@ export default function DriverManager() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="w-full mx-auto px-4 py-4 flex items-center gap-2">
-          <UserPlusIcon className="w-5 h-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">Driver Manager</h1>
-        </div>
-      </section>
+      <PageTitle
+        icon={UserPlusIcon}
+        title="Driver Manager"
+        style={{ color: brand }}
+      />
 
       {/* CENTERED CONTENT */}
       <div className="w-full flex justify-center">
@@ -138,7 +137,6 @@ export default function DriverManager() {
             {!loadingDrivers && driverList.length === 0 && (
               <Card
                 className="p-4 text-sm text-text-muted"
-                style={{ border: `2px solid ${brand}` }}
               >
                 No drivers yet.
               </Card>
@@ -185,7 +183,6 @@ export default function DriverManager() {
                 clubMembers.filter((m) => m.driver_id === null).length === 0 && (
                   <Card
                     className="p-4 text-sm text-text-muted"
-                    style={{ border: `2px solid ${brand}` }}
                   >
                     No club members yet.
                   </Card>
@@ -195,7 +192,6 @@ export default function DriverManager() {
                 clubMembers.filter((m) => m.driver_id === null).length > 0 && (
                   <Card
                     className="p-4 space-y-3"
-                    style={{ border: `2px solid ${brand}` }}
                   >
                     {clubMembers
                       .filter((m) => m.driver_id === null)
@@ -270,7 +266,6 @@ export default function DriverManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <Card
             className="p-6 space-y-4 bg-white max-w-sm w-full"
-            style={{ border: `2px solid ${brand}` }}
           >
             <h3 className="text-lg font-semibold">Delete Member</h3>
             <p className="text-sm text-gray-700">

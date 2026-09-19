@@ -6,6 +6,7 @@ import { supabase } from "@/supabaseClient";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 
 import { useClub } from "@/app/providers/ClubProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
@@ -169,12 +170,9 @@ export default function EventNominate() {
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
-      <main className="max-w-2xl mx-auto px-4 py-10 space-y-10">
+      <PageTitle title={`Nominate for ${event.name}`} style={{ color: brand }} />
 
-        {/* HEADER */}
-        <h1 className="text-2xl font-semibold">
-          Nominate for {event.name}
-        </h1>
+      <main className="max-w-2xl mx-auto px-4 py-10 space-y-10">
 
         {/* DRIVER SELECT */}
         <section>
@@ -182,7 +180,7 @@ export default function EventNominate() {
             Select Driver
           </h2>
 
-          <Card className="p-4" style={{ border: `2px solid ${brand}` }}>
+          <Card className="p-4">
             <select
               className="w-full p-2 border rounded-md"
               value={selectedDriver}
@@ -205,7 +203,7 @@ export default function EventNominate() {
             Select Classes
           </h2>
 
-          <Card className="p-4 space-y-3" style={{ border: `2px solid ${brand}` }}>
+          <Card className="p-4 space-y-3">
             {classes.length === 0 && (
               <p className="text-text-muted">No classes available.</p>
             )}

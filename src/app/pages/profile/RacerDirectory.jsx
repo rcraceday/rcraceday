@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 
 import Card from "@/components/ui/Card";
+import PageTitle from "@/components/ui/PageTitle";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 
@@ -105,9 +106,10 @@ export default function RacerDirectory() {
   });
 
   return (
-    <div className="p-4 max-w-5xl mx-auto space-y-6">
+    <div className="min-h-screen w-full bg-background text-text-base">
+      <PageTitle title="Racer Directory" />
 
-      <h1 className="text-2xl font-bold">Racer Directory</h1>
+      <main className="p-4 max-w-5xl mx-auto space-y-6">
 
       {/* Search */}
       <input
@@ -190,6 +192,7 @@ export default function RacerDirectory() {
           No racers found.
         </p>
       )}
+      </main>
     </div>
   );
 }

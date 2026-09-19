@@ -1,4 +1,3 @@
-// src/app/routes/ProtectedAppRoute.jsx
 import { Navigate, useParams } from "react-router-dom";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useClub } from "@/app/providers/ClubProvider";
@@ -10,10 +9,18 @@ export default function ProtectedAppRoute({ children }) {
   const { club, loadingClub } = useClub();
   const { clubSlug } = useParams();
 
-  // ⭐ FIX: Wait for ALL providers to finish loading
-  const loading = loadingUser || loadingMembership || loadingClub;
+  console.log("[ProtectedAppRoute]", {
+    session,
+    loadingUser,
+    membership,
+    loadingMembership,
+    club,
+    loadingClub,
+    clubSlug,
+  });
 
-  if (loading) {
+  // Wait for auth first
+  if (loadingUser) {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
         Checking access…
@@ -21,7 +28,32 @@ export default function ProtectedAppRoute({ children }) {
     );
   }
 
-  // ⭐ FIX: Only redirect AFTER loading is complete
+  // No session -> login immediately
+  if (!session?.user) {
+    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+  }
+
+  // User is logged in, now wait for club/membership
+  if (loadingClub || loadingMembership) {
+    return (
+      <div style={{ padding: "24px", textAlign: "center" }}>
+        Checking access…
+      </div>
+    );
+  }
+
+  if (!membership) {
+    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+  }
+
+  if (membership.club_id !== club.id) {
+    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+  }
+
+  if (membership.status !== "active") {
+    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+  }
+
   if (!session?.user) {
     return <Navigate to={`/${clubSlug}/public/login`} replace />;
   }

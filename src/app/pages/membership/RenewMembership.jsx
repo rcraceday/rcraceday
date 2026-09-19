@@ -9,6 +9,7 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 
 import { supabase } from "@/supabaseClient";
 import { applyMembership } from "@/app/api/membership/membershipAPI";
@@ -108,15 +109,11 @@ export default function RenewMembership() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="w-full mx-auto px-4 py-4 flex items-center gap-2">
-          <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Renew Membership
-          </h1>
-        </div>
-      </section>
+      <PageTitle
+        icon={IdentificationIcon}
+        title="Renew Membership"
+        style={{ color: brand }}
+      />
 
       {/* MAIN */}
       <main className="max-w-[720px] mx-auto px-4 py-10 space-y-8">

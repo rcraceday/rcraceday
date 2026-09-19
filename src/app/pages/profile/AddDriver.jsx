@@ -10,6 +10,7 @@ import { useDrivers } from "@/app/providers/DriverProvider";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 import Input from "@/components/ui/Input";
 
 function SimpleSpinner() {
@@ -194,19 +195,13 @@ export default function AddDriver() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
-          <h1 className="text-xl font-semibold tracking-tight">Add Driver</h1>
-        </div>
-      </section>
+      <PageTitle title="Add Driver" style={{ color: brand }} />
 
       {/* MAIN */}
       <main className="max-w-[720px] mx-auto px-4 py-10 space-y-10">
 
         <Card
           className="p-6 space-y-6"
-          style={{ border: `2px solid ${brand}` }}
         >
           {error && (
             <div className="p-3 bg-red-100 text-red-700 rounded">

@@ -40,7 +40,7 @@ export default function Carousel({ brand, items }) {
 
 function NewsCard({ brand, item }) {
   return (
-    <Card className="news-card" style={{ border: `2px solid ${brand}` }}>
+    <Card className="news-card">
       <div className="news-card-image">{item.title}</div>
       <div className="news-card-body">
         <div className="line short"></div>

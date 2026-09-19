@@ -249,7 +249,6 @@ export default function AdminClassManager() {
       {showForm && (
         <Card
           className="p-6 space-y-6"
-          style={{ border: `2px solid ${brand}` }}
         >
           <div className="space-y-1">
             <h2 className="text-lg font-semibold">
@@ -305,7 +304,6 @@ export default function AdminClassManager() {
       {/* CLASS LIST */}
       <Card
         className="p-6 space-y-4"
-        style={{ border: `2px solid ${brand}` }}
       >
         <h2 className="text-lg font-semibold">Class List</h2>
 

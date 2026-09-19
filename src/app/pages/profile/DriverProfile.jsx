@@ -10,6 +10,7 @@ import Button from "@/components/ui/Button";
 
 import { IdentificationIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import PageTitle from "@/components/ui/PageTitle";
 
 export default function DriverProfile() {
   const { id, clubSlug } = useParams();
@@ -55,7 +56,6 @@ export default function DriverProfile() {
       <div className="p-4 max-w-xl mx-auto">
         <Card
           className="p-6 text-center space-y-4"
-          style={{ border: `2px solid ${brand}` }}
         >
           <h2 className="text-xl font-semibold">Driver Not Found</h2>
           <Button onClick={() => navigate(`/${clubSlug}/app/profile/drivers`)}>
@@ -69,19 +69,11 @@ export default function DriverProfile() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* PAGE HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-
-          {/* LEFT: Heading */}
-          <div className="flex items-center gap-2">
-            <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
-            <h1 className="text-xl font-semibold tracking-tight">
-              Driver Profile
-            </h1>
-          </div>
-
-          {/* RIGHT: Small Back Button */}
+      <PageTitle
+        icon={IdentificationIcon}
+        title="Driver Profile"
+        style={{ color: brand }}
+        actions={
           <Button
             variant="secondary"
             className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
@@ -92,8 +84,8 @@ export default function DriverProfile() {
             <ArrowLeftIcon className="h-3 w-3" />
             Back
           </Button>
-        </div>
-      </section>
+        }
+      />
 
       {/* MAIN CONTENT */}
       <main className="max-w-[720px] mx-auto px-4 flex-col items-center">

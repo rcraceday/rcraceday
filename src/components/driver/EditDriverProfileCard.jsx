@@ -198,7 +198,6 @@ export default function EditDriverProfileCard({
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
     <Card
       className="p-6 space-y-4 bg-white max-w-sm w-full"
-      style={{ border: `2px solid ${brand}` }}
     >
       <h3 className="text-lg font-semibold text-black">
         Delete Driver

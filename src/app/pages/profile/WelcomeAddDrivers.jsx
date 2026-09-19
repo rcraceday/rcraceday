@@ -10,6 +10,7 @@ import { useDrivers } from "@/app/providers/DriverProvider";
 import { useClub } from "@/app/providers/ClubProvider";   // ⭐ FIXED — YOU FORGOT THIS
 
 import Card from "@/components/ui/Card";
+import PageTitle from "@/components/ui/PageTitle";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
@@ -286,19 +287,12 @@ export default function WelcomeAddDrivers() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-center">
-          <h1 className="text-xl font-semibold tracking-tight">
-            Welcome to {club?.name}
-          </h1>
-        </div>
-      </section>
+      <PageTitle title={`Welcome to ${club?.name}`} style={{ color: brand }} />
 
       <main className="max-w-[720px] mx-auto px-4 space-y-12 pb-10 flex flex-col">
 
         <Card
           className="p-6 space-y-4"
-          style={{ border: `2px solid ${brand}` }}
         >
           <h2 className="text-lg font-semibold">Add Drivers</h2>
 
@@ -309,7 +303,6 @@ export default function WelcomeAddDrivers() {
 
           <Card
             className="p-4 space-y-3 bg-yellow-50"
-            style={{ border: `2px solid ${brand}` }}
           >
             <h3 className="text-md font-semibold">Important</h3>
 
@@ -325,7 +318,6 @@ export default function WelcomeAddDrivers() {
 
         <Card
           className="p-6 space-y-6"
-          style={{ border: `2px solid ${brand}` }}
         >
           {error && (
             <div className="p-3 bg-red-100 text-red-700 rounded">
@@ -371,7 +363,6 @@ export default function WelcomeAddDrivers() {
         {membershipType === "family" && clubMembers.length > 0 && (
           <Card
             className="p-6 space-y-4"
-            style={{ border: `2px solid ${brand}` }}
           >
             <h3 className="text-md font-semibold">Household Members</h3>
 

@@ -8,6 +8,8 @@ import EventFilters from "./events-sections/EventFilters";
 import UpcomingEventsCard from "./events-sections/UpcomingEventsCard";
 import PastEventsCard from "./events-sections/PastEventsCard";
 
+import PageTitle from "@/components/ui/PageTitle";
+
 import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 import {
   extractYearsFromEvents,
@@ -19,11 +21,11 @@ export default function Events() {
   const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
   const { clubSlug } = useParams();
 
-  const [query, setQuery] = useState("");
-  const [trackFilter, setTrackFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [yearFilter, setYearFilter] = useState("all");
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [query, setQuery] = useState("" );
+  const [trackFilter, setTrackFilter] = useState("all" );
+  const [typeFilter, setTypeFilter] = useState("all" );
+  const [yearFilter, setYearFilter] = useState("all" );
+  const [sortOrder, setSortOrder] = useState("asc" );
   const [showPastEvents, setShowPastEvents] = useState(false);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -122,37 +124,21 @@ export default function Events() {
   past = sortList(applyFilters(past));
 
   function clearFilters() {
-    setQuery("");
-    setTrackFilter("all");
-    setTypeFilter("all");
-    setYearFilter("all");
-    setSortOrder("asc");
+    setQuery("" );
+    setTrackFilter("all" );
+    setTypeFilter("all" );
+    setYearFilter("all" );
+    setSortOrder("asc" );
     setShowPastEvents(false);
   }
 
   return (
     <div style={{ minHeight: "100vh", width: "100%" }}>
-      <section
-        style={{
-          width: "100%",
-          borderBottom: "1px solid #ddd",
-          background: "white",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            padding: "16px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <CalendarDaysIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 style={{ fontSize: "20px", fontWeight: 600 }}>Events</h1>
-        </div>
-      </section>
+      <PageTitle
+        icon={CalendarDaysIcon}
+        title="Events"
+        style={{ color: brand }}
+      />
 
       {/* RESTORED EXACTLY — only removed the container */}
       <main

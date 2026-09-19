@@ -37,27 +37,6 @@ a:hover {
 }
 
 /* ===========================
-   GLOBAL HEADER STYLES
-   =========================== */
-
-.header {
-  width: 100%;
-  background: white;
-  border-bottom: 1px solid #e5e5e5;
-  position: relative;
-  z-index: 1000;
-}
-
-.header-inner {
-  max-width: 1024px;
-  margin: 0 auto;
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* ===========================
    LOGO
    =========================== */
 
@@ -262,6 +241,51 @@ a:hover {
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 
+/* ===========================
+   Page Title
+   =========================== */
+
+.page-title {
+  width: 100%;
+  background: #ffffff;
+}
+
+.page-title-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  width: 100%;
+  max-width: 1400px;
+
+  margin: 0 auto;
+  padding: 16px 24px;
+  box-sizing: border-box;
+}
+
+.page-title-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+
+  color: var(--club-colour);
+}
+
+.page-title-content h1 {
+  margin: 0;
+
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.2;
+
+  color: #222;
+}
+
+.page-title-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
 /* ===========================
    CLUB HERO (PUBLIC PAGES)
    =========================== */

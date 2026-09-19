@@ -10,6 +10,7 @@ import { useNotifications } from "@app/hooks/useNotifications";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 
 const PRICING = {
   single: { full: 80, half: 50 },
@@ -40,7 +41,7 @@ export default function UpgradeMembership() {
   if (!membership) {
     return (
       <div className="min-h-screen w-full bg-background text-text-base flex items-center justify-center px-4">
-        <Card className="p-4 w-full max-w-md" style={{ border: `2px solid ${brand}` }}>
+        <Card className="p-4 w-full max-w-md">
           <p className="text-sm text-text-muted">
             You don’t currently have a membership to upgrade.
           </p>
@@ -52,7 +53,7 @@ export default function UpgradeMembership() {
   if (membership.membership_type === "family") {
     return (
       <div className="min-h-screen w-full bg-background text-text-base flex items-center justify-center px-4">
-        <Card className="p-4 w-full max-w-md" style={{ border: `2px solid ${brand}` }}>
+        <Card className="p-4 w-full max-w-md">
           <p className="text-sm text-text-muted">
             You already have a Family Membership.
           </p>
@@ -86,15 +87,11 @@ export default function UpgradeMembership() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* HEADER — MATCHES JOIN MEMBERSHIP */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="w-full mx-auto px-4 py-4 flex items-center gap-2">
-          <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Upgrade Membership
-          </h1>
-        </div>
-      </section>
+      <PageTitle
+        icon={IdentificationIcon}
+        title="Upgrade Membership"
+        style={{ color: brand }}
+      />
 
       {/* MAIN */}
       <main className="max-w-[720px] mx-auto px-4 py-10 space-y-8">
@@ -103,10 +100,6 @@ export default function UpgradeMembership() {
         <Card
           noPadding
           className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
-          style={{
-            border: `2px solid ${brand}`,
-            background: "white",
-          }}
         >
           {/* BLUE HEADER BAR */}
           <div

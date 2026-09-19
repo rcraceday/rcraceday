@@ -8,6 +8,7 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 
 import EditDriverProfileCard from "@/components/driver/EditDriverProfileCard";
 
@@ -156,7 +157,6 @@ export default function EditProfile() {
       <div className="min-h-screen flex items-center justify-center">
         <Card
           className="p-6 max-w-sm w-full text-center text-sm text-text-muted"
-          style={{ border: `2px solid ${brand}` }}
         >
           Driver not found.
         </Card>
@@ -168,26 +168,22 @@ export default function EditProfile() {
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
-<section className="w-full border-b border-surfaceBorder bg-surface">
-  <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-<div className="flex items-center gap-2">
-  <PencilSquareIcon className="w-5 h-5" style={{ color: brand }} />
-  <h1 className="text-xl font-semibold tracking-tight">
-    Edit Driver Profile
-  </h1>
-</div>
-
-    <Button
-      variant="secondary"
-      className="!py-1 !px-3 !text-xs !rounded-sm"
-      onClick={() =>
-        requestNavigate(`/${club.slug}/app/profile/drivers`)
-      }
-    >
-      Back
-    </Button>
-  </div>
-</section>
+      <PageTitle
+        icon={PencilSquareIcon}
+        title="Edit Driver Profile"
+        style={{ color: brand }}
+        actions={
+          <Button
+            variant="secondary"
+            className="!py-1 !px-3 !text-xs !rounded-sm"
+            onClick={() =>
+              requestNavigate(`/${club.slug}/app/profile/drivers`)
+            }
+          >
+            Back
+          </Button>
+        }
+      />
 
       {/* MAIN */}
       <main className="max-w-[720px] mx-auto px-4 py-4">
@@ -212,7 +208,6 @@ export default function EditProfile() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <Card
             className="p-6 space-y-4 bg-white max-w-sm w-full"
-            style={{ border: `2px solid ${brand}` }}
           >
             <h3 className="text-lg font-semibold">Unsaved changes</h3>
             <p className="text-sm text-gray-700">

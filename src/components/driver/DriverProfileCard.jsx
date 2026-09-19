@@ -40,7 +40,6 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
       >
         <Card
           className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0 bg-white"
-          style={{ border: `2px solid ${brand}` }}
         >
           {/* HEADER */}
           <div
@@ -132,7 +131,6 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
         <div className="absolute inset-0 flex items-center justify-center px-4">
           <Card
             className="p-8 max-w-md text-center space-y-6"
-            style={{ border: `2px solid ${brand}`, background: "white" }}
           >
             <h3 className="text-lg font-semibold" style={{ color: brand }}>
               Members Only Feature

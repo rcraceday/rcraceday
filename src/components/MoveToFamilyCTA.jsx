@@ -7,7 +7,6 @@ export default function MoveToFamilyCTA({ brand, onMove }) {
   return (
     <Card
       className="p-6 space-y-4 w-full"
-      style={{ border: `2px solid ${brand}` }}
     >
       <h2 className="text-lg font-semibold">Upgrade to Family Membership</h2>
 

@@ -4,6 +4,7 @@ import { IdentificationIcon } from "@heroicons/react/24/solid";
 
 import { useClub } from "@/app/providers/ClubProvider";
 import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 
 import { moveToFamily } from "@/app/api/membership/membershipAPI";
 
@@ -42,16 +43,11 @@ export default function ChangeMembership() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
-            <h1 className="text-xl font-semibold tracking-tight">
-              Move to Family Membership
-            </h1>
-          </div>
-
+      <PageTitle
+        icon={IdentificationIcon}
+        title="Move to Family Membership"
+        style={{ color: brand }}
+        actions={
           <Button
             variant="secondary"
             className="!w-auto !px-3 !py-1.5 !text-sm"
@@ -59,8 +55,8 @@ export default function ChangeMembership() {
           >
             Back
           </Button>
-        </div>
-      </section>
+        }
+      />
 
       {/* MAIN */}
       <main className="max-w-6xl mx-auto px-4 pt-10 pb-12">

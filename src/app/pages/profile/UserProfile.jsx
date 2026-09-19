@@ -13,6 +13,7 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
 
 import Card from "@/components/ui/Card";
+import PageTitle from "@/components/ui/PageTitle";
 import Button from "@/components/ui/Button";
 
 export default function UserProfile() {
@@ -41,13 +42,7 @@ export default function UserProfile() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
-          <UserIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">User Profile</h1>
-        </div>
-      </section>
+      <PageTitle icon={UserIcon} title="User Profile" style={{ color: brand }} />
 
       {/* MAIN CONTENT */}
             <main className="max-w-[720px] mx-auto px-4 pb-16 space-y-12 flex flex-col items-center">
@@ -55,8 +50,7 @@ export default function UserProfile() {
         {/* ACCOUNT DETAILS */}
         <Card
           className="p-6 space-y-4 w-full text-center"
-          style={{ border: `2px solid ${brand}` }}
-        >
+                  >
           <h2 className="text-lg font-semibold flex items-center justify-center gap-2">
             <UserIcon className="h-5 w-5" style={{ color: brand }} />
             Account Details
@@ -83,7 +77,6 @@ export default function UserProfile() {
         {/* MEMBERSHIP */}
         <Card
           className="p-6 space-y-4 w-full text-center"
-          style={{ border: `2px solid ${brand}` }}
         >
           <h2 className="text-lg font-semibold flex items-center justify-center gap-2">
             <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
@@ -106,7 +99,6 @@ export default function UserProfile() {
         {/* DRIVERS */}
         <Card
           className="p-6 space-y-4 w-full text-center"
-          style={{ border: `2px solid ${brand}` }}
         >
           <h2 className="text-lg font-semibold flex items-center justify-center gap-2">
             <UsersIcon className="h-5 w-5" style={{ color: brand }} />

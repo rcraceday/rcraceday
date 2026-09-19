@@ -22,7 +22,6 @@ export default function DriverListCard({
   return (
     <Card
       className="p-4 w-full rounded-xl shadow-sm bg-white"
-      style={{ border: `2px solid ${brand}` }}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
 

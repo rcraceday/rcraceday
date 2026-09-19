@@ -11,6 +11,7 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/24/solid";
 import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 import { supabase } from "@/supabaseClient";
 import DOMPurify from "dompurify";
 
@@ -21,30 +22,11 @@ function PageHeader({ brand, clubSlug }) {
   const navigate = useNavigate();
 
   return (
-    <section
-      style={{
-        width: "100%",
-        borderBottom: "1px solid #ddd",
-        background: "white",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "16px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <CalendarDaysIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Event Details
-          </h1>
-        </div>
-
+    <PageTitle
+      icon={CalendarDaysIcon}
+      title="Event Details"
+      style={{ color: brand }}
+      actions={
         <Button
           variant="secondary"
           size="sm"
@@ -54,8 +36,8 @@ function PageHeader({ brand, clubSlug }) {
           <ArrowLeftIcon className="h-3 w-3" />
           Back
         </Button>
-      </div>
-    </section>
+      }
+    />
   );
 }
 

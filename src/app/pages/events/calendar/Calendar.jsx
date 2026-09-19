@@ -8,6 +8,7 @@ import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
 
 import { CalendarIcon } from "@heroicons/react/24/solid";
+import PageTitle from "@/components/ui/PageTitle";
 
 import CalendarYear from "@app/pages/events/calendar/CalendarYear";
 
@@ -62,19 +63,13 @@ export default function Calendar() {
      =========================== */
 
   return (
-    <div className="min-h-screen w-full bg-background text-text-base">
+    <div style={{ minHeight: "100vh", width: "100%" }}>
 
-      {/* HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-
-          {/* LEFT: Icon + Title */}
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" style={{ color: brand }} />
-            <h1 className="text-xl font-semibold tracking-tight">Calendar</h1>
-          </div>
-
-          {/* RIGHT: Year Selector */}
+      <PageTitle
+        icon={CalendarIcon}
+        title="Calendar"
+        style={{ color: brand }}
+        actions={
           <select
             className="border border-surfaceBorder rounded-md p-1.5 bg-white shadow-sm text-sm"
             value={year}
@@ -89,13 +84,21 @@ export default function Calendar() {
               );
             })}
           </select>
-
-        </div>
-      </section>
+        }
+      />
 
       {/* MAIN */}
-      <main className="max-w-[720px] mx-auto px-4 space-y-12 pb-10 flex flex-col">
-
+      <main
+        style={{
+          padding: "40px 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "48px",
+          maxWidth: "768px",
+          margin: "0 auto",
+        }}
+      >
+        
         {/* YEAR VIEW */}
         <section className="transition-all duration-300">
           {loading && <p className="text-text-muted">Loading calendar…</p>}

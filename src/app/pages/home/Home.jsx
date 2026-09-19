@@ -8,9 +8,11 @@ import { useDrivers } from "@/app/providers/DriverProvider";
 
 import { supabase } from "@/supabaseClient";
 
-import CMSCard from "@/app/pages/admin/cms/CMSCard";
+import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Carousel from "@/components/Carousel";
+
+import PageTitle from "@/components/ui/PageTitle";
 
 import {
   CalendarDaysIcon,
@@ -77,7 +79,6 @@ export default function Home() {
       if (data?.length > 0) {
         setNextEvent(data[0]);
       }
-
       setLoadingEvent(false);
     }
 
@@ -85,19 +86,16 @@ export default function Home() {
   }, [club?.id]);
 
   return (
-    <>
-      {/* HEADER */}
-<header className="flex items-center gap-2 mb-4 sm:mb-8">
-        <HomeIcon className="h-5 w-5" style={{ color: brand }} />
-        <h1 className="text-xl font-semibold tracking-tight">Home</h1>
-      </header>
+
+    <div style={{ minHeight: "100vh", width: "100%" }}>
+      <PageTitle
+        icon={HomeIcon}
+        title="Home"
+        style={{ color: brand }}
+      />
 
       {/* NEWS */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
-          Club News
-        </h2>
-
         <Carousel brand={brand} items={newsItems} />
       </section>
 
@@ -108,15 +106,15 @@ export default function Home() {
         </h2>
 
         {loadingEvent && (
-          <CMSCard>
+          <Card>
             <p className="text-text-muted">Loading event...</p>
-          </CMSCard>
+          </Card>
         )}
 
         {!loadingEvent && !nextEvent && (
-          <CMSCard>
+          <Card>
             <p className="text-text-muted">No upcoming events scheduled.</p>
-          </CMSCard>
+          </Card>
         )}
 
         {!loadingEvent && nextEvent && (
@@ -124,7 +122,7 @@ export default function Home() {
             to={`/${clubSlug}/app/events/${nextEvent.id}`}
             className="block no-underline"
           >
-            <CMSCard className="text-center space-y-3">
+            <Card className="text-center space-y-3">
               {nextEvent.logourl && (
                 <img
                   src={nextEvent.logourl}
@@ -149,7 +147,7 @@ export default function Home() {
               {nextEvent.track && (
                 <p className="text-text-muted">Track: {nextEvent.track}</p>
               )}
-            </CMSCard>
+            </Card>
           </Link>
         )}
       </section>
@@ -244,6 +242,6 @@ export default function Home() {
           </Button>
         )}
       </section>
-    </>
+    </div>
   );
 }

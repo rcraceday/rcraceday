@@ -15,7 +15,6 @@ export default function EventListItem({ event, brand, clubSlug, isPast }) {
   return (
     <Card
       className={`p-0 rounded-lg bg-white ${isPast ? "opacity-80" : ""}`}
-      style={{ border: `2px solid ${brand}` }}
     >
       <div className="p-4 flex flex-col md:flex-row gap-4 items-start">
 

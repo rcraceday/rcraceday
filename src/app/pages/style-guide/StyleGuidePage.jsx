@@ -12,6 +12,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
+import PageTitle from "@/components/ui/PageTitle";
 
 export default function StyleGuidePage() {
   const { club } = useOutletContext();
@@ -20,13 +21,11 @@ export default function StyleGuidePage() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      {/* PAGE HEADER */}
-      <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
-          <IdentificationIcon className="h-5 w-5" style={{ color: brand }} />
-          <h1 className="text-xl font-semibold tracking-tight">Style Guide</h1>
-        </div>
-      </section>
+      <PageTitle
+        icon={IdentificationIcon}
+        title="Style Guide"
+        style={{ color: brand }}
+      />
 
       {/* MAIN */}
       <main className="max-w-3xl mx-auto px-4 py-10 space-y-10">
@@ -39,7 +38,6 @@ export default function StyleGuidePage() {
 
           <Card
             className="p-6 space-y-4"
-            style={{ border: `2px solid ${brand}` }}
           >
             {/* Primary */}
             <div className="space-y-1">
@@ -101,7 +99,6 @@ export default function StyleGuidePage() {
           <Card
             className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
             style={{
-              border: `2px solid ${brand}`,
               background: "white",
               padding: 0,
             }}
@@ -150,7 +147,6 @@ export default function StyleGuidePage() {
           {/* Standard Card */}
           <Card
             className="p-4"
-            style={{ border: `2px solid ${brand}` }}
           >
             <p className="font-medium">Standard Card</p>
             <p className="text-sm text-gray-600">This is a standard card.</p>
@@ -160,7 +156,6 @@ export default function StyleGuidePage() {
           <Card
             className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
             style={{
-              border: `2px solid ${brand}`,
               background: "white",
               padding: 0,
             }}
@@ -182,7 +177,6 @@ export default function StyleGuidePage() {
           {/* Delete Confirmation Card */}
           <Card
             className="p-6 space-y-4 bg-red-50"
-            style={{ border: `2px solid ${brand}` }}
           >
             <h3 className="text-lg font-semibold text-red-700">
               Delete Confirmation
@@ -206,7 +200,6 @@ export default function StyleGuidePage() {
 
           <Card
             className="p-4 space-y-3"
-            style={{ border: `2px solid ${brand}` }}
           >
             <h1 className="text-2xl font-bold">Heading 1</h1>
             <h2 className="text-xl font-semibold">Heading 2</h2>
