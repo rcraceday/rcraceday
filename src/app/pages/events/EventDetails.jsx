@@ -12,6 +12,7 @@ import {
 } from "@heroicons/react/24/solid";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import useTheme from "@/app/providers/useTheme";
 import { supabase } from "@/supabaseClient";
 import DOMPurify from "dompurify";
 
@@ -28,7 +29,7 @@ function PageHeader({ brand, clubSlug }) {
       style={{ color: brand }}
       actions={
         <Button
-          variant="secondary"
+          variant="primary"
           size="sm"
           className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
           onClick={() => navigate(`/${clubSlug}/app/events`)}
@@ -64,29 +65,6 @@ function formatDate(iso) {
   } catch {
     return null;
   }
-}
-
-function formatDateTime(iso) {
-  if (!iso) return null;
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString(undefined, {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return null;
-  }
-}
-
-function formatDayTime(dayDate, timeStr) {
-  if (!dayDate || !timeStr || timeStr.trim() === "") return null;
-  const iso = `${dayDate}T${timeStr}:00`;
-  return formatDateTime(iso) || `${dayDate} ${timeStr}`;
 }
 
 function formatTimeOnly(date, timeStr) {
@@ -136,7 +114,7 @@ function TwoColumnList({ items }) {
 // ---------------------------------------------
 // SECTION
 // ---------------------------------------------
-function Section({ title, Icon, brand, children }) {
+function Section({ title, icon: SectionIcon, brand, children }) {
   return (
     <section style={{ marginTop: "8px" }}>
       <div
@@ -147,7 +125,10 @@ function Section({ title, Icon, brand, children }) {
           marginBottom: "8px",
         }}
       >
-        <Icon className="h-5 w-5" style={{ color: brand }} />
+        {React.createElement(SectionIcon, {
+          className: "h-5 w-5",
+          style: { color: brand },
+        })}
         <h2 style={{ fontSize: "16px", fontWeight: 600 }}>{title}</h2>
       </div>
       {children}
@@ -159,20 +140,25 @@ function Section({ title, Icon, brand, children }) {
 // MAIN COMPONENT
 // ---------------------------------------------
 export default function EventDetails() {
+  const { palette } = useTheme();
   const { id } = useParams();
   const outlet = useOutletContext() || {};
   const club = outlet.club;
 
   const clubSlug = club?.slug;
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette?.primary || "#00438a";
+  const contentText = palette?.text || "#1f2937";
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [classMap, setClassMap] = useState({});
 
-  const [logoLoaded, setLogoLoaded] = useState(false);
-  const [logoSrc, setLogoSrc] = useState(null);
+  const logoSrc = event?.logourl
+    ? event.logourl.startsWith("http")
+      ? event.logourl
+      : `https://mvcttnmclrvaatdgzhpb.supabase.co/storage/v1/object/public/club-assets/${event.logourl}`
+    : null;
 
   // Load event
   useEffect(() => {
@@ -223,36 +209,9 @@ export default function EventDetails() {
 }, [event]);
 
 
-// ---------------------------------------------
-// FIXED LOGO LOADER (club-assets bucket)
-// ---------------------------------------------
-useEffect(() => {
-  if (!event) return;
-
-  let src = null;
-
-  if (event.logourl) {
-    if (event.logourl.startsWith("http")) {
-      src = event.logourl;
-    } else {
-      src = `https://mvcttnmclrvaatdgzhpb.supabase.co/storage/v1/object/public/club-assets/${event.logourl}`;
-    }
-  }
-
-  setLogoSrc(src);
-  setLogoLoaded(false);
-
-  if (!src) return;
-
-  const img = new Image();
-  img.src = src;
-  img.onload = () => setLogoLoaded(true);
-  img.onerror = () => setLogoLoaded(false);
-}, [event]);
-
 if (loading) {
   return (
-    <div style={{ minHeight: "100vh", background: "#f9f9f9" }}>
+    <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
       <PageHeader brand={brand} clubSlug={clubSlug} />
       <div
         style={{
@@ -270,7 +229,7 @@ if (loading) {
 
 if (!event) {
   return (
-    <div style={{ minHeight: "100vh", background: "#f9f9f9" }}>
+    <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
       <PageHeader brand={brand} clubSlug={clubSlug} />
       <div
         style={{
@@ -308,7 +267,7 @@ const nominationsAreOpen =
 
 return (
   
-  <div style={{ minHeight: "100vh", background: "#f9f9f9" }}>
+  <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
     <PageHeader brand={brand} clubSlug={clubSlug} />
 
 <main
@@ -319,12 +278,15 @@ return (
   }}
 >
   <div
+    className="event-details-content"
     style={{
       width: "100%",
       maxWidth: "800px",
-      background: "white",
+      background: palette?.surface || "#ffffff",
+      color: contentText,
       borderRadius: "8px",
       border: `2px solid ${brand}`,
+      lineHeight: 1.5,
       padding: "24px",
       position: "relative",
       overflow: "hidden",
@@ -341,29 +303,32 @@ return (
 <div
   className="flex flex-col items-center mb-4"
   style={{
-    background: "linear-gradient(180deg, #003366 0%, #ffffff 70%)",
+    background: `linear-gradient(180deg, ${brand} 0%, ${palette?.surfaceAlt || "#f9fafb"} 70%)`,
     padding: "24px 0",
     borderRadius: "8px",
   }}
 >
-  <div
+      <div
     className="
-      bg-white border border-gray-200 rounded-[10px] overflow-hidden flex items-center justify-center
+      border rounded-[10px] overflow-hidden flex items-center justify-center
       w-[200px] h-[200px]    /* ⭐ mobile */
       sm:w-[260px] sm:h-[260px] /* ⭐ desktop unchanged */
       mb-3
+      relative
     "
+    style={{
+      background: palette?.surface || "#ffffff",
+      borderColor: palette?.surfaceBorder || "#e5e7eb",
+    }}
   >
-    {!logoLoaded && (
-      <div className="w-full h-full bg-[#f0f0f0]" />
-    )}
-
-    {logoLoaded && (
+    {logoSrc ? (
       <img
         src={logoSrc}
         alt={event.name}
         className="w-full h-full object-contain"
       />
+    ) : (
+      <div className="w-full h-full bg-[#f0f0f0]" />
     )}
   </div>
 
@@ -373,6 +338,7 @@ return (
       text-[18px]      /* ⭐ mobile */
       sm:text-[30px]   /* ⭐ desktop unchanged */
     "
+    style={{ color: contentText }}
   >
     {event.name}
   </div>
@@ -473,11 +439,14 @@ return (
     text-[14px]
     leading-[1.5]
     mb-6
-    border border-gray-300
     rounded-md
     p-4
-    bg-gray-50
   "
+  style={{
+    background: palette?.surfaceAlt || "#f9fafb",
+    border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}`,
+    color: contentText,
+  }}
   dangerouslySetInnerHTML={{
     __html: DOMPurify.sanitize(event.description || "")
   }}
@@ -486,7 +455,7 @@ return (
 {/* Schedule */}
 <Section
   title="Schedule"
-  Icon={ClockIcon}
+  icon={ClockIcon}
   brand={brand}
   style={{ marginTop: "-18px" }}   // MOVE SCHEDULE UP
 >
@@ -529,7 +498,7 @@ return (
                 fontSize: 14,
                 fontWeight: 600,
                 marginBottom: "6px",
-                color: "#000",
+                color: contentText,
               }}
             >
               {combinedLabel}
@@ -541,7 +510,7 @@ return (
                 flexWrap: "wrap",
                 gap: "12px",
                 fontSize: 14,
-                color: "#000",
+                color: contentText,
               }}
             >
               {items.map((text, i) => (
@@ -582,7 +551,7 @@ return (
 {/* Classes */}
 <Section
   title="Classes"
-  Icon={FlagIcon}
+  icon={FlagIcon}
   brand={brand}
   style={{ marginTop: "-18px" }}   // MATCH SCHEDULE POSITIONING
 >
@@ -609,7 +578,7 @@ return (
                     fontSize: 14,
                     fontWeight: 600,
                     marginBottom: "6px",
-                    color: "#000",
+                    color: contentText,
                   }}
                 >
                   {dayName}
@@ -627,7 +596,7 @@ return (
                         alignItems: "center",
                         gap: "10px",
                         fontSize: 14,
-                        color: "#000",
+                        color: contentText,
                       }}
                     >
                       {/* DOT */}
@@ -663,7 +632,7 @@ return (
 {/* Pricing */}
 
 {has(event.pricing) && (
-  <Section title="Pricing" Icon={BanknotesIcon} brand={brand}>
+  <Section title="Pricing" icon={BanknotesIcon} brand={brand}>
     {event.pricing.mode === "per_entry" && (
       <TwoColumnList
         items={[
@@ -743,7 +712,7 @@ return (
 {has(event.merchandise) && (
   <Section
     title="Merchandise"
-    Icon={ShoppingBagIcon}
+    icon={ShoppingBagIcon}
     brand={brand}
   >
     <div className="flex flex-col gap-4 w-full mx-auto">
@@ -751,19 +720,21 @@ return (
       {event.merchandise.map((m, idx) => (
         <div
           key={idx}
-          className="
-            text-[14px]
-            leading-[1.5]
-            mb-6
-            border border-gray-300
-            rounded-md
-            p-4
-            bg-gray-200
-            flex flex-col gap-4
-          "
+          className="text-[14px] leading-[1.5] mb-6 rounded-md p-4 flex flex-col gap-4"
+          style={{
+            background: palette?.surfaceAlt || "#f9fafb",
+            border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}`,
+            color: contentText,
+          }}
         >
           {/* MAIN PHOTO */}
-          <div className="w-full h-56 bg-gray-100 border border-gray-200 rounded-md overflow-hidden">
+          <div
+            className="w-full h-56 border rounded-md overflow-hidden"
+            style={{
+              background: palette?.surface || "#ffffff",
+              borderColor: palette?.surfaceBorder || "#e5e7eb",
+            }}
+          >
             {m.photo_url ? (
               <img
                 src={m.photo_url}
@@ -771,7 +742,10 @@ return (
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+              <div
+                className="w-full h-full flex items-center justify-center text-xs"
+                style={{ color: palette?.textMuted || "#6b7280" }}
+              >
                 No Image
               </div>
             )}
@@ -785,7 +759,10 @@ return (
             </div>
 
             {m.description && (
-              <div className="text-sm text-gray-700">
+              <div
+                className="text-sm"
+                style={{ color: palette?.textMuted || "#6b7280" }}
+              >
                 {m.description}
               </div>
             )}
@@ -810,7 +787,14 @@ return (
             {Array.isArray(m.options) && m.options.length > 0 && (
               <div className="mt-2 space-y-4">
                 {m.options.map((group, gi) => (
-                  <div key={gi} className="border border-gray-200 rounded-md p-3 bg-white">
+                  <div
+                    key={gi}
+                    className="border rounded-md p-3"
+                    style={{
+                      background: palette?.surface || "#ffffff",
+                      borderColor: palette?.surfaceBorder || "#e5e7eb",
+                    }}
+                  >
                     
                     <div className="font-semibold text-base mb-2">
                       {group.name || "Option Group"}
@@ -820,10 +804,11 @@ return (
                       {group.values.map((v, vi) => (
                         <div
                           key={vi}
-                          className="
-                            flex flex-col items-center gap-2
-                            border border-gray-200 rounded-md p-2 bg-gray-50
-                          "
+                          className="flex flex-col items-center gap-2 border rounded-md p-2"
+                          style={{
+                            background: palette?.surfaceAlt || "#f9fafb",
+                            borderColor: palette?.surfaceBorder || "#e5e7eb",
+                          }}
                         >
                           {v.photo_url && (
                             <img
@@ -858,25 +843,27 @@ return (
 
 {/* Class Add‑Ons */}
 {has(event.class_add_ons) && (
-  <Section title="Add‑Ons" Icon={PlusCircleIcon} brand={brand}>
+  <Section title="Add‑Ons" icon={PlusCircleIcon} brand={brand}>
     <div className="flex flex-col gap-4 w-full mx-auto">
 
       {event.class_add_ons.map((a, idx) => (
         <div
           key={idx}
-          className="
-            text-[14px]
-            leading-[1.5]
-            mb-6
-            border border-gray-300
-            rounded-md
-            p-4
-            bg-gray-200
-            flex flex-col gap-4
-          "
+          className="text-[14px] leading-[1.5] mb-6 rounded-md p-4 flex flex-col gap-4"
+          style={{
+            background: palette?.surfaceAlt || "#f9fafb",
+            border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}`,
+            color: contentText,
+          }}
         >
           {/* PHOTO */}
-          <div className="w-full h-56 bg-gray-100 border border-gray-200 rounded-md overflow-hidden">
+          <div
+            className="w-full h-56 border rounded-md overflow-hidden"
+            style={{
+              background: palette?.surface || "#ffffff",
+              borderColor: palette?.surfaceBorder || "#e5e7eb",
+            }}
+          >
             {a.photo_url ? (
               <img
                 src={a.photo_url}
@@ -884,7 +871,10 @@ return (
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+              <div
+                className="w-full h-full flex items-center justify-center text-xs"
+                style={{ color: palette?.textMuted || "#6b7280" }}
+              >
                 No Image
               </div>
             )}
@@ -900,7 +890,10 @@ return (
 
             {/* DESCRIPTION */}
             {a.description && (
-              <div className="text-sm text-gray-700">
+              <div
+                className="text-sm"
+                style={{ color: palette?.textMuted || "#6b7280" }}
+              >
                 {a.description}
               </div>
             )}
@@ -942,7 +935,14 @@ return (
             {Array.isArray(a.options) && a.options.length > 0 && (
               <div className="mt-2 space-y-4">
                 {a.options.map((group, gi) => (
-                  <div key={gi} className="border border-gray-200 rounded-md p-3 bg-white">
+                  <div
+                    key={gi}
+                    className="border rounded-md p-3"
+                    style={{
+                      background: palette?.surface || "#ffffff",
+                      borderColor: palette?.surfaceBorder || "#e5e7eb",
+                    }}
+                  >
                     
                     <div className="font-semibold text-base mb-2">
                       {group.name || "Option Group"}
@@ -952,10 +952,11 @@ return (
                       {group.values.map((v, vi) => (
                         <div
                           key={vi}
-                          className="
-                            flex flex-col items-center gap-2
-                            border border-gray-200 rounded-md p-2 bg-gray-50
-                          "
+                          className="flex flex-col items-center gap-2 border rounded-md p-2"
+                          style={{
+                            background: palette?.surfaceAlt || "#f9fafb",
+                            borderColor: palette?.surfaceBorder || "#e5e7eb",
+                          }}
                         >
                           {v.photo_url && (
                             <img

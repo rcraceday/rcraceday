@@ -1,5 +1,7 @@
 // src/app/pages/events/EventDetailsSections/EventDetailsClasses.jsx
 
+import useTheme from "@/app/providers/useTheme";
+
 /* ===========================
    HELPERS
    =========================== */
@@ -20,6 +22,7 @@ function formatDate(dateString) {
    =========================== */
 
 export default function EventDetailsClasses({ event }) {
+  const { palette } = useTheme();
   const classesByDay = Array.isArray(event.classes_by_day)
     ? event.classes_by_day
     : [];
@@ -27,7 +30,7 @@ export default function EventDetailsClasses({ event }) {
   if (classesByDay.length === 0) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ color: palette?.text || "#1f2937" }}>
 
       {classesByDay.map((day, index) => {
         const label = day.label?.trim() || `Day ${index + 1}`;
@@ -44,13 +47,13 @@ export default function EventDetailsClasses({ event }) {
 
             {/* CLASS LIST */}
             {classes.length > 0 ? (
-              <ul className="text-sm text-text-muted leading-tight space-y-1">
+              <ul className="text-sm leading-tight space-y-1">
                 {classes.map((cls, i) => (
                   <li key={i}>• {cls}</li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-text-muted">
+              <p className="text-sm">
                 No classes listed for this day.
               </p>
             )}

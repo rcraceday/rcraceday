@@ -57,7 +57,11 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
                 {nominationLabel && (
                   <>
                     <span aria-hidden="true">•</span>
-                    <span className="min-w-0 break-words font-bold text-green-600">
+                    <span
+                      className={`min-w-0 break-words font-bold ${
+                        nominationsOpen ? "text-green-600" : ""
+                      }`}
+                    >
                       {nominationLabel}
                     </span>
                   </>

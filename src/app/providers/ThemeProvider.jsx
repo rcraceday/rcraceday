@@ -41,11 +41,11 @@ export default function ThemeProvider({
       adminLogoUrl: club?.admin_logo_url || club?.logo_url || DEFAULT_PALETTE.logoUrl,
       primary,
       primarySoft: primary,
-      text: club?.text_color || DEFAULT_PALETTE.text,
+      text: DEFAULT_PALETTE.text,
       button,
       buttonText: club?.button_text_color || DEFAULT_PALETTE.buttonText,
       headerAccent: primary,
-      headerText: club?.text_color || DEFAULT_PALETTE.headerText,
+      headerText: DEFAULT_PALETTE.headerText,
       cardColor: DEFAULT_PALETTE.cardColor,
       borderColor: DEFAULT_PALETTE.borderColor,
       buttonColor: button,
@@ -72,6 +72,11 @@ export default function ThemeProvider({
     root.style.setProperty("--theme-background", theme.palette.background);
     root.style.setProperty("--theme-surface", theme.palette.surface);
     root.style.setProperty("--theme-border", theme.palette.surfaceBorder);
+    root.style.setProperty("--text-base", theme.palette.text);
+    root.style.setProperty("--text-muted", theme.palette.textMuted);
+    root.style.setProperty("--surface-base", theme.palette.surface);
+    root.style.setProperty("--surface-alt", theme.palette.surfaceAlt);
+    root.style.setProperty("--border-color", theme.palette.surfaceBorder);
 
     return () => {
       root.style.removeProperty("--theme-primary");
@@ -81,6 +86,11 @@ export default function ThemeProvider({
       root.style.removeProperty("--theme-background");
       root.style.removeProperty("--theme-surface");
       root.style.removeProperty("--theme-border");
+      root.style.removeProperty("--text-base");
+      root.style.removeProperty("--text-muted");
+      root.style.removeProperty("--surface-base");
+      root.style.removeProperty("--surface-alt");
+      root.style.removeProperty("--border-color");
     };
   }, [theme]);
 

@@ -42,10 +42,10 @@ export default function Button({
       border: brand,
     },
     success: {
-      bg: "#16A34A",
-      hover: "#15803D",
-      text: "#FFFFFF",
-      border: "#15803D",
+      bg: "#16a34a",
+      hover: "#15803d",
+      text: buttonTextColor,
+      border: "#15803d",
     },
   };
 
