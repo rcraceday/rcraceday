@@ -1,36 +1,34 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
-
 import { useClub } from "@/app/providers/ClubProvider";
 
-import EventFilters from "./events-sections/EventFilters";
-import UpcomingEventsCard from "./events-sections/UpcomingEventsCard";
-import PastEventsCard from "./events-sections/PastEventsCard";
+import useTheme from "@/app/providers/useTheme";
+
+import EventCard from "./EventCard";
 
 import PageTitle from "@/components/ui/PageTitle";
+import FilterDropdown from "@/components/ui/FilterDropdown";
 
 import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 import {
   extractYearsFromEvents,
-  formatDate,
 } from "./events-sections/helpers";
 
 export default function Events() {
-  const { club } = useClub();
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const { palette } = useTheme();
+  const brand = palette.primary;
   const { clubSlug } = useParams();
+  const { club } = useClub();
 
-  const [query, setQuery] = useState("" );
-  const [trackFilter, setTrackFilter] = useState("all" );
-  const [typeFilter, setTypeFilter] = useState("all" );
-  const [yearFilter, setYearFilter] = useState("all" );
-  const [sortOrder, setSortOrder] = useState("asc" );
-  const [showPastEvents, setShowPastEvents] = useState(false);
-
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const currentYear = new Date().getFullYear();
+  const [view, setView] = useState("upcoming");
+  const [selectedYear, setSelectedYear] = useState(currentYear);
 
   const [events, setEvents] = useState([]);
+  const [trackNames, setTrackNames] = useState({});
+  const [tracks, setTracks] = useState([]);
+  const [trackFilter, setTrackFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   // -----------------------------
@@ -52,85 +50,73 @@ export default function Events() {
 
   useEffect(() => {
     async function loadEvents() {
+      if (!club?.id) return;
+
       setLoading(true);
 
-      const { data } = await supabase
+      const { data = [] } = await supabase
         .from("events")
         .select("*")
+        .eq("club_id", club.id)
         .order("event_date", { ascending: true });
 
-      setEvents(data || []);
+      const { data: clubTracks = [] } = await supabase
+        .from("club_tracks")
+        .select("id, name")
+        .eq("club_id", club.id)
+        .order("name");
+
+      if (clubTracks.length > 0) {
+        setTracks(clubTracks);
+        setTrackNames(
+          clubTracks.reduce((names, track) => {
+            names[track.id] = track.name;
+            return names;
+          }, {})
+        );
+      } else {
+        const trackIds = data.map((event) => event.track).filter(Boolean);
+        if (trackIds.length > 0) {
+          const { data: eventTracks = [] } = await supabase
+          .from("club_tracks")
+          .select("id, name")
+          .in("id", trackIds);
+
+          setTracks(eventTracks);
+          setTrackNames(
+            eventTracks.reduce((names, track) => {
+              names[track.id] = track.name;
+              return names;
+            }, {})
+          );
+        } else {
+          setTracks([]);
+          setTrackNames({});
+        }
+      }
+
+      setEvents(data);
       setLoading(false);
     }
 
     loadEvents();
-  }, []);
+  }, [club?.id]);
 
-  // Extract years from start dates
-  const years = extractYearsFromEvents(
-    events.map((e) => getEventStartDate(e))
-  );
+  const years = extractYearsFromEvents(events);
+  const activeYear = years.includes(selectedYear) ? selectedYear : years[0];
 
   const now = new Date();
 
-  // Multi‑day aware upcoming/past classification
-  let upcoming = events.filter((e) => getEventEndDate(e) >= now);
-  let past = events.filter((e) => getEventEndDate(e) < now);
+  const displayedEvents = events
+    .filter((event) => {
+      const matchesView = view === "upcoming"
+        ? getEventEndDate(event) >= now
+        : getEventStartDate(event).getFullYear() === activeYear;
+      const matchesTrack = trackFilter === "all" || event.track === trackFilter;
 
-  // -----------------------------
-  // Filtering
-  // -----------------------------
-  function applyFilters(list) {
-    return list.filter((e) => {
-      const q = query.toLowerCase();
-      const name = (e.name || "").toLowerCase();
-
-      // AdminEventEdit uses "track"
-      const track = (e.track || "").toLowerCase();
-
-      const type = (e.event_type || "").toLowerCase();
-
-      const startDate = getEventStartDate(e);
-      const dateStr = formatDate(startDate).toLowerCase();
-      const year = startDate.getFullYear().toString();
-
-      const matchesQuery =
-        !q || name.includes(q) || track.includes(q) || dateStr.includes(q);
-
-      const matchesTrack =
-        trackFilter === "all" || track.includes(trackFilter.toLowerCase());
-
-      const matchesType =
-        typeFilter === "all" || type === typeFilter.toLowerCase();
-
-      const matchesYear = yearFilter === "all" || year === yearFilter;
-
-      return matchesQuery && matchesTrack && matchesType && matchesYear;
-    });
-  }
-
-  // -----------------------------
-  // Sorting
-  // -----------------------------
-  function sortList(list) {
-    return [...list].sort((a, b) => {
-      const da = getEventStartDate(a);
-      const db = getEventStartDate(b);
-      return sortOrder === "asc" ? da - db : db - da;
-    });
-  }
-
-  upcoming = sortList(applyFilters(upcoming));
-  past = sortList(applyFilters(past));
-
-  function clearFilters() {
-    setQuery("" );
-    setTrackFilter("all" );
-    setTypeFilter("all" );
-    setYearFilter("all" );
-    setSortOrder("asc" );
-    setShowPastEvents(false);
-  }
+      return matchesView && matchesTrack;
+    })
+    .sort((a, b) => getEventStartDate(a) - getEventStartDate(b));
 
   return (
     <div style={{ minHeight: "100vh", width: "100%" }}>
@@ -143,74 +129,67 @@ export default function Events() {
       {/* RESTORED EXACTLY — only removed the container */}
       <main
         style={{
-          padding: "40px 16px",
+          padding: "24px 16px",
           display: "flex",
           flexDirection: "column",
-          gap: "48px",
+          gap: "24px",
           maxWidth: "768px",
           margin: "0 auto",
         }}
       >
-        {/* FILTER BAR */}
-        <div
-          style={{
-            border: `2px solid ${brand}`,
-            background: "white",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-          onClick={() => setFiltersOpen(!filtersOpen)}
-        >
-          <div
-            style={{
-              padding: "6px 12px",
-              height: "36px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              color: brand,
-              fontSize: "14px",
-              fontWeight: 600,
-            }}
-          >
-            <span>Filters</span>
-            <span>{filtersOpen ? "▲" : "▼"}</span>
-          </div>
-
-          {filtersOpen && (
-            <div
-              style={{ padding: "16px", borderTop: "1px solid #eee" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <EventFilters
-                query={query}
-                setQuery={setQuery}
-                trackFilter={trackFilter}
-                setTrackFilter={setTrackFilter}
-                typeFilter={typeFilter}
-                setTypeFilter={setTypeFilter}
-                yearFilter={yearFilter}
-                setYearFilter={setYearFilter}
-                sortOrder={sortOrder}
-                setSortOrder={setSortOrder}
-                showPastEvents={showPastEvents}
-                setShowPastEvents={setShowPastEvents}
-                clearFilters={clearFilters}
-                years={years}
-                brand={brand}
-              />
-            </div>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <FilterDropdown
+            value={view}
+            onChange={setView}
+            ariaLabel="Event view"
+            options={[
+              { value: "upcoming", label: "Upcoming Events" },
+              { value: "year", label: "All Events" },
+            ]}
+          />
+          {tracks.length > 1 && (
+            <FilterDropdown
+              value={trackFilter}
+              onChange={setTrackFilter}
+              ariaLabel="Track type"
+              options={[
+                { value: "all", label: "All Tracks" },
+                ...tracks.map((track) => ({ value: track.id, label: track.name })),
+              ]}
+            />
+          )}
+          {years.length > 1 && (
+            <FilterDropdown
+              value={activeYear || currentYear}
+              onChange={(year) => {
+                setSelectedYear(Number(year));
+                setView("year");
+              }}
+              ariaLabel="Event year"
+              options={years.map((year) => ({ value: year, label: String(year) }))}
+            />
           )}
         </div>
 
-        <UpcomingEventsCard
-          brand={brand}
-          clubSlug={clubSlug}
-          loading={loading}
-          events={upcoming}
-        />
-
-        {showPastEvents && <PastEventsCard brand={brand} events={past} />}
+        <section className="space-y-2">
+          {loading && <p className="text-text-muted">Loading events...</p>}
+          {!loading && displayedEvents.length === 0 && (
+            <p className="text-text-muted">
+              {view === "upcoming"
+                ? "No upcoming events scheduled."
+                : `No events scheduled for ${activeYear || currentYear}.`}
+            </p>
+          )}
+          {!loading && displayedEvents.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+              clubSlug={clubSlug}
+              trackNames={trackNames}
+              showResults={getEventEndDate(event) < now}
+            />
+          ))}
+        </section>
       </main>
     </div>
   );

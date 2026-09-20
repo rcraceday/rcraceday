@@ -1,4 +1,3 @@
-// Needed by EventListItem.jsx
 export const TYPE_LABELS = {
   racing: "Racing",
   practice: "Practice",
@@ -8,7 +7,6 @@ export const TYPE_LABELS = {
   national_titles: "National Titles",
 };
 
-// Needed by EventListItem.jsx
 export function isNominationsOpen(event) {
   if (!event?.nominations_open || !event?.nominations_close) return false;
 
@@ -24,8 +22,9 @@ export function extractYearsFromEvents(events) {
   const years = new Set();
 
   events.forEach((e) => {
-    if (e.event_date) {
-      const y = new Date(e.event_date).getFullYear();
+    const eventDate = e instanceof Date ? e : e.event_date;
+    if (eventDate) {
+      const y = new Date(eventDate).getFullYear();
       years.add(y);
     }
   });
