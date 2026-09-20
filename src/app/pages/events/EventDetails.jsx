@@ -67,6 +67,22 @@ function formatDate(iso) {
   }
 }
 
+function formatEventDate(event) {
+  if (!event.is_multi_day || !Array.isArray(event.days)) {
+    return formatDate(event.event_date);
+  }
+
+  const dates = event.days
+    .map((day) => day?.date)
+    .filter((date) => date && !Number.isNaN(new Date(date).getTime()))
+    .sort();
+
+  if (dates.length === 0) return formatDate(event.event_date);
+  if (dates.length === 1 || dates[0] === dates.at(-1)) return formatDate(dates[0]);
+
+  return `${formatDate(dates[0])} - ${formatDate(dates.at(-1))}`;
+}
+
 function formatTimeOnly(date, timeStr) {
   if (!timeStr) return null;
   try {
@@ -245,12 +261,7 @@ if (!event) {
   );
 }
 
-const isSingleDay = !event.is_multi_day;
-const primaryDate = isSingleDay
-  ? formatDate(event.event_date)
-  : event.days?.[0]?.date
-  ? formatDate(event.days[0].date)
-  : null;
+const primaryDate = formatEventDate(event);
 
 const now = new Date();
 const nominationsOpen = event.nominations_open

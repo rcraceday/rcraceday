@@ -1,189 +1,95 @@
-import React, { useState } from "react";
+import React from "react";
 
-export default function CalendarEventCard({
-  event,
-  brand,
-  onNavigate,
-  compact = false,
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const hasLogo = event.logourl;
+export default function CalendarEventCard({ event, brand, onNavigate }) {
+  const logoSrc = event.logo_preview_url ||
+    (event.logourl?.startsWith("http")
+      ? event.logourl
+      : event.logourl
+        ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/club-assets/${event.logourl}`
+        : null);
 
-  const formatType = (str) => {
-    if (!str) return "";
-    return str
-      .split(" ")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-  };
-
-  const isMobile = window.matchMedia("(hover: none)").matches;
-
-  /* ---------------------------
-     DESKTOP HOVER BEHAVIOR
-     --------------------------- */
-  const handleMouseEnter = () => {
-    if (!isMobile) setExpanded(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (!isMobile) setExpanded(false);
-  };
-
-  /* ---------------------------
-     CLICK BEHAVIOR
-     --------------------------- */
   const handleClick = () => {
-    if (isMobile) {
-      // MOBILE: first tap expands, second tap navigates
-      if (!expanded) {
-        setExpanded(true);
-        return;
-      }
-      if (onNavigate) onNavigate();
-      return;
-    }
-
-    // DESKTOP: click navigates immediately
     if (onNavigate) onNavigate();
   };
 
   return (
     <div
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       onClick={handleClick}
       style={{
-        padding: "12px",
+        width: "100%",
+        boxSizing: "border-box",
+        padding: "3px",
         borderRadius: "12px",
         background: "white",
         border: `2px solid ${brand}`,
         cursor: "pointer",
         display: "flex",
-        flexDirection: "column",
-        gap: "12px",
+        alignItems: "center",
+        gap: "8px",
         boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
         transition: "transform 0.15s ease",
       }}
     >
-      {/* TOP ROW */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-        }}
-      >
-        {hasLogo ? (
-          <img src={event.logourl}
-            alt={event.name}
-            style={{
-              width: "72px",
-              height: "72px",
-              objectFit: "contain",
-              flexShrink: 0,
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "72px",
-              height: "72px",
-              borderRadius: "10px",
-              background: brand,
-              color: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 700,
-              fontSize: "14px",
-              textAlign: "center",
-              padding: "6px",
-              flexShrink: 0,
-            }}
-          >
-            {event.name}
-          </div>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div
-            style={{
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "#333",
-            }}
-          >
-            {formatType(event.event_type)}
-          </div>
-
-          <div
-            style={{
-              fontSize: "13px",
-              color: "#666",
-              marginTop: "2px",
-            }}
-          >
-            {event.track_type || event.track || "Track TBA"}
-          </div>
-        </div>
-      </div>
-
-      {/* EXPANDED DETAILS */}
-      {expanded && (
+      {logoSrc ? (
         <div
           style={{
-            width: "100%",
-            paddingTop: "10px",
-            borderTop: "1px solid #eee",
+            width: "72px",
+            height: "72px",
+            padding: 0,
+            borderRadius: "10px",
+            background: "#fff",
             display: "flex",
-            flexDirection: "column",
-            gap: "6px",
+            alignItems: "center",
+            justifyContent: "center",
+            boxSizing: "border-box",
+            overflow: "hidden",
           }}
         >
-          <div
+          <img
+            src={logoSrc}
+            alt={event.name}
             style={{
-              fontSize: "16px",
-              fontWeight: 700,
-              color: "#222",
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              borderRadius: "8px",
             }}
-          >
-            {event.name}
-          </div>
-
-          <div
-            style={{
-              fontSize: "13px",
-              color: "#555",
-            }}
-          >
-            {event.track_type || event.track || "Track TBA"}
-          </div>
-
-          <div
-            style={{
-              fontSize: "12px",
-              color: "#777",
-            }}
-          >
-            {formatType(event.event_type)}
-          </div>
-
-          {/* Desktop-only hint */}
-          {!isMobile && (
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: brand,
-              }}
-            >
-              View details →
-            </div>
-          )}
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            width: "72px",
+            height: "72px",
+            borderRadius: "10px",
+            background: brand,
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: "13px",
+            textAlign: "center",
+            padding: 0,
+            flexShrink: 0,
+            boxSizing: "border-box",
+            overflow: "hidden",
+          }}
+        >
+          {event.name}
         </div>
       )}
+
+      <div
+        style={{
+          fontSize: "14px",
+          fontWeight: 700,
+          color: "#222",
+          lineHeight: 1.3,
+        }}
+      >
+        {event.name}
+      </div>
     </div>
   );
 }

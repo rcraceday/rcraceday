@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
+import useTheme from "@/app/providers/useTheme";
 
 import { CalendarIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
@@ -19,9 +20,10 @@ import CalendarYear from "@app/pages/events/calendar/CalendarYear";
 export default function Calendar() {
   const { clubSlug } = useParams();
   const { club } = useClub();
+  const { palette } = useTheme() || {};
   const navigate = useNavigate();
 
-  const brand = club?.theme?.hero?.backgroundColor ?? "#0A66C2";
+  const brand = palette?.primary ?? "#0A66C2";
 
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -39,15 +41,16 @@ export default function Calendar() {
 
       setLoading(true);
 
-      const start = new Date(year, 0, 1);
-      const end = new Date(year, 11, 31, 23, 59, 59);
+      const startDate = `${year}-01-01`;
+      const endDate = `${year}-12-31`;
 
       const { data, error } = await supabase
         .from("events")
         .select("*")
         .eq("club_id", club.id)
-        .gte("event_date", start.toISOString())
-        .lte("event_date", end.toISOString())
+        .or(
+          `and(event_date.gte.${startDate},event_date.lte.${endDate}),is_multi_day.eq.true`,
+        )
         .order("event_date", { ascending: true });
 
       if (!error) setEvents(data || []);

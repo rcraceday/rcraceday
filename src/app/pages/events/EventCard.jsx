@@ -17,6 +17,34 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
         : null);
   const type = (event.event_type || "racing").toLowerCase();
   const typeLabel = TYPE_LABELS[type] || event.event_type || "Event";
+  const scheduledDays = [
+    ...(Array.isArray(event.classes_by_day) ? event.classes_by_day : []),
+    ...(Array.isArray(event.days) ? event.days : []),
+  ];
+  const scheduledDates = scheduledDays
+    .map((day) => day?.date)
+    .filter((date) => date && !Number.isNaN(new Date(date).getTime()))
+    .sort();
+  const eventDate = event.event_date || scheduledDates[0] || null;
+  const eventEndDate = scheduledDates.at(-1) || eventDate;
+  const formatRangeDate = (date) => {
+    const localDate = new Date(`${date.slice(0, 10)}T12:00:00`);
+    const day = localDate.getDate();
+    const suffix = [11, 12, 13].includes(day % 100)
+      ? "th"
+      : ["th", "st", "nd", "rd"][day % 10] || "th";
+    const weekday = localDate.toLocaleDateString("en-US", { weekday: "short" });
+    const month = localDate.toLocaleDateString("en-US", { month: "short" });
+
+    return `${weekday} ${month} ${day}${suffix}`;
+  };
+  const eventDateLabel = event.is_multi_day && eventDate
+    ? eventDate === eventEndDate
+      ? formatRangeDate(eventDate)
+      : `${formatRangeDate(eventDate)} - ${formatRangeDate(eventEndDate)}`
+    : eventDate
+      ? formatDate(eventDate)
+      : "Date TBD";
   const nominationsOpen = isNominationsOpen(event);
   const nominationLabel = nominationsOpen
     ? "Nominations Open"
@@ -51,7 +79,7 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
               <p className="flex flex-wrap min-w-0 items-center gap-x-1.5 gap-y-0.5 text-sm font-semibold leading-tight text-text-muted">
                 <span className="min-w-0 truncate max-w-full">{track}</span>
                 <span aria-hidden="true">•</span>
-                <span className="shrink-0">{formatDate(event.event_date)}</span>
+                <span className="shrink-0">{eventDateLabel}</span>
                 <span aria-hidden="true">•</span>
                 <span className="shrink-0">{typeLabel}</span>
                 {nominationLabel && (

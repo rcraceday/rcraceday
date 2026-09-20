@@ -9,8 +9,47 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
 
   const safeEvents = Array.isArray(events) ? events : [];
 
-  const formatDate = (iso) => {
-    const d = new Date(iso);
+  const lighten = (hex) => {
+    try {
+      const num = parseInt(hex.replace("#", ""), 16);
+      const r = Math.min(255, (num >> 16) + 30);
+      const g = Math.min(255, ((num >> 8) & 0xff) + 30);
+      const b = Math.min(255, (num & 0xff) + 30);
+      return `rgb(${r}, ${g}, ${b})`;
+    } catch {
+      return hex;
+    }
+  };
+
+  const monthHeaderColor = lighten(brand);
+
+  const parseLocalDate = (value) => {
+    if (!value) return null;
+
+    const candidate = new Date(value);
+    if (Number.isNaN(candidate.getTime())) return null;
+
+    return new Date(`${value.slice(0, 10)}T12:00:00`);
+  };
+
+  const getEventCalendarDate = (event) => {
+    if (event.event_date) return parseLocalDate(event.event_date);
+
+    const scheduledDays = [
+      ...(Array.isArray(event.classes_by_day) ? event.classes_by_day : []),
+      ...(Array.isArray(event.days) ? event.days : []),
+    ];
+
+    return scheduledDays
+      .map((day) => parseLocalDate(day?.date))
+      .filter(Boolean)
+      .sort((first, second) => first - second)[0] || null;
+  };
+
+  const formatDate = (value) => {
+    const d = value instanceof Date ? value : parseLocalDate(value);
+    if (!d) return "Date TBD";
+
     const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
     const day = d.getDate();
     const month = d.toLocaleDateString("en-US", { month: "short" });
@@ -55,8 +94,8 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
       >
         {MONTHS.map((label, monthIndex) => {
           const monthEvents = safeEvents.filter((e) => {
-            const d = new Date(e.event_date);
-            return d.getFullYear() === year && d.getMonth() === monthIndex;
+            const d = getEventCalendarDate(e);
+            return d && d.getFullYear() === year && d.getMonth() === monthIndex;
           });
 
           return (
@@ -66,7 +105,6 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
               style={{
                 width: "100%",
                 maxWidth: "420px",
-                border: `2px solid ${brand}`,
                 background: "white",
                 display: "flex",
                 flexDirection: "column",
@@ -75,7 +113,7 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
               {/* BLUE HEADER BAR FOR MONTH */}
               <div
                 style={{
-                  background: brand,
+                  background: monthHeaderColor,
                   color: "white",
                   padding: "12px 16px",
                   fontSize: "16px",
@@ -88,10 +126,11 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
               {/* CARD BODY */}
               <div
                 style={{
-                  padding: "16px",
+                  padding: "16px 0",
                   display: "flex",
                   flexDirection: "column",
                   gap: "16px",
+                  boxSizing: "border-box",
                 }}
               >
                 {monthEvents.length === 0 && (
@@ -113,6 +152,9 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
                       display: "flex",
                       flexDirection: "column",
                       gap: "8px",
+                      width: "100%",
+                      padding: "0 2px",
+                      boxSizing: "border-box",
                     }}
                   >
                     <div
@@ -120,9 +162,10 @@ export default function CalendarYear({ year, events, brand, onEventClick }) {
                         fontSize: "14px",
                         fontWeight: 600,
                         color: "#333",
+                        textAlign: "left",
                       }}
                     >
-                      {formatDate(event.event_date)}
+                      {formatDate(getEventCalendarDate(event))}
                     </div>
 
                     <CalendarEventCard

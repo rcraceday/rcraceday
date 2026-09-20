@@ -27,6 +27,22 @@ import {
   Cog6ToothIcon,
 } from "@heroicons/react/24/solid";
 
+function formatEventDate(event) {
+  if (!event.is_multi_day || !Array.isArray(event.days)) {
+    return formatDate(event.event_date);
+  }
+
+  const dates = event.days
+    .map((day) => day?.date)
+    .filter((date) => date && !Number.isNaN(new Date(date).getTime()))
+    .sort();
+
+  if (dates.length === 0) return formatDate(event.event_date);
+  if (dates.length === 1 || dates[0] === dates.at(-1)) return formatDate(dates[0]);
+
+  return `${formatDate(dates[0])} - ${formatDate(dates.at(-1))}`;
+}
+
 export default function Home() {
   const { club } = useClub();
   const { profile } = useProfile();
@@ -215,7 +231,7 @@ export default function Home() {
                         <p className="flex flex-wrap min-w-0 items-center gap-x-1.5 gap-y-0.5 text-sm font-semibold leading-tight text-text-muted">
                           <span className="min-w-0 truncate max-w-full">{track}</span>
                           <span aria-hidden="true">•</span>
-                          <span className="shrink-0">{formatDate(event.event_date)}</span>
+                          <span className="shrink-0">{formatEventDate(event)}</span>
                           {nominationLabel && (
                             <>
                               <span aria-hidden="true">•</span>
