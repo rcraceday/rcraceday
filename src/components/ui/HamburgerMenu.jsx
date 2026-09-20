@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
+import useTheme from "@/app/providers/useTheme";
 
 import DesktopDropdown from "@/components/ui/DesktopDropdown";
 import MobileDrawer from "@/components/ui/MobileDrawer";
@@ -18,6 +19,8 @@ export default function HamburgerMenu({
 
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { palette } = useTheme();
+  const primaryColor = palette?.primary || "#00438a";
 
   const isAdminUser = profile?.role === "admin";
 
@@ -46,7 +49,11 @@ export default function HamburgerMenu({
       >
         <Bars3Icon
           className="hamburger-icon"
-          style={isAdmin ? { color: "var(--admin-accent)" } : {}}
+          style={
+            isAdmin
+              ? { color: "var(--admin-accent)" }
+              : { color: primaryColor }
+          }
         />
         <span>Menu</span>
       </button>
@@ -56,7 +63,7 @@ export default function HamburgerMenu({
           open={open}
           items={items}
           onClose={() => setOpen(false)}
-          accentColor={accentColor}
+          accentColor={isAdmin ? accentColor : primaryColor}
           isAdmin={isAdmin}
         />
       )}
@@ -66,7 +73,7 @@ export default function HamburgerMenu({
           open={open}
           onClose={() => setOpen(false)}
           items={items}
-          accentColor={accentColor}
+          accentColor={isAdmin ? accentColor : primaryColor}
           isAdmin={isAdmin}
         />
       )}

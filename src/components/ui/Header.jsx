@@ -2,30 +2,26 @@
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
+import useTheme from "@/app/providers/useTheme";
 import AvatarMenu from "@/components/ui/AvatarMenu";
 import HamburgerMenu from "@/components/ui/HamburgerMenu";
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
 
-export default function Header({ club, hideMenu }) {
+export default function Header({ hideMenu }) {
   const { clubSlug } = useParams();
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { palette } = useTheme();
 
   const isAdmin = profile?.role === "admin";
-
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
-  const logoSrc =
-    club?.logoUrl ||
-    club?.logo ||
-    club?.logo_url ||
-    club?.theme?.hero?.logo ||
-    club?.branding?.logo ||
-    club?.assets?.logo ||
-    null;
+  const logoSrc = palette.logoUrl;
 
   return (
-    <header className="w-full bg-white">
-      <div className="w-full" style={{ borderBottom: `4px solid ${brand}` }}>
+    <header className="w-full" style={{ backgroundColor: palette.background }}>
+      <div
+        className="w-full"
+        style={{ borderBottom: `4px solid ${palette.primary}` }}
+      >
         <div
           className="
             w-full max-w-screen-lg mx-auto px-4 py-3
@@ -48,7 +44,7 @@ export default function Header({ club, hideMenu }) {
               <Link to={`/${clubSlug}/app`} className="flex items-center">
                 <img
                   src={logoSrc}
-                  alt={club?.name}
+                  alt="Club logo"
                   className="h-12 md:h-20 w-auto object-contain"
                 />
               </Link>

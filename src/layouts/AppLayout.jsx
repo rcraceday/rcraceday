@@ -5,7 +5,7 @@ import { useClub } from "@/app/providers/ClubProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
-import { useTheme } from "@/app/providers/ThemeProvider";
+import useTheme from "@/app/providers/useTheme";
 
 import Header from "@/components/ui/Header";
 import Footer from "@/components/ui/Footer";
@@ -66,7 +66,7 @@ export default function AppLayout() {
         color: palette?.text || "#111827",
       }}
     >
-      <Header club={club} />
+      <Header />
 
       <main
         style={{

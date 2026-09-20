@@ -1,7 +1,8 @@
 // src/app/providers/ThemeProvider.jsx
 
-import { createContext, useContext, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useClub } from "@/app/providers/ClubProvider";
+import { ThemeContext } from "@/app/providers/ThemeContext";
 
 const DEFAULT_PALETTE = {
   logoUrl: null,
@@ -15,14 +16,13 @@ const DEFAULT_PALETTE = {
   surface: "#ffffff",
   surfaceAlt: "#f9fafb",
   surfaceBorder: "#e5e7eb",
+  cardColor: "#ffffff",
+  borderColor: "#e5e7eb",
+  buttonColor: "#00438a",
   headerAccent: "#00438a",
-  headerText: "#ffffff",
+  headerText: "#1f2937",
+  headerColor: "#00438a",
 };
-
-export const ThemeContext = createContext({
-  palette: DEFAULT_PALETTE,
-  mode: "drivers",
-});
 
 export default function ThemeProvider({
   mode = "drivers",
@@ -38,16 +38,18 @@ export default function ThemeProvider({
       ...DEFAULT_PALETTE,
       ...clubTheme,
       logoUrl: club?.logo_url || DEFAULT_PALETTE.logoUrl,
+      adminLogoUrl: club?.admin_logo_url || club?.logo_url || DEFAULT_PALETTE.logoUrl,
       primary,
-      primarySoft: club?.accent_color || primary,
-      text: club?.header_text_color || DEFAULT_PALETTE.text,
+      primarySoft: primary,
+      text: club?.text_color || DEFAULT_PALETTE.text,
       button,
       buttonText: club?.button_text_color || DEFAULT_PALETTE.buttonText,
       headerAccent: primary,
-      headerText: club?.header_text_color || DEFAULT_PALETTE.headerText,
-      background: club?.background_color || DEFAULT_PALETTE.background,
-      surface: club?.card_color || DEFAULT_PALETTE.surface,
-      surfaceBorder: club?.border_color || DEFAULT_PALETTE.surfaceBorder,
+      headerText: club?.text_color || DEFAULT_PALETTE.headerText,
+      cardColor: DEFAULT_PALETTE.cardColor,
+      borderColor: DEFAULT_PALETTE.borderColor,
+      buttonColor: button,
+      headerColor: primary,
       hero: {
         ...(clubTheme.hero || {}),
         ...(club?.theme?.hero || {}),
@@ -67,6 +69,19 @@ export default function ThemeProvider({
     root.style.setProperty("--theme-text", theme.palette.text);
     root.style.setProperty("--theme-button", theme.palette.button);
     root.style.setProperty("--theme-button-text", theme.palette.buttonText);
+    root.style.setProperty("--theme-background", theme.palette.background);
+    root.style.setProperty("--theme-surface", theme.palette.surface);
+    root.style.setProperty("--theme-border", theme.palette.surfaceBorder);
+
+    return () => {
+      root.style.removeProperty("--theme-primary");
+      root.style.removeProperty("--theme-text");
+      root.style.removeProperty("--theme-button");
+      root.style.removeProperty("--theme-button-text");
+      root.style.removeProperty("--theme-background");
+      root.style.removeProperty("--theme-surface");
+      root.style.removeProperty("--theme-border");
+    };
   }, [theme]);
 
   return (
@@ -76,6 +91,3 @@ export default function ThemeProvider({
   );
 }
 
-export function useTheme() {
-  return useContext(ThemeContext);
-}

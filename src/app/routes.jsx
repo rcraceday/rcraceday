@@ -198,9 +198,11 @@ export default function AppRoutes() {
         path="/:clubSlug/app/admin/*"
         element={
           <ClubProvider>
-            <ProtectedAppRoute admin>
-              <AdminLayout />
-            </ProtectedAppRoute>
+            <ThemeProvider mode="admin">
+              <ProtectedAppRoute admin>
+                <AdminLayout />
+              </ProtectedAppRoute>
+            </ThemeProvider>
           </ClubProvider>
         }
       >

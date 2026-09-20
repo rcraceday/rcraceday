@@ -1,28 +1,43 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/supabaseClient";
-import CMSInput from "@cms/CMSInput";
+import { useClub } from "@/app/providers/ClubProvider";
 import CMSButton from "@cms/CMSButton";
 import CMSColorPicker from "@cms/CMSColorPicker";
 import CMSCard from "@cms/CMSCard";
 
+const getFormFromClub = (club) => ({
+  logo_url: club?.logo_url || "",
+  admin_logo_url: club?.admin_logo_url || "",
+  use_club_logo_for_admin: !club?.admin_logo_url,
+  primary_color: club?.primary_color || "#005BBB",
+  text_color: club?.text_color || "#FFFFFF",
+  button_color: club?.button_color || "",
+  button_text_color: club?.button_text_color || "#FFFFFF",
+});
+
+const getStoragePath = (url) => {
+  if (!url) return null;
+
+  const marker = "/club-assets/";
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex === -1) return null;
+
+  return decodeURIComponent(url.slice(markerIndex + marker.length).split("?")[0]);
+};
+
 export default function BrandingSettingsCard({ club }) {
-  const [form, setForm] = useState({
-    logo_url: club?.logo_url || "",
-    admin_logo_url: club?.admin_logo_url || "",
-    use_club_logo_for_admin: !club?.admin_logo_url,
-
-    primary_color: club?.primary_color || "#005BBB",
-    header_text_color: club?.header_text_color || "#FFFFFF",
-
-    button_color: club?.button_color || "",
-    button_text_color: club?.button_text_color || "#FFFFFF",
-  });
+  const { refreshClub } = useClub();
+  const [form, setForm] = useState(() => getFormFromClub(club));
 
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const updateField = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  useEffect(() => {
+    setForm(getFormFromClub(club));
+  }, [club]);
 
   // -------------------------------------------------------
   // FILE UPLOAD HELPERS
@@ -38,33 +53,35 @@ export default function BrandingSettingsCard({ club }) {
 
     setUploading(true);
 
-    const ext = file.name.split(".").pop().toLowerCase();
-    const filename = `${club.id}-${fieldName}.${ext}`;
-    const filePath = `clubs/${filename}`;
+    try {
+      const ext = file.name.split(".").pop().toLowerCase();
+      const filePath = `clubs/${club.id}-${fieldName}.${ext}`;
+      const oldPath = getStoragePath(oldUrl);
 
-    // Delete old file if exists
-    if (oldUrl) {
-      const oldFile = oldUrl.split("/").pop();
-      await supabase.storage.from("club-assets").remove([`clubs/${oldFile}`]);
-    }
+      const { error: uploadError } = await supabase.storage
+        .from("club-assets")
+        .upload(filePath, file, { upsert: true });
 
-    // Upload new file
-    const { error: uploadError } = await supabase.storage
-      .from("club-assets")
-      .upload(filePath, file, { upsert: true });
+      if (uploadError) {
+        alert("Upload failed.");
+        return;
+      }
 
-    if (uploadError) {
+      if (oldPath && oldPath !== filePath) {
+        await supabase.storage.from("club-assets").remove([oldPath]);
+      }
+
+      const { data: publicUrl } = supabase.storage
+        .from("club-assets")
+        .getPublicUrl(filePath);
+
+      updateField(fieldName, `${publicUrl.publicUrl}?v=${Date.now()}`);
+    } catch (error) {
+      console.error(`Failed to upload ${label.toLowerCase()}:`, error);
       alert("Upload failed.");
+    } finally {
       setUploading(false);
-      return;
     }
-
-    const { data: publicUrl } = supabase.storage
-      .from("club-assets")
-      .getPublicUrl(filePath);
-
-    updateField(fieldName, publicUrl.publicUrl);
-    setUploading(false);
   };
 
   const handleLogoUpload = (e) => {
@@ -81,6 +98,8 @@ export default function BrandingSettingsCard({ club }) {
   // SAVE
   // -------------------------------------------------------
   const handleSave = async () => {
+    if (!club?.id) return;
+
     setSaving(true);
 
     const payload = {
@@ -90,23 +109,33 @@ export default function BrandingSettingsCard({ club }) {
         : form.admin_logo_url,
 
       primary_color: form.primary_color,
-      header_text_color: form.header_text_color,
+      text_color: form.text_color,
 
       button_color: form.button_color || form.primary_color,
       button_text_color: form.button_text_color,
     };
 
-    const { error } = await supabase
-      .from("clubs")
-      .update(payload)
-      .eq("id", club.id);
+    try {
+      const { data: savedClub, error } = await supabase
+        .from("clubs")
+        .update(payload)
+        .eq("id", club.id)
+        .select("id, logo_url, admin_logo_url, primary_color, text_color, button_color, button_text_color")
+        .maybeSingle();
 
-    setSaving(false);
+      if (error || !savedClub) {
+        console.error("Failed to save branding settings:", error || "No club row was updated");
+        alert("Failed to save branding settings.");
+        return;
+      }
 
-    if (error) {
-      alert("Failed to save branding settings.");
-    } else {
+      await refreshClub();
       alert("Branding settings saved.");
+    } catch (error) {
+      console.error("Failed to save branding settings:", error);
+      alert("Failed to save branding settings.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -114,7 +143,7 @@ export default function BrandingSettingsCard({ club }) {
   // PREVIEW VALUES
   // -------------------------------------------------------
   const previewPrimary = form.primary_color;
-  const previewHeaderText = form.header_text_color;
+  const previewHeaderText = form.text_color;
 
   const previewButton = form.button_color || form.primary_color;
   const previewButtonText = form.button_text_color;
@@ -208,9 +237,9 @@ export default function BrandingSettingsCard({ club }) {
       {/* HEADER TEXT COLOUR (under primary) */}
       {/* ------------------------------------------------------- */}
       <CMSColorPicker
-        label="Header Text Colour"
-        value={form.header_text_color}
-        onChange={(val) => updateField("header_text_color", val)}
+        label="Text Colour"
+        value={form.text_color}
+        onChange={(val) => updateField("text_color", val)}
       />
 
       {/* ------------------------------------------------------- */}

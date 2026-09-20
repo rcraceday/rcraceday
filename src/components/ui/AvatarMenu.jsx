@@ -1,11 +1,13 @@
 // src/components/ui/AvatarMenu.jsx
 import { useState } from "react";
 import { useMembership } from "@app/providers/MembershipProvider";
+import useTheme from "@/app/providers/useTheme";
 import UserStatusIcon from "@/components/ui/UserStatusIcon";
 
 export default function AvatarMenu({ isAdmin }) {
   const [open, setOpen] = useState(false);
   const { membership } = useMembership();
+  const { palette } = useTheme();
 
   const type = membership?.membership_type;
 
@@ -29,7 +31,10 @@ export default function AvatarMenu({ isAdmin }) {
       <UserStatusIcon />
 
       {isAdmin && (
-        <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-blue-600 text-white">
+        <span
+          className="px-2 py-0.5 text-xs font-semibold rounded-md text-white"
+          style={{ backgroundColor: palette?.primary || "#00438a" }}
+        >
           Admin
         </span>
       )}

@@ -97,6 +97,10 @@
   border-left-color: var(--admin-accent) !important;
 }
 
+.admin-root .admin-dropdown-item.admin-primary-item:hover {
+  border-left-color: var(--brand-color) !important;
+}
+
 .admin-root .admin-drawer {
   border-color: var(--admin-accent) !important;
 }

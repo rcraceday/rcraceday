@@ -1,5 +1,5 @@
 // src/components/ui/Card.jsx
-import { useTheme } from "@/app/providers/ThemeProvider";
+import useTheme from "@/app/providers/useTheme";
 import { useEffect } from "react";
 
 export default function Card({
@@ -11,15 +11,15 @@ export default function Card({
   ...props
 }) {
   const { palette } = useTheme();
-  const { cardColor, borderColor } = palette;
+  const { primary } = palette;
 
   const baseStyle = {
-    background: cardColor || "#FFFFFF", // Use cardColor as the background color
+    background: "#FFFFFF",
   borderRadius: "16px",
   boxShadow: "0 4px 10px rgba(0,0,0,0.12)",
   transition: "all 0.25s ease",
   ...style,
-    border: `2px solid ${borderColor || "#ccc"}`, // Use borderColor for the border
+    border: `2px solid ${primary || "#00438a"}`,
 };
 
   const hoverStyle = {

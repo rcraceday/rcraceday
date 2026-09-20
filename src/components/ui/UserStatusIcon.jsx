@@ -1,14 +1,13 @@
 // src/components/ui/UserStatusIcon.jsx
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useMembership } from "@app/providers/MembershipProvider";
-import { useClub } from "@/app/providers/ClubProvider"; // if you already have this
+import useTheme from "@/app/providers/useTheme";
 
 export default function UserStatusIcon() {
   const { user } = useAuth();
   const { membership } = useMembership();
-  const { club } = useClub(); // gives access to theme colours
-
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const { palette } = useTheme();
+  const brand = palette?.primary || "#00438a";
 
   // Extract initials from user full name
   const fullName = user?.user_metadata?.full_name || user?.full_name || "";

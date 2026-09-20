@@ -6,7 +6,7 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;                 /* REQUIRED for full-screen splash */
-  background-color: #000;       /* match manifest background_color */
+  background-color: var(--theme-background, #ffffff);
   overflow-x: hidden;
 
   font-family:
@@ -131,6 +131,10 @@ a:hover {
 .desktop-dropdown nav a:hover {
   background: rgba(0,0,0,0.04);
   border-left-color: var(--brand-color, #0A66C2);
+}
+
+.desktop-dropdown nav a.admin-accent-item:hover {
+  border-left-color: var(--admin-accent) !important;
 }
 
 /* ===========================

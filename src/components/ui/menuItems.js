@@ -9,7 +9,7 @@ import {
   Cog6ToothIcon,
   ShieldCheckIcon,
   ArrowRightOnRectangleIcon,
-} from "@heroicons/react/24/outline";
+} from "@heroicons/react/24/solid";
 
 export function buildMenuItems({ clubSlug, isAdmin, user }) {
   return [
@@ -56,6 +56,7 @@ export function buildMenuItems({ clubSlug, isAdmin, user }) {
             label: "Admin Portal",
             icon: ShieldCheckIcon,
             to: `/${clubSlug}/app/admin`,
+            useAdminColor: true,
           },
         ]
       : []),

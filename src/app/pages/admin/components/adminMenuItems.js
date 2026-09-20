@@ -6,7 +6,7 @@ import {
   UserGroupIcon,
   Cog6ToothIcon,
   HomeIcon,
-} from "@heroicons/react/24/outline";
+} from "@heroicons/react/24/solid";
 
 export function buildAdminMenuItems({ clubSlug }) {
   return [
@@ -44,6 +44,7 @@ export function buildAdminMenuItems({ clubSlug }) {
       label: "Home",
       icon: HomeIcon,
       to: `/${clubSlug}/app`,
+      usePrimaryColor: true,
     },
   ];
 }

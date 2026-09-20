@@ -1,5 +1,5 @@
 // src/components/ui/ClubHero.jsx
-import { useTheme } from "@app/providers/ThemeProvider";
+import useTheme from "@app/providers/useTheme";
 
 export default function ClubHero({ variant = "medium", showLogo = true }) {
   const { palette } = useTheme();

@@ -1,5 +1,5 @@
 // src/components/ui/Button.jsx
-import { useOutletContext } from "react-router-dom";
+import useTheme from "@/app/providers/useTheme";
 
 export default function Button({
   children,
@@ -9,31 +9,30 @@ export default function Button({
   disabled = false,
   ...props
 }) {
-  const outlet = useOutletContext() || {};
-  const club = outlet.club;
-  const theme = club?.theme;
+  const { palette } = useTheme();
+  const brand = palette?.primary || "#0A66C2";
+  const buttonColor = palette?.button || brand;
+  const buttonTextColor = palette?.buttonText || "#FFFFFF";
 
-  const brand = theme?.hero?.backgroundColor || "#0A66C2";
-
-  const darken = (hex) => {
+  const lighten = (hex) => {
     try {
       const num = parseInt(hex.replace("#", ""), 16);
-      const r = Math.max(0, (num >> 16) - 20);
-      const g = Math.max(0, ((num >> 8) & 0xff) - 20);
-      const b = Math.max(0, (num & 0xff) - 20);
+      const r = Math.min(255, (num >> 16) + 30);
+      const g = Math.min(255, ((num >> 8) & 0xff) + 30);
+      const b = Math.min(255, (num & 0xff) + 30);
       return `rgb(${r}, ${g}, ${b})`;
     } catch {
       return hex;
     }
   };
 
-  const brandHover = darken(brand);
+  const buttonHover = lighten(buttonColor);
 
   const variants = {
     primary: {
-      bg: brand,
-      hover: brandHover,
-      text: "#FFFFFF",
+      bg: buttonColor,
+      hover: buttonHover,
+      text: buttonTextColor,
       border: "rgba(255,255,255,0.8)",
     },
     secondary: {
@@ -90,13 +89,15 @@ export default function Button({
         ...(props.style || {}),
       }}
       onMouseEnter={(e) => {
-        if (!disabled && !inlineBg) {
-          e.currentTarget.style.backgroundColor = style.hover;
+        if (!disabled) {
+          if (!inlineBg) e.currentTarget.style.backgroundColor = style.hover;
+          e.currentTarget.style.filter = "brightness(1.12)";
         }
       }}
       onMouseLeave={(e) => {
-        if (!disabled && !inlineBg) {
-          e.currentTarget.style.backgroundColor = style.bg;
+        if (!disabled) {
+          if (!inlineBg) e.currentTarget.style.backgroundColor = style.bg;
+          e.currentTarget.style.filter = "";
         }
       }}
     >
