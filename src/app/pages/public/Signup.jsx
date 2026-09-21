@@ -1,7 +1,6 @@
 // src/app/pages/public/Signup.jsx
 import { useOutletContext, Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
-import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
@@ -14,6 +13,28 @@ export default function Signup() {
   const clubId = club?.id;
   const createUserUrl =
     "https://mvcttnmclrvaatdgzhpb.supabase.co/functions/v1/create-user";
+  const lookupMembershipUrl =
+    "https://mvcttnmclrvaatdgzhpb.supabase.co/functions/v1/lookup-membership";
+
+  async function lookupMembership(cleanEmail) {
+    const response = await fetch(lookupMembershipUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ email: cleanEmail, club_id: clubId }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Membership lookup failed");
+    }
+
+    return result.membership;
+  }
 
   const [step, setStep] = useState("memberQuestion");
 
@@ -135,19 +156,16 @@ export default function Signup() {
 
     const cleanEmail = membershipEmail.trim().toLowerCase();
 
-    const { data, error } = await supabase
-      .from("household_memberships")
-      .select("*")
-      .eq("club_id", clubId)
-      .ilike("email", cleanEmail)
-      .maybeSingle();
-
-    setLoading(false);
-
-    if (error) {
-      console.error("Lookup error:", error);
+    let data;
+    try {
+      data = await lookupMembership(cleanEmail);
+    } catch (err) {
+      console.error("Lookup error:", err);
+      setLoading(false);
       return setErrorMsg("Something went wrong. Please try again.");
     }
+
+    setLoading(false);
 
     if (!data) {
       return setErrorMsg(
@@ -418,12 +436,14 @@ async function handleNonMemberSignup(e) {
   const lastName = parts.length > 1 ? parts.slice(1).join(" ") : firstName;
 
   // Block: this email already belongs to a membership at this club
-  const { data: existingMembership } = await supabase
-    .from("household_memberships")
-    .select("id, status")
-    .eq("club_id", clubId)
-    .ilike("email", cleanEmail)
-    .maybeSingle();
+  let existingMembership;
+  try {
+    existingMembership = await lookupMembership(cleanEmail);
+  } catch (err) {
+    console.error("Lookup error:", err);
+    setLoading(false);
+    return setErrorMsg("Something went wrong. Please try again.");
+  }
 
   if (existingMembership) {
     setLoading(false);
