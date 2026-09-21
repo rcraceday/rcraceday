@@ -138,7 +138,7 @@ export default function Login() {
 
     if (!membership) {
       if (
-        user.user_metadata?.club_id !== club.id ||
+        String(user.user_metadata?.club_id) !== String(club.id) ||
         user.user_metadata?.signup_type !== "non_member_signup"
       ) {
         await supabase.auth.signOut();
