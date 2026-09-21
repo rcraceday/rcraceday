@@ -8,6 +8,7 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import { useClub } from "@/app/providers/ClubProvider";   // ⭐ FIXED — YOU FORGOT THIS
+import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import PageTitle from "@/components/ui/PageTitle";
@@ -30,8 +31,9 @@ export default function WelcomeAddDrivers() {
   const { membership, loadingMembership } = useMembership();
   const { user, loadingProfile } = useProfile();
   const { refreshDrivers } = useDrivers();
+  const { palette } = useTheme();
 
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette.primary;
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -287,9 +289,13 @@ export default function WelcomeAddDrivers() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      <PageTitle title={`Welcome to ${club?.name}`} style={{ color: brand }} />
+      <PageTitle
+        title="Welcome to Chargers RC Drivers Portal"
+        style={{ color: brand }}
+        centered
+      />
 
-      <main className="max-w-[720px] mx-auto px-4 space-y-12 pb-10 flex flex-col">
+      <main className="max-w-[720px] mx-auto px-4 pt-8 pb-16 space-y-12 flex flex-col">
 
         <Card
           className="p-6 space-y-4"
@@ -302,15 +308,17 @@ export default function WelcomeAddDrivers() {
           </p>
 
           <Card
-            className="p-4 space-y-3 bg-yellow-50"
+            className="p-4 space-y-3 bg-yellow-300 text-black"
           >
-            <h3 className="text-md font-semibold">Important</h3>
+            <h3 className="text-md font-bold text-red-600">
+              Important - Please Read Carefully!
+            </h3>
 
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-black">
               Your driver’s name must match <strong>exactly</strong> as it appears in LiveTime — spelling, spacing, and capitalisation included.
             </p>
 
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-black">
               LiveTime treats any variation as a completely new racer. If the name does not match perfectly, previous race history, seeding, and results will not link correctly.
             </p>
           </Card>

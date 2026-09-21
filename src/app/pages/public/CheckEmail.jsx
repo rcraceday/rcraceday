@@ -24,14 +24,13 @@ export default function CheckEmail() {
     setLoading(true);
     setMessage("");
 
-    const redirectUrl = `${window.location.origin}/${clubSlug}/public/login/`;
+    const redirectUrl = `${window.location.origin}/${clubSlug}/public/login`;
 
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
       options: {
         emailRedirectTo: redirectUrl,
-        redirectTo: redirectUrl
       }
     });
 

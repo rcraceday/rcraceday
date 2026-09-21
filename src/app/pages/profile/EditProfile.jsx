@@ -5,6 +5,7 @@ import { useNavigate, useParams, useOutletContext } from "react-router-dom";
 
 import { useDrivers } from "@/app/providers/DriverProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -12,14 +13,15 @@ import PageTitle from "@/components/ui/PageTitle";
 
 import EditDriverProfileCard from "@/components/driver/EditDriverProfileCard";
 
-import { PencilSquareIcon } from "@heroicons/react/24/solid";
+import { ArrowLeftIcon, PencilSquareIcon } from "@heroicons/react/24/solid";
 
 import { supabase } from "@/supabaseClient";
 
 export default function EditProfile() {
   const navigate = useNavigate();
   const { club } = useOutletContext();
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const { palette } = useTheme();
+  const brand = palette.primary;
 
   const { id } = useParams();
   const { drivers, loadingDrivers, refreshDrivers, deleteDriver } = useDrivers();
@@ -174,12 +176,13 @@ export default function EditProfile() {
         style={{ color: brand }}
         actions={
           <Button
-            variant="secondary"
-            className="!py-1 !px-3 !text-xs !rounded-sm"
+            variant="primary"
+            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
             onClick={() =>
               requestNavigate(`/${club.slug}/app/profile/drivers`)
             }
           >
+            <ArrowLeftIcon className="h-3 w-3" />
             Back
           </Button>
         }

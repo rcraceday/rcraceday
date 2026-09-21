@@ -5,6 +5,7 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 
 import { useDrivers } from "@/app/providers/DriverProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import useTheme from "@/app/providers/useTheme";
 
 import DriverListCard from "@/components/driver/DriverListCard";
 import Card from "@/components/ui/Card";
@@ -12,12 +13,13 @@ import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
 
 import { supabase } from "@/supabaseClient";
-import { UserPlusIcon, TrashIcon } from "@heroicons/react/24/solid";
+import { ArrowLeftIcon, UserPlusIcon, TrashIcon } from "@heroicons/react/24/solid";
 
 export default function DriverManager() {
   const navigate = useNavigate();
   const { club } = useOutletContext();
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const { palette } = useTheme();
+  const brand = palette.primary;
   const clubSlug = club?.slug;
 
   const { drivers, loadingDrivers } = useDrivers();
@@ -120,6 +122,16 @@ export default function DriverManager() {
         icon={UserPlusIcon}
         title="Driver Manager"
         style={{ color: brand }}
+        actions={
+          <Button
+            variant="primary"
+            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
+            onClick={() => navigate(`/${clubSlug}/app/profile`)}
+          >
+            <ArrowLeftIcon className="h-3 w-3" />
+            Back
+          </Button>
+        }
       />
 
       {/* CENTERED CONTENT */}

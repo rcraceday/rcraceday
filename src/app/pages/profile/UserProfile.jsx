@@ -7,10 +7,10 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/solid";
 
-import { useClub } from "@/app/providers/ClubProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
+import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import PageTitle from "@/components/ui/PageTitle";
@@ -20,12 +20,12 @@ export default function UserProfile() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
 
-  const { club } = useClub();
   const { profile } = useProfile();
   const { membership } = useMembership();
   const { drivers } = useDrivers();
+  const { palette } = useTheme();
 
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette.primary;
 
   const membershipLabel = membership
     ? membership.membership_type === "non_member"

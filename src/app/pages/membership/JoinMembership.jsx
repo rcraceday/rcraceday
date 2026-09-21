@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { IdentificationIcon } from "@heroicons/react/24/solid";
 
 import { useClub } from "@/app/providers/ClubProvider";
+import useTheme from "@/app/providers/useTheme";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
@@ -16,13 +17,13 @@ export default function JoinMembership() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
   const { club } = useClub();
+  const { palette } = useTheme();
 
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette?.primary || "#00438a";
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedType, setSelectedType] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const [processing, setProcessing] = useState(false);
@@ -95,12 +96,12 @@ export default function JoinMembership() {
     });
 
     if (error) {
-      setError("Something went wrong joining the club.");
+      setError(error.message || "Something went wrong joining the club.");
       setProcessing(false);
       return;
     }
 
-    navigate(`/${clubSlug}/membership`);
+    navigate(`/${clubSlug}/app/membership`);
   };
 
   /* ------------------------------------------------------------
@@ -164,10 +165,7 @@ export default function JoinMembership() {
                         return (
                           <button
                             key={product.id}
-                            onClick={() => {
-                              setSelectedType(type);
-                              setSelectedProduct(product);
-                            }}
+                            onClick={() => setSelectedProduct(product)}
                             className="w-full text-left rounded-md px-5 py-4 transition"
                             style={{
                               background: "#FFFFFF",

@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { IdentificationIcon } from "@heroicons/react/24/solid";
 
-import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import useTheme from "@/app/providers/useTheme";
 import { useNotifications } from "@app/hooks/useNotifications";
 
 import Card from "@/components/ui/Card";
@@ -21,11 +21,11 @@ const PRICING = {
 export default function UpgradeMembership() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
-  const { club } = useClub();
   const { membership, loadingMembership } = useMembership();
   const { notify } = useNotifications();
+  const { palette } = useTheme();
 
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette?.primary || "#00438a";
 
   const [duration, setDuration] = useState("full");
   const [processing, setProcessing] = useState(false);
@@ -58,7 +58,7 @@ export default function UpgradeMembership() {
             You already have a Family Membership.
           </p>
         </Card>
-      </div>
+        </div>
     );
   }
 
@@ -75,7 +75,7 @@ export default function UpgradeMembership() {
     try {
       notify("Upgrade recorded (simulated).", "success");
       navigate(`/${clubSlug}/app/membership`);
-    } catch (e) {
+    } catch {
       notify("There was a problem upgrading your membership.", "error");
     } finally {
       setProcessing(false);

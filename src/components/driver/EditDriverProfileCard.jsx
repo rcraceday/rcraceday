@@ -162,36 +162,38 @@ export default function EditDriverProfileCard({
           )}
 
           {/* SAVE + PREVIEW BUTTONS */}
-          <div className="space-y-4 pt-4">
+          <div className="flex flex-col items-center gap-4 pt-4">
             <Button
-              className="w-full py-3 bg-blue-600 text-white hover:bg-blue-700"
+              className="!w-auto px-6 py-3"
               onClick={() => save()}
             >
               Save Changes
             </Button>
 
             <Button
-              className="w-full py-3 bg-white border border-gray-300 text-sm text-gray-800 hover:bg-gray-50"
               variant="secondary"
+              className="!w-auto px-6 py-3"
               onClick={() =>
                 navigate(`/${club.slug}/app/profile/drivers/${driver.id}`)
               }
             >
-              Preview Profile Card
+              Preview Profile
             </Button>
           </div>
         </div>
       </Card>
 
       {/* DELETE DRIVER BUTTON */}
-      <Button
-        variant="danger"
-        className="w-full !py-2.5 !text-sm"
-        onClick={() => setShowDeleteModal(true)}
-        disabled={deleting}
-      >
-        {deleting ? "Deleting…" : "Delete Driver"}
-      </Button>
+      <div className="flex flex-col items-center pt-4">
+        <Button
+          variant="danger"
+          className="!w-auto px-6 py-3"
+          onClick={() => setShowDeleteModal(true)}
+          disabled={deleting}
+        >
+          {deleting ? "Deleting…" : "Delete Driver"}
+        </Button>
+      </div>
 
 {/* DELETE DRIVER MODAL */}
 {showDeleteModal && (

@@ -19,9 +19,13 @@ export async function applyMembership({
     const { data, error } = await supabase.rpc("apply_membership", {
       action,
       club_slug,
-      membership_id,
+      membership_id: membership_id ?? null,
       membership_product_id,
     });
+
+    if (error) {
+      console.error("apply_membership RPC error:", error);
+    }
 
     return { data, error };
   } catch (err) {

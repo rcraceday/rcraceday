@@ -4,7 +4,6 @@ import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom
 import { supabase } from "@/supabaseClient";
 import TextInput from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { userBelongsToClub } from "@/app/providers/ClubProvider";
 
 export default function Login() {
   const { club } = useOutletContext();
@@ -30,15 +29,7 @@ export default function Login() {
         return;
       }
 
-      const belongs = await userBelongsToClub(existingUser.id, club.id);
-
-      if (belongs) {
-        navigate(`/${clubSlug}/app/`);
-      } else {
-        setErrorMsg(
-          "You are logged in with an account that does not belong to this club. Please log in with a different account."
-        );
-      }
+      await supabase.auth.signOut();
 
       setCheckingExistingSession(false);
     }
@@ -75,17 +66,25 @@ export default function Login() {
 
     setLoading(true);
 
-    const { data: loginData, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
     });
 
     if (error) {
-      setErrorMsg(
-        error.message.includes("Invalid login credentials")
-          ? "Incorrect email or password."
-          : error.message
-      );
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        navigate(
+          `/${clubSlug}/public/check-email?email=${encodeURIComponent(email.trim().toLowerCase())}`
+        );
+      } else if (error.message.includes("Invalid login credentials")) {
+        navigate(`/${clubSlug}/public/signup`, {
+          state: {
+            message: "This user or email was not found in the system. Please sign up.",
+          },
+        });
+      } else {
+        setErrorMsg(error.message);
+      }
       setLoading(false);
       return;
     }
@@ -103,40 +102,107 @@ export default function Login() {
     const userId = user.id;
     const userEmail = user.email?.toLowerCase();
 
-    const { data: membership } = await supabase
+    let { data: membership, error: membershipLookupError } = await supabase
       .from("household_memberships")
       .select("*")
       .eq("club_id", club.id)
-      .ilike("email", userEmail)
+      .eq("user_id", userId)
       .maybeSingle();
 
+    if (membershipLookupError) {
+      setErrorMsg(membershipLookupError.message);
+      setLoading(false);
+      return;
+    }
+
     if (!membership) {
-      setErrorMsg(
-        "This email is not registered with this club. Please contact the club or use a different account."
-      );
+      const emailLookup = await supabase
+        .from("household_memberships")
+        .select("*")
+        .eq("club_id", club.id)
+        .ilike("email", userEmail)
+        .maybeSingle();
+
+      membership = emailLookup.data;
+      membershipLookupError = emailLookup.error;
+
+      if (membershipLookupError) {
+        setErrorMsg(membershipLookupError.message);
+        setLoading(false);
+        return;
+      }
+    }
+
+    let firstLogin = false;
+    let membershipUpdates = {};
+
+    if (!membership) {
+      if (
+        user.user_metadata?.club_id !== club.id ||
+        user.user_metadata?.signup_type !== "non_member_signup"
+      ) {
+        await supabase.auth.signOut();
+        navigate(`/${clubSlug}/public/signup`, {
+          state: {
+            message: "This user or email was not found in the system. Please sign up.",
+          },
+        });
+        setLoading(false);
+        return;
+      }
+
+      const metadata = user.user_metadata || {};
+      const { data: createdMembership, error: membershipError } = await supabase
+        .from("household_memberships")
+        .insert({
+          user_id: userId,
+          email: userEmail,
+          primary_first_name: metadata.first_name || "",
+          primary_last_name: metadata.last_name || "",
+          membership_type: "non_member",
+          status: "active",
+          club_id: club.id,
+        })
+        .select("*")
+        .single();
+
+      if (membershipError) {
+        setErrorMsg("Unable to create your club access. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      firstLogin = true;
+      membership = createdMembership;
+    }
+
+    if (membership.user_id && membership.user_id !== userId) {
+      await supabase.auth.signOut();
+      setErrorMsg("This membership is already linked to another account.");
       setLoading(false);
       return;
     }
 
     if (!membership.user_id) {
+      membershipUpdates.user_id = userId;
+      firstLogin = true;
+    }
+
+    if (
+      membership.membership_type === "non_member" &&
+      membership.status !== "active"
+    ) {
+      membershipUpdates.status = "active";
+    }
+
+    if (Object.keys(membershipUpdates).length > 0) {
       await supabase
         .from("household_memberships")
-        .update({
-          user_id: userId,
-          status: "active",
-        })
+        .update(membershipUpdates)
         .eq("id", membership.id);
     }
 
-    await supabase
-      .from("profiles")
-      .update({
-        membership_id: membership.id,
-        club_id: club.id,
-      })
-      .eq("id", userId);
-
-    navigate(`/${clubSlug}/app/`);
+    navigate(`/${clubSlug}/app/${firstLogin ? "profile/drivers/welcome" : ""}`);
   }
 
   return (

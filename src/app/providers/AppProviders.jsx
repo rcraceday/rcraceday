@@ -1,9 +1,11 @@
 // src/app/providers/AppProviders.jsx
 
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "@/app/providers/AuthProvider";
 
 import ClubProvider from "@/app/providers/ClubProvider";
+import ThemeProvider from "@/app/providers/ThemeProvider";
 import ProfileProvider from "@/app/providers/ProfileProvider";
 import MembershipProvider from "@/app/providers/MembershipProvider";
 import DriverProvider from "@/app/providers/DriverProvider";
@@ -13,26 +15,29 @@ import NotificationProvider from "@/app/providers/NotificationProvider";
 function AuthenticatedProviders({ children }) {
   return (
     <ClubProvider>
-      <ProfileProvider>
-        <MembershipProvider>
-          <DriverProvider>
-            <NumberProvider>
-              <NotificationProvider>
-                {children}
-              </NotificationProvider>
-            </NumberProvider>
-          </DriverProvider>
-        </MembershipProvider>
-      </ProfileProvider>
+      <ThemeProvider>
+        <ProfileProvider>
+          <MembershipProvider>
+            <DriverProvider>
+              <NumberProvider>
+                <NotificationProvider>
+                  {children}
+                </NotificationProvider>
+              </NumberProvider>
+            </DriverProvider>
+          </MembershipProvider>
+        </ProfileProvider>
+      </ThemeProvider>
     </ClubProvider>
   );
 }
 
 export default function AppProviders() {
   const { user, loadingUser } = useAuth();
-  const location = useLocation();
+  const { pathname } = useLocation();
 
-  console.log("[AppProviders]", { user, loadingUser, path: location.pathname });
+  const isPublicRoute =
+    pathname === "/" || pathname.includes("/public/");
 
   // ⭐ 1. Still loading session → show splash
   if (loadingUser) {
@@ -44,7 +49,7 @@ export default function AppProviders() {
   }
 
   // ⭐ 2. User NOT logged in → render login OUTSIDE providers
-  if (!user) {
+  if (!user || isPublicRoute) {
     return <Outlet />;
   }
 

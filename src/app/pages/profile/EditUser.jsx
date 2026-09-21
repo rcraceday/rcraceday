@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { UserIcon } from "@heroicons/react/24/solid";
+import { ArrowLeftIcon, UserIcon } from "@heroicons/react/24/solid";
 
-import { useClub } from "@/app/providers/ClubProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
+import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import PageTitle from "@/components/ui/PageTitle";
@@ -17,10 +17,10 @@ export default function EditProfile() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
 
-  const { club } = useClub();
   const { profile } = useProfile();
+  const { palette } = useTheme();
 
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette.primary;
 
   const [firstName] = useState(profile?.first_name || "");
   const [lastName] = useState(profile?.last_name || "");
@@ -106,7 +106,21 @@ export default function EditProfile() {
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
-      <PageTitle icon={UserIcon} title="Edit Profile" style={{ color: brand }} />
+      <PageTitle
+        icon={UserIcon}
+        title="Edit Profile"
+        style={{ color: brand }}
+        actions={
+          <Button
+            variant="primary"
+            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
+            onClick={() => navigate(`/${clubSlug}/app/profile`)}
+          >
+            <ArrowLeftIcon className="h-3 w-3" />
+            Back
+          </Button>
+        }
+      />
 
       {/* MAIN */}
 <main className="max-w-[720px] mx-auto px-4 pt-6 pb-10 flex flex-col space-y-10">

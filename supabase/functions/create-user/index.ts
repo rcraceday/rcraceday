@@ -18,6 +18,10 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const supabasePublic = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_ANON_KEY")!
+    );
 
     const { email, password, metadata } = await req.json();
 
@@ -31,106 +35,97 @@ serve(async (req) => {
       );
     }
 
-    // ------------------------------------------------------------
-    // 1. CREATE AUTH USER (FORCED EMAIL BEHAVIOR)
-    // ------------------------------------------------------------
-    const signupType = metadata?.signup_type;
-
-    const { data: authData, error: authError } =
-      await supabase.auth.admin.createUser({
+    const { data: signupData, error: signupError } =
+      await supabasePublic.auth.signUp({
         email,
         password,
-
-        // ⭐ FORCED EMAIL BEHAVIOR:
-        // Members → auto-confirmed (no email)
-        // Non-members → NOT confirmed (email ALWAYS sent)
-        email_confirm: signupType === "member_signup" ? true : false,
-
-        user_metadata: metadata || {},
+        options: {
+          data: metadata || {},
+          emailRedirectTo: metadata?.email_redirect_to,
+        },
       });
 
-    if (authError) {
-      return new Response(JSON.stringify({ error: authError.message }), {
+    if (signupError) {
+      return new Response(JSON.stringify({ error: signupError.message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const user = authData.user;
+    if (!signupData.user) {
+      return new Response(JSON.stringify({ error: "Unable to create the user account" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // ------------------------------------------------------------
-    // 2. MEMBER SIGNUP — ATTACH TO EXISTING MEMBERSHIP
-    // ------------------------------------------------------------
-    if (metadata?.membership_id) {
-      const { error: attachError } = await supabase
-        .from("household_memberships")
-        .update({ user_id: user.id })
-        .eq("id", metadata.membership_id);
-
-      if (attachError) {
-        return new Response(JSON.stringify({ error: attachError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
+    if (signupData.user.email_confirmed_at) {
       return new Response(
         JSON.stringify({
-          success: true,
-          type: "member_signup",
-          user,
+          error:
+            "Email confirmation is disabled for this Supabase project. Enable email confirmations before allowing signup.",
         }),
         {
-          status: 200,
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
-    // ------------------------------------------------------------
-    // 3. NON-MEMBER SIGNUP — CREATE NON-MEMBER ROW
-    // ------------------------------------------------------------
-    if (signupType === "non_member_signup") {
-      const { error: nmError } = await supabase
-        .from("household_memberships")
-        .insert({
-          user_id: user.id,
+    if (signupData.user.identities?.length === 0) {
+      const { data: existingAuth } = await supabase.auth.admin.getUserById(
+        signupData.user.id
+      );
+
+      if (existingAuth.user?.email_confirmed_at) {
+        return new Response(
+          JSON.stringify({ error: "A user with this email address has already been registered" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const { error: resendError } = await supabasePublic.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: metadata?.email_redirect_to },
+      });
+
+      if (resendError) {
+        return new Response(JSON.stringify({ error: resendError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: signupData.user.id,
           email,
-          primary_first_name: metadata.first_name,
-          primary_last_name: metadata.last_name,
-          membership_type: "non_member",
-          status: "pending",
-          club_id: metadata.club_id,
-        });
-
-      if (nmError) {
-        return new Response(JSON.stringify({ error: nmError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          type: "non_member_signup",
-          user,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+          first_name: metadata?.first_name || "",
+          last_name: metadata?.last_name || "",
+          full_name: metadata?.full_name || "",
+        },
+        { onConflict: "id" }
       );
+
+    if (profileError) {
+      return new Response(JSON.stringify({ error: profileError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // ------------------------------------------------------------
-    // 4. SAFETY NET — NO MEMBERSHIP ACTION
-    // ------------------------------------------------------------
     return new Response(
       JSON.stringify({
         success: true,
-        type: "no_membership_action",
-        user,
+        type: metadata?.signup_type || "signup",
+        user: signupData.user,
       }),
       {
         status: 200,

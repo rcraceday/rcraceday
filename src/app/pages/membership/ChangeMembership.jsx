@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { IdentificationIcon } from "@heroicons/react/24/solid";
 
-import { useClub } from "@/app/providers/ClubProvider";
+import useTheme from "@/app/providers/useTheme";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
 
@@ -11,9 +11,9 @@ import { moveToFamily } from "@/app/api/membership/membershipAPI";
 export default function ChangeMembership() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
-  const { club } = useClub();
+  const { palette } = useTheme();
 
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette?.primary || "#00438a";
 
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");

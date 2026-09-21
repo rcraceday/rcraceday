@@ -7,6 +7,7 @@ import { supabase } from "@/supabaseClient";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
+import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -29,8 +30,9 @@ export default function AddDriver() {
   const { membership, loadingMembership } = useMembership();
   const { user, loadingProfile } = useProfile();
   const { refreshDrivers } = useDrivers();
+  const { palette } = useTheme();
 
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette.primary;
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");

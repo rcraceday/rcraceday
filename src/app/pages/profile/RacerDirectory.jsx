@@ -8,12 +8,14 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 
 import useProfile from "@app/hooks/useProfile";
+import useTheme from "@/app/providers/useTheme";
 import { COUNTRIES } from "@/data/countries";
 
 export default function RacerDirectory() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
   const { membership } = useProfile();
+  const { palette } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [drivers, setDrivers] = useState([]);
@@ -107,7 +109,7 @@ export default function RacerDirectory() {
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
-      <PageTitle title="Racer Directory" />
+      <PageTitle title="Racer Directory" style={{ color: palette.primary }} />
 
       <main className="p-4 max-w-5xl mx-auto space-y-6">
 

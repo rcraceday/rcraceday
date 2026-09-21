@@ -6,6 +6,7 @@ import { IdentificationIcon } from "@heroicons/react/24/solid";
 
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -19,13 +20,13 @@ export default function RenewMembership() {
   const navigate = useNavigate();
   const { club } = useClub();
   const { membership } = useMembership();
+  const { palette } = useTheme();
 
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette?.primary || "#00438a";
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedType, setSelectedType] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const [processing, setProcessing] = useState(false);
@@ -164,10 +165,7 @@ export default function RenewMembership() {
                         return (
                           <button
                             key={product.id}
-                            onClick={() => {
-                              setSelectedType(type);
-                              setSelectedProduct(product);
-                            }}
+                            onClick={() => setSelectedProduct(product)}
                             className="w-full text-left rounded-md px-5 py-4 transition"
                             style={{
                               background: "#FFFFFF",

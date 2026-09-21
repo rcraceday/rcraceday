@@ -4,9 +4,10 @@ export default function PageTitle({
   children,
   actions,
   style,
+  centered = false,
 }) {
   return (
-    <div className="page-title" style={style}>
+    <div className={`page-title${centered ? " page-title-centered" : ""}`} style={style}>
       <div className="page-title-inner">
         {Icon && (
           <Icon className="page-title-icon" style={style} />

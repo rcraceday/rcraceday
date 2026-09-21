@@ -6,6 +6,7 @@ import { supabase } from "@/supabaseClient";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import useTheme from "@/app/providers/useTheme";
 
 import { HashtagIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
@@ -14,7 +15,8 @@ export default function ChooseNumber() {
   const navigate = useNavigate();
   const { id: driverId } = useParams();
   const { club } = useOutletContext();
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const { palette } = useTheme();
+  const brand = palette.primary;
 
   const [driver, setDriver] = useState(null);
   const [numbers, setNumbers] = useState([]);

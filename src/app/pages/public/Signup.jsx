@@ -1,18 +1,19 @@
 // src/app/pages/public/Signup.jsx
-import { useOutletContext, Link, useNavigate, useParams } from "react-router-dom";
+import { useOutletContext, Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { useAuth } from "@/app/providers/AuthProvider";
 
 export default function Signup() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
 
   const clubId = club?.id;
+  const createUserUrl =
+    "https://mvcttnmclrvaatdgzhpb.supabase.co/functions/v1/create-user";
 
   const [step, setStep] = useState("memberQuestion");
 
@@ -24,7 +25,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [errorMsg, setErrorMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState(location.state?.message || "");
   const [loading, setLoading] = useState(false);
 
   if (!club || !clubId) {
@@ -87,6 +88,12 @@ export default function Signup() {
         <p style={{ textAlign: "center", marginBottom: "24px" }}>
           Are you currently a financial member of {club?.name}?
         </p>
+
+        {errorMsg && (
+          <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center", marginBottom: "16px" }}>
+            {errorMsg}
+          </p>
+        )}
 
         <Button
           variant="primary"
@@ -253,9 +260,9 @@ export default function Signup() {
     const firstName = parts[0];
     const lastName = parts.length > 1 ? parts.slice(1).join(" ") : firstName;
 
-    // ⭐ EXISTING MEMBER — create user via Edge Function (no email confirmation)
+    // Create the Auth user only. Membership/profile provisioning happens after confirmation on first login.
     const response = await fetch(
-      "https://mvcttnmclrvaatdgzhpb.supabase.co/functions/v1/create-user",
+      createUserUrl,
       {
         method: "POST",
         headers: {
@@ -273,6 +280,7 @@ export default function Signup() {
             club_id: clubId,
             club_name: club?.name,
             club_logo_url: club?.logo_url,
+            email_redirect_to: `${window.location.origin}/${clubSlug}/public/login`,
             signup_type: membership?.id
               ? "member_signup"
               : "non_member_signup",
@@ -289,12 +297,9 @@ export default function Signup() {
       return setErrorMsg(result.error || "Signup failed");
     }
 
-    await supabase.auth.signOut();
-
-    setTimeout(() => {
-      setStep("signupSuccess");
-    }, 500);
-
+    navigate(
+      `/${clubSlug}/public/check-email?email=${encodeURIComponent(email.trim().toLowerCase())}`
+    );
     setLoading(false);
   }
 
@@ -428,34 +433,36 @@ async function handleNonMemberSignup(e) {
   }
 
   try {
-    // ✅ This is the path that sends emails (like before)
-    const { data: signUpData, error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/${clubSlug}/public/login`,
-        data: {
-          full_name: name.trim(),
-          first_name: firstName,
-          last_name: lastName,
-          club_id: clubId,
+    const response = await fetch(
+      createUserUrl,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-      },
-    });
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+          metadata: {
+            full_name: name.trim(),
+            first_name: firstName,
+            last_name: lastName,
+            club_id: clubId,
+            club_name: club?.name,
+            club_logo_url: club?.logo_url,
+            email_redirect_to: `${window.location.origin}/${clubSlug}/public/login`,
+            signup_type: "non_member_signup",
+          },
+        }),
+      }
+    );
 
-    if (error) throw error;
+    const result = await response.json();
 
-    // Optional: create a non-member row immediately
-    if (signUpData.user) {
-      await supabase.from("household_memberships").insert({
-        user_id: signUpData.user.id,
-        email: cleanEmail,
-        primary_first_name: firstName,
-        primary_last_name: lastName,
-        membership_type: "non_member",
-        status: "pending",
-        club_id: clubId,
-      });
+    if (!response.ok) {
+      throw new Error(result.error || "Signup failed");
     }
 
     navigate(

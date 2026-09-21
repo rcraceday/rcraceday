@@ -95,7 +95,9 @@ export default function AppRoutes() {
         path="/:clubSlug/public/*"
         element={
           <ClubProvider>
-            <PublicLayout />
+            <ThemeProvider>
+              <PublicLayout />
+            </ThemeProvider>
           </ClubProvider>
         }
       >

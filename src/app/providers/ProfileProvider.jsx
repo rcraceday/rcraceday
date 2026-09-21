@@ -32,6 +32,12 @@ export default function ProfileProvider({ children }) {
       return;
     }
 
+    if (!user.email_confirmed_at) {
+      setProfile(null);
+      setLoadingProfile(false);
+      return;
+    }
+
     setLoadingProfile(true);
 
     try {
@@ -51,44 +57,10 @@ export default function ProfileProvider({ children }) {
           email: user.email,
         });
       } else {
-        // Create profile if missing
-        const meta = user.user_metadata || {};
-
-        const firstName =
-          meta.first_name ||
-          meta.full_name?.split(" ")?.[0] ||
-          "";
-
-        const lastName =
-          meta.last_name ||
-          meta.full_name?.split(" ")?.slice(1).join(" ") ||
-          "";
-
-        const fullName =
-          meta.full_name ||
-          `${firstName} ${lastName}`.trim();
-
-        const { data: created, error: insertError } = await supabase
-          .from("profiles")
-          .insert({
-            id: user.id,
-            email: user.email,
-            first_name: firstName,
-            last_name: lastName,
-            full_name: fullName,
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error("ProfileProvider INSERT error:", insertError);
-          setProfile(null);
-        } else {
-          setProfile({
-            ...created,
-            email: user.email,
-          });
-        }
+        // Do NOT auto-create a profile here. A missing profile means the user
+        // has not completed the membership/signup flow (see Login.jsx), which
+        // is the only place a profile row should be created.
+        setProfile(null);
       }
     } catch (err) {
       console.error("ProfileProvider loadProfile exception:", err);

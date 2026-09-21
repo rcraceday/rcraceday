@@ -10,6 +10,7 @@ import Button from "@/components/ui/Button";
 
 import { IdentificationIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
 
 export default function DriverProfile() {
@@ -17,7 +18,8 @@ export default function DriverProfile() {
   const navigate = useNavigate();
 
   const { club } = useOutletContext();
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const { palette } = useTheme();
+  const brand = palette.primary;
 
   const { membership } = useMembership();
   const isMember =
@@ -75,7 +77,6 @@ export default function DriverProfile() {
         style={{ color: brand }}
         actions={
           <Button
-            variant="secondary"
             className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
             onClick={() =>
               navigate(`/${clubSlug}/app/profile/drivers/${id}/edit`)

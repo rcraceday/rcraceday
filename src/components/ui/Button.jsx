@@ -47,6 +47,12 @@ export default function Button({
       text: buttonTextColor,
       border: "#15803d",
     },
+    danger: {
+      bg: "#dc2626",
+      hover: "#b91c1c",
+      text: "#ffffff",
+      border: "#b91c1c",
+    },
   };
 
   const style = variants[variant] || variants.primary;

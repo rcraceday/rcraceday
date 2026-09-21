@@ -34,7 +34,7 @@ export default function MemberView({ brand, club, membership }) {
 
   // Determine if user is Single or Junior
   const isSingleOrJunior =
-    membership?.membership_type === "single" ||
+    membership?.membership_type === "adult" ||
     membership?.membership_type === "junior";
 
   return (
