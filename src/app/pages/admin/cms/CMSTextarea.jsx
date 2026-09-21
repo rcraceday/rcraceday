@@ -1,8 +1,13 @@
 import { cmsStyles } from "./styles";
 
 export default function CMSTextarea({ label, value, onChange, name }) {
-  const handleValue = (e) => {
-    onChange(e.target.value);
+  const handleValue = (eOrValue) => {
+    const value =
+      typeof eOrValue === "string" || typeof eOrValue === "number"
+        ? eOrValue
+        : eOrValue?.target?.value ?? "";
+
+    onChange?.(value);
   };
 
   return (

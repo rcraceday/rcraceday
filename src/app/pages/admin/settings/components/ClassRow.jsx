@@ -79,13 +79,13 @@ export default function ClassRow({
           <CMSInput
             label="Class Name"
             value={editClassName}
-            onChange={(e) => setEditClassName(e.target.value)}
+            onChange={(value) => setEditClassName(value)}
           />
 
           <CMSTextarea
             label="Description (optional)"
             value={editClassDesc}
-            onChange={(e) => setEditClassDesc(e.target.value)}
+            onChange={(value) => setEditClassDesc(value)}
           />
 
           <LivetimeNotice />

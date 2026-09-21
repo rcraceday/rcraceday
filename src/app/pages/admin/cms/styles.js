@@ -1,5 +1,55 @@
 export const cmsStyles = {
   // -----------------------------
+  // PAGE LAYOUT
+  // -----------------------------
+  pageContainer: {
+    width: "100%",
+    backgroundColor: "#F5F5F5",
+    color: "#111827",
+    minWidth: 0,
+    boxSizing: "border-box",
+  },
+
+  pageContent: {
+    width: "100%",
+    padding: "20px 0 32px",
+    minWidth: 0,
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+  },
+
+  sectionHeader: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+
+  sectionHeaderWithActions: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: "16px",
+  },
+
+  sectionHeaderTitle: {
+    fontSize: "22px",
+    fontWeight: 600,
+    lineHeight: 1.25,
+    margin: 0,
+    color: "#111827",
+  },
+
+  sectionHeaderSubtitle: {
+    fontSize: "13px",
+    lineHeight: 1.5,
+    color: "#6B7280",
+    margin: 0,
+  },
+
+  // -----------------------------
   // CARD (TIGHT + CLEAN)
   // -----------------------------
   card: {

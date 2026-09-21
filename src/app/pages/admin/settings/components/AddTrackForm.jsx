@@ -164,13 +164,13 @@ export default function AddTrackForm({
       <CMSInput
         label="Track Name"
         value={newTrackName}
-        onChange={(e) => setNewTrackName(e.target.value)}
+        onChange={(value) => setNewTrackName(value)}
       />
 
       <CMSTextarea
         label="Track Description"
         value={newTrackDesc}
-        onChange={(e) => setNewTrackDesc(e.target.value)}
+        onChange={(value) => setNewTrackDesc(value)}
       />
 
       <div style={{ marginTop: "8px", fontWeight: 600, fontSize: "13px" }}>
@@ -190,15 +190,15 @@ export default function AddTrackForm({
           <CMSInput
             label={`Class Name #${index + 1}`}
             value={c.name}
-            onChange={(e) =>
-              updateTrackClassRow(index, "name", e.target.value)
+            onChange={(value) =>
+              updateTrackClassRow(index, "name", value)
             }
           />
           <CMSTextarea
             label="Description (optional)"
             value={c.description}
-            onChange={(e) =>
-              updateTrackClassRow(index, "description", e.target.value)
+            onChange={(value) =>
+              updateTrackClassRow(index, "description", value)
             }
           />
 

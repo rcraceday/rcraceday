@@ -48,14 +48,14 @@ export default function ClubInfoSettingsCard({ club }) {
         label="Club Name"
         name="name"
         value={form.name}
-        onChange={(e) => updateField("name", e.target.value)}
+        onChange={(value) => updateField("name", value)}
       />
 
       <CMSInput
         label="Short Name"
         name="short_name"
         value={form.short_name}
-        onChange={(e) => updateField("short_name", e.target.value)}
+        onChange={(value) => updateField("short_name", value)}
       />
 
       <CMSInput
@@ -63,42 +63,42 @@ export default function ClubInfoSettingsCard({ club }) {
         name="description"
         type="textarea"
         value={form.description}
-        onChange={(e) => updateField("description", e.target.value)}
+        onChange={(value) => updateField("description", value)}
       />
 
       <CMSInput
         label="Contact Email"
         name="contact_email"
         value={form.contact_email}
-        onChange={(e) => updateField("contact_email", e.target.value)}
+        onChange={(value) => updateField("contact_email", value)}
       />
 
       <CMSInput
         label="Website"
         name="website"
         value={form.website}
-        onChange={(e) => updateField("website", e.target.value)}
+        onChange={(value) => updateField("website", value)}
       />
 
       <CMSInput
         label="Phone"
         name="phone"
         value={form.phone}
-        onChange={(e) => updateField("phone", e.target.value)}
+        onChange={(value) => updateField("phone", value)}
       />
 
       <CMSInput
         label="Facebook"
         name="facebook"
         value={form.facebook}
-        onChange={(e) => updateField("facebook", e.target.value)}
+        onChange={(value) => updateField("facebook", value)}
       />
 
       <CMSInput
         label="Instagram"
         name="instagram"
         value={form.instagram}
-        onChange={(e) => updateField("instagram", e.target.value)}
+        onChange={(value) => updateField("instagram", value)}
       />
 
       {/* CENTERED SAVE BUTTON */}

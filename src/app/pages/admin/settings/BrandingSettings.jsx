@@ -8,57 +8,16 @@ import BrandingSettingsCard from "./components/BrandingSettingsCard";
 export default function BrandingSettings() {
   const navigate = useNavigate();
   const { club } = useClub();
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
 
   return (
-    <div
-      style={{
-        width: "100%",
-        backgroundColor: "#F5F5F5",
-        color: "#111827",
-        display: "flex",
-        flexDirection: "column",
-        boxSizing: "border-box",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "720px",
-          margin: "0 auto",
-          padding: "20px 16px 32px",
-          boxSizing: "border-box",
-          display: "flex",
-          flexDirection: "column",
-          gap: "24px",
-        }}
-      >
+    <div style={cmsStyles.pageContainer}>
+      <div style={cmsStyles.pageContent}>
         {/* HEADER */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <h1
-              style={{
-                fontSize: "22px",
-                fontWeight: 600,
-                margin: 0,
-              }}
-            >
-              Branding Settings
-            </h1>
+        <div style={cmsStyles.sectionHeaderWithActions}>
+          <div style={cmsStyles.sectionHeader}>
+            <h1 style={cmsStyles.sectionHeaderTitle}>Branding Settings</h1>
 
-            <p
-              style={{
-                fontSize: "13px",
-                color: "#6B7280",
-                margin: 0,
-              }}
-            >
+            <p style={cmsStyles.sectionHeaderSubtitle}>
               Manage your platform name, logo, and brand colours.
             </p>
           </div>
@@ -80,10 +39,7 @@ export default function BrandingSettings() {
         {/* CARD */}
         <CMSCard
           title="Branding"
-          style={{
-            ...cmsStyles.card,
-            borderLeft: `4px solid ${brand}`,
-          }}
+          style={cmsStyles.card}
         >
           <div style={cmsStyles.cardBody}>
             <BrandingSettingsCard club={club} />

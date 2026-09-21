@@ -1,6 +1,6 @@
 import { cmsStyles } from "./styles";
 
-export default function CMSCard({ title, actions, children }) {
+export default function CMSCard({ title, actions, children, style = {} }) {
   return (
     <div
       style={{
@@ -13,6 +13,7 @@ export default function CMSCard({ title, actions, children }) {
         display: "flex",
         flexDirection: "column",
         gap: "12px",                  // ⭐ tighter gap
+        ...style,
       }}
     >
       {(title || actions) && (

@@ -1,0 +1,16 @@
+# Dependencies - MUST IGNORE to save credits
+node_modules/
+.pnpm-store/
+jspm_packages/
+
+# Production/Build outputs
+dist/
+build/
+.next/
+.nuxt/
+out/
+
+# Environments & sensitive data
+.env
+.env.*
+.v聲

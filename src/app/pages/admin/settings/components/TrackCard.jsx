@@ -140,12 +140,12 @@ actions={
             <CMSInput
               label="Class Name"
               value={newClassName}
-              onChange={(e) => setNewClassName(e.target.value)}
+              onChange={(value) => setNewClassName(value)}
             />
             <CMSTextarea
               label="Description (optional)"
               value={newClassDesc}
-              onChange={(e) => setNewClassDesc(e.target.value)}
+              onChange={(value) => setNewClassDesc(value)}
             />
 
             <LivetimeNotice />
@@ -179,7 +179,7 @@ actions={
             <CMSTextarea
               label="Bulk Insert Classes (one per line)"
               value={bulkClassesInput}
-              onChange={(e) => setBulkClassesInput(e.target.value)}
+              onChange={(value) => setBulkClassesInput(value)}
             />
 
             <LivetimeNotice />

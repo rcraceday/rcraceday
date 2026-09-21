@@ -22,14 +22,14 @@ export default function CMSInput({
     outline: "none",
   };
 
-  // ⭐ FIX: Always convert events → raw values
+  // Accept either a raw value or a DOM event so all admin forms work consistently.
   const handleValue = (eOrValue) => {
-    const v =
-      typeof eOrValue === "string"
+    const value =
+      typeof eOrValue === "string" || typeof eOrValue === "number"
         ? eOrValue
         : eOrValue?.target?.value ?? "";
 
-    onChange(v);
+    onChange?.(value);
   };
 
   return (

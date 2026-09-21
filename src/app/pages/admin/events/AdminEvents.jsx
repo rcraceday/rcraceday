@@ -390,6 +390,7 @@ const formatDateTime = (iso) => {
                 return (
                   <div
                     key={ev.id}
+                    className="admin-event-card"
                     style={{
                       border: "1px solid #E5E7EB",
                       borderRadius: 8,
@@ -401,7 +402,7 @@ const formatDateTime = (iso) => {
                     }}
                   >
                     {/* Compact Row */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div className="admin-event-card__row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <button
                         type="button"
                         onClick={() => toggleExpanded(ev.id)}
@@ -457,7 +458,7 @@ const formatDateTime = (iso) => {
                         </div>
                       </div>
 
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div className="admin-event-card__actions" style={{ display: "flex", gap: 8 }}>
                         <CMSButton onClick={() => handleEdit(ev)}>Edit</CMSButton>
 
                         <CMSButton
