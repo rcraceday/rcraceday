@@ -1,8 +1,12 @@
 // src/app/components/driver/DriverProfileCard/sections/SponsorsSection.jsx
 
 import React from "react";
+import useTheme from "@/app/providers/useTheme";
 
-export default function SponsorsSection({ driver, brand }) {
+export default function SponsorsSection({ driver, brand: brandProp }) {
+  const { palette } = useTheme();
+  const brand = brandProp || palette?.primary || "#0A66C2";
+
   if (!driver?.sponsors || driver.sponsors.length === 0) return null;
 
   return (

@@ -1,6 +1,7 @@
 // src/app/components/driver/DriverProfileCard/sections/MobileLayout.jsx
 
 import React from "react";
+import useTheme from "@/app/providers/useTheme";
 
 import AvatarSection from "./AvatarSection";
 import IdentitySection from "./IdentitySection";
@@ -15,7 +16,10 @@ import DirtCarProfileSection from "./DirtCarProfileSection";
 import ExperienceSection from "./ExperienceSection";
 import TriviaSection from "./TriviaSection";
 
-export default function MobileLayout({ driver, country, brand, chassis }) {
+export default function MobileLayout({ driver, country, brand: brandProp, chassis }) {
+  const { palette } = useTheme();
+  const brand = brandProp || palette?.primary || "#0A66C2";
+
   return (
     <div className="space-y-10">
 

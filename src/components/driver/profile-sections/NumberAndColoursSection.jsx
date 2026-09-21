@@ -1,15 +1,19 @@
 // src/app/components/driver/profile-sections/NumberAndColoursSection.jsx
 
+import useTheme from "@/app/providers/useTheme";
 import Input from "@/components/ui/Input";
 
 export default function NumberAndColoursSection({
   driver,
   update,
-  brand,
+  brand: brandProp,
   club,
   navigate,
   previewNumber,
 }) {
+  const { palette } = useTheme();
+  const brand = brandProp || palette?.primary || "#0A66C2";
+
   return (
     <section className="space-y-10">
       {/* ------------------------------------------------------------

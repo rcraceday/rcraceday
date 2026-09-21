@@ -1,6 +1,7 @@
 // src/app/components/driver/EditDriverProfileCard.jsx
 
 import { useState } from "react";
+import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -20,7 +21,7 @@ export default function EditDriverProfileCard({
   driver,
   update,
   isMember,
-  brand,
+  brand: brandProp,
   club,
   navigate,
   previewNumber,
@@ -31,6 +32,8 @@ export default function EditDriverProfileCard({
 }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { palette } = useTheme();
+  const brand = brandProp || palette?.primary || "#0A66C2";
 
   if (!driver) return null;
 
@@ -51,12 +54,12 @@ export default function EditDriverProfileCard({
     <>
       <Card
         className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
-        style={{ border: `2px solid ${brand}`, background: "white" }}
+        style={{ border: `2px solid ${brand}`, background: palette?.surface || "white" }}
       >
         {/* HEADER */}
         <div
           className="px-5 py-3"
-          style={{ background: brand, color: "white" }}
+          style={{ background: brand, color: palette?.buttonText || "white" }}
         >
           <h2 className="text-base font-semibold">Driver Profile</h2>
         </div>

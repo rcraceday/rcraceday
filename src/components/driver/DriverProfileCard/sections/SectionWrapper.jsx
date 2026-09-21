@@ -1,8 +1,12 @@
 // src/app/components/driver/DriverProfileCard/sections/SectionWrapper.jsx
 
 import React from "react";
+import useTheme from "@/app/providers/useTheme";
 
-export default function SectionWrapper({ title, brand, children }) {
+export default function SectionWrapper({ title, brand: brandProp, children }) {
+  const { palette } = useTheme();
+  const brand = brandProp || palette?.primary || "#0A66C2";
+
   return (
     <div
       className="rounded-lg overflow-hidden border"

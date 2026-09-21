@@ -1,18 +1,15 @@
 // src/app/components/driver/profile-sections/SponsorsAndManufacturerSection.jsx
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Input from "@/components/ui/Input";
 import { MANUFACTURERS } from "@/data/manufacturers";
 
 export default function SponsorsAndManufacturerSection({ driver, update }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [search, setSearch] = useState("");
-  const [sponsorsText, setSponsorsText] = useState("");
-
-  // Sync sponsors text
-  useEffect(() => {
-    setSponsorsText((driver.sponsors || []).join(", "));
-  }, [driver.sponsors]);
+  const [sponsorsText, setSponsorsText] = useState(() =>
+    (driver.sponsors || []).join(", ")
+  );
 
   const filtered = MANUFACTURERS.filter((m) =>
     m.name.toLowerCase().includes(search.toLowerCase())

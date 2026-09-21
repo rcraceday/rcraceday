@@ -13,10 +13,11 @@ import PageTitle from "@/components/ui/PageTitle";
 
 export default function ChooseNumber() {
   const navigate = useNavigate();
-  const { id: driverId } = useParams();
+  const { id: driverId, clubSlug } = useParams();
   const { club } = useOutletContext();
   const { palette } = useTheme();
-  const brand = palette.primary;
+  const brand = palette?.primary || "#0A66C2";
+  const slug = clubSlug || club?.slug;
 
   const [driver, setDriver] = useState(null);
   const [numbers, setNumbers] = useState([]);
@@ -129,17 +130,25 @@ export default function ChooseNumber() {
         title="Choose Race Number"
         style={{ color: brand }}
         actions={
-          <button
-            onClick={() => navigate(-1)}
-            className="hidden md:flex items-center gap-1 text-gray-700 hover:opacity-70"
+          <Button
+            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
+            onClick={() =>
+              navigate(`/${slug}/app/profile/drivers/${driverId}/edit`)
+            }
           >
-            <ArrowLeftIcon className="h-5 w-5" />
+            <ArrowLeftIcon className="h-3 w-3" />
             Back
-          </button>
+          </Button>
         }
       />
 
       <main className="max-w-[720px] mx-auto px-4 py-8 space-y-8">
+
+        {error && (
+          <div className="p-3 bg-red-100 text-red-700 rounded text-sm">
+            {error}
+          </div>
+        )}
 
         {/* SEARCH */}
         <Input
@@ -169,12 +178,13 @@ export default function ChooseNumber() {
             border: `2px solid ${brand}`,
             borderRadius: "14px",
             overflow: "hidden",
+            background: palette?.surface || "#ffffff",
           }}
         >
           <div
             style={{
               backgroundColor: brand,
-              color: "white",
+              color: palette?.buttonText || "white",
               padding: "16px 20px",
               fontWeight: 600,
               fontSize: "1.1rem",
@@ -185,7 +195,7 @@ export default function ChooseNumber() {
 
           <div
             style={{
-              backgroundColor: "white",
+              backgroundColor: palette?.surface || "white",
               maxHeight: "420px",
               overflowY: "auto",
               padding: "16px",
@@ -261,15 +271,18 @@ export default function ChooseNumber() {
         <Button
           onClick={saveNumber}
           disabled={!selected || assigning}
-          className="w-full py-3 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          className="w-full py-3 disabled:opacity-50"
         >
           {assigning ? "Saving…" : "Save Number"}
         </Button>
 
         {/* CANCEL */}
         <Button
-          onClick={() => navigate(-1)}
-          className="w-full py-3 bg-gray-200 text-gray-700 hover:bg-gray-300"
+          variant="secondary"
+          onClick={() =>
+            navigate(`/${slug}/app/profile/drivers/${driverId}/edit`)
+          }
+          className="w-full py-3"
         >
           Cancel
         </Button>

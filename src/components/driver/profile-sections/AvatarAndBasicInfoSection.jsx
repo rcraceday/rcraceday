@@ -1,6 +1,7 @@
 // src/app/components/driver/profile-sections/AvatarAndBasicInfoSection.jsx
 
 import { UserCircleIcon, PhotoIcon } from "@heroicons/react/24/solid";
+import useTheme from "@/app/providers/useTheme";
 import Input from "@/components/ui/Input";
 import CustomFlagSelect from "@/components/ui/CustomFlagSelect";
 import { COUNTRIES } from "@/data/countries";
@@ -9,10 +10,13 @@ export default function AvatarAndBasicInfoSection({
   driver,
   update,
   isMember,
-  brand,
+  brand: brandProp,
   handleAvatarSelect,
   handleRemoveAvatar,
 }) {
+  const { palette } = useTheme();
+  const brand = brandProp || palette?.primary || "#0A66C2";
+
   return (
     <section className="space-y-10">
       {/* ------------------------------------------------------------

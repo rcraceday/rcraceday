@@ -1,6 +1,7 @@
 // src/app/components/driver/DriverProfileCard.jsx
 
 import React from "react";
+import useTheme from "@/app/providers/useTheme";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 
@@ -24,9 +25,11 @@ import MobileLayout from "./DriverProfileCard/sections/MobileLayout";
 import SectionWrapper from "./DriverProfileCard/sections/SectionWrapper";
 
 export default function DriverProfileCard({ driver, club, isMember, navigate }) {
+  const { palette } = useTheme();
+
   if (!driver || !club) return null;
 
-  const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";
+  const brand = palette?.primary || "#0A66C2";
   const country = COUNTRIES.find((c) => c.name === driver.country);
   const chassis = MANUFACTURERS.find((m) => m.name === driver.chassis_manufacturer);
 
@@ -39,12 +42,13 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
         style={!isMember ? { filter: "grayscale(100%)" } : {}}
       >
         <Card
-          className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0 bg-white"
+          className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
+          style={{ background: palette?.surface || "#ffffff", borderColor: palette?.surfaceBorder || "#e5e7eb" }}
         >
           {/* HEADER */}
           <div
             className="px-5 py-3"
-            style={{ background: brand, color: "white" }}
+            style={{ background: brand, color: palette?.buttonText || "#ffffff" }}
           >
             <h2 className="text-base font-semibold">Driver Profile</h2>
           </div>
@@ -136,11 +140,11 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
               Members Only Feature
             </h3>
 
-            <p className="text-sm text-gray-700">
+            <p className="text-sm" style={{ color: palette?.textMuted || "#6b7280" }}>
               Become a club member to unlock full driver profiles and enjoy these benefits:
             </p>
 
-            <ul className="text-sm text-gray-700 space-y-1 text-left mx-auto w-fit">
+            <ul className="text-sm space-y-1 text-left mx-auto w-fit" style={{ color: palette?.text || "#1f2937" }}>
               <li>50% off race fees</li>
               <li>Insurance coverage</li>
               <li>Junior members race free</li>
@@ -150,14 +154,15 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
             </ul>
 
             <Button
-              className="w-full bg-blue-600 text-white hover:bg-blue-700"
+              className="w-full"
               onClick={() => navigate(`/${club.slug}/app/membership`)}
             >
               Join Membership
             </Button>
 
             <Button
-              className="w-full bg-gray-200 text-gray-700 hover:bg-gray-300"
+              variant="secondary"
+              className="w-full"
               onClick={() => navigate(`/${club.slug}/app/profile/drivers`)}
             >
               Return to Drivers

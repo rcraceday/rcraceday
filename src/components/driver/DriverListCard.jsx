@@ -1,15 +1,18 @@
 // src/components/driver/DriverListCard.jsx
 
+import useTheme from "@/app/providers/useTheme";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { UserCircleIcon } from "@heroicons/react/24/solid";
 
 export default function DriverListCard({
   driver,
-  brand,
+  brand: brandProp,
   onEditProfile,
   onViewProfile,
 }) {
+  const { palette } = useTheme();
+  const brand = brandProp || palette?.primary || "#0A66C2";
   if (!driver) return null;
 
   const isJunior = !!driver.is_junior;
@@ -21,7 +24,8 @@ export default function DriverListCard({
 
   return (
     <Card
-      className="p-4 w-full rounded-xl shadow-sm bg-white"
+      className="p-4 w-full rounded-xl shadow-sm"
+      style={{ borderColor: brand, background: palette?.surface || "#ffffff" }}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
 

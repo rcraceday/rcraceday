@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function TeamChassisTrackSection({ driver, chassis }) {
+export default function TeamChassisTrackSection({ driver }) {
   return (
     <div className="col-span-6 space-y-4 flex flex-col items-center text-center">
 
