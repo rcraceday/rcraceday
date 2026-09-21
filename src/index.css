@@ -323,13 +323,13 @@ a:hover {
   max-width: 1400px;
 
   margin: 0;
-  padding: 16px 24px 16px 0;
+  padding: 16px;
   box-sizing: border-box;
 }
 
 .page-title-centered .page-title-inner {
   justify-content: center;
-  padding: 32px 24px;
+  padding: 32px 16px;
 }
 
 .page-title-icon {

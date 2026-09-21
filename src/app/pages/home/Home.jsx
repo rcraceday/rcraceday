@@ -43,6 +43,18 @@ function formatEventDate(event) {
   return `${formatDate(dates[0])} - ${formatDate(dates.at(-1))}`;
 }
 
+function formatNominationDate(dateString) {
+  const date = new Date(dateString);
+  const day = date.getDate();
+  const suffix = [11, 12, 13].includes(day % 100)
+    ? "th"
+    : ["th", "st", "nd", "rd"][day % 10] || "th";
+  const weekday = date.toLocaleDateString("en-AU", { weekday: "short" });
+  const month = date.toLocaleDateString("en-AU", { month: "short" });
+
+  return `${weekday}, ${day}${suffix} ${month}`;
+}
+
 export default function Home() {
   const { club } = useClub();
   const { profile } = useProfile();
@@ -149,6 +161,17 @@ export default function Home() {
         style={{ color: brand }}
       />
 
+      <main
+        style={{
+          padding: "24px 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "24px",
+          maxWidth: "768px",
+          margin: "0 auto",
+        }}
+      >
+
       {/* NEWS */}
       {newsItems.length > 0 && (
         <section className="w-full max-w-screen-lg mx-auto space-y-3">
@@ -198,11 +221,9 @@ export default function Home() {
                 nominationsOpen &&
                 new Date() >= nominationsOpen &&
                 (!nominationsClose || new Date() <= nominationsClose);
-              const nominationLabel = isOpen
-                ? "Nominations Open"
-                : nominationsOpen
-                  ? `Nominations Open: ${formatDate(event.nominations_open)}`
-                  : null;
+              const nominationDate = nominationsOpen
+                ? formatNominationDate(event.nominations_open)
+                : null;
 
               return (
                 <Link
@@ -228,21 +249,22 @@ export default function Home() {
                         <h3 className="break-words font-semibold leading-tight text-text-base">
                           {event.name}
                         </h3>
-                        <p className="flex flex-wrap min-w-0 items-center gap-x-1.5 gap-y-0.5 text-sm font-semibold leading-tight text-text-muted">
-                          <span className="min-w-0 truncate max-w-full">{track}</span>
-                          <span aria-hidden="true">•</span>
-                          <span className="shrink-0">{formatEventDate(event)}</span>
-                          {nominationLabel && (
+                        <p className="flex min-w-0 flex-col items-start gap-y-0.5 text-sm font-semibold leading-tight text-text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1">
+                          <span className="min-w-0 max-w-full truncate sm:w-auto">{track}</span>
+                          <span aria-hidden="true" className="hidden sm:inline">•</span>
+                          <span className="min-w-0 max-w-full break-words sm:w-auto">{formatEventDate(event)}</span>
+                          {nominationsOpen && (
                             <>
-                              <span aria-hidden="true">•</span>
+                              <span aria-hidden="true" className="hidden sm:inline">•</span>
                               <span
-                                className={`min-w-0 break-words ${
+                                className={`min-w-0 max-w-full break-words sm:w-auto ${
                                   isOpen
                                     ? "font-bold text-green-600"
                                     : ""
                                 }`}
                               >
-                                {nominationLabel}
+                                <span className="block sm:inline">Nominations Open:</span>
+                                <span className="block sm:inline sm:ml-1">{nominationDate}</span>
                               </span>
                             </>
                           )}
@@ -370,6 +392,7 @@ export default function Home() {
           </Button>
         )}
       </section>
+      </main>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { formatDate, TYPE_LABELS, isNominationsOpen } from "./events-sections/helpers";
+import { formatDate, isNominationsOpen } from "./events-sections/helpers";
 
 export default function EventCard({ event, clubSlug, trackNames, showResults }) {
   const track =
@@ -15,8 +15,6 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
       : event.logourl
         ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/club-assets/${event.logourl}`
         : null);
-  const type = (event.event_type || "racing").toLowerCase();
-  const typeLabel = TYPE_LABELS[type] || event.event_type || "Event";
   const scheduledDays = [
     ...(Array.isArray(event.classes_by_day) ? event.classes_by_day : []),
     ...(Array.isArray(event.days) ? event.days : []),
@@ -46,11 +44,9 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
       ? formatDate(eventDate)
       : "Date TBD";
   const nominationsOpen = isNominationsOpen(event);
-  const nominationLabel = nominationsOpen
-    ? "Nominations Open"
-    : event.nominations_open
-      ? `Nominations Open: ${formatDate(event.nominations_open)}`
-      : null;
+  const nominationLabel = event.nominations_open
+    ? `Nominations Open: ${formatDate(event.nominations_open)}`
+    : null;
 
   return (
     <Card className="!p-0 overflow-hidden">
@@ -72,27 +68,21 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
               )}
             </div>
 
-            <div className="min-w-0 flex-1 pl-5 pr-3 py-2">
+            <div className="min-w-0 flex-1 py-2 pl-4 pr-4 sm:pl-5">
               <h3 className="break-words font-semibold leading-tight text-text-base">
                 {event.name}
               </h3>
-              <p className="flex flex-wrap min-w-0 items-center gap-x-1.5 gap-y-0.5 text-sm font-semibold leading-tight text-text-muted">
-                <span className="min-w-0 truncate max-w-full">{track}</span>
-                <span aria-hidden="true">•</span>
-                <span className="shrink-0">{eventDateLabel}</span>
-                <span aria-hidden="true">•</span>
-                <span className="shrink-0">{typeLabel}</span>
+              <p className="flex min-w-0 flex-col items-start gap-y-0.5 text-sm font-semibold leading-tight text-text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 md:flex-col md:items-start md:gap-x-0 md:gap-y-0.5">
+                <span className="min-w-0 max-w-full truncate sm:w-auto">{track}</span>
+                <span className="min-w-0 max-w-full break-words sm:w-auto">{eventDateLabel}</span>
                 {nominationLabel && (
-                  <>
-                    <span aria-hidden="true">•</span>
-                    <span
-                      className={`min-w-0 break-words font-bold ${
-                        nominationsOpen ? "text-green-600" : ""
-                      }`}
-                    >
-                      {nominationLabel}
-                    </span>
-                  </>
+                  <span
+                    className={`min-w-0 max-w-full break-words font-bold sm:w-auto ${
+                      nominationsOpen ? "text-green-600" : ""
+                    }`}
+                  >
+                    {nominationLabel}
+                  </span>
                 )}
               </p>
             </div>
