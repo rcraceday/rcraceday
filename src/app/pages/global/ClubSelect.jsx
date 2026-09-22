@@ -15,18 +15,21 @@ export default function ClubSelect() {
   const { user } = useAuth();
 
   const [clubs, setClubs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadClubs = async () => {
+    async function loadClubs() {
       const { data, error } = await supabase
         .from("clubs")
-        .select("id, slug, name, logo_url")
-        .order("name", { ascending: true });
+        .select("id, name, slug")
+        .order("name");
 
-      if (!error && data) {
-        setClubs(data);
+      if (!error) {
+        setClubs(data || []);
       }
-    };
+
+      setLoading(false);
+    }
 
     loadClubs();
   }, []);

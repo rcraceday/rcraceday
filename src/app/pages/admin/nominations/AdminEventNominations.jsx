@@ -69,17 +69,61 @@ export default function AdminEventNominations() {
   }, {});
   const csv = buildLiveTimeCsv(buildLiveTimeRows({ nominations, entries, drivers, classes, memberships, clubName }));
 
+  const flatRequirements = useMemo(() => {
+    const requirements = Array.isArray(event?.club_requirements) ? event.club_requirements : [];
+    const flattened = [];
+
+    requirements.forEach((group, groupIndex) => {
+      const descriptor = typeof group?.descriptor === "string" ? group.descriptor.trim() : "";
+      const items = Array.isArray(group?.items)
+        ? group.items.map((item) => String(item ?? "").trim()).filter(Boolean)
+        : typeof group?.item === "string" && group.item.trim()
+          ? [group.item.trim()]
+          : [];
+
+      const requirementId = group?.id || `requirement-${groupIndex}`;
+
+      if (!descriptor && items.length === 0) return;
+
+      if (items.length === 0) {
+        flattened.push({
+          id: `${requirementId}-item-0`,
+          requirementId,
+          descriptor,
+          item: "",
+        });
+        return;
+      }
+
+      items.forEach((item, itemIndex) => {
+        flattened.push({
+          id: `${requirementId}-item-${itemIndex}`,
+          requirementId,
+          descriptor,
+          item,
+        });
+      });
+    });
+
+    return flattened;
+  }, [event?.club_requirements]);
+
   const requirementTally = useMemo(() => {
     const seenGroups = new Set();
     const counts = {};
+
     nominations.forEach((nomination) => {
       if (seenGroups.has(nomination.group_id)) return;
       seenGroups.add(nomination.group_id);
+
       const selected = nomination.merchandise?.requirements || {};
       Object.entries(selected).forEach(([reqId, checked]) => {
-        if (checked) counts[reqId] = (counts[reqId] || 0) + 1;
+        if (!checked) return;
+        const requirementId = reqId.replace(/-item-\d+$/, "");
+        counts[requirementId] = (counts[requirementId] || 0) + 1;
       });
     });
+
     return counts;
   }, [nominations]);
 
@@ -103,7 +147,44 @@ export default function AdminEventNominations() {
   return <div className="min-h-screen bg-background text-text-base"><PageTitle title="Admin nominations" style={{ color: palette?.primary }} /><main className="max-w-5xl mx-auto px-4 py-4 space-y-5"><select className="w-full rounded-md border border-surfaceBorder bg-white px-3 py-2" value={eventId} onChange={(e) => setEventId(e.target.value)}>{events.map((item) => <option key={item.id} value={item.id}>{item.name} - {item.event_date}</option>)}</select><div className="flex flex-wrap gap-2">{["drivers", "classes", "requirements", "full", "export"].map((item) => <Button key={item} variant={tab === item ? "primary" : "secondary"} onClick={() => setTab(item)}>{item === "drivers" ? "Drivers" : item === "classes" ? "By class" : item === "requirements" ? "Requirements" : item === "full" ? "Full sheet" : "Export"}</Button>)}</div>
     {tab === "drivers" && <section className="space-y-3"><div className="flex justify-end"><select className="rounded-md border border-surfaceBorder bg-white px-3 py-2 text-sm" value={sort} onChange={(e) => setSort(e.target.value)}><option value="name">Sort by driver</option><option value="class">Sort by class</option></select></div>{sortedDrivers.map(({ nomination, driver, entries: driverEntries }) => <Card key={nomination.id} className="space-y-2"><div className="flex flex-wrap justify-between gap-2"><strong>{driver.first_name} {driver.last_name}</strong><span>{driver.permanent_number ? `#${driver.permanent_number}` : ""}</span></div><p className="text-sm text-text-muted">{Array.isArray(driver.sponsors) ? driver.sponsors.join(", ") : driver.sponsors || "No sponsor listed"}</p><p className="text-sm">{driverEntries.map((entry) => `${classMap.get(entry.class_id) || "Unknown class"}${entry.is_preference ? " (preference)" : ""}`).join(" · ")}</p></Card>)}</section>}
     {tab === "classes" && <section className="space-y-3">{Object.entries(classRows).sort(([a], [b]) => a.localeCompare(b)).map(([name, classDrivers]) => <Card key={name}><h2 className="font-semibold">{name}</h2><p className="mt-2 text-sm text-text-muted">{classDrivers.sort((a, b) => `${a.last_name}${a.first_name}`.localeCompare(`${b.last_name}${b.first_name}`)).map((driver) => `${driver.first_name} ${driver.last_name}`).join(" · ")}</p></Card>)}</section>}
-    {tab === "requirements" && <section className="space-y-3">{(event?.club_requirements || []).length === 0 && <Card><p className="text-sm text-text-muted">No club requirements configured for this event.</p></Card>}{(event?.club_requirements || []).map((r) => <Card key={r.id} className="flex items-center justify-between"><span>{r.descriptor} — {r.item}</span><strong>{requirementTally[r.id] || 0}</strong></Card>)}</section>}
+    {tab === "requirements" && (
+      <section className="space-y-3">
+        {flatRequirements.length === 0 && (
+          <Card>
+            <p className="text-sm text-text-muted">No club requirements configured for this event.</p>
+          </Card>
+        )}
+
+        {Object.values(
+          flatRequirements.reduce((groups, requirement) => {
+            if (!groups[requirement.requirementId]) {
+              groups[requirement.requirementId] = {
+                descriptor: requirement.descriptor,
+                items: [],
+              };
+            }
+            groups[requirement.requirementId].items.push(requirement);
+            return groups;
+          }, {})
+        ).map((group) => (
+          <Card key={group.items[0].requirementId} className="space-y-2">
+            <div className="font-medium">{group.descriptor}</div>
+            <div className="flex flex-col gap-2">
+              {group.items.map((requirement) => (
+                <label key={requirement.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!requirementTally[requirement.requirementId]}
+                    readOnly
+                  />
+                  <span>{requirement.item}</span>
+                </label>
+              ))}
+            </div>
+          </Card>
+        ))}
+      </section>
+    )}
     {tab === "full" && <div className="overflow-x-auto"><table className="w-full border-collapse text-sm"><thead><tr className="border-b border-surfaceBorder text-left"><th className="p-2">Driver</th><th className="p-2">Number</th><th className="p-2">Paid</th><th className="p-2">Classes</th><th className="p-2">Fee</th></tr></thead><tbody>{driverRows.map(({ nomination, driver, entries: driverEntries }) => <tr key={nomination.id} className="border-b border-surfaceBorder"><td className="p-2">{driver.first_name} {driver.last_name}</td><td className="p-2">{driver.permanent_number || ""}</td><td className="p-2"><button type="button" className="rounded-md border border-surfaceBorder px-2 py-1 text-xs" onClick={() => togglePaid(nomination)}>{nomination.paid ? "TRUE" : "FALSE"}</button></td><td className="p-2">{driverEntries.map((entry) => classMap.get(entry.class_id)).join(", ")}</td><td className="p-2">{nomination.total_fee ?? ""}</td></tr>)}</tbody></table></div>}
     {tab === "export" && <Card className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-text-muted">Preferences are excluded from this LiveTime export.</p><Button onClick={downloadCsv}>Download LiveTime CSV</Button></div><pre className="max-h-[480px] overflow-auto rounded-md bg-surfaceAlt p-3 text-xs whitespace-pre-wrap">{csv}</pre></Card>}
   </main></div>;

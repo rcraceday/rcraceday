@@ -64,29 +64,6 @@ export default function EventNominationsCard({ event = {}, onChange }) {
           </>
         )}
       </div>
-
-      {/* MULTI-DAY DISPLAY */}
-      {isMulti && days.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: cmsLayout.spacing.md }}>
-          <div style={{ fontWeight: 600 }}>Per-day nomination days</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {days.map((d, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 6,
-                  background: "#F3F4F6",
-                  color: "#111827",
-                  fontSize: 13,
-                }}
-              >
-                {d.label ? `${d.label} — ${d.date}` : d.date}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

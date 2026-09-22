@@ -33,37 +33,22 @@ function parseItems(value = "") {
 
 export default function EventRequirementsCard({ event = {}, onChange = () => {} }) {
   const requirements = normalizeRequirements(event.club_requirements);
-  const [descriptor, setDescriptor] = useState("");
-  const [itemsInput, setItemsInput] = useState("");
+  const [newDescriptor, setNewDescriptor] = useState("");
 
   const addRequirement = () => {
-    const trimmedDescriptor = descriptor.trim();
-    const parsedItems = parseItems(itemsInput);
+    const trimmedDescriptor = newDescriptor.trim();
+    if (!trimmedDescriptor) return;
 
-    if (!trimmedDescriptor || parsedItems.length === 0) return;
+    onChange("club_requirements", [
+      ...requirements,
+      {
+        id: crypto.randomUUID(),
+        descriptor: trimmedDescriptor,
+        items: [],
+      },
+    ]);
 
-    const existing = requirements.find(
-      (requirement) => requirement.descriptor.toLowerCase() === trimmedDescriptor.toLowerCase()
-    );
-
-    const updated = existing
-      ? requirements.map((requirement) =>
-          requirement.id === existing.id
-            ? { ...requirement, items: [...new Set([...requirement.items, ...parsedItems])] }
-            : requirement
-        )
-      : [
-          ...requirements,
-          {
-            id: crypto.randomUUID(),
-            descriptor: trimmedDescriptor,
-            items: parsedItems,
-          },
-        ];
-
-    onChange("club_requirements", updated);
-    setDescriptor("");
-    setItemsInput("");
+    setNewDescriptor("");
   };
 
   const removeRequirement = (id) => {
@@ -91,39 +76,52 @@ export default function EventRequirementsCard({ event = {}, onChange = () => {} 
     onChange("club_requirements", updated);
   };
 
+  const addItem = (id, itemValue) => {
+    const item = itemValue.trim();
+    if (!item) return;
+
+    const updated = requirements.map((requirement) => {
+      if (requirement.id !== id) return requirement;
+
+      return {
+        ...requirement,
+        items: [...new Set([...(requirement.items || []), item])],
+      };
+    });
+
+    onChange("club_requirements", updated);
+  };
+
+  const removeItem = (id, itemIndex) => {
+    const updated = requirements.map((requirement) => {
+      if (requirement.id !== id) return requirement;
+
+      return {
+        ...requirement,
+        items: requirement.items.filter((_, index) => index !== itemIndex),
+      };
+    });
+
+    onChange("club_requirements", updated);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ fontWeight: 700 }}>Club Requirements</div>
-      <div style={{ color: "#666", fontSize: 13 }}>
-        Optional items a driver/household may need to supply (e.g. Table & Chairs, Marquee, Lunch / Dinner). Drivers tick these on the nomination form.
-      </div>
 
       {requirements.length === 0 && (
         <div style={{ padding: "8px 0", color: "#666" }}>No requirements configured.</div>
       )}
 
       {requirements.map((requirement) => (
-        <div
+        <RequirementRow
           key={requirement.id}
-          style={{ display: "flex", gap: 8, alignItems: "center" }}
-        >
-          <input
-            style={{ flex: 1, padding: "6px 8px" }}
-            value={requirement.descriptor}
-            placeholder="Descriptor (e.g. Pit gear required (Interstate Only))"
-            onChange={(event) => updateRequirement(requirement.id, "descriptor", event.target.value)}
-          />
-          <textarea
-            rows={2}
-            style={{ flex: 2, padding: "6px 8px", resize: "vertical" }}
-            value={requirement.items.join(", ")}
-            placeholder="Items (e.g. Table & Chairs, Marquee, Lunch / Dinner)"
-            onChange={(event) => updateRequirement(requirement.id, "items", event.target.value)}
-          />
-          <CMSButton variant="danger" onClick={() => removeRequirement(requirement.id)}>
-            Remove
-          </CMSButton>
-        </div>
+          requirement={requirement}
+          onDescriptorChange={(value) => updateRequirement(requirement.id, "descriptor", value)}
+          onAddItem={(value) => addItem(requirement.id, value)}
+          onRemoveItem={(index) => removeItem(requirement.id, index)}
+          onRemoveRequirement={() => removeRequirement(requirement.id)}
+        />
       ))}
 
       <div
@@ -137,19 +135,65 @@ export default function EventRequirementsCard({ event = {}, onChange = () => {} 
       >
         <input
           style={{ flex: 1, padding: "6px 8px" }}
-          value={descriptor}
-          placeholder="Descriptor"
-          onChange={(event) => setDescriptor(event.target.value)}
+          value={newDescriptor}
+          placeholder="New requirement description"
+          onChange={(event) => setNewDescriptor(event.target.value)}
         />
-        <textarea
-          rows={2}
-          style={{ flex: 2, padding: "6px 8px", resize: "vertical" }}
-          value={itemsInput}
-          placeholder="Items (comma or newline separated)"
-          onChange={(event) => setItemsInput(event.target.value)}
-        />
-        <CMSButton onClick={addRequirement}>Add Requirement</CMSButton>
+        <CMSButton onClick={addRequirement}>Add Requirements</CMSButton>
       </div>
+    </div>
+  );
+}
+
+function RequirementRow({
+  requirement,
+  onDescriptorChange,
+  onAddItem,
+  onRemoveItem,
+  onRemoveRequirement,
+}) {
+  const [itemInput, setItemInput] = useState("");
+
+  return (
+    <div style={{ border: "1px solid #eee", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input
+          style={{ flex: 1, padding: "6px 8px" }}
+          value={requirement.descriptor}
+          placeholder="Description"
+          onChange={(event) => onDescriptorChange(event.target.value)}
+        />
+        <input
+          style={{ flex: 1, padding: "6px 8px" }}
+          value={itemInput}
+          placeholder="Add item"
+          onChange={(event) => setItemInput(event.target.value)}
+        />
+        <CMSButton
+          onClick={() => {
+            onAddItem(itemInput);
+            setItemInput("");
+          }}
+        >
+          Add Item
+        </CMSButton>
+        <CMSButton variant="danger" onClick={onRemoveRequirement}>
+          Remove
+        </CMSButton>
+      </div>
+
+      {requirement.items.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 4 }}>
+          {requirement.items.map((item, index) => (
+            <div key={`${requirement.id}-${index}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ flex: 1 }}>{item}</span>
+              <CMSButton variant="danger" onClick={() => onRemoveItem(index)}>
+                Remove Item
+              </CMSButton>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
