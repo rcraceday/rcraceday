@@ -38,6 +38,7 @@ const initialEventState = {
   classes_by_day: [],
   class_entry_limits: {},
   class_limit: 3,
+  class_limit_per_day: null,
   class_limit_scope: "per_event",
   preference_enabled: true,
   nominations_open: "",
@@ -157,6 +158,18 @@ const normalizedDays = Array.isArray(data.days)
           is_multi_day: !!data.is_multi_day,
           class_limit_scope:
             data.class_limit_scope === "per_day" ? "per_day" : "per_event",
+          class_limit:
+            !!data.is_multi_day &&
+            data.class_limit_scope === "per_day" &&
+            (data.class_limit_per_day == null || data.class_limit_per_day === "")
+              ? null
+              : data.class_limit,
+          class_limit_per_day:
+            data.class_limit_per_day != null && data.class_limit_per_day !== ""
+              ? Number(data.class_limit_per_day)
+              : !!data.is_multi_day && data.class_limit_scope === "per_day"
+                ? data.class_limit ?? 3
+                : null,
           available_classes: [],
         });
 
@@ -414,9 +427,20 @@ const payload = {
     typeof eventData.is_published === "boolean"
       ? eventData.is_published
       : true,
-  class_limit: eventData.class_limit ?? 3,
+  class_limit: eventData.is_multi_day
+    ? eventData.class_limit == null || eventData.class_limit === ""
+      ? null
+      : eventData.class_limit
+    : eventData.class_limit ?? 3,
+  class_limit_per_day: eventData.is_multi_day
+    ? eventData.class_limit_per_day == null || eventData.class_limit_per_day === ""
+      ? null
+      : eventData.class_limit_per_day
+    : null,
   class_limit_scope: eventData.is_multi_day
-    ? eventData.class_limit_scope === "per_day"
+    ? eventData.class_limit_per_day != null &&
+      eventData.class_limit_per_day !== "" &&
+      (eventData.class_limit == null || eventData.class_limit === "")
       ? "per_day"
       : "per_event"
     : "per_event",

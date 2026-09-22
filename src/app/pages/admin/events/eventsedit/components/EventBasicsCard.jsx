@@ -113,6 +113,7 @@ export default function EventBasicsCard({
             onChange("event_date", first);
             onChange("days", []);
             onChange("class_limit_scope", "per_event");
+            onChange("class_limit_per_day", null);
           } else {
             const first = event.event_date || "";
             onChange("days", first ? [{ date: first, label: "" }] : []);
@@ -143,17 +144,6 @@ export default function EventBasicsCard({
           }}
         >
           <div style={{ fontWeight: 600 }}>Event Days</div>
-
-          <CMSSelect
-            label="Class limit applies"
-            value={event.class_limit_scope || "per_event"}
-            onChange={(value) => onChange("class_limit_scope", value)}
-            options={[
-              { label: "Max Classes Per Event", value: "per_event" },
-              { label: "Max Classes Per Day", value: "per_day" },
-            ]}
-            placeholder="Select..."
-          />
 
           {days.length === 0 && <div style={cmsLayout.muted}>No days added yet.</div>}
 

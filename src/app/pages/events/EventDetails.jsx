@@ -15,6 +15,7 @@ import PageTitle from "@/components/ui/PageTitle";
 import useTheme from "@/app/providers/useTheme";
 import { supabase } from "@/supabaseClient";
 import DOMPurify from "dompurify";
+import { getDayClassLimit, getEventClassLimit } from "@/app/lib/eventClassLimit";
 
 // ---------------------------------------------
 // PAGE HEADER
@@ -649,6 +650,17 @@ return (
   style={{ marginTop: "-18px" }}   // MATCH SCHEDULE POSITIONING
 >
   <div style={{ marginTop: "-6px" }}>   {/* MATCH SCHEDULE HEADER GAP */}
+
+    {event.is_multi_day && (getEventClassLimit(event) != null || getDayClassLimit(event) != null) && (
+      <div style={{ fontSize: 14, marginBottom: 12, display: "flex", flexDirection: "column", gap: 4, color: contentText }}>
+        {getEventClassLimit(event) != null && (
+          <div>Max classes per driver (event): {getEventClassLimit(event)}</div>
+        )}
+        {getDayClassLimit(event) != null && (
+          <div>Max classes per day: {getDayClassLimit(event)}</div>
+        )}
+      </div>
+    )}
 
     {Array.isArray(event.classes_by_day) && event.classes_by_day.length > 0 ? (
       <div

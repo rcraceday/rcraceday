@@ -13,12 +13,13 @@ import { calculateUserPricing } from "@app/pages/events/events-sections/calculat
 import useRcraClubs from "@app/providers/useRcraClubs";
 import SearchableClubSelect from "@components/SearchableClubSelect";
 import {
-  canSetMultiDayClass,
   classLimitLabel,
   flattenMultiDaySelections,
   getClassLimitNumber,
-  getClassLimitScope,
+  getDayClassLimit,
   getDayClassSlots,
+  getEventClassLimit,
+  multiDayClassLimitError,
   multiDaySlotsPerDay,
   validateDriverClassSelections,
 } from "@/app/lib/eventClassLimit";
@@ -120,6 +121,7 @@ export default function EventNominate() {
 
   const classMap = useMemo(() => new Map(clubClasses.map((item) => [item.id, item.name])), [clubClasses]);
   const classLimit = getClassLimitNumber(event);
+  const classLimitPerDay = getDayClassLimit(event);
   const preferenceEnabled = !!event?.preference_enabled;
   const requiresRcraClub = !!event?.requires_rcra_club;
   const merchandise = Array.isArray(event?.merchandise) ? event.merchandise : [];
@@ -157,7 +159,7 @@ export default function EventNominate() {
     return !!usage && usage.taken >= usage.limit;
   }
 
-  // Seed one selection slot per driver once drivers/event are known.
+  // Seed one selection slot per driver once drivers/event are known, and resize when limits change.
   useEffect(() => {
     if (!event || !drivers.length) return;
     setSelections((current) => {
@@ -165,22 +167,36 @@ export default function EventNominate() {
       const dayCount = event.is_multi_day ? (event.days || []).length : 0;
       const slotsPerDay = multiDaySlotsPerDay(event);
       drivers.forEach((driver) => {
-        if (next[driver.id]) return;
-        const classesByDay = {};
-        if (event.is_multi_day) {
-          for (let i = 0; i < dayCount; i += 1) {
-            classesByDay[i] = Array.from({ length: slotsPerDay }, () => "");
+        const existing = next[driver.id];
+        if (!existing) {
+          const classesByDay = {};
+          if (event.is_multi_day) {
+            for (let i = 0; i < dayCount; i += 1) {
+              classesByDay[i] = Array.from({ length: slotsPerDay }, () => "");
+            }
           }
+          next[driver.id] = {
+            ...emptySelection(),
+            classesByDay,
+            classSlots: Array.from({ length: classLimit }, () => ""),
+          };
+          return;
         }
-        next[driver.id] = {
-          ...emptySelection(),
-          classesByDay,
-          classSlots: Array.from({ length: classLimit }, () => ""),
-        };
+        if (event.is_multi_day) {
+          const classesByDay = { ...existing.classesByDay };
+          for (let i = 0; i < dayCount; i += 1) {
+            classesByDay[i] = getDayClassSlots(classesByDay, i, slotsPerDay);
+          }
+          next[driver.id] = { ...existing, classesByDay };
+        } else {
+          const slots = (existing.classSlots || []).slice();
+          while (slots.length < classLimit) slots.push("");
+          next[driver.id] = { ...existing, classSlots: slots.slice(0, classLimit) };
+        }
       });
       return next;
     });
-  }, [event, drivers, classLimit]);
+  }, [event, drivers, classLimit, classLimitPerDay]);
 
   function updateSelection(driverId, update) {
     setSelections((current) => ({ ...current, [driverId]: { ...emptySelection(), ...current[driverId], ...update } }));
@@ -195,21 +211,15 @@ export default function EventNominate() {
     const slotsPerDay = multiDaySlotsPerDay(event);
     const slots = getDayClassSlots(current.classesByDay, dayIndex, slotsPerDay);
     const currentValue = slots[slotIndex] || "";
-    if (
-      classId &&
-      !canSetMultiDayClass({
-        event,
-        classesByDay: current.classesByDay,
-        dayIndex,
-        classId,
-        currentValue,
-      })
-    ) {
-      setError(
-        getClassLimitScope(event) === "per_day"
-          ? `You can select up to ${classLimit} classes per day.`
-          : `You can select up to ${classLimit} classes for this event.`
-      );
+    const limitErr = multiDayClassLimitError({
+      event,
+      classesByDay: current.classesByDay,
+      dayIndex,
+      classId,
+      currentValue,
+    });
+    if (limitErr) {
+      setError(limitErr);
       setTimeout(() => setError(""), 2500);
       return;
     }
@@ -484,7 +494,14 @@ export default function EventNominate() {
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Event Type" value={event.event_type ? event.event_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : ""} />
               <Field label="Track" value={event.track || ""} />
-              <Field label="Class Limit" value={classLimitLabel(event)} />
+              {event.is_multi_day ? (
+                <>
+                  <Field label="Max Event Classes per Driver" value={getEventClassLimit(event) ?? "No event maximum"} />
+                  <Field label="Max Classes per Day per Driver" value={getDayClassLimit(event) ?? "No daily maximum"} />
+                </>
+              ) : (
+                <Field label="Class Limit" value={classLimitLabel(event)} />
+              )}
               <Field label="Preferences" value={preferenceEnabled ? `Allowed (${event.preference_limit ?? 1})` : "Not allowed"} />
               <Field label="Nominations Open" value={event.nominations_open ? new Date(event.nominations_open).toLocaleString("en-AU") : ""} />
               <Field label="Nominations Close" value={event.nominations_close ? new Date(event.nominations_close).toLocaleString("en-AU") : ""} />

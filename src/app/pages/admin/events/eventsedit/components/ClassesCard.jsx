@@ -5,7 +5,6 @@ import CMSButton from "@cms/CMSButton";
 import CMSToggle from "@cms/CMSToggle";
 import { cmsLayout } from "@cms/layout";
 import SortableClassItem from "./SortableClassItem";
-import { classLimitLabel } from "@/app/lib/eventClassLimit";
 
 import {
   DndContext,
@@ -160,31 +159,37 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
         gap: cmsLayout.spacing.lg,
       }}
     >
-      {/* Max Classes Per Driver */}
-      <div style={{ width: 220 }}>
-        <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-          Max Classes Per Driver
-        </label>
+      {/* Max Classes Per Event */}
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ width: 220 }}>
+          <CMSInput
+            type="number"
+            label={isMulti ? "Max Event Classes per Driver" : "Max Classes Per Driver Per Day"}
+            value={event.class_limit == null ? "" : String(event.class_limit)}
+            onChange={(v) => {
+              const next = v === "" ? null : Math.max(0, Number(v));
+              onChange("class_limit", next);
+              if (next != null && event.preference_enabled) {
+                const pref = event.preference_limit;
+                if (pref != null && pref > next) {
+                  onChange("preference_limit", next);
+                }
+              }
+            }}
+          />
+        </div>
         {isMulti && (
-          <div style={{ ...cmsLayout.muted, marginBottom: 6, fontSize: 13 }}>
-            {classLimitLabel(event)}
+          <div style={{ width: 220 }}>
+            <CMSInput
+              type="number"
+              label="Max Classes per Day"
+              value={event.class_limit_per_day == null ? "" : String(event.class_limit_per_day)}
+              onChange={(v) =>
+                onChange("class_limit_per_day", v === "" ? null : Math.max(0, Number(v)))
+              }
+            />
           </div>
         )}
-        <CMSInput
-          type="number"
-          value={event.class_limit == null ? "" : String(event.class_limit)}
-          onChange={(v) => {
-            const next = v === "" ? null : Math.max(0, Number(v));
-            onChange("class_limit", next);
-            if (next != null && event.preference_enabled) {
-              const pref = event.preference_limit;
-              if (pref != null && pref > next) {
-                onChange("preference_limit", next);
-              }
-            }
-          }}
-          placeholder="e.g., 2"
-        />
       </div>
 
       {/* Preferences */}

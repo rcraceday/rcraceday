@@ -1,6 +1,7 @@
 // src/app/pages/events/EventDetailsSections/EventDetailsClasses.jsx
 
 import useTheme from "@/app/providers/useTheme";
+import { getDayClassLimit, getEventClassLimit } from "@/app/lib/eventClassLimit";
 
 /* ===========================
    HELPERS
@@ -31,6 +32,17 @@ export default function EventDetailsClasses({ event }) {
 
   return (
     <div className="space-y-6" style={{ color: palette?.text || "#1f2937" }}>
+
+      {event.is_multi_day && (getEventClassLimit(event) != null || getDayClassLimit(event) != null) && (
+        <div className="text-sm space-y-1">
+          {getEventClassLimit(event) != null && (
+            <div>Max classes per driver (event): {getEventClassLimit(event)}</div>
+          )}
+          {getDayClassLimit(event) != null && (
+            <div>Max classes per day: {getDayClassLimit(event)}</div>
+          )}
+        </div>
+      )}
 
       {classesByDay.map((day, index) => {
         const label = day.label?.trim() || `Day ${index + 1}`;

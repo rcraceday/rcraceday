@@ -1,10 +1,29 @@
-export function getClassLimitScope(event) {
-  if (!event?.is_multi_day) return "per_event";
-  return event.class_limit_scope === "per_day" ? "per_day" : "per_event";
+export function getEventClassLimit(event) {
+  if (!event?.is_multi_day) {
+    if (event?.class_limit == null || event.class_limit === "") return 3;
+    return Number(event.class_limit);
+  }
+  if (
+    (event.class_limit_per_day == null || event.class_limit_per_day === "") &&
+    event.class_limit_scope === "per_day"
+  ) {
+    return null;
+  }
+  if (event.class_limit == null || event.class_limit === "") return null;
+  return Number(event.class_limit);
+}
+
+export function getDayClassLimit(event) {
+  if (!event?.is_multi_day) return null;
+  if (event.class_limit_per_day != null && event.class_limit_per_day !== "") {
+    return Number(event.class_limit_per_day);
+  }
+  if (event.class_limit_scope === "per_day") return Number(event.class_limit ?? 3);
+  return null;
 }
 
 export function getClassLimitNumber(event) {
-  return event?.class_limit ?? 3;
+  return getEventClassLimit(event) ?? getDayClassLimit(event) ?? 3;
 }
 
 export function flattenMultiDaySelections(classesByDay) {
@@ -43,43 +62,54 @@ export function getDayClassSlots(classesByDay, dayIndex, slotCount) {
 }
 
 export function multiDaySlotsPerDay(event) {
-  return getClassLimitScope(event) === "per_day" ? getClassLimitNumber(event) : 1;
+  return getDayClassLimit(event) ?? getEventClassLimit(event) ?? 1;
 }
 
-export function canSetMultiDayClass({ event, classesByDay, dayIndex, classId, currentValue }) {
-  if (!classId || classId === currentValue) return true;
-  const limit = getClassLimitNumber(event);
-  if (getClassLimitScope(event) === "per_day") {
-    const filled = countSelectionsForDay(classesByDay, dayIndex);
-    if (currentValue) return true;
-    return filled < limit;
+export function multiDayClassLimitError({ event, classesByDay, dayIndex, classId, currentValue }) {
+  if (!classId || classId === currentValue) return null;
+  const dayLimit = getDayClassLimit(event);
+  const eventLimit = getEventClassLimit(event);
+  const nextDay = countSelectionsForDay(classesByDay, dayIndex) + (currentValue ? 0 : 1);
+  const nextTotal = countMultiDaySelections(classesByDay) + (currentValue ? 0 : 1);
+  if (dayLimit != null && nextDay > dayLimit) {
+    return `You can select up to ${dayLimit} classes per day.`;
   }
-  let total = countMultiDaySelections(classesByDay);
-  if (currentValue) total -= 1;
-  return total + 1 <= limit;
+  if (eventLimit != null && nextTotal > eventLimit) {
+    return `You can select up to ${eventLimit} classes for this event.`;
+  }
+  return null;
+}
+
+export function canSetMultiDayClass(args) {
+  return !multiDayClassLimitError(args);
 }
 
 export function validateDriverClassSelections(event, selection) {
   if (!event?.is_multi_day) return null;
   const classesByDay = selection?.classesByDay || {};
-  const limit = getClassLimitNumber(event);
-  if (getClassLimitScope(event) === "per_day") {
+  const dayLimit = getDayClassLimit(event);
+  const eventLimit = getEventClassLimit(event);
+  if (dayLimit != null) {
     for (const dayIndex of Object.keys(classesByDay)) {
-      if (countSelectionsForDay(classesByDay, dayIndex) > limit) {
-        return `You can select up to ${limit} classes per day.`;
+      if (countSelectionsForDay(classesByDay, dayIndex) > dayLimit) {
+        return `You can select up to ${dayLimit} classes per day.`;
       }
     }
-    return null;
   }
-  if (countMultiDaySelections(classesByDay) > limit) {
-    return `You can select up to ${limit} classes for this event.`;
+  if (eventLimit != null && countMultiDaySelections(classesByDay) > eventLimit) {
+    return `You can select up to ${eventLimit} classes for this event.`;
   }
   return null;
 }
 
 export function classLimitLabel(event) {
-  const limit = getClassLimitNumber(event);
-  if (!event?.is_multi_day) return `${limit} per driver`;
-  if (getClassLimitScope(event) === "per_day") return `${limit} per driver per day`;
-  return `${limit} per driver (across all days)`;
+  if (!event?.is_multi_day) {
+    return `${getEventClassLimit(event)} per driver`;
+  }
+  const eventLimit = getEventClassLimit(event);
+  const dayLimit = getDayClassLimit(event);
+  const parts = [];
+  if (eventLimit != null) parts.push(`${eventLimit} per driver (event)`);
+  if (dayLimit != null) parts.push(`${dayLimit} per driver per day`);
+  return parts.join(" · ") || "No class limit";
 }
