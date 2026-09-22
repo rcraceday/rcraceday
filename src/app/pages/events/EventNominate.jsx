@@ -10,6 +10,18 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import useTheme from "@app/providers/useTheme";
 import { calculateUserPricing } from "@app/pages/events/events-sections/calculatePricing";
+import useRcraClubs from "@app/providers/useRcraClubs";
+import SearchableClubSelect from "@components/SearchableClubSelect";
+import {
+  canSetMultiDayClass,
+  classLimitLabel,
+  flattenMultiDaySelections,
+  getClassLimitNumber,
+  getClassLimitScope,
+  getDayClassSlots,
+  multiDaySlotsPerDay,
+  validateDriverClassSelections,
+} from "@/app/lib/eventClassLimit";
 
 const money = (value) => Number(value || 0).toLocaleString("en-AU", { style: "currency", currency: "AUD" });
 const emptySelection = () => ({ classSlots: [], classesByDay: {}, preference: "", merch: {}, addons: {} });
@@ -39,6 +51,7 @@ export default function EventNominate() {
   const { palette } = useTheme();
   const brand = palette?.primary || "#00438a";
   const contentText = palette?.text || "#1f2937";
+  const { clubs: rcraClubs, loading: loadingClubs } = useRcraClubs();
 
   const [event, setEvent] = useState(null);
   const [clubClasses, setClubClasses] = useState([]);
@@ -51,6 +64,8 @@ export default function EventNominate() {
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [otherEntryCounts, setOtherEntryCounts] = useState({});
   const [requirementSelections, setRequirementSelections] = useState({});
+  const [clubAffiliationConfirmed, setClubAffiliationConfirmed] = useState(false);
+  const [affiliatedClubId, setAffiliatedClubId] = useState("");
 
   const logoSrc = event?.logourl
     ? event.logourl.startsWith("http")
@@ -104,8 +119,9 @@ export default function EventNominate() {
   }, [event, membership?.id]);
 
   const classMap = useMemo(() => new Map(clubClasses.map((item) => [item.id, item.name])), [clubClasses]);
-  const classLimit = event?.class_limit ?? 3;
+  const classLimit = getClassLimitNumber(event);
   const preferenceEnabled = !!event?.preference_enabled;
+  const requiresRcraClub = !!event?.requires_rcra_club;
   const merchandise = Array.isArray(event?.merchandise) ? event.merchandise : [];
   const addOns = Array.isArray(event?.class_add_ons) ? event.class_add_ons : [];
   const clubRequirements = Array.isArray(event?.club_requirements) ? event.club_requirements : [];
@@ -114,7 +130,9 @@ export default function EventNominate() {
 
   function localSelectionCount(classId) {
     return Object.values(selections).reduce((count, selection) => {
-      const ids = event?.is_multi_day ? Object.values(selection.classesByDay || {}) : (selection.classSlots || []);
+      const ids = event?.is_multi_day
+        ? flattenMultiDaySelections(selection.classesByDay || {})
+        : (selection.classSlots || []);
       return count + ids.filter((id) => id === classId).length;
     }, 0);
   }
@@ -144,10 +162,19 @@ export default function EventNominate() {
     if (!event || !drivers.length) return;
     setSelections((current) => {
       const next = { ...current };
+      const dayCount = event.is_multi_day ? (event.days || []).length : 0;
+      const slotsPerDay = multiDaySlotsPerDay(event);
       drivers.forEach((driver) => {
         if (next[driver.id]) return;
+        const classesByDay = {};
+        if (event.is_multi_day) {
+          for (let i = 0; i < dayCount; i += 1) {
+            classesByDay[i] = Array.from({ length: slotsPerDay }, () => "");
+          }
+        }
         next[driver.id] = {
           ...emptySelection(),
+          classesByDay,
           classSlots: Array.from({ length: classLimit }, () => ""),
         };
       });
@@ -163,10 +190,33 @@ export default function EventNominate() {
     setRequirementSelections((current) => ({ ...current, [id]: !current[id] }));
   }
 
-  function setDayClass(driverId, dayIndex, classId) {
+  function setDayClass(driverId, dayIndex, classId, slotIndex = 0) {
     const current = selections[driverId] || emptySelection();
-    const nextByDay = { ...current.classesByDay, [dayIndex]: classId };
-    const stillSelected = Object.values(nextByDay).includes(current.preference);
+    const slotsPerDay = multiDaySlotsPerDay(event);
+    const slots = getDayClassSlots(current.classesByDay, dayIndex, slotsPerDay);
+    const currentValue = slots[slotIndex] || "";
+    if (
+      classId &&
+      !canSetMultiDayClass({
+        event,
+        classesByDay: current.classesByDay,
+        dayIndex,
+        classId,
+        currentValue,
+      })
+    ) {
+      setError(
+        getClassLimitScope(event) === "per_day"
+          ? `You can select up to ${classLimit} classes per day.`
+          : `You can select up to ${classLimit} classes for this event.`
+      );
+      setTimeout(() => setError(""), 2500);
+      return;
+    }
+    slots[slotIndex] = classId;
+    const nextByDay = { ...current.classesByDay, [dayIndex]: slots };
+    const flat = flattenMultiDaySelections(nextByDay);
+    const stillSelected = flat.includes(current.preference);
     updateSelection(driverId, { classesByDay: nextByDay, preference: stillSelected ? current.preference : "" });
   }
 
@@ -180,7 +230,13 @@ export default function EventNominate() {
 
   function selectedClassIds(selection) {
     if (!selection) return [];
-    return Array.from(new Set(event?.is_multi_day ? Object.values(selection.classesByDay).filter(Boolean) : selection.classSlots.filter(Boolean)));
+    return Array.from(
+      new Set(
+        event?.is_multi_day
+          ? flattenMultiDaySelections(selection.classesByDay)
+          : selection.classSlots.filter(Boolean)
+      )
+    );
   }
 
   function updateMerchQty(driverId, itemId, qty, maxQty) {
@@ -261,6 +317,19 @@ export default function EventNominate() {
     const active = drivers.map((driver) => ({ driver, selection: selections[driver.id] || emptySelection() })).filter(({ selection }) => selectedClassIds(selection).length > 0);
     if (!active.length) return setError("Select at least one class for a driver.");
 
+    if (requiresRcraClub && !clubAffiliationConfirmed) {
+      return setError("You must confirm your RCRA club affiliation.");
+    }
+
+    if (requiresRcraClub && !affiliatedClubId) {
+      return setError("Select your RCRA club.");
+    }
+
+    for (const { selection } of active) {
+      const limitErr = validateDriverClassSelections(event, selection);
+      if (limitErr) return setError(limitErr);
+    }
+
     for (const { selection } of active) {
       for (const classId of selectedClassIds(selection)) {
         const usage = classUsage(classId);
@@ -288,9 +357,15 @@ export default function EventNominate() {
           driver_id: driver.id,
           group_id: membership.id,
           club_id: club?.id || driver.club_id,
+          affiliated_club_id: affiliatedClubId,
           total_fee: driverTotal(driver),
           paid: true,
-          merchandise: { merch: selection.merch, addons: selection.addons, requirements: requirementSelections, payment_method: paymentMethod },
+          merchandise: {
+            merch: selection.merch,
+            addons: selection.addons,
+            requirements: requirementSelections,
+            payment_method: paymentMethod,
+          },
         }))
       )
       .select("id, driver_id");
@@ -346,6 +421,28 @@ export default function EventNominate() {
     );
   }
 
+  function flattenRequirements(requirements) {
+    if (!Array.isArray(requirements)) return [];
+
+    return requirements.flatMap((requirement, groupIndex) => {
+      const descriptor = typeof requirement?.descriptor === "string" ? requirement.descriptor.trim() : "";
+      const items = Array.isArray(requirement?.items)
+        ? requirement.items.map((item) => String(item ?? "").trim()).filter(Boolean)
+        : typeof requirement?.item === "string" && requirement.item.trim()
+          ? [requirement.item.trim()]
+          : [];
+
+      const requirementId = requirement?.id || `requirement-${groupIndex}`;
+
+      return items.map((item, itemIndex) => ({
+        id: `${requirementId}-${itemIndex}`,
+        requirementId,
+        descriptor,
+        item,
+      }));
+    });
+  }
+
   const flatRequirements = useMemo(
     () => flattenRequirements(event?.club_requirements),
     [event?.club_requirements]
@@ -387,27 +484,43 @@ export default function EventNominate() {
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Event Type" value={event.event_type ? event.event_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : ""} />
               <Field label="Track" value={event.track || ""} />
-              <Field label="Class Limit" value={`${classLimit} per driver`} />
+              <Field label="Class Limit" value={classLimitLabel(event)} />
               <Field label="Preferences" value={preferenceEnabled ? `Allowed (${event.preference_limit ?? 1})` : "Not allowed"} />
               <Field label="Nominations Open" value={event.nominations_open ? new Date(event.nominations_open).toLocaleString("en-AU") : ""} />
               <Field label="Nominations Close" value={event.nominations_close ? new Date(event.nominations_close).toLocaleString("en-AU") : ""} />
             </div>
 
             {flatRequirements.length > 0 && (
-              <div className="rounded-lg border border-surfaceBorder p-4 space-y-2">
+              <div className="rounded-lg border border-surfaceBorder p-4 space-y-3">
                 <p className="text-sm font-medium">Club Requirements</p>
-                {flatRequirements.map((requirement) => (
-                  <label key={requirement.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={!!requirementSelections[requirement.id]}
-                      onChange={() => toggleRequirement(requirement.id)}
-                    />
-                    <span>
-                      {requirement.descriptor}
-                      {requirement.item ? ` — ${requirement.item}` : ""}
-                    </span>
-                  </label>
+
+                {Object.values(
+                  flatRequirements.reduce((groups, requirement) => {
+                    if (!groups[requirement.requirementId]) {
+                      groups[requirement.requirementId] = {
+                        descriptor: requirement.descriptor,
+                        items: [],
+                      };
+                    }
+                    groups[requirement.requirementId].items.push(requirement);
+                    return groups;
+                  }, {})
+                ).map((group) => (
+                  <div key={group.items[0].requirementId} className="space-y-2">
+                    <div className="text-sm font-medium">{group.descriptor}</div>
+                    <div className="flex flex-col gap-2 pl-1">
+                      {group.items.map((requirement) => (
+                        <label key={requirement.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={!!requirementSelections[requirement.id]}
+                            onChange={() => toggleRequirement(requirement.id)}
+                          />
+                          <span>{requirement.item}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -428,19 +541,31 @@ export default function EventNominate() {
                     {event.is_multi_day
                       ? days.map((day, dayIndex) => {
                           const dayClassIds = (event.classes_by_day?.[dayIndex]?.classes || []);
-                          const currentValue = selection.classesByDay[dayIndex] || "";
+                          const slotsPerDay = multiDaySlotsPerDay(event);
+                          const daySlots = getDayClassSlots(selection.classesByDay, dayIndex, slotsPerDay);
                           return (
-                            <label key={dayIndex} className="block text-xs font-medium">
-                              {day.label || `Day ${dayIndex + 1}`}{day.date ? ` — ${new Date(day.date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}` : ""}
-                              <select className="mt-1 w-full rounded-md border border-surfaceBorder bg-white px-3 py-2 text-sm" value={currentValue} onChange={(e) => setDayClass(driver.id, dayIndex, e.target.value)}>
-                                <option value="">Not racing this day</option>
-                                {dayClassIds.map((id) => (
-                                  <option key={id} value={id} disabled={classOptionDisabled(id, currentValue)}>
-                                    {classOptionLabel(id)}{classOptionDisabled(id, currentValue) ? " - FULL" : ""}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                            <div key={dayIndex} className="space-y-2">
+                              <p className="text-xs font-medium">
+                                {day.label || `Day ${dayIndex + 1}`}{day.date ? ` — ${new Date(day.date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}` : ""}
+                              </p>
+                              {daySlots.map((currentValue, slotIndex) => (
+                                <label key={slotIndex} className="block text-xs font-medium">
+                                  {slotsPerDay > 1 ? `Class ${slotIndex + 1}` : "Class"}
+                                  <select
+                                    className="mt-1 w-full rounded-md border border-surfaceBorder bg-white px-3 py-2 text-sm"
+                                    value={currentValue}
+                                    onChange={(e) => setDayClass(driver.id, dayIndex, e.target.value, slotIndex)}
+                                  >
+                                    <option value="">{slotsPerDay > 1 ? "No class selected" : "Not racing this day"}</option>
+                                    {dayClassIds.map((id) => (
+                                      <option key={id} value={id} disabled={classOptionDisabled(id, currentValue)}>
+                                        {classOptionLabel(id)}{classOptionDisabled(id, currentValue) ? " - FULL" : ""}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              ))}
+                            </div>
                           );
                         })
                       : Array.from({ length: classLimit }, (_, slotIndex) => {
@@ -554,6 +679,42 @@ export default function EventNominate() {
                 </>
               )}
             </div>
+
+            {requiresRcraClub && (
+              <div className="rounded-lg border border-surfaceBorder p-4 space-y-3">
+                <p className="text-sm font-medium">RCRA Club Affiliation</p>
+
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={clubAffiliationConfirmed}
+                    onChange={(e) => setClubAffiliationConfirmed(e.target.checked)}
+                  />
+                  <span>I confirm that I am affiliated with an RCRA club.</span>
+                </label>
+
+                {!clubAffiliationConfirmed && (
+                  <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    You must confirm your RCRA club affiliation.
+                  </div>
+                )}
+
+<label className="block text-sm">
+  Club
+  <SearchableClubSelect
+    clubs={rcraClubs}
+    selectedClubId={affiliatedClubId}
+    onSelectClub={setAffiliatedClubId}
+  />
+</label>
+
+                {clubAffiliationConfirmed && !affiliatedClubId && (
+                  <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    Select your RCRA club.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </Card>
       </main>

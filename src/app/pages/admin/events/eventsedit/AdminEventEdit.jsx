@@ -38,6 +38,7 @@ const initialEventState = {
   classes_by_day: [],
   class_entry_limits: {},
   class_limit: 3,
+  class_limit_scope: "per_event",
   preference_enabled: true,
   nominations_open: "",
   nominations_close: "",
@@ -154,6 +155,8 @@ const normalizedDays = Array.isArray(data.days)
               ? data.class_entry_limits
               : {},
           is_multi_day: !!data.is_multi_day,
+          class_limit_scope:
+            data.class_limit_scope === "per_day" ? "per_day" : "per_event",
           available_classes: [],
         });
 
@@ -412,12 +415,20 @@ const payload = {
       ? eventData.is_published
       : true,
   class_limit: eventData.class_limit ?? 3,
+  class_limit_scope: eventData.is_multi_day
+    ? eventData.class_limit_scope === "per_day"
+      ? "per_day"
+      : "per_event"
+    : "per_event",
   preference_enabled:
     typeof eventData.preference_enabled === "boolean"
-      ? eventData.preference_enabled
+     ? eventData.preference_enabled
       : true,
+    requires_rcra_club: // <--- Add this line
+    typeof eventData.requires_rcra_club === "boolean" // <--- Add this line
+     ? eventData.requires_rcra_club // <--- Add this line
+    : false, // <--- Add this line
 };
-
     Object.keys(payload).forEach(
       (k) => payload[k] === undefined && delete payload[k]
     );

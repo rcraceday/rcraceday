@@ -5,6 +5,7 @@ import CMSButton from "@cms/CMSButton";
 import CMSToggle from "@cms/CMSToggle";
 import { cmsLayout } from "@cms/layout";
 import SortableClassItem from "./SortableClassItem";
+import { classLimitLabel } from "@/app/lib/eventClassLimit";
 
 import {
   DndContext,
@@ -164,12 +165,24 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
         <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
           Max Classes Per Driver
         </label>
+        {isMulti && (
+          <div style={{ ...cmsLayout.muted, marginBottom: 6, fontSize: 13 }}>
+            {classLimitLabel(event)}
+          </div>
+        )}
         <CMSInput
           type="number"
           value={event.class_limit == null ? "" : String(event.class_limit)}
-          onChange={(v) =>
-            onChange("class_limit", v === "" ? null : Number(v))
-          }
+          onChange={(v) => {
+            const next = v === "" ? null : Math.max(0, Number(v));
+            onChange("class_limit", next);
+            if (next != null && event.preference_enabled) {
+              const pref = event.preference_limit;
+              if (pref != null && pref > next) {
+                onChange("preference_limit", next);
+              }
+            }
+          }}
           placeholder="e.g., 2"
         />
       </div>

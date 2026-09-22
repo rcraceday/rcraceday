@@ -76,6 +76,17 @@ export default function EventBasicsCard({
   // Build prefix for logos so each club's logos are grouped
   const logoPrefix = event.club_id ? `${event.club_id}/event-logos` : "";
 
+  const isTitleEvent =
+    ["state_titles", "national_titles"].includes(
+      (event.event_type || "").toLowerCase()
+    );
+
+  useEffect(() => {
+    if (isTitleEvent && !event.requires_rcra_club) {
+      onChange("requires_rcra_club", true);
+    }
+  }, [isTitleEvent, event.requires_rcra_club, onChange]);
+
   return (
     <div
       style={{
@@ -101,6 +112,7 @@ export default function EventBasicsCard({
             const first = days[0]?.date || event.event_date || "";
             onChange("event_date", first);
             onChange("days", []);
+            onChange("class_limit_scope", "per_event");
           } else {
             const first = event.event_date || "";
             onChange("days", first ? [{ date: first, label: "" }] : []);
@@ -131,6 +143,17 @@ export default function EventBasicsCard({
           }}
         >
           <div style={{ fontWeight: 600 }}>Event Days</div>
+
+          <CMSSelect
+            label="Class limit applies"
+            value={event.class_limit_scope || "per_event"}
+            onChange={(value) => onChange("class_limit_scope", value)}
+            options={[
+              { label: "Max Classes Per Event", value: "per_event" },
+              { label: "Max Classes Per Day", value: "per_day" },
+            ]}
+            placeholder="Select..."
+          />
 
           {days.length === 0 && <div style={cmsLayout.muted}>No days added yet.</div>}
 
@@ -171,6 +194,13 @@ export default function EventBasicsCard({
         placeholder="Select type..."
         required
       />
+
+            <CMSToggle
+        label="Requires RCRA club affiliation"
+        checked={!!event.requires_rcra_club}
+        onChange={(checked) => onChange("requires_rcra_club", checked)}
+      />
+
 
       {/* Track: always visible. If only one track, ensure it's selected and show as read-only */}
       {tracks.length === 1 ? (
@@ -233,6 +263,7 @@ export default function EventBasicsCard({
           }}
         />
       </div>
+
     </div>
   );
 }
