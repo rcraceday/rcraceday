@@ -6,6 +6,14 @@ import { supabase } from "@/supabaseClient";
 
 import MerchEditor from "./MerchEditor";
 
+const normalizeRequirements = (requirements) =>
+  (Array.isArray(requirements) ? requirements : []).map((requirement) => ({
+    description: requirement?.description || "",
+    items: (Array.isArray(requirement?.items) ? requirement.items : []).map((item) => ({
+      label: item?.label || "",
+    })),
+  }));
+
 export default function EventMerchandiseCard({ event = {}, onChange = () => {} }) {
   const [editingItem, setEditingItem] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -24,6 +32,7 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
       photo_file: null,
       photo_url: null,
       options: [],
+      requirements: [],
       classes: [], // merch has no classes
     });
     setDrawerOpen(true);
@@ -34,6 +43,7 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
       ...item,
       photo_file: null,
       options: item.options || [],
+      requirements: normalizeRequirements(item.requirements),
     });
     setDrawerOpen(true);
   };
@@ -42,6 +52,7 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
     const copy = {
       ...item,
       id: crypto.randomUUID(),
+      requirements: normalizeRequirements(item.requirements),
       classes: [], // clear classes for merch
     };
     const updated = [...merchandise, copy];
@@ -111,6 +122,7 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
       photo_url: photoUrl || null,
       photo_file: null,
       options: optionsWithPhotos,
+      requirements: normalizeRequirements(item.requirements),
       classes: [], // merch has no classes
     };
 

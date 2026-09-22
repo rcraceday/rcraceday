@@ -5,6 +5,14 @@ import { supabase } from "@/supabaseClient";
 
 import ClassAddOnEditor from "./ClassAddOnEditor";
 
+const normalizeRequirements = (requirements) =>
+  (Array.isArray(requirements) ? requirements : []).map((requirement) => ({
+    description: requirement?.description || "",
+    items: (Array.isArray(requirement?.items) ? requirement.items : []).map((item) => ({
+      label: item?.label || "",
+    })),
+  }));
+
 export default function EventClassAddOnsCard({
   event = {},
   onChange = () => {},
@@ -27,6 +35,7 @@ export default function EventClassAddOnsCard({
       photo_file: null,
       photo_url: null,
       options: [],
+      requirements: [],
       classes: [],
       class_rules: {},
     });
@@ -38,6 +47,7 @@ export default function EventClassAddOnsCard({
       ...item,
       photo_file: null,
       options: item.options || [],
+      requirements: normalizeRequirements(item.requirements),
       class_rules: item.class_rules || {},
     });
     setDrawerOpen(true);
@@ -47,6 +57,7 @@ export default function EventClassAddOnsCard({
     const copy = {
       ...item,
       id: crypto.randomUUID(),
+      requirements: normalizeRequirements(item.requirements),
     };
     const updated = [...addOns, copy];
     onChange("class_add_ons", updated);
@@ -135,6 +146,7 @@ export default function EventClassAddOnsCard({
       photo_url: photoUrl || null,
       photo_file: null,
       options: optionsWithPhotos,
+      requirements: normalizeRequirements(item.requirements),
 
       // ⭐ REQUIRED ⭐
       class_rules: classRulesWithPhotos,

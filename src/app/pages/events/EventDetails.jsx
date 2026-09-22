@@ -96,6 +96,17 @@ function formatTimeOnly(date, timeStr) {
   }
 }
 
+function normalizeRequirements(requirements) {
+  return (Array.isArray(requirements) ? requirements : [])
+    .map((requirement) => ({
+      description: requirement?.description || "",
+      items: (Array.isArray(requirement?.items) ? requirement.items : [])
+        .map((item) => ({ label: item?.label || "" }))
+        .filter((item) => item.label.trim()),
+    }))
+    .filter((requirement) => requirement.description.trim() || requirement.items.length > 0);
+}
+
 
 // ---------------------------------------------
 // TWO-COLUMN LIST
@@ -149,6 +160,39 @@ function Section({ title, icon: SectionIcon, brand, children }) {
       </div>
       {children}
     </section>
+  );
+}
+
+function RequirementsDisplay({ requirements, palette }) {
+  const normalized = normalizeRequirements(requirements);
+  if (normalized.length === 0) return null;
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="font-semibold text-base">Requirements</div>
+      {normalized.map((requirement, ri) => (
+        <div
+          key={ri}
+          className="grid grid-cols-1 md:grid-cols-2 gap-2 border rounded-md p-3"
+          style={{
+            background: palette?.surface || "#ffffff",
+            borderColor: palette?.surfaceBorder || "#e5e7eb",
+          }}
+        >
+          <div className="font-medium text-sm">
+            {requirement.description || `Requirement ${ri + 1}`}
+          </div>
+          <div className="flex flex-col gap-1">
+            {requirement.items.map((item, ii) => (
+              <label key={ii} className="flex items-start gap-2 text-sm">
+                <input type="checkbox" />
+                <span>{item.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -839,6 +883,8 @@ return (
               </div>
             )}
 
+            <RequirementsDisplay requirements={m.requirements} palette={palette} />
+
             {Array.isArray(m.options) && m.options.length > 0 && (
               <div className="mt-2 space-y-4">
                 {m.options.map((group, gi) => (
@@ -971,6 +1017,8 @@ return (
                 <strong>Max Qty:</strong> {a.max_qty}
               </div>
             )}
+
+            <RequirementsDisplay requirements={a.requirements} palette={palette} />
 
             {/* ⭐ APPLIES TO CLASSES — USING classMap ⭐ */}
             {Array.isArray(a.classes) && a.classes.length > 0 && (
