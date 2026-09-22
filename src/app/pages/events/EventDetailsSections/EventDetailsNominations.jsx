@@ -130,33 +130,28 @@ export default function EventDetailsNominations({ event, clubSlug, brand }) {
       <div className="flex flex-col gap-3">
 
         {/* NOMINATE BUTTON */}
-        <Button
-          disabled={buttonDisabled}
-          className="w-full !py-2 !rounded-md font-semibold"
-          style={{
-            backgroundColor: buttonDisabled ? "#ccc" : brand,
-            color: buttonDisabled ? "#666" : "white",
-            cursor: buttonDisabled ? "not-allowed" : "pointer",
-          }}
-          as={buttonDisabled ? "div" : Link}
-          to={
-            buttonDisabled
-              ? undefined
-              : `/${clubSlug}/app/events/${event.id}/nominate`
-          }
-        >
-          {buttonLabel}
-        </Button>
+        {buttonDisabled ? (
+          <Button
+            disabled
+            className="w-full !py-2 !rounded-md font-semibold"
+            style={{ backgroundColor: "#ccc", color: "#666", cursor: "not-allowed" }}
+          >
+            {buttonLabel}
+          </Button>
+        ) : (
+          <Link to={`/${clubSlug}/app/events/${event.id}/nominate`} className="block w-full no-underline">
+            <Button className="w-full !py-2 !rounded-md font-semibold" style={{ backgroundColor: brand, color: "white" }}>
+              {buttonLabel}
+            </Button>
+          </Link>
+        )}
 
         {/* VIEW NOMINATIONS */}
-        <Button
-          variant="secondary"
-          className="w-full !py-2 !rounded-md font-semibold"
-          as={Link}
-          to={`/${clubSlug}/app/events/${event.id}/nominations`}
-        >
-          View Nominations
-        </Button>
+        <Link to={`/${clubSlug}/app/events/${event.id}/nominations`} className="block w-full no-underline">
+          <Button variant="secondary" className="w-full !py-2 !rounded-md font-semibold">
+            View Nominations
+          </Button>
+        </Link>
       </div>
     </div>
   );

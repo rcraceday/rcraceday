@@ -98,7 +98,7 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
           </Link>
           {nominationsOpen && (
             <Link
-              to={`/${clubSlug}/app/nominate?eventId=${event.id}`}
+              to={`/${clubSlug}/app/events/${event.id}/nominate`}
               className="block w-[120px] justify-self-center no-underline"
             >
               <Button variant="success" className="!py-1.5 !text-xs w-full">
@@ -106,6 +106,14 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
               </Button>
             </Link>
           )}
+          <Link
+            to={`/${clubSlug}/app/events/${event.id}/nominations`}
+            className="block w-[120px] justify-self-center no-underline"
+          >
+            <Button variant="secondary" className="!py-1.5 !text-xs w-full">
+              Nominations
+            </Button>
+          </Link>
           {showResults && (
             <Link
               to={`/${clubSlug}/app/events/${event.id}/results`}

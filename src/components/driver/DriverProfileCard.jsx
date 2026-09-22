@@ -31,7 +31,7 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
 
   const brand = palette?.primary || "#0A66C2";
   const country = COUNTRIES.find((c) => c.name === driver.country);
-  const chassis = MANUFACTURERS.find((m) => m.name === driver.chassis_manufacturer);
+  const chassis = MANUFACTURERS.find((m) => m.name === driver.manufacturer);
 
   return (
     <div className="relative">

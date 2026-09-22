@@ -24,6 +24,7 @@ import Home from "@app/pages/home/Home";
 import Events from "@app/pages/events/Events";
 import EventDetails from "@app/pages/events/EventDetails";
 import EventNominate from "@app/pages/events/EventNominate";
+import NominationsView from "@app/pages/nominations/NominationsView";
 
 // CALENDAR
 import Calendar from "@app/pages/events/calendar/Calendar";
@@ -135,6 +136,7 @@ export default function AppRoutes() {
         <Route path="events" element={<Events />} />
         <Route path="events/:id" element={<EventDetails />} />
         <Route path="events/:eventId/nominate" element={<EventNominate />} />
+        <Route path="events/:eventId/nominations" element={<NominationsView />} />
         <Route path="profile" element={<UserProfile />} />
         <Route path="profile/edit" element={<EditUser />} />
 

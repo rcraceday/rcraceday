@@ -1,346 +1,110 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/supabaseClient";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
+import useTheme from "@app/providers/useTheme";
+import { buildLiveTimeCsv, buildLiveTimeRows } from "@app/pages/nominations/LiveTimeExport";
 
-export default function AdminNominations() {
+export default function AdminEventNominations() {
+  const { palette } = useTheme();
   const [events, setEvents] = useState([]);
-  const [eventId, setEventId] = useState(null);
-
+  const [eventId, setEventId] = useState("");
   const [event, setEvent] = useState(null);
   const [nominations, setNominations] = useState([]);
   const [entries, setEntries] = useState([]);
   const [drivers, setDrivers] = useState([]);
-  const [profiles, setProfiles] = useState([]);
   const [classes, setClasses] = useState([]);
-
-  const [activeTab, setActiveTab] = useState("drivers");
+  const [memberships, setMemberships] = useState([]);
+  const [clubName, setClubName] = useState("");
+  const [tab, setTab] = useState("drivers");
+  const [sort, setSort] = useState("name");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadUpcomingEvents();
+    supabase.from("events").select("id, name, event_date, club_id").order("event_date", { ascending: false }).then(({ data }) => {
+      setEvents(data || []);
+      if (data?.[0]) setEventId(data[0].id);
+    });
   }, []);
 
-  async function loadUpcomingEvents() {
-    const today = new Date().toISOString().split("T")[0];
-
-    const { data } = await window.supabase
-      .from("events")
-      .select("*")
-      .gte("event_date", today)
-      .order("event_date", { ascending: true });
-
-    setEvents(data || []);
-
-    if (data && data.length > 0) {
-      setEventId(data[0].id);
-    }
-  }
-
   useEffect(() => {
-    if (eventId) loadAll(eventId);
+    if (!eventId) return;
+    async function load() {
+      setLoading(true);
+      const { data: eventRow } = await supabase.from("events").select("*").eq("id", eventId).single();
+      const { data: nominationRows } = await supabase.from("nominations").select("*").eq("event_id", eventId);
+      const nominationIds = (nominationRows || []).map((item) => item.id);
+      const driverIds = (nominationRows || []).map((item) => item.driver_id);
+      const { data: entryRows } = nominationIds.length ? await supabase.from("nomination_entries").select("*").in("nomination_id", nominationIds) : { data: [] };
+      const { data: driverRows } = driverIds.length ? await supabase.from("drivers").select("*").in("id", driverIds) : { data: [] };
+      const classIds = (entryRows || []).map((item) => item.class_id);
+      const { data: classRows } = classIds.length ? await supabase.from("club_classes").select("id, name").in("id", classIds) : { data: [] };
+      const membershipIds = (driverRows || []).map((item) => item.membership_id).filter(Boolean);
+      const { data: membershipRows } = membershipIds.length ? await supabase.from("household_memberships").select("*").in("id", membershipIds) : { data: [] };
+      const { data: clubRow } = eventRow?.club_id ? await supabase.from("clubs").select("name").eq("id", eventRow.club_id).single() : { data: null };
+      setEvent(eventRow || null);
+      setNominations(nominationRows || []);
+      setEntries(entryRows || []);
+      setDrivers(driverRows || []);
+      setClasses(classRows || []);
+      setMemberships(membershipRows || []);
+      setClubName(clubRow?.name || "");
+      setLoading(false);
+    }
+    load();
   }, [eventId]);
 
-  async function loadAll(eventId) {
-    const { data: eventData } = await window.supabase
-      .from("events")
-      .select("*")
-      .eq("id", eventId)
-      .single();
-    setEvent(eventData);
+  const driverMap = useMemo(() => new Map(drivers.map((driver) => [driver.id, driver])), [drivers]);
+  const classMap = useMemo(() => new Map(classes.map((item) => [item.id, item.name || ""])), [classes]);
+  const entriesFor = (nominationId) => entries.filter((entry) => entry.nomination_id === nominationId).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+  const driverRows = nominations.map((nomination) => ({ nomination, driver: driverMap.get(nomination.driver_id), entries: entriesFor(nomination.id) })).filter((row) => row.driver);
+  const sortedDrivers = driverRows.slice().sort((a, b) => sort === "class" ? (classMap.get(a.entries.find((entry) => !entry.is_preference)?.class_id) || "").localeCompare(classMap.get(b.entries.find((entry) => !entry.is_preference)?.class_id) || "") : `${a.driver.last_name}${a.driver.first_name}`.localeCompare(`${b.driver.last_name}${b.driver.first_name}`));
+  const classRows = entries.filter((entry) => !entry.is_preference).reduce((groups, entry) => {
+    const name = classMap.get(entry.class_id) || "Unknown class";
+    const nomination = nominations.find((item) => item.id === entry.nomination_id);
+    const driver = nomination && driverMap.get(nomination.driver_id);
+    if (driver) groups[name] = [...(groups[name] || []), driver];
+    return groups;
+  }, {});
+  const csv = buildLiveTimeCsv(buildLiveTimeRows({ nominations, entries, drivers, classes, memberships, clubName }));
 
-    const { data: nominationData } = await window.supabase
-      .from("nominations")
-      .select("*")
-      .eq("event_id", eventId);
-    setNominations(nominationData || []);
-
-    const { data: entryData } = await window.supabase
-      .from("nomination_entries")
-      .select("*")
-      .in(
-        "nomination_id",
-        nominationData?.map((n) => n.id) || []
-      );
-    setEntries(entryData || []);
-
-    const driverIds = nominationData?.map((n) => n.driver_id) || [];
-    const { data: driverData } = await window.supabase
-      .from("drivers")
-      .select("*")
-      .in("id", driverIds);
-    setDrivers(driverData || []);
-
-    const { data: profileData } = await window.supabase
-      .from("driver_profiles")
-      .select("*")
-      .in("driver_id", driverIds);
-    setProfiles(profileData || []);
-
-    const { data: classData } = await window.supabase
-      .from("event_classes")
-      .select("*")
-      .eq("track", eventData.track);
-    setClasses(classData || []);
-  }
-
-  function getDriver(driverId) {
-    return drivers.find((d) => d.id === driverId);
-  }
-
-  function getProfile(driverId) {
-    return profiles.find((p) => p.driver_id === driverId);
-  }
-
-  function getEntriesForNomination(nominationId) {
-    return entries
-      .filter((e) => e.nomination_id === nominationId)
-      .sort((a, b) => a.order_index - b.order_index);
-  }
-
-  function getClassName(classId) {
-    return classes.find((c) => c.id === classId)?.class_name || "";
-  }
-
-  function membershipLabel(type) {
-    return type === "non_member" ? "Non Member" : "Member";
-  }
-
-  function generateCSV() {
-    if (!event) return "";
-
-    const header =
-      "FirstName,LastName,ClassName,TransponderNumber,LocalMembershipType";
-
-    const rows = [];
-
-    nominations.forEach((nom) => {
-      const driver = getDriver(nom.driver_id);
-      if (!driver) return;
-
-      const driverEntries = getEntriesForNomination(nom.id);
-
-      driverEntries.forEach((entry) => {
-        if (entry.is_preference) return;
-
-        const className = getClassName(entry.class_id);
-
-        rows.push([
-          driver.first_name || "",
-          driver.last_name || "",
-          className,
-          driver.transponder_number || "",
-          membershipLabel(driver.membership_type),
-        ]);
+  const requirementTally = useMemo(() => {
+    const seenGroups = new Set();
+    const counts = {};
+    nominations.forEach((nomination) => {
+      if (seenGroups.has(nomination.group_id)) return;
+      seenGroups.add(nomination.group_id);
+      const selected = nomination.merchandise?.requirements || {};
+      Object.entries(selected).forEach(([reqId, checked]) => {
+        if (checked) counts[reqId] = (counts[reqId] || 0) + 1;
       });
     });
+    return counts;
+  }, [nominations]);
 
-    rows.sort((a, b) => {
-      const ln = a[1].localeCompare(b[1]);
-      if (ln !== 0) return ln;
-      const fn = a[0].localeCompare(b[0]);
-      if (fn !== 0) return fn;
-      return a[2].localeCompare(b[2]);
-    });
-
-    return (
-      header +
-      "\n" +
-      rows.map((r) => r.join(",")).join("\n")
-    );
-  }
-
-  function downloadCSV() {
-    const csv = generateCSV();
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-
-    const filename = `${event.name}-${event.event_date}-livetime.csv`;
-
+  function downloadCsv() {
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
+    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    link.download = `${event?.name || "event"}-livetime.csv`;
     link.click();
-    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   }
 
-  const tabs = [
-    { id: "drivers", label: "Drivers" },
-    { id: "classes", label: "Classes" },
-    { id: "export", label: "Export" },
-  ];
+  async function togglePaid(nomination) {
+    const paid = nomination.paid !== true;
+    const { error } = await supabase.from("nominations").update({ paid }).eq("id", nomination.id);
+    if (error) return;
+    setNominations((current) => current.map((item) => item.id === nomination.id ? { ...item, paid } : item));
+  }
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 px-4 py-10">
-      <div className="max-w-5xl mx-auto space-y-8">
+  if (loading && !event) return <div className="min-h-screen flex items-center justify-center text-text-muted">Loading nominations...</div>;
 
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
-          Admin — Nominations
-        </h1>
-
-        {/* EVENT SELECTOR */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-200">
-            Select Event
-          </label>
-          <select
-            className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:ring-2 focus:ring-emerald-500"
-            value={eventId || ""}
-            onChange={(e) => setEventId(e.target.value)}
-          >
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>
-                {ev.name} — {ev.event_date}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {event && (
-          <>
-            {/* TABS */}
-            <div className="flex gap-2 border-b border-slate-800 pb-2">
-              {tabs.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTab(t.id)}
-                  className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
-                    activeTab === t.id
-                      ? "bg-slate-800 text-emerald-300 border border-slate-700 border-b-slate-800"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            {/* DRIVERS TAB */}
-            {activeTab === "drivers" && (
-              <div className="space-y-4">
-                {nominations
-                  .slice()
-                  .sort((a, b) => {
-                    const da = getDriver(a.driver_id);
-                    const db = getDriver(b.driver_id);
-                    return (
-                      da.last_name.localeCompare(db.last_name) ||
-                      da.first_name.localeCompare(db.first_name)
-                    );
-                  })
-                  .map((nom) => {
-                    const driver = getDriver(nom.driver_id);
-                    const profile = getProfile(nom.driver_id);
-                    const driverEntries = getEntriesForNomination(nom.id);
-
-                    return (
-                      <div
-                        key={nom.id}
-                        className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 space-y-2"
-                      >
-                        <div className="text-lg font-semibold text-slate-50">
-                          {driver.first_name} {driver.last_name}
-                        </div>
-
-                        <div className="text-sm text-slate-400">
-                          Membership: {membershipLabel(driver.membership_type)}
-                        </div>
-                        <div className="text-sm text-slate-400">
-                          Transponder: {driver.transponder_number || "—"}
-                        </div>
-
-                        <div className="pt-2">
-                          <div className="font-medium text-slate-200">
-                            Classes:
-                          </div>
-                          <ul className="list-disc ml-6 text-sm text-slate-300">
-                            {driverEntries.map((e) => (
-                              <li key={e.id}>
-                                {getClassName(e.class_id)}
-                                {e.is_preference && (
-                                  <span className="text-emerald-300 ml-1">
-                                    (Preference)
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-
-            {/* CLASSES TAB */}
-            {activeTab === "classes" && (
-              <div className="space-y-6">
-                {classes
-                  .slice()
-                  .sort((a, b) => a.order_index - b.order_index)
-                  .map((cls) => {
-                    const classDrivers = nominations
-                      .map((nom) => {
-                        const driver = getDriver(nom.driver_id);
-                        const driverEntries = getEntriesForNomination(nom.id);
-                        const entry = driverEntries.find(
-                          (e) => e.class_id === cls.id
-                        );
-                        return entry ? { driver, entry } : null;
-                      })
-                      .filter(Boolean);
-
-                    return (
-                      <div
-                        key={cls.id}
-                        className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 space-y-2"
-                      >
-                        <h2 className="text-xl font-semibold text-slate-50">
-                          {cls.class_name}
-                        </h2>
-
-                        {classDrivers.length === 0 && (
-                          <p className="text-sm text-slate-500">
-                            No drivers in this class.
-                          </p>
-                        )}
-
-                        {classDrivers.length > 0 && (
-                          <ul className="list-disc ml-6 text-sm text-slate-300">
-                            {classDrivers.map(({ driver, entry }) => (
-                              <li key={driver.id}>
-                                {driver.first_name} {driver.last_name}
-                                {entry.is_preference && (
-                                  <span className="text-emerald-300 ml-1">
-                                    (Preference)
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-
-            {/* EXPORT TAB */}
-            {activeTab === "export" && (
-              <div className="space-y-4">
-                <button
-                  onClick={downloadCSV}
-                  className="rounded-full bg-emerald-500 text-slate-950 px-5 py-2.5 text-sm font-semibold hover:bg-emerald-400 transition-colors"
-                >
-                  Download LiveTime CSV
-                </button>
-
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                  <pre className="whitespace-pre-wrap text-sm text-slate-300">
-                    {generateCSV()}
-                  </pre>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
+  return <div className="min-h-screen bg-background text-text-base"><PageTitle title="Admin nominations" style={{ color: palette?.primary }} /><main className="max-w-5xl mx-auto px-4 py-4 space-y-5"><select className="w-full rounded-md border border-surfaceBorder bg-white px-3 py-2" value={eventId} onChange={(e) => setEventId(e.target.value)}>{events.map((item) => <option key={item.id} value={item.id}>{item.name} - {item.event_date}</option>)}</select><div className="flex flex-wrap gap-2">{["drivers", "classes", "requirements", "full", "export"].map((item) => <Button key={item} variant={tab === item ? "primary" : "secondary"} onClick={() => setTab(item)}>{item === "drivers" ? "Drivers" : item === "classes" ? "By class" : item === "requirements" ? "Requirements" : item === "full" ? "Full sheet" : "Export"}</Button>)}</div>
+    {tab === "drivers" && <section className="space-y-3"><div className="flex justify-end"><select className="rounded-md border border-surfaceBorder bg-white px-3 py-2 text-sm" value={sort} onChange={(e) => setSort(e.target.value)}><option value="name">Sort by driver</option><option value="class">Sort by class</option></select></div>{sortedDrivers.map(({ nomination, driver, entries: driverEntries }) => <Card key={nomination.id} className="space-y-2"><div className="flex flex-wrap justify-between gap-2"><strong>{driver.first_name} {driver.last_name}</strong><span>{driver.permanent_number ? `#${driver.permanent_number}` : ""}</span></div><p className="text-sm text-text-muted">{Array.isArray(driver.sponsors) ? driver.sponsors.join(", ") : driver.sponsors || "No sponsor listed"}</p><p className="text-sm">{driverEntries.map((entry) => `${classMap.get(entry.class_id) || "Unknown class"}${entry.is_preference ? " (preference)" : ""}`).join(" · ")}</p></Card>)}</section>}
+    {tab === "classes" && <section className="space-y-3">{Object.entries(classRows).sort(([a], [b]) => a.localeCompare(b)).map(([name, classDrivers]) => <Card key={name}><h2 className="font-semibold">{name}</h2><p className="mt-2 text-sm text-text-muted">{classDrivers.sort((a, b) => `${a.last_name}${a.first_name}`.localeCompare(`${b.last_name}${b.first_name}`)).map((driver) => `${driver.first_name} ${driver.last_name}`).join(" · ")}</p></Card>)}</section>}
+    {tab === "requirements" && <section className="space-y-3">{(event?.club_requirements || []).length === 0 && <Card><p className="text-sm text-text-muted">No club requirements configured for this event.</p></Card>}{(event?.club_requirements || []).map((r) => <Card key={r.id} className="flex items-center justify-between"><span>{r.descriptor} — {r.item}</span><strong>{requirementTally[r.id] || 0}</strong></Card>)}</section>}
+    {tab === "full" && <div className="overflow-x-auto"><table className="w-full border-collapse text-sm"><thead><tr className="border-b border-surfaceBorder text-left"><th className="p-2">Driver</th><th className="p-2">Number</th><th className="p-2">Paid</th><th className="p-2">Classes</th><th className="p-2">Fee</th></tr></thead><tbody>{driverRows.map(({ nomination, driver, entries: driverEntries }) => <tr key={nomination.id} className="border-b border-surfaceBorder"><td className="p-2">{driver.first_name} {driver.last_name}</td><td className="p-2">{driver.permanent_number || ""}</td><td className="p-2"><button type="button" className="rounded-md border border-surfaceBorder px-2 py-1 text-xs" onClick={() => togglePaid(nomination)}>{nomination.paid ? "TRUE" : "FALSE"}</button></td><td className="p-2">{driverEntries.map((entry) => classMap.get(entry.class_id)).join(", ")}</td><td className="p-2">{nomination.total_fee ?? ""}</td></tr>)}</tbody></table></div>}
+    {tab === "export" && <Card className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-text-muted">Preferences are excluded from this LiveTime export.</p><Button onClick={downloadCsv}>Download LiveTime CSV</Button></div><pre className="max-h-[480px] overflow-auto rounded-md bg-surfaceAlt p-3 text-xs whitespace-pre-wrap">{csv}</pre></Card>}
+  </main></div>;
 }

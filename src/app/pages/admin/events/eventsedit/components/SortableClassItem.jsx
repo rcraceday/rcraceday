@@ -1,6 +1,7 @@
 // src/app/pages/admin/events/eventsedit/components/SortableClassItem.jsx
 import React from "react";
 import CMSSelect from "@cms/CMSSelect";
+import CMSInput from "@cms/CMSInput";
 import CMSButton from "@cms/CMSButton";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -17,6 +18,8 @@ import { CSS } from "@dnd-kit/utilities";
  *   - onChange(value)
  *   - onRemove()
  *   - label: label text for the selector
+ *   - maxEntries: optional max entries value for this class
+ *   - onMaxEntriesChange(value): called when max entries changes
  */
 export default function SortableClassItem({
   id,
@@ -25,6 +28,8 @@ export default function SortableClassItem({
   onChange,
   onRemove,
   label = "Class",
+  maxEntries = "",
+  onMaxEntriesChange,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
   const style = {
@@ -71,6 +76,18 @@ export default function SortableClassItem({
           onChange={onChange}
           options={options}
           placeholder={options.length === 0 ? "No classes available" : "Select class..."}
+        />
+      </div>
+
+      <div style={{ width: 140, flexShrink: 0 }}>
+        <CMSInput
+          type="number"
+          min="0"
+          label="Max Entries"
+          value={maxEntries === null || maxEntries === undefined ? "" : String(maxEntries)}
+          onChange={(v) => onMaxEntriesChange?.(v === "" ? "" : v)}
+          placeholder="Unlimited"
+          disabled={!value}
         />
       </div>
 

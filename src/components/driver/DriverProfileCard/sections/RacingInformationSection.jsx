@@ -7,7 +7,7 @@ export default function RacingInformationSection({ driver, chassis }) {
     !driver.favourite_classes?.length &&
     !driver.preferred_surface &&
     !driver.home_track &&
-    !driver.chassis_manufacturer
+    !driver.manufacturer
   ) {
     return null;
   }
@@ -30,7 +30,7 @@ export default function RacingInformationSection({ driver, chassis }) {
           </p>
         )}
 
-        {driver.chassis_manufacturer && (
+        {driver.manufacturer && (
           <p className="flex items-center gap-2">
             <span className="font-semibold">Chassis Manufacturer:</span>
 
@@ -43,7 +43,7 @@ export default function RacingInformationSection({ driver, chassis }) {
               />
             ) : (
               /* Otherwise → show the text */
-              driver.chassis_manufacturer
+              driver.manufacturer
             )}
           </p>
         )}

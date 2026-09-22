@@ -16,6 +16,7 @@ import SaveActions from "./components/SaveActions";
 
 import EventMerchandiseCard from "./components/EventMerchandiseCard";
 import EventClassAddOnsCard from "./components/EventClassAddOnsCard";
+import EventRequirementsCard from "./components/EventRequirementsCard";
 
 import EventPreviewModal from "./components/EventPreviewModal";
 
@@ -35,6 +36,7 @@ const initialEventState = {
   logo_file: null,
   classes: [],
   classes_by_day: [],
+  class_entry_limits: {},
   class_limit: 3,
   preference_enabled: true,
   nominations_open: "",
@@ -47,6 +49,7 @@ const initialEventState = {
 
   merchandise: [],
   class_add_ons: [],
+  club_requirements: [],
 
   available_classes: [],
 };
@@ -142,7 +145,14 @@ const normalizedDays = Array.isArray(data.days)
           class_add_ons: Array.isArray(data.class_add_ons)
             ? data.class_add_ons
             : [],
+          club_requirements: Array.isArray(data.club_requirements)
+            ? data.club_requirements
+            : [],
           classes: Array.isArray(data.classes) ? data.classes : [],
+          class_entry_limits:
+            data.class_entry_limits && typeof data.class_entry_limits === "object"
+              ? data.class_entry_limits
+              : {},
           is_multi_day: !!data.is_multi_day,
           available_classes: [],
         });
@@ -389,8 +399,10 @@ const payload = {
 
   classes_by_day: normalizedClassesByDay,
   classes: eventData.is_multi_day ? [] : eventData.classes ?? [],
+  class_entry_limits: eventData.class_entry_limits ?? {},
   merchandise: eventData.merchandise ?? [],
   class_add_ons: eventData.class_add_ons ?? [],
+  club_requirements: eventData.club_requirements ?? [],
 
   // ⭐ THIS WAS MISSING
   pricing: eventData.pricing ?? {},
@@ -555,6 +567,13 @@ if (eventData.is_multi_day) {
 
             <CMSCard title="Pricing">
               <EventPricingCard event={eventData} onChange={handleFieldChange} />
+            </CMSCard>
+
+            <CMSCard title="Club Requirements">
+              <EventRequirementsCard
+                event={eventData}
+                onChange={handleFieldChange}
+              />
             </CMSCard>
 
             <CMSCard title="Merchandise">

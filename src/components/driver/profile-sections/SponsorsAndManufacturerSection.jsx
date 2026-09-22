@@ -15,9 +15,8 @@ export default function SponsorsAndManufacturerSection({ driver, update }) {
     m.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // FIXED: use chassis_manufacturer (the real DB field)
   const selected = MANUFACTURERS.find(
-    (m) => m.name === driver.chassis_manufacturer
+    (m) => m.name === driver.manufacturer
   );
 
   return (
@@ -49,7 +48,7 @@ export default function SponsorsAndManufacturerSection({ driver, update }) {
       <div className="relative">
         <Input
           label="Manufacturer"
-          value={search || driver.chassis_manufacturer || ""}
+          value={search || driver.manufacturer || ""}
           onFocus={() => setShowDropdown(true)}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -67,8 +66,7 @@ export default function SponsorsAndManufacturerSection({ driver, update }) {
                 key={m.name}
                 className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2"
                 onClick={() => {
-                  update("manufacturer", m.name); // legacy field
-                  update("chassis_manufacturer", m.name); // real field
+                  update("manufacturer", m.name);
                   setSearch("");
                   setShowDropdown(false);
                 }}

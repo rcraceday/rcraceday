@@ -169,6 +169,7 @@ export default function EventDetails() {
   const [loading, setLoading] = useState(true);
 
   const [classMap, setClassMap] = useState({});
+  const [classEntryCounts, setClassEntryCounts] = useState({});
 
   const logoSrc = event?.logourl
     ? event.logourl.startsWith("http")
@@ -222,6 +223,43 @@ export default function EventDetails() {
   }
 
   loadClasses();
+}, [event]);
+
+// Load current entry counts per class so limits can show as "taken/max"
+useEffect(() => {
+  async function loadEntryCounts() {
+    const limits = event?.class_entry_limits;
+    if (!event?.id || !limits || Object.keys(limits).length === 0) {
+      setClassEntryCounts({});
+      return;
+    }
+
+    const { data: nominationRows } = await supabase
+      .from("nominations")
+      .select("id")
+      .eq("event_id", event.id);
+
+    const nominationIds = (nominationRows || []).map((row) => row.id);
+    if (nominationIds.length === 0) {
+      setClassEntryCounts({});
+      return;
+    }
+
+    const { data: entryRows } = await supabase
+      .from("nomination_entries")
+      .select("class_id")
+      .in("nomination_id", nominationIds)
+      .eq("is_preference", false);
+
+    const counts = {};
+    (entryRows || []).forEach((row) => {
+      counts[row.class_id] = (counts[row.class_id] || 0) + 1;
+    });
+
+    setClassEntryCounts(counts);
+  }
+
+  loadEntryCounts();
 }, [event]);
 
 
@@ -623,6 +661,12 @@ return (
                       ></span>
 
                       <span>{classMap[cid] || cid}</span>
+
+                      {event.class_entry_limits?.[cid] != null && (
+                        <span style={{ fontSize: 12, color: "#6B7280" }}>
+                          ({classEntryCounts[cid] || 0}/{event.class_entry_limits[cid]} entries)
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

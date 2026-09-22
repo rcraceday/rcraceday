@@ -138,6 +138,19 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
     value: c.id,
   }));
 
+  const entryLimits = event.class_entry_limits || {};
+
+  const setEntryLimit = (classId, value) => {
+    if (!classId) return;
+    const next = { ...entryLimits };
+    if (value === null || value === "") {
+      delete next[classId];
+    } else {
+      next[classId] = Math.max(0, Number(value));
+    }
+    onChange("class_entry_limits", next);
+  };
+
   return (
     <div
       style={{
@@ -280,6 +293,8 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
                                 removeClassFromDay(dayIndex, idx)
                               }
                               label={`Class ${idx + 1}`}
+                              maxEntries={cId ? entryLimits[cId] ?? "" : ""}
+                              onMaxEntriesChange={(v) => setEntryLimit(cId, v)}
                             />
                           </div>
                         );
