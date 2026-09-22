@@ -55,9 +55,7 @@ export default function OptionGroupEditor({
       />
 
       <div style={{ marginTop: 12 }}>
-        <strong>Values</strong>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {group.values.map((val, vi) => (
             <div
               key={vi}

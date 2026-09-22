@@ -9,10 +9,19 @@ import { supabase } from "@/supabaseClient";
 
 import OptionGroupEditor from "./OptionGroupEditor";
 
+const normalizeRequirements = (requirements) =>
+  (Array.isArray(requirements) ? requirements : []).map((requirement) => ({
+    description: requirement?.description || "",
+    items: (Array.isArray(requirement?.items) ? requirement.items : []).map((item) => ({
+      label: item?.label || "",
+    })),
+  }));
+
 export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
   const update = (field, value) => {
     setItem((prev) => ({ ...prev, [field]: value }));
   };
+  const requirements = normalizeRequirements(item.requirements);
 
   const updateClasses = (classId) => {
     const current = Array.isArray(item.classes) ? [...item.classes] : [];
@@ -120,6 +129,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
       photo_url: photoUrl || null,
       photo_file: null,
       options: optionsWithPhotos,
+      requirements: normalizeRequirements(item.requirements),
 
       // ⭐ REQUIRED FIX
       class_rules: classRulesWithPhotos,
@@ -247,6 +257,124 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
               }}
             />
           ))}
+        </CMSCard>
+
+        <CMSCard title="Requirements">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <strong>Checklist Requirements</strong>
+              <CMSButton
+                type="button"
+                onClick={() =>
+                  update("requirements", [
+                    ...requirements,
+                    { description: "", items: [] },
+                  ])
+                }
+              >
+                Add Requirements
+              </CMSButton>
+            </div>
+
+            {requirements.map((requirement, ri) => (
+              <div
+                key={ri}
+                style={{
+                  border: "1px solid #DDD",
+                  borderRadius: 6,
+                  padding: 12,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  background: "#FAFAFA",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <CMSInput
+                      label="Description"
+                      value={requirement.description}
+                      onChange={(description) => {
+                        const nextRequirements = requirements.map((entry, index) =>
+                          index === ri ? { ...entry, description } : entry
+                        );
+                        update("requirements", nextRequirements);
+                      }}
+                    />
+                  </div>
+                  <CMSButton
+                    type="button"
+                    onClick={() => {
+                      const nextRequirements = requirements.map((entry, index) =>
+                        index === ri
+                          ? {
+                              ...entry,
+                              items: [...entry.items, { label: "" }],
+                            }
+                          : entry
+                      );
+                      update("requirements", nextRequirements);
+                    }}
+                  >
+                    Add Item
+                  </CMSButton>
+                  <CMSButton
+                    type="button"
+                    variant="danger"
+                    onClick={() =>
+                      update(
+                        "requirements",
+                        requirements.filter((_, index) => index !== ri)
+                      )
+                    }
+                  >
+                    Remove
+                  </CMSButton>
+                </div>
+
+                {requirement.items.map((entry, ii) => (
+                  <div key={ii} style={{ display: "flex", gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <CMSInput
+                        label={`Item ${ii + 1}`}
+                        value={entry.label}
+                        onChange={(label) => {
+                          const nextRequirements = requirements.map((req, reqIndex) =>
+                            reqIndex === ri
+                              ? {
+                                  ...req,
+                                  items: req.items.map((itemEntry, itemIndex) =>
+                                    itemIndex === ii ? { ...itemEntry, label } : itemEntry
+                                  ),
+                                }
+                              : req
+                          );
+                          update("requirements", nextRequirements);
+                        }}
+                      />
+                    </div>
+                    <CMSButton
+                      type="button"
+                      variant="danger"
+                      onClick={() => {
+                        const nextRequirements = requirements.map((req, reqIndex) =>
+                          reqIndex === ri
+                            ? {
+                                ...req,
+                                items: req.items.filter((_, itemIndex) => itemIndex !== ii),
+                              }
+                            : req
+                        );
+                        update("requirements", nextRequirements);
+                      }}
+                    >
+                      Remove Item
+                    </CMSButton>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </CMSCard>
 
         <CMSCard title="Apply to Classes">
