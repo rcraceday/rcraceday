@@ -40,59 +40,41 @@ a:hover {
   position: relative;
 }
 
-.filter-dropdown-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  min-width: 10rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 6px;
-  background: #fff;
-  color: var(--text-base, #0a1a2f);
-  cursor: pointer;
+.filter-dropdown.is-open {
+  position: relative;
+  z-index: 300;
 }
 
+.filter-dropdown-menu-scroll {
+  scrollbar-gutter: stable;
+}
+
+.manage-classes-panel {
+  scrollbar-gutter: stable;
+  padding-right: 0.75rem;
+}
+
+/* FilterDropdown: layout + hover/focus via theme variable from component */
 .filter-dropdown-trigger:focus-visible {
-  outline: 2px solid var(--brand-color, #00438a);
+  outline: 2px solid var(--dropdown-primary, #00438a);
   outline-offset: 2px;
-}
-
-.filter-dropdown-trigger svg {
-  width: 1rem;
-  height: 1rem;
-  color: var(--brand-color, #00438a);
-}
-
-.filter-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  z-index: 60;
-  min-width: 100%;
-  overflow: hidden;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.filter-dropdown-option {
-  display: block;
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 0;
-  background: #fff;
-  color: var(--text-base, #0a1a2f);
-  cursor: pointer;
-  text-align: left;
 }
 
 .filter-dropdown-option:hover,
 .filter-dropdown-option:focus-visible {
-  background: var(--brand-color, #00438a);
+  background: var(--dropdown-primary, #00438a);
   color: #fff;
+  outline: none;
+}
+
+.filter-dropdown-menu--cms .filter-dropdown-option {
+  background: transparent;
+}
+
+.filter-dropdown-menu--cms .filter-dropdown-option:hover,
+.filter-dropdown-menu--cms .filter-dropdown-option:focus-visible {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
   outline: none;
 }
 
