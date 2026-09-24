@@ -94,16 +94,89 @@ function QuickAction({ to, icon: Icon, label }) {
   return content;
 }
 
+function CurrentNominationsPanel({ events, totalCount }) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        backgroundColor: "#FFFFFF",
+        borderRadius: "8px",
+        border: "1px solid #E5E7EB",
+        padding: "16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        boxSizing: "border-box",
+      }}
+    >
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", gap: "8px" }}>
+        <span
+          style={{
+            fontSize: "12px",
+            textTransform: "uppercase",
+            letterSpacing: "0.12em",
+            color: "#6B7280",
+            fontWeight: 600,
+          }}
+        >
+          Current Nominations
+        </span>
+        <span style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>
+          {totalCount} total
+        </span>
+      </div>
+      {events.length === 0 ? (
+        <p style={{ fontSize: "13px", color: "#6B7280", margin: 0 }}>
+          No nominations yet for upcoming events.
+        </p>
+      ) : (
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            width: "100%",
+          }}
+        >
+          {events.map((event) => (
+            <li
+              key={event.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                padding: "10px 12px",
+                borderRadius: "6px",
+                backgroundColor: "#F9FAFB",
+                border: "1px solid #E5E7EB",
+              }}
+            >
+              <span style={{ fontSize: "14px", fontWeight: 500, color: "#111827" }}>{event.name}</span>
+              <span style={{ fontSize: "14px", fontWeight: 700, color: "#111827", whiteSpace: "nowrap" }}>
+                {event.nominationCount}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { clubSlug } = useParams();
 
   const [stats, setStats] = useState({
     totalEvents: 0,
     upcomingEvents: 0,
-    pendingNominations: 0,
     activeMembers: 0,
     drivers: 0,
   });
+  const [nominationsByEvent, setNominationsByEvent] = useState([]);
 
   useEffect(() => {
     async function loadMetrics() {
@@ -122,10 +195,11 @@ export default function AdminDashboard() {
       const clubId = club.id;
 
       // Fetch all metrics safely
+      const nowIso = new Date().toISOString();
+
       const [
         totalEventsRes,
         upcomingEventsRes,
-        pendingNominationsRes,
         activeMembersRes,
         driversRes,
       ] = await Promise.all([
@@ -136,15 +210,10 @@ export default function AdminDashboard() {
 
         supabase
           .from("events")
-          .select("id", { count: "exact" })
+          .select("id, name, event_date")
           .eq("club_id", clubId)
-          .gte("event_date", new Date().toISOString()),
-
-        supabase
-          .from("nominations")
-          .select("id", { count: "exact" })
-          .eq("club_id", clubId)
-          .eq("status", "pending"),
+          .gte("event_date", nowIso)
+          .order("event_date", { ascending: true }),
 
         supabase
           .from("club_members")
@@ -155,10 +224,32 @@ export default function AdminDashboard() {
           .select("id", { count: "exact" }),
       ]);
 
+      const upcomingEvents = upcomingEventsRes.data || [];
+      const upcomingEventIds = upcomingEvents.map((event) => event.id);
+
+      const nominationCounts = {};
+      if (upcomingEventIds.length > 0) {
+        const { data: nominationRows } = await supabase
+          .from("nominations")
+          .select("event_id")
+          .in("event_id", upcomingEventIds);
+        (nominationRows || []).forEach((row) => {
+          nominationCounts[row.event_id] = (nominationCounts[row.event_id] || 0) + 1;
+        });
+      }
+
+      const eventsWithNominations = upcomingEvents
+        .filter((event) => nominationCounts[event.id] > 0)
+        .map((event) => ({
+          id: event.id,
+          name: event.name || "Untitled event",
+          nominationCount: nominationCounts[event.id],
+        }));
+
+      setNominationsByEvent(eventsWithNominations);
       setStats({
         totalEvents: totalEventsRes.count || 0,
-        upcomingEvents: upcomingEventsRes.count || 0,
-        pendingNominations: pendingNominationsRes.count || 0,
+        upcomingEvents: upcomingEventIds.length,
         activeMembers: activeMembersRes.count || 0,
         drivers: driversRes.count || 0,
       });
@@ -205,9 +296,15 @@ export default function AdminDashboard() {
           >
             <StatCard label="Total Events" value={stats.totalEvents} />
             <StatCard label="Upcoming Events" value={stats.upcomingEvents} />
-            <StatCard label="Pending Nominations" value={stats.pendingNominations} />
-            <StatCard label="Active Members" value={stats.activeMembers} />
             <StatCard label="Drivers" value={stats.drivers} />
+            <StatCard label="Active Members" value={stats.activeMembers} />
+          </div>
+
+          <div style={{ width: "100%", marginTop: "12px" }}>
+            <CurrentNominationsPanel
+              events={nominationsByEvent}
+              totalCount={nominationsByEvent.reduce((sum, event) => sum + event.nominationCount, 0)}
+            />
           </div>
         </section>
 

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ClipboardDocumentCheckIcon,
   ArrowLeftIcon,
@@ -40,6 +40,32 @@ import {
 } from "@/app/lib/eventClassLimit";
 
 const money = (value) => Number(value || 0).toLocaleString("en-AU", { style: "currency", currency: "AUD" });
+const moneyAmount = (value) => Math.round(Number(value || 0) * 100) / 100;
+
+async function fetchNominationCreditBalance(groupId, clubId) {
+  if (!groupId || !clubId) return 0;
+  const { data, error } = await supabase.from("nomination_credits").select("amount").eq("group_id", groupId).eq("club_id", clubId);
+  if (error) {
+    console.error("Error loading nomination credits:", error);
+    return 0;
+  }
+  return moneyAmount((data || []).reduce((sum, row) => sum + Number(row.amount || 0), 0));
+}
+
+async function insertNominationCredit(row) {
+  const amount = moneyAmount(row.amount);
+  if (!row.group_id || !row.club_id || !amount) return "";
+  const { error } = await supabase.from("nomination_credits").insert({
+    group_id: row.group_id,
+    club_id: row.club_id,
+    amount,
+    source_event_id: row.source_event_id || null,
+    applied_event_id: row.applied_event_id || null,
+    notes: row.notes || null,
+  });
+  if (error) return error.message || "Unable to update nomination credit.";
+  return "";
+}
 const emptySelection = () => ({
   classSlots: [],
   classesByDay: {},
@@ -84,6 +110,134 @@ function clearNominateDraft(eventId, membershipId) {
   } catch {
     /* ignore */
   }
+}
+
+function nominationSelectionSnapshot(selection) {
+  if (!selection || typeof selection !== "object") return {};
+  return {
+    classSlots: selection.classSlots,
+    classesByDay: selection.classesByDay,
+    racingDays: selection.racingDays,
+    preference: selection.preference,
+    preferencesByDay: selection.preferencesByDay,
+    merch: selection.merch,
+    addons: selection.addons,
+    transponders: selection.transponders,
+    visibleClassSlotsByDay: selection.visibleClassSlotsByDay,
+  };
+}
+
+function selectionFromNominationEntries(event, entries, classLimit) {
+  const sorted = (entries || []).slice().sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+  const selection = emptySelection();
+  if (!event?.is_multi_day) {
+    const classIds = sorted.filter((entry) => !entry.is_preference).map((entry) => entry.class_id);
+    const slots = [...classIds];
+    while (slots.length < classLimit) slots.push("");
+    selection.classSlots = slots.slice(0, classLimit);
+    const preferenceEntry = sorted.find((entry) => entry.is_preference);
+    selection.preference = preferenceEntry?.class_id || "";
+    return selection;
+  }
+  return selection;
+}
+
+function applySavedMerchandiseToSelection(selection, merch, event) {
+  if (!merch || typeof merch !== "object") return selection;
+  const next = { ...selection };
+  if (merch.merch && typeof merch.merch === "object") next.merch = merch.merch;
+  if (merch.addons && typeof merch.addons === "object") next.addons = merch.addons;
+  if (!event?.is_multi_day) return next;
+  const practiceDays = merch.practice_days;
+  if (!Array.isArray(practiceDays)) return next;
+  next.racingDays = { ...(next.racingDays || {}) };
+  practiceDays.forEach((dayIndex) => {
+    next.racingDays[dayIndex] = true;
+  });
+  return next;
+}
+
+function pricingRowIdentity(row) {
+  return [
+    row?.kind || "",
+    row?.driverId || "",
+    row?.classId || "",
+    row?.itemId || "",
+    row?.lineIndex ?? "",
+    row?.slotIndex ?? "",
+    row?.label || "",
+  ].join("::");
+}
+
+function additionalPricingRows(currentRows, settledRows) {
+  const settledByKey = new Map(
+    (settledRows || []).map((row) => [pricingRowIdentity(row), Number(row.amount || 0)])
+  );
+  return (currentRows || []).filter((row) => {
+    const key = pricingRowIdentity(row);
+    if (!settledByKey.has(key)) return true;
+    return Number(row.amount || 0) > settledByKey.get(key) + 0.005;
+  });
+}
+
+function collectSelectionClassIds(selectionsMap) {
+  const ids = new Set();
+  Object.values(selectionsMap || {}).forEach((selection) => {
+    (selection?.classSlots || []).filter(Boolean).forEach((id) => ids.add(id));
+    Object.values(selection?.classesByDay || {}).forEach((value) => {
+      if (Array.isArray(value)) value.filter(Boolean).forEach((id) => ids.add(id));
+      else if (value) ids.add(value);
+    });
+    if (selection?.preference) ids.add(selection.preference);
+    Object.values(selection?.preferencesByDay || {}).forEach((id) => {
+      if (id) ids.add(id);
+    });
+  });
+  return Array.from(ids);
+}
+
+function padDriverSelectionsForEvent(current, event, drivers, classLimit) {
+  const next = { ...current };
+  const dayCount = event?.is_multi_day ? (event.days || []).length : 0;
+  drivers.forEach((driver) => {
+    const existing = next[driver.id];
+    if (!existing) {
+      const classesByDay = {};
+      const racingDays = {};
+      if (event?.is_multi_day) {
+        for (let i = 0; i < dayCount; i += 1) {
+          const slotsPerDay = multiDaySlotsPerDay(event, i);
+          classesByDay[i] = Array.from({ length: slotsPerDay }, () => "");
+          racingDays[i] = false;
+        }
+      }
+      next[driver.id] = {
+        ...emptySelection(),
+        classesByDay,
+        racingDays,
+        classSlots: Array.from({ length: classLimit }, () => ""),
+      };
+      return;
+    }
+    if (!existing.transponders) existing.transponders = {};
+    if (!existing.racingDays) existing.racingDays = {};
+    if (!existing.visibleClassSlotsByDay) existing.visibleClassSlotsByDay = {};
+    if (event?.is_multi_day) {
+      const classesByDay = { ...existing.classesByDay };
+      const racingDays = { ...existing.racingDays };
+      for (let i = 0; i < dayCount; i += 1) {
+        const slotsPerDay = multiDaySlotsPerDay(event, i);
+        classesByDay[i] = getDayClassSlots(classesByDay, i, slotsPerDay);
+        if (racingDays[i] == null) racingDays[i] = (classesByDay[i] || []).some(Boolean);
+      }
+      next[driver.id] = { ...existing, classesByDay, racingDays };
+    } else {
+      const slots = (existing.classSlots || []).slice();
+      while (slots.length < classLimit) slots.push("");
+      next[driver.id] = { ...existing, classSlots: slots.slice(0, classLimit) };
+    }
+  });
+  return next;
 }
 
 function formatDate(iso) {
@@ -341,10 +495,18 @@ function flattenRequirements(requirements) {
   });
 }
 
-function Section({ title, icon: SectionIcon, brand, children }) {
+function Section({ title, icon: SectionIcon, brand, children, highlighted, id }) {
   if (!children) return null;
   return (
-    <section style={{ marginTop: "16px" }}>
+    <section
+      id={id}
+      style={{ marginTop: "16px" }}
+      className={
+        highlighted
+          ? "rounded-md border border-red-300 bg-red-50 p-3 ring-2 ring-red-200"
+          : undefined
+      }
+    >
       <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
         <SectionIcon className="h-5 w-5" style={{ color: brand }} />
         <h2 style={{ fontSize: "16px", fontWeight: 600 }}>{title}</h2>
@@ -474,6 +636,7 @@ function PurchaseLineEditor({
 
 export default function EventNominate() {
   const { eventId, clubSlug } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { club } = useClub();
   const { membership } = useMembership();
@@ -489,6 +652,9 @@ export default function EventNominate() {
   const [selections, setSelections] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [errorPlacement, setErrorPlacement] = useState("page");
+  const [focusSection, setFocusSection] = useState("");
+  const checkoutErrorRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [assignedDriverClasses, setAssignedDriverClasses] = useState([]);
   const [saved, setSaved] = useState(false);
@@ -500,6 +666,13 @@ export default function EventNominate() {
   const [affiliatedClubId, setAffiliatedClubId] = useState("");
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [draftScope, setDraftScope] = useState("");
+  const [hydrationReady, setHydrationReady] = useState(false);
+  const [priorHouseholdPaid, setPriorHouseholdPaid] = useState(0);
+  const [hadPaidNominations, setHadPaidNominations] = useState(false);
+  const [paymentSettledForDue, setPaymentSettledForDue] = useState(null);
+  const [paidBreakdownSnapshot, setPaidBreakdownSnapshot] = useState([]);
+  const [accountCreditBalance, setAccountCreditBalance] = useState(0);
+  const paidSnapshotCapturedRef = useRef(false);
 
   const logoSrc = event?.logourl
     ? event.logourl.startsWith("http")
@@ -507,12 +680,31 @@ export default function EventNominate() {
       : `https://mvcttnmclrvaatdgzhpb.supabase.co/storage/v1/object/public/club-assets/${event.logourl}`
     : null;
 
+  function showPageError(message) {
+    setError(message);
+    setErrorPlacement("page");
+    setFocusSection("");
+  }
+
+  function showCheckoutError(message, section = "") {
+    setError(message);
+    setErrorPlacement("checkout");
+    setFocusSection(section);
+  }
+
+  useEffect(() => {
+    if (!error || errorPlacement !== "checkout") return;
+    const focusEl = focusSection ? document.getElementById(`nominate-focus-${focusSection}`) : null;
+    const target = focusEl || checkoutErrorRef.current;
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error, errorPlacement, focusSection]);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const { data: eventRow, error: eventError } = await supabase.from("events").select("*").eq("id", eventId).single();
       if (cancelled) return;
-      if (eventError) setError("Unable to load this event nomination.");
+      if (eventError) showPageError("Unable to load this event nomination.");
       setEvent(eventRow || null);
 
       if (eventRow?.track) {
@@ -543,7 +735,7 @@ export default function EventNominate() {
           .select("id, name")
           .in("id", Array.from(classIdSet));
         if (cancelled) return;
-        if (classError) setError("Unable to load this event nomination.");
+        if (classError) showPageError("Unable to load this event nomination.");
         setClubClasses(classRows || []);
       } else if (!cancelled) {
         setClubClasses([]);
@@ -686,65 +878,151 @@ export default function EventNominate() {
   }
 
   useEffect(() => {
-    if (!eventId || !membership?.id) return;
-    const draft = readNominateDraft(eventId, membership.id);
-    if (draft?.selections && typeof draft.selections === "object") setSelections(draft.selections);
-    if (draft?.requirementSelections && typeof draft.requirementSelections === "object") {
-      setRequirementSelections(draft.requirementSelections);
-    }
-    if (typeof draft?.clubAffiliationConfirmed === "boolean") {
-      setClubAffiliationConfirmed(draft.clubAffiliationConfirmed);
-    }
-    if (typeof draft?.affiliatedClubId === "string") setAffiliatedClubId(draft.affiliatedClubId);
-    if (typeof draft?.selectedDriverId === "string") setSelectedDriverId(draft.selectedDriverId);
-    setDraftScope(`${eventId}:${membership.id}`);
-  }, [eventId, membership?.id]);
+    setHydrationReady(false);
+    setPriorHouseholdPaid(0);
+    setHadPaidNominations(false);
+    setPaymentSettledForDue(null);
+    setPaidBreakdownSnapshot([]);
+    setAccountCreditBalance(0);
+    paidSnapshotCapturedRef.current = false;
+  }, [eventId, membership?.id, location.key]);
 
   useEffect(() => {
-    if (!event || !drivers.length) return;
-    setSelections((current) => {
-      const next = { ...current };
-      const dayCount = event.is_multi_day ? (event.days || []).length : 0;
-      drivers.forEach((driver) => {
-        const existing = next[driver.id];
-        if (!existing) {
-          const classesByDay = {};
-          const racingDays = {};
-          if (event.is_multi_day) {
-            for (let i = 0; i < dayCount; i += 1) {
-              const slotsPerDay = multiDaySlotsPerDay(event, i);
-              classesByDay[i] = Array.from({ length: slotsPerDay }, () => "");
-              racingDays[i] = false;
-            }
+    if (!eventId || !membership?.id || !event || loadingDrivers || !drivers.length) return;
+    let cancelled = false;
+
+    async function hydrateFromSavedOrDraft() {
+      const { data: nominationRows } = await supabase
+        .from("nominations")
+        .select("id, driver_id, paid, merchandise")
+        .eq("event_id", eventId)
+        .eq("group_id", membership.id);
+
+      if (cancelled) return;
+
+      const scope = `${eventId}:${membership.id}`;
+
+      const creditClubId = event?.club_id ?? club?.id;
+      const creditBalance = await fetchNominationCreditBalance(membership.id, creditClubId);
+      if (cancelled) return;
+      setAccountCreditBalance(creditBalance);
+
+      if (nominationRows?.length) {
+        const nominationIds = nominationRows.map((row) => row.id);
+        const { data: entryRows } = await supabase
+          .from("nomination_entries")
+          .select("nomination_id, class_id, is_preference, order_index")
+          .in("nomination_id", nominationIds);
+
+        const entriesByNomination = new Map();
+        (entryRows || []).forEach((entry) => {
+          if (!entriesByNomination.has(entry.nomination_id)) entriesByNomination.set(entry.nomination_id, []);
+          entriesByNomination.get(entry.nomination_id).push(entry);
+        });
+
+        let nextSelections = {};
+        nominationRows.forEach((nomination) => {
+          const merch = nomination.merchandise && typeof nomination.merchandise === "object" ? nomination.merchandise : {};
+          const entries = entriesByNomination.get(nomination.id) || [];
+          let selection;
+          if (merch.selection_snapshot && typeof merch.selection_snapshot === "object") {
+            selection = { ...emptySelection(), ...merch.selection_snapshot };
+          } else {
+            selection = selectionFromNominationEntries(event, entries, classLimit);
           }
-          next[driver.id] = { ...emptySelection(), classesByDay, racingDays, classSlots: Array.from({ length: classLimit }, () => "") };
-          return;
+          selection = applySavedMerchandiseToSelection(selection, merch, event);
+          nextSelections[nomination.driver_id] = selection;
+        });
+
+        nextSelections = padDriverSelectionsForEvent(nextSelections, event, drivers, classLimit);
+
+        const savedClassIds = collectSelectionClassIds(nextSelections);
+        if (savedClassIds.length) {
+          const { data: savedClassRows } = await supabase.from("club_classes").select("id, name").in("id", savedClassIds);
+          if (!cancelled && savedClassRows?.length) {
+            setClubClasses((prev) => {
+              const byId = new Map((prev || []).map((row) => [row.id, row]));
+              savedClassRows.forEach((row) => byId.set(row.id, row));
+              return Array.from(byId.values()).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+            });
+          }
         }
-        if (!existing.transponders) existing.transponders = {};
-        if (!existing.racingDays) existing.racingDays = {};
-        if (!existing.visibleClassSlotsByDay) existing.visibleClassSlotsByDay = {};
-        if (event.is_multi_day) {
-          const classesByDay = { ...existing.classesByDay };
-          const racingDays = { ...existing.racingDays };
-          for (let i = 0; i < dayCount; i += 1) {
-            const slotsPerDay = multiDaySlotsPerDay(event, i);
-            classesByDay[i] = getDayClassSlots(classesByDay, i, slotsPerDay);
-            if (racingDays[i] == null) racingDays[i] = (classesByDay[i] || []).some(Boolean);
-          }
-          next[driver.id] = { ...existing, classesByDay, racingDays };
+
+        const firstMerch =
+          nominationRows[0]?.merchandise && typeof nominationRows[0].merchandise === "object" && !Array.isArray(nominationRows[0].merchandise)
+            ? nominationRows[0].merchandise
+            : {};
+        const feeSum = nominationRows.reduce((sum, row) => sum + Number(row.total_fee || 0), 0);
+        const storedPaid = Number(firstMerch.household_paid_total || firstMerch.prior_household_paid || 0);
+        setPriorHouseholdPaid(feeSum > 0 ? feeSum : storedPaid);
+        setHadPaidNominations(true);
+
+        setSelections(nextSelections);
+        if (firstMerch.requirements && typeof firstMerch.requirements === "object") {
+          setRequirementSelections(firstMerch.requirements);
+        }
+        const rcraId =
+          typeof firstMerch.affiliated_rcra_club_id === "string" ? firstMerch.affiliated_rcra_club_id : "";
+        if (rcraId) {
+          setAffiliatedClubId(rcraId);
+          setClubAffiliationConfirmed(true);
+        } else if (typeof firstMerch.affiliated_club_name === "string" && firstMerch.affiliated_club_name.trim()) {
+          const match = rcraClubs.find((item) => item.name === firstMerch.affiliated_club_name.trim());
+          if (match?.id) setAffiliatedClubId(match.id);
+          setClubAffiliationConfirmed(true);
+        }
+        if (typeof firstMerch.payment_method === "string" && firstMerch.payment_method) {
+          setPaymentMethod(firstMerch.payment_method);
         } else {
-          const slots = (existing.classSlots || []).slice();
-          while (slots.length < classLimit) slots.push("");
-          next[driver.id] = { ...existing, classSlots: slots.slice(0, classLimit) };
+          setPaymentMethod("");
         }
-      });
-      return next;
-    });
-  }, [event, drivers, classLimit, classLimitPerDay]);
+        if (Array.isArray(firstMerch.paid_checkout_breakdown)) {
+          setPaidBreakdownSnapshot(firstMerch.paid_checkout_breakdown);
+        } else {
+          setPaidBreakdownSnapshot([]);
+        }
+        setDraftScope(scope);
+        setHydrationReady(true);
+        return;
+      }
+
+      setHadPaidNominations(false);
+      setPriorHouseholdPaid(0);
+      const draft = readNominateDraft(eventId, membership.id);
+      if (draft?.selections && typeof draft.selections === "object") {
+        setSelections(padDriverSelectionsForEvent(draft.selections, event, drivers, classLimit));
+      } else {
+        setSelections(padDriverSelectionsForEvent({}, event, drivers, classLimit));
+      }
+      if (draft?.requirementSelections && typeof draft.requirementSelections === "object") {
+        setRequirementSelections(draft.requirementSelections);
+      }
+      if (typeof draft?.clubAffiliationConfirmed === "boolean") {
+        setClubAffiliationConfirmed(draft.clubAffiliationConfirmed);
+      }
+      if (typeof draft?.affiliatedClubId === "string") setAffiliatedClubId(draft.affiliatedClubId);
+      if (typeof draft?.selectedDriverId === "string") setSelectedDriverId(draft.selectedDriverId);
+      setPaymentMethod("");
+      setPaymentConfirmed(false);
+      setPaymentSettledForDue(null);
+      setDraftScope(scope);
+      setHydrationReady(true);
+    }
+
+    hydrateFromSavedOrDraft();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId, membership?.id, event, drivers, loadingDrivers, classLimit, rcraClubs, club?.id, location.key]);
+
+  useEffect(() => {
+    if (!hydrationReady || !event || !drivers.length) return;
+    setSelections((current) => padDriverSelectionsForEvent(current, event, drivers, classLimit));
+  }, [hydrationReady, event, drivers, classLimit, classLimitPerDay]);
 
   useEffect(() => {
     const scope = eventId && membership?.id ? `${eventId}:${membership.id}` : "";
-    if (!scope || draftScope !== scope) return;
+    if (!hydrationReady || !scope || draftScope !== scope) return;
     writeNominateDraft(eventId, membership.id, {
       selections,
       requirementSelections,
@@ -761,6 +1039,7 @@ export default function EventNominate() {
     clubAffiliationConfirmed,
     affiliatedClubId,
     selectedDriverId,
+    hydrationReady,
   ]);
 
   useEffect(() => {
@@ -812,8 +1091,12 @@ export default function EventNominate() {
       currentValue,
     });
     if (limitErr) {
-      setError(limitErr);
-      setTimeout(() => setError(""), 2500);
+      showPageError(limitErr);
+      setTimeout(() => {
+        setError("");
+        setErrorPlacement("page");
+        setFocusSection("");
+      }, 2500);
       return;
     }
     const slots = getDayClassSlots(nextByDay, dayIndex, slotsPerDay);
@@ -1189,16 +1472,16 @@ export default function EventNominate() {
       const lines = purchaseLinesForItem(item, entry, { locked });
       if (locked) {
         if (hasOptions && !lines.every((line) => optionsComplete(item.options, line.options))) {
-          return `Choose options for ${item.name}.`;
+          return { message: `Choose options for ${item.name}.`, section: "merchandise" };
         }
         if (!hasOptions && totalLineQty(lines) < 1) {
-          return `${item.name} is required.`;
+          return { message: `${item.name} is required.`, section: "merchandise" };
         }
         continue;
       }
       if (totalLineQty(lines) <= 0) continue;
       if (hasOptions && !lines.every((line) => optionsComplete(item.options, line.options))) {
-        return `Choose options for ${item.name}.`;
+        return { message: `Choose options for ${item.name}.`, section: "merchandise" };
       }
     }
 
@@ -1212,27 +1495,32 @@ export default function EventNominate() {
       const lines = purchaseLinesForItem(addon, entry, { locked });
       if (locked) {
         if (hasOptions && !lines.every((line) => optionsComplete(addon.options, line.options))) {
-          return `Choose options for ${addon.name}.`;
+          return { message: `Choose options for ${addon.name}.`, section: "addons" };
         }
         if (!hasOptions && totalLineQty(lines) < 1) {
-          return `${addon.name} is required.`;
+          return { message: `${addon.name} is required.`, section: "addons" };
         }
         continue;
       }
       if (totalLineQty(lines) <= 0) continue;
       if (hasOptions && !lines.every((line) => optionsComplete(addon.options, line.options))) {
-        return `Choose options for ${addon.name}.`;
+        return { message: `Choose options for ${addon.name}.`, section: "addons" };
       }
     }
-    return "";
+    return null;
   }
 
   function validateActiveDriversPurchases(active) {
     for (const { driver, selection } of active) {
       const purchaseErr = validatePurchaseSelection(selection);
-      if (purchaseErr) return `${driver.first_name} ${driver.last_name}: ${purchaseErr}`;
+      if (purchaseErr) {
+        return {
+          message: `${driver.first_name} ${driver.last_name}: ${purchaseErr.message}`,
+          section: purchaseErr.section,
+        };
+      }
     }
-    return "";
+    return null;
   }
 
   function checkoutBreakdownFor(driver, selection) {
@@ -1444,8 +1732,42 @@ export default function EventNominate() {
     return rows;
   }
 
+  function householdCheckoutBreakdown(selectionsMap = selections, driverList = drivers) {
+    const family = membership?.membership_type === "family" || driverList.length > 1;
+    return driverList.flatMap((driver) => {
+      const driverSelection = selectionsMap[driver.id] || emptySelection();
+      if (!hasNominationActivity(driverSelection)) return [];
+      const prefix = family ? `${driver.first_name} ${driver.last_name}` : "";
+      return checkoutBreakdownFor(driver, driverSelection).map((row) => ({
+        ...row,
+        label: prefix ? `${prefix}: ${row.label}` : row.label,
+      }));
+    });
+  }
+
   const householdTotal = drivers.reduce((sum, driver) => sum + driverTotal(driver), 0);
+  const cartDue = moneyAmount(Math.max(0, householdTotal - priorHouseholdPaid));
+  const reductionCredit = moneyAmount(Math.max(0, priorHouseholdPaid - householdTotal));
+  const creditApplied = moneyAmount(Math.min(Math.max(0, accountCreditBalance), cartDue));
+  const amountToPay = moneyAmount(Math.max(0, cartDue - creditApplied));
+  const amountDue = cartDue;
+  const nominationCredit = reductionCredit;
+  const checkoutReady =
+    amountToPay <= 0.005 || (paymentConfirmed && paymentSettledForDue === amountToPay);
   const flatRequirements = useMemo(() => flattenRequirements(event?.club_requirements), [event?.club_requirements]);
+
+  useEffect(() => {
+    if (!hydrationReady || paidSnapshotCapturedRef.current) return;
+    if (!hadPaidNominations) return;
+    paidSnapshotCapturedRef.current = true;
+    if (priorHouseholdPaid <= 0 && householdTotal > 0) {
+      setPriorHouseholdPaid(householdTotal);
+    }
+    if (paidBreakdownSnapshot.length === 0) {
+      const rows = householdCheckoutBreakdown();
+      if (rows.length) setPaidBreakdownSnapshot(rows);
+    }
+  }, [hydrationReady, hadPaidNominations]);
 
   function startPayment(method) {
     const active = drivers
@@ -1453,41 +1775,65 @@ export default function EventNominate() {
       .filter(({ selection }) => hasNominationActivity(selection));
     const purchaseErr = validateActiveDriversPurchases(active);
     if (purchaseErr) {
-      setError(purchaseErr);
+      showCheckoutError(purchaseErr.message, purchaseErr.section);
       return;
     }
+    setError("");
+    setErrorPlacement("page");
+    setFocusSection("");
     setPaymentMethod(method);
+    setPaymentSettledForDue(amountToPay);
     setPaymentConfirmed(true);
   }
 
   async function confirmPaymentAndNominations() {
-    if (!membership?.id) return setError("Membership information is not available.");
+    if (!membership?.id) return showCheckoutError("Membership information is not available.");
+    if (amountToPay > 0.005 && !paymentConfirmed) {
+      return showCheckoutError(`Pay the balance due (${money(amountToPay)}) before confirming.`);
+    }
     const active = drivers
       .map((driver) => ({ driver, selection: selections[driver.id] || emptySelection() }))
       .filter(({ selection }) => hasNominationActivity(selection));
     if (!active.length) {
-      return setError("Select at least one class or a practice day for a driver.");
+      return showCheckoutError("Select at least one class or a practice day for a driver.", "classes");
     }
-    if (requiresRcraClub && !clubAffiliationConfirmed) return setError("You must confirm your RCRA club affiliation.");
-    if (requiresRcraClub && !affiliatedClubId) return setError("Select your RCRA club.");
+    if (requiresRcraClub && !clubAffiliationConfirmed) {
+      return showCheckoutError("You must confirm your RCRA club affiliation.", "rcra");
+    }
+    if (requiresRcraClub && !affiliatedClubId) {
+      return showCheckoutError("Select your RCRA club.", "rcra");
+    }
 
     for (const { selection } of active) {
       const limitErr = validateDriverClassSelections(event, selection);
-      if (limitErr) return setError(limitErr);
+      if (limitErr) return showCheckoutError(limitErr, "classes");
     }
     const purchaseErr = validateActiveDriversPurchases(active);
-    if (purchaseErr) return setError(purchaseErr);
+    if (purchaseErr) return showCheckoutError(purchaseErr.message, purchaseErr.section);
     for (const { selection } of active) {
       for (const classId of selectedClassIds(selection)) {
         const usage = classUsage(classId);
         if (usage && usage.taken > usage.limit) {
-          return setError(`${classMap.get(classId) || "A class"} is full. Please choose another class.`);
+          return showCheckoutError(
+            `${classMap.get(classId) || "A class"} is full. Please choose another class.`,
+            "classes"
+          );
         }
       }
     }
 
     setSaving(true);
     setError("");
+    setErrorPlacement("page");
+    setFocusSection("");
+
+    const affiliatedClubName =
+      requiresRcraClub && affiliatedClubId
+        ? rcraClubs.find((item) => item.id === affiliatedClubId)?.name || null
+        : null;
+    const markPaid = amountToPay <= 0.005 || paymentConfirmed;
+    const checkoutBreakdownAtSave = householdCheckoutBreakdown();
+    const creditClubId = event?.club_id ?? club?.id;
 
     const { data: existing } = await supabase.from("nominations").select("id").eq("event_id", eventId).eq("group_id", membership.id);
     const existingIds = (existing || []).map((item) => item.id);
@@ -1505,10 +1851,9 @@ export default function EventNominate() {
             event_id: eventId,
             driver_id: driver.id,
             group_id: membership.id,
-            club_id: club?.id || driver.club_id,
-            affiliated_club_id: affiliatedClubId,
+            club_id: event?.club_id ?? club?.id ?? driver.club_id,
             total_fee: driverTotal(driver),
-            paid: true,
+            paid: markPaid,
             merchandise: {
               merch: selection.merch,
               addons: selection.addons,
@@ -1516,6 +1861,15 @@ export default function EventNominate() {
               payment_method: paymentMethod,
               practice_days: practiceMeta.practice_days,
               practice_class_ids: practiceMeta.practice_class_ids,
+              affiliated_club_name: affiliatedClubName,
+              affiliated_rcra_club_id: affiliatedClubId || null,
+              selection_snapshot: nominationSelectionSnapshot(selection),
+              prior_household_paid: priorHouseholdPaid,
+              household_amount_due: amountToPay,
+              nomination_credit_amount: reductionCredit,
+              credit_applied: creditApplied,
+              household_paid_total: markPaid ? householdTotal : priorHouseholdPaid,
+              paid_checkout_breakdown: checkoutBreakdownAtSave,
             },
           };
         })
@@ -1523,7 +1877,7 @@ export default function EventNominate() {
       .select("id, driver_id");
 
     if (nominationError || !nominations) {
-      setError(nominationError?.message || "Unable to save nominations.");
+      showCheckoutError(nominationError?.message || "Unable to save nominations.");
       setSaving(false);
       return;
     }
@@ -1562,11 +1916,38 @@ export default function EventNominate() {
 
     const { error: entryError } = await supabase.from("nomination_entries").insert(entries);
 
+    if (!entryError && creditClubId && membership?.id) {
+      if (reductionCredit > 0.005) {
+        const creditErr = await insertNominationCredit({
+          group_id: membership.id,
+          club_id: creditClubId,
+          amount: reductionCredit,
+          source_event_id: eventId,
+          notes: `Credit from reduced nomination (${event?.name || eventId})`,
+        });
+        if (creditErr) console.error("Error issuing nomination credit:", creditErr);
+      }
+      if (creditApplied > 0.005) {
+        const applyErr = await insertNominationCredit({
+          group_id: membership.id,
+          club_id: creditClubId,
+          amount: -creditApplied,
+          applied_event_id: eventId,
+          notes: `Credit applied to nomination (${event?.name || eventId})`,
+        });
+        if (applyErr) console.error("Error applying nomination credit:", applyErr);
+      }
+    }
+
+    const hostClubId = event?.club_id ?? club?.id;
     const driverClassesToUpdate = [];
     active.forEach(({ driver, selection }) => {
+      const rowClubId = hostClubId ?? driver.club_id;
+      if (!rowClubId) return;
       for (const classId in selection.transponders) {
         driverClassesToUpdate.push({
           driver_id: driver.id,
+          club_id: rowClubId,
           class_id: classId,
           transponder_number: selection.transponders[classId],
         });
@@ -1578,7 +1959,7 @@ export default function EventNominate() {
     }
 
     setSaving(false);
-    if (entryError) return setError(entryError.message || "Unable to save class entries.");
+    if (entryError) return showCheckoutError(entryError.message || "Unable to save class entries.");
     clearNominateDraft(eventId, membership.id);
     setSaved(true);
     navigate(`/${clubSlug}/app/events/${eventId}/nominations`);
@@ -1597,7 +1978,10 @@ export default function EventNominate() {
     ];
   }
 
-  if (loading || loadingDrivers) {
+  const awaitingNominationHydration =
+    Boolean(eventId && membership?.id && event && !loadingDrivers && drivers.length > 0 && !hydrationReady);
+
+  if (loading || loadingDrivers || awaitingNominationHydration) {
     return (
       <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
         <PageTitle icon={ClipboardDocumentCheckIcon} title="Nominate" style={{ color: brand }} />
@@ -1626,19 +2010,64 @@ export default function EventNominate() {
   const selection = selectedDriver ? selections[selectedDriver.id] || emptySelection() : emptySelection();
   const classIds = selectedClassIds(selection);
   const currentDriverTotal = selectedDriver ? driverTotal(selectedDriver) : 0;
-  const pricingBreakdownRows = isFamily
-    ? drivers.flatMap((driver) => {
-        const driverSelection = selections[driver.id] || emptySelection();
-        if (!hasNominationActivity(driverSelection)) return [];
-        const prefix = `${driver.first_name} ${driver.last_name}`;
-        return checkoutBreakdownFor(driver, driverSelection).map((row) => ({
-          ...row,
-          label: `${prefix}: ${row.label}`,
-        }));
-      })
-    : selectedDriver
-      ? checkoutBreakdownFor(selectedDriver, selection)
+  const pricingBreakdownRows = householdCheckoutBreakdown();
+  const editingPaidNomination = hadPaidNominations || priorHouseholdPaid > 0;
+  const settledBreakdownRows = paidBreakdownSnapshot.length
+    ? paidBreakdownSnapshot
+    : editingPaidNomination && amountDue <= 0.005
+      ? pricingBreakdownRows
       : [];
+  const additionalBreakdownRows = paidBreakdownSnapshot.length
+    ? additionalPricingRows(pricingBreakdownRows, paidBreakdownSnapshot)
+    : editingPaidNomination && amountDue > 0.005
+      ? additionalPricingRows(pricingBreakdownRows, [])
+      : [];
+  const showSettledBreakdown = editingPaidNomination && settledBreakdownRows.length > 0;
+  const showAdditionalBreakdown = editingPaidNomination && additionalBreakdownRows.length > 0;
+  const showNewNominationBreakdown = !editingPaidNomination && pricingBreakdownRows.length > 0;
+
+  function renderPricingBreakdownRow(row, rowIndex, { readOnly = false } = {}) {
+    const editablePurchase = !readOnly && (row.kind === "merch" || row.kind === "addon") && !row.included;
+    const removableClass = !readOnly && row.kind === "class" && !!row.classId;
+    const rowKey = `${row.kind || row.label}-${row.itemId || row.classId || ""}-${row.lineIndex ?? row.slotIndex ?? rowIndex}-${rowIndex}`;
+    return (
+      <div key={rowKey}>
+        {editablePurchase ? (
+          <PurchaseLineEditor
+            label={row.label}
+            amount={row.amount}
+            qty={row.qty}
+            maxQty={row.remainingQty ?? numericMaxQty(row.maxQty)}
+            brand={brand}
+            palette={palette}
+            onQtyChange={(next) => {
+              if (row.kind === "merch") {
+                updateMerchLineQty(row.driverId, row.itemId, row.lineIndex, next, numericMaxQty(row.maxQty));
+              } else {
+                updateAddonLineQty(row.driverId, row.itemId, row.lineIndex, next, numericMaxQty(row.maxQty));
+              }
+            }}
+            onRemove={() => {
+              if (row.kind === "merch") removeMerchLine(row.driverId, row.itemId, row.lineIndex);
+              else removeAddonLine(row.driverId, row.itemId, row.lineIndex);
+            }}
+          />
+        ) : (
+          <PurchaseLineEditor
+            label={row.label}
+            amount={row.amount}
+            qty={Number(row.qty) > 1 ? row.qty : 1}
+            brand={brand}
+            palette={palette}
+            qtyEditable={false}
+            removable={removableClass}
+            onRemove={() => removeClassEntry(row.driverId, row)}
+          />
+        )}
+      </div>
+    );
+  }
+
   const availableAddOns = selectedDriver ? addonsFor(selection) : [];
 
   return (
@@ -1718,7 +2147,7 @@ export default function EventNominate() {
               )}
             </div>
 
-            {error && (
+            {error && errorPlacement === "page" && (
               <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 mb-4">{error}</div>
             )}
 
@@ -1838,7 +2267,13 @@ export default function EventNominate() {
                   </div>
                 )}
 
-                <Section title="Classes" icon={FlagIcon} brand={brand}>
+                <Section
+                  title="Classes"
+                  icon={FlagIcon}
+                  brand={brand}
+                  id="nominate-focus-classes"
+                  highlighted={focusSection === "classes"}
+                >
                   <div style={{ marginTop: "-6px" }}>
                     {event.is_multi_day && (eventClassLimit != null || dayClassLimit != null) && (
                       <div style={{ fontSize: 14, marginBottom: 12, display: "flex", flexDirection: "column", gap: 4, color: contentText }}>
@@ -2045,7 +2480,7 @@ export default function EventNominate() {
 
                     {!event.is_multi_day &&
                       Array.from({ length: classLimit }, (_, slotIndex) => {
-                          const currentValue = selection.classSlots[slotIndex] || "";
+                          const currentValue = (selection.classSlots || [])[slotIndex] || "";
                           return (
                             <div key={slotIndex} className="space-y-1 mb-3">
                               <div className="text-sm font-medium">{`Class ${slotIndex + 1}`}</div>
@@ -2105,7 +2540,13 @@ export default function EventNominate() {
                 </Section>
 
                 {merchandise.length > 0 && (
-                  <Section title="Merchandise" icon={ShoppingBagIcon} brand={brand}>
+                  <Section
+                    title="Merchandise"
+                    icon={ShoppingBagIcon}
+                    brand={brand}
+                    id="nominate-focus-merchandise"
+                    highlighted={focusSection === "merchandise"}
+                  >
                     <div className="flex flex-col gap-4 w-full mx-auto">
                       {merchandise.map((item, idx) => {
                         const itemId = item.id || `merch-${idx}`;
@@ -2229,7 +2670,13 @@ export default function EventNominate() {
                 )}
 
                 {availableAddOns.length > 0 && (
-                  <Section title="Add‑Ons" icon={PlusCircleIcon} brand={brand}>
+                  <Section
+                    title="Add‑Ons"
+                    icon={PlusCircleIcon}
+                    brand={brand}
+                    id="nominate-focus-addons"
+                    highlighted={focusSection === "addons"}
+                  >
                     <div className="flex flex-col gap-4 w-full mx-auto">
                       {availableAddOns.map((addon, idx) => {
                         const addonId = addon.id || `addon-${idx}`;
@@ -2361,70 +2808,83 @@ export default function EventNominate() {
                 )}
 
                 {requiresRcraClub && (
-                  <div className="mt-6 rounded-md border p-4 space-y-3" style={{ borderColor: palette?.surfaceBorder || "#e5e7eb" }}>
+                  <div
+                    id="nominate-focus-rcra"
+                    className={`mt-6 rounded-md border p-4 space-y-3 ${
+                      focusSection === "rcra" ? "border-red-300 bg-red-50 ring-2 ring-red-200" : ""
+                    }`}
+                    style={
+                      focusSection === "rcra"
+                        ? undefined
+                        : { borderColor: palette?.surfaceBorder || "#e5e7eb" }
+                    }
+                  >
                     <p className="text-sm font-medium">RCRA Club Affiliation</p>
                     <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
                         checked={clubAffiliationConfirmed}
-                        onChange={(e) => setClubAffiliationConfirmed(e.target.checked)}
+                        onChange={(e) => {
+                          setClubAffiliationConfirmed(e.target.checked);
+                          if (focusSection === "rcra") setFocusSection("");
+                        }}
                       />
                       <span>I confirm that I am affiliated with an RCRA club.</span>
                     </label>
                     <label className="block text-sm">
                       Club
-                      <SearchableClubSelect clubs={rcraClubs} selectedClubId={affiliatedClubId} onSelectClub={setAffiliatedClubId} />
+                      <SearchableClubSelect
+                        clubs={rcraClubs}
+                        selectedClubId={affiliatedClubId}
+                        onSelectClub={(clubId) => {
+                          setAffiliatedClubId(clubId);
+                          if (focusSection === "rcra") setFocusSection("");
+                        }}
+                      />
                     </label>
                   </div>
                 )}
 
-                <Section title="Pricing" icon={BanknotesIcon} brand={brand}>
+                <Section title="Payment" icon={BanknotesIcon} brand={brand}>
                   <div className="rounded-md p-4 space-y-3" style={{ background: palette?.surfaceAlt || "#f9fafb", border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}` }}>
-                    {pricingBreakdownRows.length > 0 && (
-                      <div className="space-y-2">
-                        {pricingBreakdownRows.map((row, rowIndex) => {
-                          const editablePurchase = (row.kind === "merch" || row.kind === "addon") && !row.included;
-                          const removableClass = row.kind === "class" && !!row.classId;
-                          return (
-                            <div key={`${row.kind || row.label}-${row.itemId || row.classId || ""}-${row.lineIndex ?? row.slotIndex ?? rowIndex}-${rowIndex}`}>
-                              {editablePurchase ? (
-                                <PurchaseLineEditor
-                                  label={row.label}
-                                  amount={row.amount}
-                                  qty={row.qty}
-                                  maxQty={row.remainingQty ?? numericMaxQty(row.maxQty)}
-                                  brand={brand}
-                                  palette={palette}
-                                  onQtyChange={(next) => {
-                                    if (row.kind === "merch") {
-                                      updateMerchLineQty(row.driverId, row.itemId, row.lineIndex, next, numericMaxQty(row.maxQty));
-                                    } else {
-                                      updateAddonLineQty(row.driverId, row.itemId, row.lineIndex, next, numericMaxQty(row.maxQty));
-                                    }
-                                  }}
-                                  onRemove={() => {
-                                    if (row.kind === "merch") removeMerchLine(row.driverId, row.itemId, row.lineIndex);
-                                    else removeAddonLine(row.driverId, row.itemId, row.lineIndex);
-                                  }}
-                                />
-                              ) : (
-                                <PurchaseLineEditor
-                                  label={row.label}
-                                  amount={row.amount}
-                                  qty={1}
-                                  brand={brand}
-                                  palette={palette}
-                                  qtyEditable={false}
-                                  removable={removableClass}
-                                  onRemove={() => removeClassEntry(row.driverId, row)}
-                                />
-                              )}
+                    {(showSettledBreakdown || showAdditionalBreakdown || showNewNominationBreakdown) && (
+                      <div className="space-y-3">
+                        {showSettledBreakdown && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-text-muted">Current nomination</p>
+                            {settledBreakdownRows.map((row, rowIndex) =>
+                              renderPricingBreakdownRow(row, rowIndex, { readOnly: true })
+                            )}
+                            <div className="flex items-center justify-between border-t border-surfaceBorder pt-2 text-sm font-semibold text-green-700">
+                              <span>Paid</span>
+                              <span>{money(priorHouseholdPaid)}</span>
                             </div>
-                          );
-                        })}
+                          </div>
+                        )}
+                        {showAdditionalBreakdown && (
+                          <div className="space-y-2 border-t border-surfaceBorder pt-3">
+                            <p className="text-sm font-medium text-text-muted">Additional items</p>
+                            {additionalBreakdownRows.map((row, rowIndex) =>
+                              renderPricingBreakdownRow(row, rowIndex, { readOnly: false })
+                            )}
+                          </div>
+                        )}
+                        {showNewNominationBreakdown && (
+                          <div className="space-y-2">
+                            {pricingBreakdownRows.map((row, rowIndex) =>
+                              renderPricingBreakdownRow(row, rowIndex, { readOnly: false })
+                            )}
+                          </div>
+                        )}
+                        {editingPaidNomination && !showSettledBreakdown && priorHouseholdPaid > 0 && (
+                          <div className="flex items-center justify-between border-t border-surfaceBorder pt-2 text-sm font-semibold text-green-700">
+                            <span>Paid</span>
+                            <span>{money(priorHouseholdPaid)}</span>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {isFamily && (
+                    {isFamily && !editingPaidNomination && (
                       <div className="flex items-center justify-between text-sm">
                         <span>
                           {selectedDriver.first_name} {selectedDriver.last_name}
@@ -2433,22 +2893,79 @@ export default function EventNominate() {
                         <span className="font-semibold">{money(currentDriverTotal)}</span>
                       </div>
                     )}
-                    <div className="flex items-center justify-between">
-                      <p className="text-xl text-text-muted">{isFamily ? "Household total" : "Total"}</p>
-                      <p className="text-xl font-semibold">{money(householdTotal)}</p>
-                    </div>
-                    {!paymentConfirmed ? (
+                    {editingPaidNomination ? (
+                      amountToPay > 0.005 ? (
+                        <div className="space-y-2 border-t border-surfaceBorder pt-3">
+                          {creditApplied > 0.005 && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-text-muted">Account credit applied</span>
+                              <span>-{money(creditApplied)}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <p className="text-xl text-text-muted">Total</p>
+                            <p className="text-xl font-semibold">{money(amountToPay)}</p>
+                          </div>
+                        </div>
+                      ) : reductionCredit > 0.005 ? (
+                        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 leading-snug">
+                          <p className="font-semibold">Account credited {money(reductionCredit)}</p>
+                          <p className="mt-1">
+                            This credit will be applied to future events or nominations. If you want a refund, please contact
+                            the club.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-green-700">No additional payment required for this change.</p>
+                      )
+                    ) : (
+                      <div className="space-y-2 border-t border-surfaceBorder pt-3">
+                        {accountCreditBalance > 0.005 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-text-muted">Account credit</span>
+                            <span>{money(accountCreditBalance)}</span>
+                          </div>
+                        )}
+                        {creditApplied > 0.005 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-text-muted">Credit applied</span>
+                            <span>-{money(creditApplied)}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <p className="text-xl text-text-muted">{isFamily ? "Household total" : "Total"}</p>
+                          <p className="text-xl font-semibold">{money(amountToPay)}</p>
+                        </div>
+                      </div>
+                    )}
+                    {error && errorPlacement === "checkout" && (
+                      <div
+                        ref={checkoutErrorRef}
+                        className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 mb-4"
+                      >
+                        {error}
+                      </div>
+                    )}
+                    {!checkoutReady ? (
                       <div className="flex flex-wrap gap-3 pt-1">
                         <Button className="flex-1" onClick={() => startPayment("stripe")}>
-                          Pay with Stripe
+                          {amountToPay > 0.005
+                            ? `${editingPaidNomination ? "Pay balance with Stripe" : "Pay with Stripe"} (${money(amountToPay)})`
+                            : "Pay with Stripe"}
                         </Button>
                         <Button variant="secondary" className="flex-1" onClick={() => startPayment("paypal")}>
-                          Pay with PayPal
+                          {amountToPay > 0.005
+                            ? `${editingPaidNomination ? "Pay balance with PayPal" : "Pay with PayPal"} (${money(amountToPay)})`
+                            : "Pay with PayPal"}
                         </Button>
                       </div>
                     ) : (
                       <>
-                        <p className="text-sm text-green-700">Payment via {paymentMethod === "stripe" ? "Stripe" : "PayPal"} confirmed.</p>
+                        {paymentConfirmed && amountToPay > 0.005 && (
+                          <p className="text-sm text-green-700">
+                            Payment via {paymentMethod === "stripe" ? "Stripe" : "PayPal"} confirmed.
+                          </p>
+                        )}
                         <Button className="w-full" disabled={saving || saved} onClick={confirmPaymentAndNominations}>
                           {saving ? "Saving..." : "Confirm Payment & Nominations"}
                         </Button>
