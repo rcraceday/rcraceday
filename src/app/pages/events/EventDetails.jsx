@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useOutletContext, useNavigate } from "react-router-dom";
+import { useParams, useOutletContext, useNavigate, Link } from "react-router-dom";
 import {
   CalendarDaysIcon,
   ClockIcon,
@@ -383,6 +383,9 @@ const nominationsAreOpen =
   now >= nominationsOpen &&
   (!nominationsClose || now <= nominationsClose);
 
+const nominateButtonClassName =
+  "!py-2.5 !px-6 !text-sm font-semibold !rounded-sm";
+
 return (
   
   <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
@@ -521,26 +524,22 @@ return (
   <div className="event-details-right w-full md:w-auto flex flex-col items-start md:items-end gap-2">
 
     {nominationsAreOpen ? (
-      /* NOMINATIONS OPEN → Nominate + Add to Calendar */
       <div className="event-details-right-buttons flex flex-row gap-2 w-full md:w-auto justify-start md:justify-end">
-        <Button variant="success" size="sm" className="px-2 py-1 text-[12px]">
-          Nominate
-        </Button>
-        <Button variant="primary" size="sm" className="px-2 py-1 text-[12px]">
-          Add to Calendar
-        </Button>
+        <Link
+          to={`/${clubSlug}/app/events/${id}/nominate`}
+          className="no-underline"
+        >
+          <Button variant="success" className={nominateButtonClassName}>
+            Nominate
+          </Button>
+        </Link>
       </div>
     ) : (
-      /* NOMINATIONS CLOSED → Notify replaces Nominate */
       <div className="event-details-right-buttons event-details-right-closed flex flex-row gap-2 w-full md:w-auto justify-start md:justify-end">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input type="checkbox" />
           Notify When Nominations Open
         </label>
-
-        <Button variant="primary" size="sm" className="px-2 py-1 text-[12px]">
-          Add to Calendar
-        </Button>
       </div>
     )}
 
@@ -1133,6 +1132,19 @@ return (
 
     </div>
   </Section>
+)}
+
+{nominationsAreOpen && (
+  <div className="flex justify-center mt-8">
+    <Link
+      to={`/${clubSlug}/app/events/${id}/nominate`}
+      className="no-underline"
+    >
+      <Button variant="success" className={nominateButtonClassName}>
+        Nominate
+      </Button>
+    </Link>
+  </div>
 )}
         </div>
         </div>

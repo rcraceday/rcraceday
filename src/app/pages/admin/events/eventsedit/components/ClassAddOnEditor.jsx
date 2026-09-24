@@ -9,6 +9,7 @@ import { ClearFieldButton, RemoveButton } from "@cms/CMSButtonSet";
 import { supabase } from "@/supabaseClient";
 
 import OptionGroupEditor from "./OptionGroupEditor";
+import ClassAddOnRuleEditor from "./ClassAddOnRuleEditor";
 
 const normalizeRequirements = (requirements) =>
   (Array.isArray(requirements) ? requirements : []).map((requirement) => ({
@@ -381,6 +382,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
             </div>
 
             {(event?.available_classes || []).map((c) => {
+              if (!c?.id) return null;
               const checked =
                 Array.isArray(item.classes) && item.classes.includes(c.id);
               return (
@@ -417,6 +419,21 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
             {(!event?.available_classes || event.available_classes.length === 0) && (
               <div style={{ color: "#666" }}>No classes available for this event.</div>
             )}
+
+            {(item.classes || []).map((cid) => {
+              const cls = (event?.available_classes || []).find((c) => c?.id === cid);
+              if (!cls) return null;
+              return (
+                <ClassAddOnRuleEditor
+                  key={cid}
+                  cid={cid}
+                  cls={cls}
+                  item={item}
+                  setItem={setItem}
+                  event={event}
+                />
+              );
+            })}
           </div>
         </CMSCard>
 

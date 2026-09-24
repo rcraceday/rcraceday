@@ -34,6 +34,8 @@ import {
   isPracticeDay,
   multiDayClassLimitError,
   multiDaySlotsPerDay,
+  countSelectionsForDay,
+  countMultiDaySelectionsForEventLimit,
   validateDriverClassSelections,
 } from "@/app/lib/eventClassLimit";
 
@@ -43,10 +45,46 @@ const emptySelection = () => ({
   classesByDay: {},
   racingDays: {},
   preference: "",
+  preferencesByDay: {},
   merch: {},
   addons: {},
   transponders: {},
+  visibleClassSlotsByDay: {},
 });
+
+function nominateDraftKey(eventId, membershipId) {
+  return `rcraceday:nominate-draft:${eventId}:${membershipId}`;
+}
+
+function readNominateDraft(eventId, membershipId) {
+  if (!eventId || !membershipId) return null;
+  try {
+    const raw = sessionStorage.getItem(nominateDraftKey(eventId, membershipId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeNominateDraft(eventId, membershipId, draft) {
+  if (!eventId || !membershipId) return;
+  try {
+    sessionStorage.setItem(nominateDraftKey(eventId, membershipId), JSON.stringify(draft));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function clearNominateDraft(eventId, membershipId) {
+  if (!eventId || !membershipId) return;
+  try {
+    sessionStorage.removeItem(nominateDraftKey(eventId, membershipId));
+  } catch {
+    /* ignore */
+  }
+}
 
 function formatDate(iso) {
   if (!iso) return null;
@@ -97,13 +135,6 @@ function dayHeading(day, index) {
   return label || dateLabel || `Day ${index + 1}`;
 }
 
-function classesDifferAcrossDays(event) {
-  const days = Array.isArray(event?.classes_by_day) ? event.classes_by_day : [];
-  if (days.length < 2) return false;
-  const signatures = days.map((day) => [...(day.classes || [])].map(String).sort().join(","));
-  return signatures.some((sig) => sig !== signatures[0]);
-}
-
 function pricingConfigFor(event) {
   if (event?.pricing?.mode) return event.pricing;
   return {
@@ -117,6 +148,172 @@ function pricingConfigFor(event) {
 function optionExtra(group, selectedLabel) {
   const value = group?.values?.find((v) => v.label === selectedLabel);
   return Number(value?.price || 0);
+}
+
+function optionSignature(options = {}) {
+  return Object.entries(options)
+    .filter(([, value]) => value)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}:${value}`)
+    .join("|");
+}
+
+function itemUnitPrice(item, options) {
+  const base = item?.included ? 0 : Number(item?.price || 0);
+  const extras = Array.isArray(item?.options)
+    ? item.options.reduce((sum, group) => sum + optionExtra(group, options?.[group.name]), 0)
+    : 0;
+  return base + extras;
+}
+
+function itemSelectionLabel(item, options) {
+  const parts = (item?.options || []).map((group) => options?.[group.name]).filter(Boolean);
+  return parts.length ? `${item.name} - ${parts.join(" / ")}` : item?.name || "";
+}
+
+function numericMaxQty(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 99;
+}
+
+function normalizePurchaseLines(entry) {
+  if (Array.isArray(entry?.lines)) {
+    const fromLines = entry.lines.filter((line) => Number(line?.qty || 0) > 0);
+    if (fromLines.length) return fromLines;
+  }
+  const qty = Number(entry?.qty || 0);
+  if (qty <= 0) return [];
+  return [{ options: entry?.options || {}, qty }];
+}
+
+function totalLineQty(lines) {
+  return (lines || []).reduce((sum, line) => sum + Number(line?.qty || 0), 0);
+}
+
+function preferenceOrdinalLabel(slotsPerDay) {
+  const n = Number(slotsPerDay) + 1;
+  const suffix =
+    n % 100 >= 11 && n % 100 <= 13 ? "th" : { 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th";
+  return `${n}${suffix} Class preference`;
+}
+
+function optionsComplete(groups, options) {
+  if (!Array.isArray(groups) || groups.length === 0) return true;
+  return groups.every((group) => !!options?.[group.name]);
+}
+
+function preferenceMapForSelection(event, selection) {
+  const map = {};
+  if (event?.is_multi_day) {
+    Object.values(selection.preferencesByDay || {}).forEach((classId) => {
+      if (classId) map[classId] = true;
+    });
+  } else if (selection.preference) {
+    map[selection.preference] = true;
+  }
+  return map;
+}
+
+function commitCurrentPurchaseLine(entry, groups, maxQty) {
+  if (!optionsComplete(groups, entry?.options)) return entry;
+  const lines = normalizePurchaseLines(entry).map((line) => ({ ...line }));
+  const max = maxQty || 99;
+  if (totalLineQty(lines) >= max) return entry;
+  const sig = optionSignature(entry.options);
+  const idx = lines.findIndex((line) => optionSignature(line.options) === sig);
+  if (idx >= 0) {
+    lines[idx] = { ...lines[idx], qty: Number(lines[idx].qty || 0) + 1 };
+  } else {
+    lines.push({ options: { ...(entry.options || {}) }, qty: 1 });
+  }
+  const nextTotal = totalLineQty(lines);
+  return { ...entry, lines, qty: nextTotal, options: {}, selected: nextTotal > 0 };
+}
+
+function removePurchaseLine(entry, lineIndex) {
+  const lines = normalizePurchaseLines(entry).filter((_, idx) => idx !== lineIndex);
+  const nextTotal = totalLineQty(lines);
+  return { ...entry, lines, qty: nextTotal, options: entry?.options || {}, selected: nextTotal > 0 };
+}
+
+function setPurchaseLineQty(entry, lineIndex, qty, maxQty) {
+  let lines = normalizePurchaseLines(entry).map((line) => ({ ...line }));
+  if (!lines.length) {
+    lines = [{ options: entry?.options || {}, qty: 0 }];
+    lineIndex = 0;
+  } else if (lineIndex < 0 || lineIndex >= lines.length) {
+    lineIndex = 0;
+  }
+  const otherQty = lines.reduce(
+    (sum, line, idx) => (idx === lineIndex ? sum : sum + Number(line.qty || 0)),
+    0
+  );
+  const max = numericMaxQty(maxQty);
+  const clamped = Math.max(0, Math.min(Number(qty) || 0, max - otherQty));
+  if (clamped <= 0) lines.splice(lineIndex, 1);
+  else lines[lineIndex] = { ...lines[lineIndex], qty: clamped };
+  const nextTotal = totalLineQty(lines);
+  return { ...entry, lines, qty: nextTotal, options: entry?.options || {}, selected: nextTotal > 0 };
+}
+
+function purchaseMapEntry(map, id) {
+  if (!map || id == null) return {};
+  if (map[id]) return map[id];
+  const matchKey = Object.keys(map).find((key) => String(key) === String(id));
+  return matchKey ? map[matchKey] : {};
+}
+
+function dayClassCapacity(event, dayIndex) {
+  const slotsPerDay = multiDaySlotsPerDay(event, dayIndex);
+  if (isPracticeDay(event, dayIndex)) return slotsPerDay;
+  const dayLimit = getDayClassLimit(event);
+  if (dayLimit != null) return Math.min(slotsPerDay, dayLimit);
+  return slotsPerDay;
+}
+
+function remainingClassAddsForDay(event, selection, dayIndex) {
+  const dayCount = countSelectionsForDay(selection.classesByDay, dayIndex);
+  const capacity = dayClassCapacity(event, dayIndex);
+  if (isPracticeDay(event, dayIndex)) return Math.max(0, capacity - dayCount);
+  const eventCount = countMultiDaySelectionsForEventLimit(event, selection.classesByDay);
+  const eventLimit = getEventClassLimit(event);
+  let remaining = capacity - dayCount;
+  if (eventLimit != null) {
+    remaining = Math.min(remaining, eventLimit - eventCount);
+  }
+  return Math.max(0, remaining);
+}
+
+function shouldShowMultiDayPreference(event, selection, dayIndex) {
+  if (isPracticeDay(event, dayIndex)) return false;
+  const dayCount = countSelectionsForDay(selection.classesByDay, dayIndex);
+  if (dayCount === 0) return false;
+  const dayLimit = getDayClassLimit(event) ?? multiDaySlotsPerDay(event, dayIndex);
+  const eventLimit = getEventClassLimit(event);
+  const eventCount = countMultiDaySelectionsForEventLimit(event, selection.classesByDay);
+  if (dayCount >= dayLimit) return true;
+  if (eventLimit != null && eventCount >= eventLimit) return true;
+  return false;
+}
+
+function preferenceSlotCountForDay(event, dayIndex) {
+  return getDayClassLimit(event) ?? multiDaySlotsPerDay(event, dayIndex);
+}
+
+function formatDayDate(iso) {
+  if (!iso) return "";
+  try {
+    const date = String(iso).includes("T") ? new Date(iso) : new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("en-AU", {
+      weekday: "long",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "";
+  }
 }
 
 function flattenRequirements(requirements) {
@@ -158,6 +355,8 @@ function Section({ title, icon: SectionIcon, brand, children }) {
 }
 
 function QtyControl({ value, min = 0, max = 99, onChange, disabled, brand }) {
+  const cap = Number(max);
+  const limit = Number.isFinite(cap) ? cap : 99;
   return (
     <div className="flex items-center gap-2">
       <button
@@ -172,7 +371,7 @@ function QtyControl({ value, min = 0, max = 99, onChange, disabled, brand }) {
       <span className="min-w-[1.5rem] text-center text-sm font-semibold">{value}</span>
       <button
         type="button"
-        disabled={disabled || value >= max}
+        disabled={disabled || value >= limit}
         className="h-8 w-8 rounded-md border text-sm font-semibold disabled:opacity-40"
         style={{ borderColor: brand, color: "#fff", background: brand }}
         onClick={() => onChange(value + 1)}
@@ -183,8 +382,9 @@ function QtyControl({ value, min = 0, max = 99, onChange, disabled, brand }) {
   );
 }
 
-function OptionPicker({ groups, selected, onChange, palette, brand }) {
+function OptionPicker({ groups, selected, committed = [], onChange, palette, brand }) {
   if (!Array.isArray(groups) || groups.length === 0) return null;
+  const committedMaps = Array.isArray(committed) ? committed : [];
   return (
     <div className="mt-2 space-y-4">
       {groups.map((group, gi) => (
@@ -196,7 +396,9 @@ function OptionPicker({ groups, selected, onChange, palette, brand }) {
           <div className="font-semibold text-base mb-2">{group.name || "Option Group"}</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {(group.values || []).map((v, vi) => {
-              const isSelected = selected?.[group.name] === v.label;
+              const isSelected =
+                selected?.[group.name] === v.label ||
+                committedMaps.some((options) => options?.[group.name] === v.label);
               return (
                 <button
                   key={v.label || vi}
@@ -207,7 +409,7 @@ function OptionPicker({ groups, selected, onChange, palette, brand }) {
                     borderColor: isSelected ? brand : palette?.surfaceBorder || "#e5e7eb",
                     borderWidth: isSelected ? 2 : 1,
                   }}
-                  onClick={() => onChange(group.name, isSelected ? "" : v.label)}
+                  onClick={() => onChange(group.name, isSelected && selected?.[group.name] === v.label ? "" : v.label)}
                 >
                   {v.photo_url && (
                     <img src={v.photo_url} alt={v.label} className="w-full h-24 object-contain rounded border border-gray-200" />
@@ -222,6 +424,50 @@ function OptionPicker({ groups, selected, onChange, palette, brand }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function PurchaseLineEditor({
+  label,
+  amount,
+  qty,
+  minQty = 0,
+  maxQty = 99,
+  onQtyChange,
+  onRemove,
+  brand,
+  palette,
+  qtyEditable = true,
+  removable = true,
+}) {
+  return (
+    <div
+      className="rounded-md p-3 space-y-2"
+      style={{
+        background: palette?.surface || "#ffffff",
+        border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}`,
+      }}
+    >
+      <div className="flex items-start justify-between gap-3 text-sm">
+        <span>
+          {label}
+          {qty > 1 ? ` × ${qty}` : ""}
+        </span>
+        <span className="font-medium whitespace-nowrap">{money(amount)}</span>
+      </div>
+      {(qtyEditable || removable) && (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {qtyEditable && (
+            <QtyControl value={qty} min={minQty} max={maxQty} brand={brand} onChange={onQtyChange} />
+          )}
+          {removable && (
+            <Button type="button" variant="secondary" size="sm" onClick={onRemove}>
+              Remove
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -253,7 +499,7 @@ export default function EventNominate() {
   const [clubAffiliationConfirmed, setClubAffiliationConfirmed] = useState(false);
   const [affiliatedClubId, setAffiliatedClubId] = useState("");
   const [selectedDriverId, setSelectedDriverId] = useState("");
-  const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [draftScope, setDraftScope] = useState("");
 
   const logoSrc = event?.logourl
     ? event.logourl.startsWith("http")
@@ -262,13 +508,16 @@ export default function EventNominate() {
     : null;
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       const { data: eventRow, error: eventError } = await supabase.from("events").select("*").eq("id", eventId).single();
+      if (cancelled) return;
       if (eventError) setError("Unable to load this event nomination.");
       setEvent(eventRow || null);
 
       if (eventRow?.track) {
         const { data: trackRow } = await supabase.from("club_tracks").select("name").eq("id", eventRow.track).maybeSingle();
+        if (cancelled) return;
         setTrackName(trackRow?.name || "");
       } else {
         setTrackName("");
@@ -293,14 +542,25 @@ export default function EventNominate() {
           .from("club_classes")
           .select("id, name")
           .in("id", Array.from(classIdSet));
+        if (cancelled) return;
         if (classError) setError("Unable to load this event nomination.");
         setClubClasses(classRows || []);
-      } else {
+      } else if (!cancelled) {
         setClubClasses([]);
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
     load();
+    const refetch = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", refetch);
+    window.addEventListener("focus", refetch);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", refetch);
+      window.removeEventListener("focus", refetch);
+    };
   }, [eventId]);
 
   useEffect(() => {
@@ -365,15 +625,24 @@ export default function EventNominate() {
   const pricing = useMemo(() => pricingConfigFor(event), [event]);
   const entryLimits = event?.class_entry_limits || {};
   const isFamily = membership?.membership_type === "family" || drivers.length > 1;
-  const daysDiffer = classesDifferAcrossDays(event);
+
+  function racingSelectionIds(selection) {
+    if (!selection) return [];
+    if (!event?.is_multi_day) return (selection.classSlots || []).filter(Boolean);
+    const ids = [];
+    Object.entries(selection.classesByDay || {}).forEach(([dayIndex, value]) => {
+      if (isPracticeDay(event, dayIndex)) return;
+      if (Array.isArray(value)) ids.push(...value.filter(Boolean));
+      else if (value) ids.push(value);
+    });
+    return ids;
+  }
 
   function localSelectionCount(classId) {
-    return Object.values(selections).reduce((count, selection) => {
-      const ids = event?.is_multi_day
-        ? flattenMultiDaySelections(selection.classesByDay || {})
-        : selection.classSlots || [];
-      return count + ids.filter((id) => id === classId).length;
-    }, 0);
+    return Object.values(selections).reduce(
+      (count, selection) => count + racingSelectionIds(selection).filter((id) => id === classId).length,
+      0
+    );
   }
 
   function classUsage(classId) {
@@ -417,6 +686,21 @@ export default function EventNominate() {
   }
 
   useEffect(() => {
+    if (!eventId || !membership?.id) return;
+    const draft = readNominateDraft(eventId, membership.id);
+    if (draft?.selections && typeof draft.selections === "object") setSelections(draft.selections);
+    if (draft?.requirementSelections && typeof draft.requirementSelections === "object") {
+      setRequirementSelections(draft.requirementSelections);
+    }
+    if (typeof draft?.clubAffiliationConfirmed === "boolean") {
+      setClubAffiliationConfirmed(draft.clubAffiliationConfirmed);
+    }
+    if (typeof draft?.affiliatedClubId === "string") setAffiliatedClubId(draft.affiliatedClubId);
+    if (typeof draft?.selectedDriverId === "string") setSelectedDriverId(draft.selectedDriverId);
+    setDraftScope(`${eventId}:${membership.id}`);
+  }, [eventId, membership?.id]);
+
+  useEffect(() => {
     if (!event || !drivers.length) return;
     setSelections((current) => {
       const next = { ...current };
@@ -438,6 +722,7 @@ export default function EventNominate() {
         }
         if (!existing.transponders) existing.transponders = {};
         if (!existing.racingDays) existing.racingDays = {};
+        if (!existing.visibleClassSlotsByDay) existing.visibleClassSlotsByDay = {};
         if (event.is_multi_day) {
           const classesByDay = { ...existing.classesByDay };
           const racingDays = { ...existing.racingDays };
@@ -456,6 +741,27 @@ export default function EventNominate() {
       return next;
     });
   }, [event, drivers, classLimit, classLimitPerDay]);
+
+  useEffect(() => {
+    const scope = eventId && membership?.id ? `${eventId}:${membership.id}` : "";
+    if (!scope || draftScope !== scope) return;
+    writeNominateDraft(eventId, membership.id, {
+      selections,
+      requirementSelections,
+      clubAffiliationConfirmed,
+      affiliatedClubId,
+      selectedDriverId,
+    });
+  }, [
+    eventId,
+    membership?.id,
+    draftScope,
+    selections,
+    requirementSelections,
+    clubAffiliationConfirmed,
+    affiliatedClubId,
+    selectedDriverId,
+  ]);
 
   useEffect(() => {
     if (!drivers.length) return;
@@ -483,27 +789,19 @@ export default function EventNominate() {
     const racingDays = { ...current.racingDays, [dayIndex]: racing };
     const slotsPerDay = multiDaySlotsPerDay(event, dayIndex);
     const nextByDay = { ...current.classesByDay };
+    const preferencesByDay = { ...(current.preferencesByDay || {}) };
     if (!racing) {
       nextByDay[dayIndex] = Array.from({ length: slotsPerDay }, () => "");
-    } else if (!daysDiffer) {
-      const sourceIndex = Object.keys(racingDays).find((key) => racingDays[key] && Number(key) !== dayIndex);
-      if (sourceIndex != null) {
-        const sourceSlots = multiDaySlotsPerDay(event, Number(sourceIndex));
-        nextByDay[dayIndex] = getDayClassSlots(nextByDay, Number(sourceIndex), sourceSlots);
-      }
+      delete preferencesByDay[dayIndex];
     }
-    updateSelection(driverId, { racingDays, classesByDay: nextByDay });
-    if (racing) setActiveDayIndex(dayIndex);
+    const visibleClassSlotsByDay = { ...(current.visibleClassSlotsByDay || {}) };
+    if (!racing) delete visibleClassSlotsByDay[dayIndex];
+    updateSelection(driverId, { racingDays, classesByDay: nextByDay, preferencesByDay, visibleClassSlotsByDay });
   }
 
   function setDayClass(driverId, dayIndex, classId, slotIndex = 0) {
     const current = selections[driverId] || emptySelection();
     const slotsPerDay = multiDaySlotsPerDay(event, dayIndex);
-    const applyIndexes = !daysDiffer
-      ? Object.keys(current.racingDays || {})
-          .filter((key) => current.racingDays[key])
-          .map(Number)
-      : [dayIndex];
     const nextByDay = { ...current.classesByDay };
     const currentValue = getDayClassSlots(current.classesByDay, dayIndex, slotsPerDay)[slotIndex] || "";
     const limitErr = multiDayClassLimitError({
@@ -518,21 +816,82 @@ export default function EventNominate() {
       setTimeout(() => setError(""), 2500);
       return;
     }
-    applyIndexes.forEach((idx) => {
-      const daySlots = multiDaySlotsPerDay(event, idx);
-      const slots = getDayClassSlots(nextByDay, idx, daySlots);
-      slots[slotIndex] = classId;
-      nextByDay[idx] = slots;
-    });
+    const slots = getDayClassSlots(nextByDay, dayIndex, slotsPerDay);
+    slots[slotIndex] = classId || "";
+    const visibleClassSlotsByDay = { ...(current.visibleClassSlotsByDay || {}) };
+    if (!classId) {
+      const packed = slots.filter(Boolean);
+      nextByDay[dayIndex] = Array.from({ length: slotsPerDay }, (_, i) => packed[i] || "");
+      visibleClassSlotsByDay[dayIndex] = packed.length;
+    } else {
+      nextByDay[dayIndex] = slots;
+      visibleClassSlotsByDay[dayIndex] = Math.max(
+        Number(current.visibleClassSlotsByDay?.[dayIndex] || 0),
+        slots.filter(Boolean).length
+      );
+    }
+    const packedForPref = (nextByDay[dayIndex] || []).filter(Boolean);
     const flat = flattenMultiDaySelections(nextByDay);
     const stillSelected = flat.includes(current.preference);
+    const preferencesByDay = { ...(current.preferencesByDay || {}) };
+    const dayPref = preferencesByDay[dayIndex];
+    if (dayPref && packedForPref.includes(dayPref)) {
+      preferencesByDay[dayIndex] = "";
+    }
+    if (!shouldShowMultiDayPreference(event, { ...current, classesByDay: nextByDay, preferencesByDay }, dayIndex)) {
+      preferencesByDay[dayIndex] = "";
+    }
     const newTransponders = fillTransponder(driverId, classId, current.transponders);
     updateSelection(driverId, {
       classesByDay: nextByDay,
       racingDays: { ...current.racingDays, [dayIndex]: true },
       preference: stillSelected ? current.preference : "",
+      preferencesByDay,
       transponders: newTransponders,
+      visibleClassSlotsByDay,
     });
+  }
+
+  function setDayPreference(driverId, dayIndex, value) {
+    updateSelection(driverId, (current) => ({
+      preferencesByDay: { ...(current.preferencesByDay || {}), [dayIndex]: value },
+    }));
+  }
+
+  function removeMerchLine(driverId, itemId, lineIndex) {
+    updateSelection(driverId, (current) => ({
+      merch: {
+        ...current.merch,
+        [itemId]: removePurchaseLine(current.merch[itemId] || {}, lineIndex),
+      },
+    }));
+  }
+
+  function removeAddonLine(driverId, addonId, lineIndex) {
+    updateSelection(driverId, (current) => ({
+      addons: {
+        ...current.addons,
+        [addonId]: removePurchaseLine(current.addons[addonId] || {}, lineIndex),
+      },
+    }));
+  }
+
+  function updateMerchLineQty(driverId, itemId, lineIndex, qty, maxQty) {
+    updateSelection(driverId, (current) => ({
+      merch: {
+        ...current.merch,
+        [itemId]: setPurchaseLineQty(purchaseMapEntry(current.merch, itemId), lineIndex, qty, maxQty),
+      },
+    }));
+  }
+
+  function updateAddonLineQty(driverId, addonId, lineIndex, qty, maxQty) {
+    updateSelection(driverId, (current) => ({
+      addons: {
+        ...current.addons,
+        [addonId]: setPurchaseLineQty(purchaseMapEntry(current.addons, addonId), lineIndex, qty, maxQty),
+      },
+    }));
   }
 
   function setClassSlot(driverId, slotIndex, classId) {
@@ -542,6 +901,33 @@ export default function EventNominate() {
     const stillSelected = slots.includes(current.preference);
     const newTransponders = fillTransponder(driverId, classId, current.transponders);
     updateSelection(driverId, { classSlots: slots, preference: stillSelected ? current.preference : "", transponders: newTransponders });
+  }
+
+  function removeClassEntry(driverId, row) {
+    if (event?.is_multi_day) {
+      const dayIndex = row.dayIndex;
+      if (dayIndex == null) return;
+      const slotsPerDay = multiDaySlotsPerDay(event, dayIndex);
+      const slots = getDayClassSlots(
+        (selections[driverId] || emptySelection()).classesByDay,
+        dayIndex,
+        slotsPerDay
+      );
+      const slotIndex =
+        row.slotIndex != null && row.slotIndex >= 0
+          ? row.slotIndex
+          : slots.findIndex((id) => id === row.classId);
+      if (slotIndex < 0) return;
+      setDayClass(driverId, dayIndex, "", slotIndex);
+      return;
+    }
+    const slots = (selections[driverId] || emptySelection()).classSlots || [];
+    const slotIndex =
+      row.slotIndex != null && row.slotIndex >= 0
+        ? row.slotIndex
+        : slots.findIndex((id) => id === row.classId);
+    if (slotIndex < 0) return;
+    setClassSlot(driverId, slotIndex, "");
   }
 
   function selectedClassIds(selection) {
@@ -555,22 +941,23 @@ export default function EventNominate() {
     if (!selection) return [];
     if (!event?.is_multi_day) {
       return (selection.classSlots || [])
-        .filter(Boolean)
-        .map((classId) => ({ classId, isPractice: false }));
+        .map((classId, slotIndex) => ({ classId, isPractice: false, slotIndex }))
+        .filter((entry) => entry.classId);
     }
     const dayCount = (event.days || event.classes_by_day || []).length;
     const entries = [];
     for (let dayIndex = 0; dayIndex < dayCount; dayIndex += 1) {
       if (!selection.racingDays?.[dayIndex]) continue;
       if (isOpenPracticeDay(event, dayIndex)) {
-        entries.push({ classId: null, isPractice: true, openPractice: true });
+        entries.push({ classId: null, isPractice: true, openPractice: true, dayIndex });
         continue;
       }
       const isPractice = isPracticeDay(event, dayIndex);
       const slots = selection.classesByDay?.[dayIndex];
       if (!Array.isArray(slots)) continue;
-      slots.filter(Boolean).forEach((classId) => {
-        entries.push({ classId, isPractice });
+      slots.forEach((classId, slotIndex) => {
+        if (!classId) return;
+        entries.push({ classId, isPractice, dayIndex, slotIndex });
       });
     }
     return entries;
@@ -644,32 +1031,88 @@ export default function EventNominate() {
     return rows;
   }
 
-  function updateMerchQty(driverId, itemId, qty, maxQty) {
-    const clamped = Math.max(0, Math.min(Number(qty) || 0, maxQty || 99));
+  function setPurchaseQty(entry, qty, maxQty, currentOptions) {
+    const options = currentOptions || entry?.options || {};
+    const sig = optionSignature(options);
+    const lines = normalizePurchaseLines(entry);
+    const otherQty = lines.reduce(
+      (sum, line) => (optionSignature(line.options) === sig ? sum : sum + Number(line.qty || 0)),
+      0
+    );
+    const clamped = Math.max(0, Math.min(Number(qty) || 0, (maxQty || 99) - otherQty));
+    const nextLines = lines.filter((line) => optionSignature(line.options) !== sig);
+    if (clamped > 0) nextLines.push({ options, qty: clamped });
+    const total = totalLineQty(nextLines);
+    return { ...entry, options, qty: total, lines: nextLines, selected: total > 0 };
+  }
+
+  function setPurchaseOption(entry, groupName, value, maxQty, groups) {
+    const options = { ...(entry?.options || {}), [groupName]: value };
+    const max = maxQty || 99;
+    const hasGroups = Array.isArray(groups) && groups.length > 0;
+    if (hasGroups && max > 1 && optionsComplete(groups, options) && value) {
+      return commitCurrentPurchaseLine({ ...entry, options }, groups, max);
+    }
+    const lines = normalizePurchaseLines(entry).map((line) => ({ ...line }));
+    const total = totalLineQty(lines);
+    const sig = optionSignature(options);
+    if (max === 1) {
+      const nextLines = value || Object.values(options).some(Boolean) ? [{ options, qty: Math.max(1, total || 1) }] : [];
+      const nextTotal = totalLineQty(nextLines);
+      return { ...entry, options, qty: nextTotal, lines: nextLines, selected: nextTotal > 0 };
+    }
+    const existingIndex = lines.findIndex((line) => optionSignature(line.options) === sig);
+    const blankIndex = lines.findIndex((line) => !optionSignature(line.options));
+    if (existingIndex < 0 && blankIndex >= 0 && value) {
+      lines[blankIndex] = { ...lines[blankIndex], options };
+    } else if (existingIndex < 0 && total === 0 && value && max > 0) {
+      lines.push({ options, qty: 1 });
+    }
+    const nextTotal = totalLineQty(lines);
+    return { ...entry, options, qty: nextTotal, lines, selected: nextTotal > 0 };
+  }
+
+  function purchaseQtyForOptions(entry, options, hasOptionGroups) {
+    const lines = normalizePurchaseLines(entry);
+    if (!hasOptionGroups) return totalLineQty(lines) || Number(entry?.qty || 0);
+    const match = lines.find((line) => optionSignature(line.options) === optionSignature(options || {}));
+    return Number(match?.qty || 0);
+  }
+
+  function updateMerchQty(driverId, itemId, qty, maxQty, currentOptions) {
     updateSelection(driverId, (current) => ({
-      merch: { ...current.merch, [itemId]: { ...(current.merch[itemId] || {}), qty: clamped } },
+      merch: {
+        ...current.merch,
+        [itemId]: setPurchaseQty(current.merch[itemId] || {}, qty, maxQty, currentOptions),
+      },
     }));
   }
 
-  function updateMerchOption(driverId, itemId, groupName, value) {
-    updateSelection(driverId, (current) => {
-      const entry = current.merch[itemId] || { qty: 1, options: {} };
-      return { merch: { ...current.merch, [itemId]: { ...entry, qty: entry.qty || 1, options: { ...entry.options, [groupName]: value } } } };
-    });
-  }
-
-  function updateAddonQty(driverId, addonId, qty, maxQty) {
-    const clamped = Math.max(0, Math.min(Number(qty) || 0, maxQty || 99));
+  function updateMerchOption(driverId, itemId, groupName, value, maxQty, groups) {
     updateSelection(driverId, (current) => ({
-      addons: { ...current.addons, [addonId]: { ...(current.addons[addonId] || {}), qty: clamped, selected: clamped > 0 } },
+      merch: {
+        ...current.merch,
+        [itemId]: setPurchaseOption(current.merch[itemId] || {}, groupName, value, maxQty, groups),
+      },
     }));
   }
 
-  function updateAddonOption(driverId, addonId, groupName, value) {
-    updateSelection(driverId, (current) => {
-      const entry = current.addons[addonId] || { qty: 1, selected: true, options: {} };
-      return { addons: { ...current.addons, [addonId]: { ...entry, options: { ...entry.options, [groupName]: value } } } };
-    });
+  function updateAddonQty(driverId, addonId, qty, maxQty, currentOptions) {
+    updateSelection(driverId, (current) => ({
+      addons: {
+        ...current.addons,
+        [addonId]: setPurchaseQty(current.addons[addonId] || {}, qty, maxQty, currentOptions),
+      },
+    }));
+  }
+
+  function updateAddonOption(driverId, addonId, groupName, value, maxQty, groups) {
+    updateSelection(driverId, (current) => ({
+      addons: {
+        ...current.addons,
+        [addonId]: setPurchaseOption(current.addons[addonId] || {}, groupName, value, maxQty, groups),
+      },
+    }));
   }
 
   function updateTransponder(driverId, classId, value) {
@@ -687,27 +1130,30 @@ export default function EventNominate() {
   function merchandiseCostFor(selection) {
     return merchandise.reduce((sum, item, idx) => {
       const entry = selection.merch[item.id || `merch-${idx}`] || selection.merch[item.id];
-      const qty = item.included || item.compulsory ? 1 : Number(entry?.qty || 0);
-      if (qty <= 0) return sum;
-      const base = item.included ? 0 : Number(item.price || 0);
-      const optionsCost = Array.isArray(item.options) ? item.options.reduce((s, group) => s + optionExtra(group, entry?.options?.[group.name]), 0) : 0;
-      return sum + (base + optionsCost) * qty;
+      if (item.included) return sum;
+      const lines = item.compulsory && !normalizePurchaseLines(entry).length
+        ? [{ options: entry?.options || {}, qty: 1 }]
+        : normalizePurchaseLines(entry);
+      return sum + lines.reduce((lineSum, line) => lineSum + itemUnitPrice(item, line.options) * Number(line.qty || 0), 0);
     }, 0);
   }
 
   function addonsFor(selection) {
     const classIds = selectedClassIds(selection);
-    return addOns.filter((addon) => !Array.isArray(addon.classes) || addon.classes.length === 0 || addon.classes.some((id) => classIds.includes(id)));
+    return addOns.filter((addon) => {
+      const classes = Array.isArray(addon.classes) ? addon.classes : [];
+      if (classes.length === 0) return true;
+      return classes.some((cid) => classIds.includes(typeof cid === "string" ? cid : cid?.id));
+    });
   }
 
   function addonCostFor(selection) {
     return addonsFor(selection).reduce((sum, addon, idx) => {
       const entry = selection.addons[addon.id || `addon-${idx}`] || selection.addons[addon.id];
-      const qty = addon.required ? 1 : Number(entry?.qty || 0);
-      if (qty <= 0) return sum;
-      const base = Number(addon.price || 0);
-      const optionsCost = Array.isArray(addon.options) ? addon.options.reduce((s, group) => s + optionExtra(group, entry?.options?.[group.name]), 0) : 0;
-      return sum + (base + optionsCost) * qty;
+      const lines = addon.required && !normalizePurchaseLines(entry).length
+        ? [{ options: entry?.options || {}, qty: 1 }]
+        : normalizePurchaseLines(entry);
+      return sum + lines.reduce((lineSum, line) => lineSum + itemUnitPrice(addon, line.options) * Number(line.qty || 0), 0);
     }, 0);
   }
 
@@ -721,15 +1167,295 @@ export default function EventNominate() {
       selectedClasses: classIds,
       selectedClassEntries: selectedClassEntries(selection),
       membershipType,
-      preferenceMap: selection.preference ? { [selection.preference]: true } : {},
+      preferenceMap: preferenceMapForSelection(event, selection),
     });
     return (classResult.total || 0) + merchandiseCostFor(selection) + addonCostFor(selection);
+  }
+
+  function purchaseLinesForItem(item, entry, { locked }) {
+    if (locked && !normalizePurchaseLines(entry).length) {
+      return [{ options: entry?.options || {}, qty: 1 }];
+    }
+    return normalizePurchaseLines(entry);
+  }
+
+  function validatePurchaseSelection(selection) {
+    for (let idx = 0; idx < merchandise.length; idx += 1) {
+      const item = merchandise[idx];
+      const itemId = item.id || `merch-${idx}`;
+      const entry = selection.merch[itemId] || selection.merch[item.id];
+      const locked = item.included || item.compulsory;
+      const hasOptions = Array.isArray(item.options) && item.options.length > 0;
+      const lines = purchaseLinesForItem(item, entry, { locked });
+      if (locked) {
+        if (hasOptions && !lines.every((line) => optionsComplete(item.options, line.options))) {
+          return `Choose options for ${item.name}.`;
+        }
+        if (!hasOptions && totalLineQty(lines) < 1) {
+          return `${item.name} is required.`;
+        }
+        continue;
+      }
+      if (totalLineQty(lines) <= 0) continue;
+      if (hasOptions && !lines.every((line) => optionsComplete(item.options, line.options))) {
+        return `Choose options for ${item.name}.`;
+      }
+    }
+
+    const addons = addonsFor(selection);
+    for (let idx = 0; idx < addons.length; idx += 1) {
+      const addon = addons[idx];
+      const addonId = addon.id || `addon-${idx}`;
+      const entry = selection.addons[addonId] || selection.addons[addon.id];
+      const locked = !!addon.required;
+      const hasOptions = Array.isArray(addon.options) && addon.options.length > 0;
+      const lines = purchaseLinesForItem(addon, entry, { locked });
+      if (locked) {
+        if (hasOptions && !lines.every((line) => optionsComplete(addon.options, line.options))) {
+          return `Choose options for ${addon.name}.`;
+        }
+        if (!hasOptions && totalLineQty(lines) < 1) {
+          return `${addon.name} is required.`;
+        }
+        continue;
+      }
+      if (totalLineQty(lines) <= 0) continue;
+      if (hasOptions && !lines.every((line) => optionsComplete(addon.options, line.options))) {
+        return `Choose options for ${addon.name}.`;
+      }
+    }
+    return "";
+  }
+
+  function validateActiveDriversPurchases(active) {
+    for (const { driver, selection } of active) {
+      const purchaseErr = validatePurchaseSelection(selection);
+      if (purchaseErr) return `${driver.first_name} ${driver.last_name}: ${purchaseErr}`;
+    }
+    return "";
+  }
+
+  function checkoutBreakdownFor(driver, selection) {
+    const membershipType = driver.is_junior ? "junior" : membership?.isMember ? "member" : "non_member";
+    const preferenceMap = preferenceMapForSelection(event, selection);
+    const classResult = calculateUserPricing({
+      event,
+      pricing,
+      selectedClasses: selectedClassIds(selection),
+      selectedClassEntries: selectedClassEntries(selection),
+      membershipType,
+      preferenceMap,
+    });
+    const rows = [];
+    const mode = pricing.mode || "per_entry";
+    const entries = selectedClassEntries(selection);
+    const chargePrefs = pricing.charge_preferences;
+
+    if (mode === "per_class") {
+      const classPrices = pricing.class_prices || {};
+      entries.forEach((entry) => {
+        if (entry?.openPractice) {
+          rows.push({ kind: "class", driverId: driver.id, label: "Open practice day", amount: 0, dayIndex: entry.dayIndex });
+          return;
+        }
+        const classId = entry?.classId;
+        if (!classId) return;
+        if (preferenceMap[classId] && !chargePrefs) return;
+        const override = classPrices[classId];
+        let amount = 0;
+        if (override) {
+          if (entry.isPractice) {
+            const practicePrice = override.practice?.[membershipType];
+            amount = practicePrice != null && practicePrice !== "" ? Math.max(0, Number(practicePrice)) : 0;
+          } else if (!override.free) {
+            amount = Math.max(0, Number(override[membershipType] || 0));
+          }
+        }
+        const suffix = entry.isPractice ? " (practice)" : preferenceMap[classId] ? " (preference)" : "";
+        rows.push({
+          kind: "class",
+          driverId: driver.id,
+          classId,
+          dayIndex: entry.dayIndex,
+          slotIndex: entry.slotIndex,
+          label: `${classMap.get(classId) || classId}${suffix}`,
+          amount,
+        });
+      });
+    } else if (mode === "tiered") {
+      const tier = pricing.tiered?.[membershipType] || {};
+      const firstClassPrice = Math.max(0, Number(tier.first_class || 0));
+      const additionalClassPrice = Math.max(0, Number(tier.additional_class || 0));
+      let racingClassCount = 0;
+      entries.forEach((entry) => {
+        if (entry?.openPractice) {
+          const practicePrice = tier.practice;
+          const amount =
+            practicePrice != null && practicePrice !== "" ? Math.max(0, Number(practicePrice)) : 0;
+          rows.push({ kind: "class", driverId: driver.id, label: "Open practice day", amount, dayIndex: entry.dayIndex });
+          return;
+        }
+        const classId = entry?.classId;
+        if (!classId) return;
+        if (preferenceMap[classId] && !chargePrefs) return;
+        if (entry.isPractice) {
+          const practicePrice = tier.practice;
+          const amount =
+            practicePrice != null && practicePrice !== "" ? Math.max(0, Number(practicePrice)) : 0;
+          rows.push({
+            kind: "class",
+            driverId: driver.id,
+            classId,
+            dayIndex: entry.dayIndex,
+            slotIndex: entry.slotIndex,
+            label: `${classMap.get(classId) || classId} (practice)`,
+            amount,
+          });
+          return;
+        }
+        const amount = racingClassCount === 0 ? firstClassPrice : additionalClassPrice;
+        racingClassCount += 1;
+        const suffix = preferenceMap[classId] ? " (preference)" : "";
+        rows.push({
+          kind: "class",
+          driverId: driver.id,
+          classId,
+          dayIndex: entry.dayIndex,
+          slotIndex: entry.slotIndex,
+          label: `${classMap.get(classId) || classId}${suffix}`,
+          amount,
+        });
+      });
+    } else {
+      const billable = entries.filter((entry) => {
+        if (entry?.openPractice) return true;
+        if (!entry?.classId) return false;
+        const isPref = preferenceMap[entry.classId] === true;
+        return !(isPref && !chargePrefs);
+      });
+      const hasRacing = billable.some((entry) => !entry.isPractice && !entry.openPractice);
+      const hasPractice = billable.some((entry) => entry.isPractice || entry.openPractice);
+      if (hasRacing) {
+        rows.push({
+          kind: "fee",
+          label: "Event entry",
+          amount: Math.max(0, Number(pricing.global?.[membershipType] || 0)),
+        });
+      }
+      if (hasPractice) {
+        const practicePrice = pricing.global?.practice?.[membershipType];
+        if (practicePrice != null && practicePrice !== "") {
+          rows.push({ label: "Practice", amount: Math.max(0, Number(practicePrice)) });
+        }
+      }
+    }
+
+    const appendPreferenceRow = (classId) => {
+      if (!classId) return;
+      let amount = 0;
+      if (chargePrefs) {
+        if (mode === "per_class") {
+          const override = pricing.class_prices?.[classId];
+          if (override && !override.free) {
+            amount = Math.max(0, Number(override[membershipType] || 0));
+          }
+        } else if (mode === "tiered") {
+          const tier = pricing.tiered?.[membershipType] || {};
+          const racingCount = entries.filter(
+            (entry) => entry?.classId && !entry.isPractice && !entry.openPractice && !(preferenceMap[entry.classId] && !chargePrefs)
+          ).length;
+          amount = racingCount === 0 ? Math.max(0, Number(tier.first_class || 0)) : Math.max(0, Number(tier.additional_class || 0));
+        }
+      }
+        rows.push({
+          kind: "class",
+          driverId: driver.id,
+          classId,
+          dayIndex: event?.is_multi_day ? Number(dayIndex) : undefined,
+          slotIndex: event?.is_multi_day ? undefined : (selection.classSlots || []).indexOf(classId),
+          label: `${classMap.get(classId) || classId} (preference)`,
+          amount,
+        });
+    };
+
+    if (event?.is_multi_day) {
+      Object.entries(selection.preferencesByDay || {}).forEach(([dayIndex, classId]) => {
+        if (!selection.racingDays?.[dayIndex]) return;
+        appendPreferenceRow(classId);
+      });
+    } else {
+      appendPreferenceRow(selection.preference);
+    }
+
+    merchandise.forEach((item, idx) => {
+      const itemId = item.id || `merch-${idx}`;
+      const entry = selection.merch[itemId] || selection.merch[item.id];
+      const lines = normalizePurchaseLines(entry);
+      lines.forEach((line, lineIndex) => {
+        const qty = Number(line.qty || 0);
+        if (qty <= 0) return;
+        const unit = item.included ? 0 : itemUnitPrice(item, line.options);
+        const totalQty = totalLineQty(lines);
+        const maxQty = numericMaxQty(item.max_qty);
+        rows.push({
+          kind: "merch",
+          driverId: driver.id,
+          itemId,
+          lineIndex,
+          qty,
+          maxQty,
+          remainingQty: Math.max(0, maxQty - (totalQty - qty)),
+          included: !!item.included,
+          label: itemSelectionLabel(item, line.options),
+          amount: unit * qty,
+        });
+      });
+    });
+
+    addonsFor(selection).forEach((addon, idx) => {
+      const addonId = addon.id || `addon-${idx}`;
+      const entry = selection.addons[addonId] || selection.addons[addon.id];
+      const lines = normalizePurchaseLines(entry);
+      lines.forEach((line, lineIndex) => {
+        const qty = Number(line.qty || 0);
+        if (qty <= 0) return;
+        const unit = itemUnitPrice(addon, line.options);
+        const totalQty = totalLineQty(lines);
+        const maxQty = numericMaxQty(addon.max_qty);
+        rows.push({
+          kind: "addon",
+          driverId: driver.id,
+          itemId: addonId,
+          lineIndex,
+          qty,
+          maxQty,
+          remainingQty: Math.max(0, maxQty - (totalQty - qty)),
+          included: false,
+          label: itemSelectionLabel(addon, line.options),
+          amount: unit * qty,
+        });
+      });
+    });
+
+    if (classResult.isLate && pricing.late_fee) {
+      rows.push({ label: "Late entry fee", amount: Math.max(0, Number(pricing.late_fee)) });
+    }
+
+    return rows;
   }
 
   const householdTotal = drivers.reduce((sum, driver) => sum + driverTotal(driver), 0);
   const flatRequirements = useMemo(() => flattenRequirements(event?.club_requirements), [event?.club_requirements]);
 
   function startPayment(method) {
+    const active = drivers
+      .map((driver) => ({ driver, selection: selections[driver.id] || emptySelection() }))
+      .filter(({ selection }) => hasNominationActivity(selection));
+    const purchaseErr = validateActiveDriversPurchases(active);
+    if (purchaseErr) {
+      setError(purchaseErr);
+      return;
+    }
     setPaymentMethod(method);
     setPaymentConfirmed(true);
   }
@@ -749,6 +1475,8 @@ export default function EventNominate() {
       const limitErr = validateDriverClassSelections(event, selection);
       if (limitErr) return setError(limitErr);
     }
+    const purchaseErr = validateActiveDriversPurchases(active);
+    if (purchaseErr) return setError(purchaseErr);
     for (const { selection } of active) {
       for (const classId of selectedClassIds(selection)) {
         const usage = classUsage(classId);
@@ -807,13 +1535,28 @@ export default function EventNominate() {
       classRows.forEach((row) => {
         entries.push({ nomination_id: nomination.id, ...row });
       });
-      if (preferenceEnabled && selection.preference) {
+      if (preferenceEnabled && !event.is_multi_day && selection.preference) {
         entries.push({
           nomination_id: nomination.id,
           class_id: selection.preference,
           is_preference: true,
           order_index: classRows.length + 1,
         });
+      }
+      if (preferenceEnabled && event.is_multi_day) {
+        const dayCount = (event.days || event.classes_by_day || []).length;
+        let prefOrder = classRows.length + 1;
+        for (let dayIndex = 0; dayIndex < dayCount; dayIndex += 1) {
+          const classId = selection.preferencesByDay?.[dayIndex];
+          if (!classId || !selection.racingDays?.[dayIndex]) continue;
+          entries.push({
+            nomination_id: nomination.id,
+            class_id: classId,
+            is_preference: true,
+            order_index: prefOrder,
+          });
+          prefOrder += 1;
+        }
       }
     });
 
@@ -836,15 +1579,17 @@ export default function EventNominate() {
 
     setSaving(false);
     if (entryError) return setError(entryError.message || "Unable to save class entries.");
+    clearNominateDraft(eventId, membership.id);
     setSaved(true);
     navigate(`/${clubSlug}/app/events/${eventId}/nominations`);
   }
 
-  function classOptions(ids, currentValue) {
+  function classOptions(ids, currentValue, takenIds = [], { ignoreEntryLimits } = {}) {
     return [
       { value: "", label: "No class selected" },
       ...ids
-        .filter((id) => !classOptionDisabled(id, currentValue))
+        .filter((id) => id === currentValue || !takenIds.includes(id))
+        .filter((id) => ignoreEntryLimits || !classOptionDisabled(id, currentValue))
         .map((id) => ({
           value: id,
           label: classOptionLabel(id),
@@ -880,9 +1625,20 @@ export default function EventNominate() {
   const selectedDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
   const selection = selectedDriver ? selections[selectedDriver.id] || emptySelection() : emptySelection();
   const classIds = selectedClassIds(selection);
-  const racingIndexes = days.map((_, i) => i).filter((i) => selection.racingDays?.[i]);
-  const visibleDayIndex = racingIndexes.includes(activeDayIndex) ? activeDayIndex : racingIndexes[0] ?? 0;
   const currentDriverTotal = selectedDriver ? driverTotal(selectedDriver) : 0;
+  const pricingBreakdownRows = isFamily
+    ? drivers.flatMap((driver) => {
+        const driverSelection = selections[driver.id] || emptySelection();
+        if (!hasNominationActivity(driverSelection)) return [];
+        const prefix = `${driver.first_name} ${driver.last_name}`;
+        return checkoutBreakdownFor(driver, driverSelection).map((row) => ({
+          ...row,
+          label: `${prefix}: ${row.label}`,
+        }));
+      })
+    : selectedDriver
+      ? checkoutBreakdownFor(selectedDriver, selection)
+      : [];
   const availableAddOns = selectedDriver ? addonsFor(selection) : [];
 
   return (
@@ -1022,7 +1778,6 @@ export default function EventNominate() {
                           value={selectedDriver.id}
                           onChange={(value) => {
                             setSelectedDriverId(value);
-                            setActiveDayIndex(0);
                           }}
                           options={drivers.map((driver) => ({
                             value: driver.id,
@@ -1095,128 +1850,201 @@ export default function EventNominate() {
                     {event.is_multi_day && (
                       <div className="space-y-3 mb-4">
                         <div className="text-sm font-medium">Days Racing</div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-col gap-3">
                           {days.map((day, dayIndex) => {
                             const selected = !!selection.racingDays?.[dayIndex];
+                            const dateLabel = formatDayDate(day?.date);
+                            const nameLabel = day?.label?.trim() || "";
+                            const openPractice = isOpenPracticeDay(event, dayIndex);
+                            const dayClassIds = getEffectiveDayClassIds(event, dayIndex, trackClassIds);
+                            const slotsPerDay = multiDaySlotsPerDay(event, dayIndex);
+                            const daySlots = getDayClassSlots(selection.classesByDay, dayIndex, slotsPerDay);
+                            const chosen = daySlots.filter(Boolean);
+                            const capacity = dayClassCapacity(event, dayIndex);
+                            const visibleFromState = selection.visibleClassSlotsByDay?.[dayIndex] || 0;
+                            const visibleSlotCount = Math.max(visibleFromState, chosen.length);
+                            const practiceDay = isPracticeDay(event, dayIndex);
+                            const canAddClass =
+                              remainingClassAddsForDay(event, selection, dayIndex) > 0 &&
+                              visibleSlotCount < capacity &&
+                              chosen.length >= visibleSlotCount &&
+                              chosen.length > 0;
+                            const showPreference = preferenceEnabled && shouldShowMultiDayPreference(event, selection, dayIndex);
+                            const prefSlotCount = preferenceSlotCountForDay(event, dayIndex);
                             return (
-                              <button
+                              <div
                                 key={dayIndex}
-                                type="button"
-                                className="rounded-md px-3 py-1.5 text-sm font-medium border"
+                                className="rounded-md border p-3 space-y-3"
                                 style={{
-                                  background: selected ? brand : palette?.surface || "#fff",
-                                  color: selected ? palette?.buttonText || "#fff" : contentText,
-                                  borderColor: brand,
+                                  background: palette?.surfaceAlt || "#f9fafb",
+                                  borderColor: palette?.surfaceBorder || "#e5e7eb",
                                 }}
-                                onClick={() => setDayRacing(selectedDriver.id, dayIndex, !selected)}
                               >
-                                {day.label || `Day ${dayIndex + 1}`}
-                              </button>
+                                <div className="flex items-start gap-3">
+                                  <input
+                                    type="checkbox"
+                                    className="mt-1 h-4 w-4 shrink-0"
+                                    checked={selected}
+                                    onChange={() => {
+                                      const next = !selected;
+                                      setDayRacing(selectedDriver.id, dayIndex, next);
+                                    }}
+                                  />
+                                  <div className="min-w-0">
+                                    {dateLabel ? <div className="text-sm font-semibold">{dateLabel}</div> : null}
+                                    {nameLabel ? (
+                                      <div
+                                        className="text-sm"
+                                        style={{ color: dateLabel ? palette?.textMuted || "#6b7280" : contentText }}
+                                      >
+                                        {nameLabel}
+                                      </div>
+                                    ) : !dateLabel ? (
+                                      <div className="text-sm font-semibold">{`Day ${dayIndex + 1}`}</div>
+                                    ) : null}
+                                  </div>
+                                </div>
+
+                                {selected && openPractice && (
+                                  <div className="text-sm" style={{ color: contentText }}>
+                                    <p>
+                                      Practice day — all track classes. No class selection is required. This day is not
+                                      included in the LiveTime export.
+                                    </p>
+                                    {dayClassIds.length > 0 && (
+                                      <p className="mt-2 text-xs opacity-80">
+                                        Classes: {dayClassIds.map((id) => classMap.get(id) || id).join(", ")}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {selected && !openPractice && visibleSlotCount === 0 && (
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() =>
+                                      updateSelection(selectedDriver.id, (current) => ({
+                                        visibleClassSlotsByDay: {
+                                          ...(current.visibleClassSlotsByDay || {}),
+                                          [dayIndex]: 1,
+                                        },
+                                      }))
+                                    }
+                                  >
+                                    Select classes
+                                  </Button>
+                                )}
+
+                                {selected && !openPractice && visibleSlotCount > 0 && (
+                                  <div className="space-y-3">
+                                    {Array.from({ length: visibleSlotCount }, (_, slotIndex) => {
+                                      const currentValue = daySlots[slotIndex] || "";
+                                      return (
+                                        <div key={slotIndex} className="space-y-1">
+                                          <div className="text-sm font-medium">
+                                            {visibleSlotCount > 1 ? `Class ${slotIndex + 1}` : "Class"}
+                                          </div>
+                                          <div className="flex w-full min-w-0 items-center gap-2">
+                                            <div className="min-w-0 flex-1">
+                                              <FilterDropdown
+                                                variant="cms"
+                                                value={currentValue}
+                                                onChange={(value) =>
+                                                  setDayClass(selectedDriver.id, dayIndex, value, slotIndex)
+                                                }
+                                                onClose={() => {
+                                                  if (!currentValue) {
+                                                    setDayClass(selectedDriver.id, dayIndex, "", slotIndex);
+                                                  }
+                                                }}
+                                                options={classOptions(
+                                                  dayClassIds,
+                                                  currentValue,
+                                                  chosen.filter((id) => id !== currentValue),
+                                                  { ignoreEntryLimits: practiceDay }
+                                                )}
+                                                ariaLabel={
+                                                  visibleSlotCount > 1 ? `Class ${slotIndex + 1}` : "Class"
+                                                }
+                                                triggerStyleOverrides={{ fontSize: "0.875rem" }}
+                                              />
+                                            </div>
+                                            {currentValue && (
+                                              <TransponderCombobox
+                                                variant="cms"
+                                                value={transponderFor(selectedDriver.id, currentValue)}
+                                                suggestions={savedTranspondersFor(selectedDriver.id)}
+                                                onChange={(value) =>
+                                                  updateTransponder(selectedDriver.id, currentValue, value)
+                                                }
+                                                ariaLabel="Transponder number"
+                                              />
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                    {canAddClass && (
+                                      <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() =>
+                                          updateSelection(selectedDriver.id, (current) => ({
+                                            visibleClassSlotsByDay: {
+                                              ...(current.visibleClassSlotsByDay || {}),
+                                              [dayIndex]: Math.max(
+                                                current.visibleClassSlotsByDay?.[dayIndex] || 0,
+                                                visibleSlotCount
+                                              ) + 1,
+                                            },
+                                          }))
+                                        }
+                                      >
+                                        Add class
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
+
+                                {selected && !openPractice && showPreference &&
+                                  (() => {
+                                    const prefOptions = dayClassIds.filter((id) => !chosen.includes(id));
+                                    if (prefOptions.length === 0) return null;
+                                    const dayPref = selection.preferencesByDay?.[dayIndex] || "";
+                                    return (
+                                      <div>
+                                        <div className="text-sm font-medium mb-1">
+                                          {preferenceOrdinalLabel(prefSlotCount)}
+                                        </div>
+                                        <FilterDropdown
+                                          variant="cms"
+                                          value={dayPref}
+                                          onChange={(value) => setDayPreference(selectedDriver.id, dayIndex, value)}
+                                          options={[
+                                            { value: "", label: "No preference" },
+                                            ...prefOptions.map((id) => ({
+                                              value: id,
+                                              label: classMap.get(id) || id,
+                                            })),
+                                          ]}
+                                          ariaLabel={preferenceOrdinalLabel(prefSlotCount)}
+                                          triggerStyleOverrides={{ fontSize: "0.875rem" }}
+                                        />
+                                      </div>
+                                    );
+                                  })()}
+                              </div>
                             );
                           })}
                         </div>
                       </div>
                     )}
 
-                    {event.is_multi_day && racingIndexes.length > 1 && daysDiffer && (
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={racingIndexes.indexOf(visibleDayIndex) <= 0}
-                          onClick={() => setActiveDayIndex(racingIndexes[Math.max(0, racingIndexes.indexOf(visibleDayIndex) - 1)])}
-                        >
-                          Previous Day
-                        </Button>
-                        <div className="text-sm font-semibold text-center">{dayHeading(days[visibleDayIndex], visibleDayIndex)}</div>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={racingIndexes.indexOf(visibleDayIndex) >= racingIndexes.length - 1}
-                          onClick={() =>
-                            setActiveDayIndex(
-                              racingIndexes[Math.min(racingIndexes.length - 1, racingIndexes.indexOf(visibleDayIndex) + 1)]
-                            )
-                          }
-                        >
-                          Next Day
-                        </Button>
-                      </div>
-                    )}
-
-                    {event.is_multi_day
-                      ? racingIndexes.length > 0 &&
-                        (daysDiffer
-                          ? [visibleDayIndex]
-                          : racingIndexes.some((idx) => isOpenPracticeDay(event, idx))
-                            ? racingIndexes
-                            : racingIndexes.length
-                              ? [racingIndexes[0]]
-                              : []
-                        ).map((dayIndex) => {
-                          const dayClassIds = getEffectiveDayClassIds(
-                            event,
-                            dayIndex,
-                            trackClassIds
-                          );
-                          const slotsPerDay = multiDaySlotsPerDay(event, dayIndex);
-                          if (isOpenPracticeDay(event, dayIndex)) {
-                            return (
-                              <div key={dayIndex} className="text-sm" style={{ color: contentText }}>
-                                <div className="font-medium mb-1">
-                                  {dayHeading(days[dayIndex], dayIndex)}
-                                </div>
-                                <p>
-                                  Practice day — all track classes. No class selection is required. This
-                                  day is not included in the LiveTime export.
-                                </p>
-                                {dayClassIds.length > 0 && (
-                                  <p className="mt-2 text-xs opacity-80">
-                                    Classes:{" "}
-                                    {dayClassIds.map((id) => classMap.get(id) || id).join(", ")}
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          }
-                          const daySlots = getDayClassSlots(selection.classesByDay, dayIndex, slotsPerDay);
-                          return (
-                            <div key={dayIndex} className="space-y-3">
-                              {!daysDiffer && (
-                                <div className="text-sm font-medium mb-1" style={{ color: contentText }}>
-                                  Classes for selected days
-                                </div>
-                              )}
-                              {daySlots.map((currentValue, slotIndex) => (
-                                <div key={slotIndex} className="space-y-1">
-                                  <div className="text-sm font-medium">{slotsPerDay > 1 ? `Class ${slotIndex + 1}` : "Class"}</div>
-                                  <div className="flex w-full min-w-0 items-center gap-2">
-                                    <div className="min-w-0 flex-1">
-                                      <FilterDropdown
-                                        variant="cms"
-                                        value={currentValue}
-                                        onChange={(value) => setDayClass(selectedDriver.id, dayIndex, value, slotIndex)}
-                                        options={classOptions(dayClassIds, currentValue)}
-                                        ariaLabel={slotsPerDay > 1 ? `Class ${slotIndex + 1}` : "Class"}
-                                        triggerStyleOverrides={{ fontSize: "0.875rem" }}
-                                      />
-                                    </div>
-                                    {currentValue && (
-                                      <TransponderCombobox
-                                        variant="cms"
-                                        value={transponderFor(selectedDriver.id, currentValue)}
-                                        suggestions={savedTranspondersFor(selectedDriver.id)}
-                                        onChange={(value) => updateTransponder(selectedDriver.id, currentValue, value)}
-                                        ariaLabel="Transponder number"
-                                      />
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })
-                      : Array.from({ length: classLimit }, (_, slotIndex) => {
+                    {!event.is_multi_day &&
+                      Array.from({ length: classLimit }, (_, slotIndex) => {
                           const currentValue = selection.classSlots[slotIndex] || "";
                           return (
                             <div key={slotIndex} className="space-y-1 mb-3">
@@ -1227,7 +2055,11 @@ export default function EventNominate() {
                                     variant="cms"
                                     value={currentValue}
                                     onChange={(value) => setClassSlot(selectedDriver.id, slotIndex, value)}
-                                    options={classOptions(clubClasses.map((item) => item.id), currentValue)}
+                                    options={classOptions(
+                                      clubClasses.map((item) => item.id),
+                                      currentValue,
+                                      (selection.classSlots || []).filter((id) => id && id !== currentValue)
+                                    )}
                                     ariaLabel={`Class ${slotIndex + 1}`}
                                     triggerStyleOverrides={{ fontSize: "0.875rem" }}
                                   />
@@ -1246,22 +2078,29 @@ export default function EventNominate() {
                           );
                         })}
 
-                    {preferenceEnabled && classIds.length > 0 && (
+                    {preferenceEnabled && !event.is_multi_day && (() => {
+                      const chosenSlots = (selection.classSlots || []).filter(Boolean);
+                      if (chosenSlots.length < classLimit) return null;
+                      const prefOptions = clubClasses.map((item) => item.id).filter((id) => !chosenSlots.includes(id));
+                      if (prefOptions.length === 0) return null;
+                      const slotsPerDay = classLimit || 1;
+                      return (
                       <div className="mt-4">
-                        <div className="text-sm font-medium mb-1">Preference</div>
+                        <div className="text-sm font-medium mb-1">{preferenceOrdinalLabel(slotsPerDay)}</div>
                         <FilterDropdown
                           variant="cms"
                           value={selection.preference}
                           onChange={(value) => updateSelection(selectedDriver.id, { preference: value })}
                           options={[
                             { value: "", label: "No preference" },
-                            ...classIds.map((id) => ({ value: id, label: classMap.get(id) || id })),
+                            ...prefOptions.map((id) => ({ value: id, label: classMap.get(id) || id })),
                           ]}
-                          ariaLabel="Preference"
+                          ariaLabel={preferenceOrdinalLabel(slotsPerDay)}
                           triggerStyleOverrides={{ fontSize: "0.875rem" }}
                         />
                       </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </Section>
 
@@ -1272,7 +2111,12 @@ export default function EventNominate() {
                         const itemId = item.id || `merch-${idx}`;
                         const entry = selection.merch[itemId] || selection.merch[item.id];
                         const locked = item.included || item.compulsory;
-                        const qty = locked ? 1 : Number(entry?.qty || 0);
+                        const hasOptions = Array.isArray(item.options) && item.options.length > 0;
+                        const maxQty = numericMaxQty(item.max_qty);
+                        const multiOption = hasOptions && maxQty > 1;
+                        const storedLines = normalizePurchaseLines(entry);
+                        const completeLines = storedLines.filter((line) => optionsComplete(item.options, line.options));
+                        const currentOptionsReady = optionsComplete(item.options, entry?.options);
                         return (
                           <div
                             key={itemId}
@@ -1316,26 +2160,65 @@ export default function EventNominate() {
                                   <strong>Max Qty:</strong> {item.max_qty}
                                 </div>
                               )}
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-sm font-medium">{locked ? "Qty: 1" : "Quantity"}</span>
-                                {!locked && (
-                                  <QtyControl
-                                    value={qty}
-                                    min={0}
-                                    max={item.max_qty || 99}
+                              {hasOptions && (
+                                <>
+                                  <OptionPicker
+                                    groups={item.options}
+                                    selected={entry?.options}
+                                    committed={completeLines.map((line) => line.options)}
+                                    onChange={(group, value) =>
+                                      updateMerchOption(selectedDriver.id, itemId, group, value, item.max_qty, item.options)
+                                    }
+                                    palette={palette}
                                     brand={brand}
-                                    onChange={(next) => updateMerchQty(selectedDriver.id, itemId, next, item.max_qty)}
                                   />
-                                )}
-                              </div>
-                              {(qty > 0 || locked) && (
-                                <OptionPicker
-                                  groups={item.options}
-                                  selected={entry?.options}
-                                  onChange={(group, value) => updateMerchOption(selectedDriver.id, itemId, group, value)}
-                                  palette={palette}
-                                  brand={brand}
-                                />
+                                  {((locked && completeLines.length === 0) ||
+                                    (Object.values(entry?.options || {}).some(Boolean) && !currentOptionsReady)) && (
+                                    <p className="text-sm text-red-600">Choose all options before checkout.</p>
+                                  )}
+                                </>
+                              )}
+                              {storedLines.map((line, lineIndex) => {
+                                if (!optionsComplete(item.options, line.options) && hasOptions) return null;
+                                const qty = Number(line.qty || 0);
+                                const unit = item.included ? 0 : itemUnitPrice(item, line.options);
+                                const lineRemaining = Math.max(0, maxQty - (totalLineQty(storedLines) - qty));
+                                return (
+                                  <PurchaseLineEditor
+                                    key={`${optionSignature(line.options)}-${lineIndex}`}
+                                    label={itemSelectionLabel(item, line.options)}
+                                    amount={unit * qty}
+                                    qty={qty}
+                                    maxQty={lineRemaining}
+                                    brand={brand}
+                                    palette={palette}
+                                    qtyEditable={!item.included}
+                                    removable={!item.included}
+                                    onQtyChange={(next) =>
+                                      updateMerchLineQty(selectedDriver.id, itemId, lineIndex, next, maxQty)
+                                    }
+                                    onRemove={() => removeMerchLine(selectedDriver.id, itemId, lineIndex)}
+                                  />
+                                );
+                              })}
+                              {multiOption && totalLineQty(storedLines) < maxQty && (
+                                <p className="text-sm" style={{ color: palette?.textMuted || "#6b7280" }}>
+                                  Select options to add another ({totalLineQty(storedLines)}/{maxQty})
+                                </p>
+                              )}
+                              {!hasOptions && !item.included && storedLines.length === 0 && (
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-sm font-medium">Quantity</span>
+                                  <QtyControl
+                                    value={0}
+                                    min={0}
+                                    max={maxQty}
+                                    brand={brand}
+                                    onChange={(next) =>
+                                      updateMerchQty(selectedDriver.id, itemId, next, item.max_qty, entry?.options)
+                                    }
+                                  />
+                                </div>
                               )}
                             </div>
                           </div>
@@ -1352,7 +2235,12 @@ export default function EventNominate() {
                         const addonId = addon.id || `addon-${idx}`;
                         const entry = selection.addons[addonId] || selection.addons[addon.id];
                         const locked = !!addon.required;
-                        const qty = locked ? 1 : Number(entry?.qty || 0);
+                        const hasOptions = Array.isArray(addon.options) && addon.options.length > 0;
+                        const maxQty = numericMaxQty(addon.max_qty);
+                        const multiOption = hasOptions && maxQty > 1;
+                        const storedLines = normalizePurchaseLines(entry);
+                        const completeLines = storedLines.filter((line) => optionsComplete(addon.options, line.options));
+                        const currentOptionsReady = optionsComplete(addon.options, entry?.options);
                         return (
                           <div
                             key={addonId}
@@ -1404,26 +2292,65 @@ export default function EventNominate() {
                                   </ul>
                                 </div>
                               )}
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-sm font-medium">{locked ? "Qty: 1" : "Quantity"}</span>
-                                {!locked && (
-                                  <QtyControl
-                                    value={qty}
-                                    min={0}
-                                    max={addon.max_qty || 99}
+                              {hasOptions && (
+                                <>
+                                  <OptionPicker
+                                    groups={addon.options}
+                                    selected={entry?.options}
+                                    committed={completeLines.map((line) => line.options)}
+                                    onChange={(group, value) =>
+                                      updateAddonOption(selectedDriver.id, addonId, group, value, addon.max_qty, addon.options)
+                                    }
+                                    palette={palette}
                                     brand={brand}
-                                    onChange={(next) => updateAddonQty(selectedDriver.id, addonId, next, addon.max_qty)}
                                   />
-                                )}
-                              </div>
-                              {(qty > 0 || locked) && (
-                                <OptionPicker
-                                  groups={addon.options}
-                                  selected={entry?.options}
-                                  onChange={(group, value) => updateAddonOption(selectedDriver.id, addonId, group, value)}
-                                  palette={palette}
-                                  brand={brand}
-                                />
+                                  {((locked && completeLines.length === 0) ||
+                                    (Object.values(entry?.options || {}).some(Boolean) && !currentOptionsReady)) && (
+                                    <p className="text-sm text-red-600">Choose all options before checkout.</p>
+                                  )}
+                                </>
+                              )}
+                              {storedLines.map((line, lineIndex) => {
+                                if (!optionsComplete(addon.options, line.options) && hasOptions) return null;
+                                const qty = Number(line.qty || 0);
+                                const unit = itemUnitPrice(addon, line.options);
+                                const lineRemaining = Math.max(0, maxQty - (totalLineQty(storedLines) - qty));
+                                return (
+                                  <PurchaseLineEditor
+                                    key={`${optionSignature(line.options)}-${lineIndex}`}
+                                    label={itemSelectionLabel(addon, line.options)}
+                                    amount={unit * qty}
+                                    qty={qty}
+                                    maxQty={lineRemaining}
+                                    brand={brand}
+                                    palette={palette}
+                                    onQtyChange={(next) =>
+                                      updateAddonLineQty(selectedDriver.id, addonId, lineIndex, next, maxQty)
+                                    }
+                                    onRemove={() => removeAddonLine(selectedDriver.id, addonId, lineIndex)}
+                                  />
+                                );
+                              })}
+                              {multiOption && totalLineQty(storedLines) < maxQty && (
+                                <p className="text-sm" style={{ color: palette?.textMuted || "#6b7280" }}>
+                                  Select options to add another ({totalLineQty(storedLines)}/{maxQty})
+                                </p>
+                              )}
+                              {!hasOptions && storedLines.length === 0 && (
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-sm font-medium">{locked ? "Qty: 1" : "Quantity"}</span>
+                                  {!locked && (
+                                    <QtyControl
+                                      value={0}
+                                      min={0}
+                                      max={maxQty}
+                                      brand={brand}
+                                      onChange={(next) =>
+                                        updateAddonQty(selectedDriver.id, addonId, next, addon.max_qty, entry?.options)
+                                      }
+                                    />
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>
@@ -1453,6 +2380,50 @@ export default function EventNominate() {
 
                 <Section title="Pricing" icon={BanknotesIcon} brand={brand}>
                   <div className="rounded-md p-4 space-y-3" style={{ background: palette?.surfaceAlt || "#f9fafb", border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}` }}>
+                    {pricingBreakdownRows.length > 0 && (
+                      <div className="space-y-2">
+                        {pricingBreakdownRows.map((row, rowIndex) => {
+                          const editablePurchase = (row.kind === "merch" || row.kind === "addon") && !row.included;
+                          const removableClass = row.kind === "class" && !!row.classId;
+                          return (
+                            <div key={`${row.kind || row.label}-${row.itemId || row.classId || ""}-${row.lineIndex ?? row.slotIndex ?? rowIndex}-${rowIndex}`}>
+                              {editablePurchase ? (
+                                <PurchaseLineEditor
+                                  label={row.label}
+                                  amount={row.amount}
+                                  qty={row.qty}
+                                  maxQty={row.remainingQty ?? numericMaxQty(row.maxQty)}
+                                  brand={brand}
+                                  palette={palette}
+                                  onQtyChange={(next) => {
+                                    if (row.kind === "merch") {
+                                      updateMerchLineQty(row.driverId, row.itemId, row.lineIndex, next, numericMaxQty(row.maxQty));
+                                    } else {
+                                      updateAddonLineQty(row.driverId, row.itemId, row.lineIndex, next, numericMaxQty(row.maxQty));
+                                    }
+                                  }}
+                                  onRemove={() => {
+                                    if (row.kind === "merch") removeMerchLine(row.driverId, row.itemId, row.lineIndex);
+                                    else removeAddonLine(row.driverId, row.itemId, row.lineIndex);
+                                  }}
+                                />
+                              ) : (
+                                <PurchaseLineEditor
+                                  label={row.label}
+                                  amount={row.amount}
+                                  qty={1}
+                                  brand={brand}
+                                  palette={palette}
+                                  qtyEditable={false}
+                                  removable={removableClass}
+                                  onRemove={() => removeClassEntry(row.driverId, row)}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     {isFamily && (
                       <div className="flex items-center justify-between text-sm">
                         <span>
@@ -1463,7 +2434,7 @@ export default function EventNominate() {
                       </div>
                     )}
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-text-muted">{isFamily ? "Household total" : "Total"}</p>
+                      <p className="text-xl text-text-muted">{isFamily ? "Household total" : "Total"}</p>
                       <p className="text-xl font-semibold">{money(householdTotal)}</p>
                     </div>
                     {!paymentConfirmed ? (

@@ -7,7 +7,7 @@ import CMSImageUpload from "@cms/CMSImageUpload";
 import { supabase } from "@/supabaseClient";
 
 export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event }) {
-  const rule = item.class_rules[cid] || {
+  const rule = item.class_rules?.[cid] || {
     price: "",
     required: false,
     max_qty: "",
@@ -23,7 +23,7 @@ export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event })
       class_rules: {
         ...prev.class_rules,
         [cid]: {
-          ...prev.class_rules[cid],
+          ...(prev.class_rules?.[cid] || {}),
           [field]: value,
         },
       },

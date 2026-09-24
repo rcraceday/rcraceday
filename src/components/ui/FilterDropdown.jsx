@@ -32,6 +32,7 @@ export default function FilterDropdown({
   hideSelectedOption = false,
   menuScroll = true,
   onMenuToggle,
+  onClose,
   variant = "public",
 }) {
   const [open, setOpen] = useState(false);
@@ -51,13 +52,19 @@ export default function FilterDropdown({
   useEffect(() => {
     function closeOnOutsideClick(event) {
       if (!dropdownRef.current?.contains(event.target)) {
-        setOpen(false);
+        setOpen((wasOpen) => {
+          if (wasOpen) onClose?.();
+          return false;
+        });
       }
     }
 
     function closeOnEscape(event) {
       if (event.key === "Escape") {
-        setOpen(false);
+        setOpen((wasOpen) => {
+          if (wasOpen) onClose?.();
+          return false;
+        });
       }
     }
 
@@ -68,7 +75,7 @@ export default function FilterDropdown({
       document.removeEventListener("mousedown", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, []);
+  }, [onClose]);
 
   useLayoutEffect(() => {
     if (!onMenuToggle) return;

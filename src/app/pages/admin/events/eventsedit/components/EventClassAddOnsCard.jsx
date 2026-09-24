@@ -17,6 +17,7 @@ const normalizeRequirements = (requirements) =>
 export default function EventClassAddOnsCard({
   event = {},
   onChange = () => {},
+  availableClasses,
 }) {
   const [editingItem, setEditingItem] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -251,7 +252,13 @@ export default function EventClassAddOnsCard({
 
             <ClassAddOnEditor
               item={editingItem}
-              event={event}
+              event={{
+                ...event,
+                available_classes:
+                  (Array.isArray(availableClasses) && availableClasses.length
+                    ? availableClasses
+                    : event.available_classes) || [],
+              }}
               setItem={setEditingItem}
             />
 
