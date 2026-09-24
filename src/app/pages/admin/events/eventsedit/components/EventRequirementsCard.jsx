@@ -1,6 +1,9 @@
 // src/app/pages/admin/events/eventsedit/components/EventRequirementsCard.jsx
 import { useState } from "react";
+import CMSInput from "@cms/CMSInput";
 import CMSButton from "@cms/CMSButton";
+import { FieldRowClearButton, RemoveButton } from "@cms/CMSButtonSet";
+import { cmsLayout } from "@cms/layout";
 
 function normalizeRequirements(requirements = []) {
   if (!Array.isArray(requirements)) return [];
@@ -106,9 +109,7 @@ export default function EventRequirementsCard({ event = {}, onChange = () => {} 
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontWeight: 700 }}>Club Requirements</div>
-
+    <div style={{ display: "flex", flexDirection: "column", gap: cmsLayout.spacing.lg }}>
       {requirements.length === 0 && (
         <div style={{ padding: "8px 0", color: "#666" }}>No requirements configured.</div>
       )}
@@ -126,19 +127,19 @@ export default function EventRequirementsCard({ event = {}, onChange = () => {} 
 
       <div
         style={{
-          display: "flex",
-          gap: 8,
-          alignItems: "center",
+          ...cmsLayout.row,
           borderTop: "1px solid #eee",
           paddingTop: 12,
         }}
       >
-        <input
-          style={{ flex: 1, padding: "6px 8px" }}
-          value={newDescriptor}
-          placeholder="New requirement description"
-          onChange={(event) => setNewDescriptor(event.target.value)}
-        />
+        <div style={{ ...cmsLayout.column, minWidth: 200 }}>
+          <CMSInput
+            label="New requirement description"
+            value={newDescriptor}
+            placeholder="New requirement description"
+            onChange={setNewDescriptor}
+          />
+        </div>
         <CMSButton onClick={addRequirement}>Add Requirements</CMSButton>
       </div>
     </div>
@@ -155,41 +156,50 @@ function RequirementRow({
   const [itemInput, setItemInput] = useState("");
 
   return (
-    <div style={{ border: "1px solid #eee", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input
-          style={{ flex: 1, padding: "6px 8px" }}
-          value={requirement.descriptor}
-          placeholder="Description"
-          onChange={(event) => onDescriptorChange(event.target.value)}
-        />
-        <input
-          style={{ flex: 1, padding: "6px 8px" }}
-          value={itemInput}
-          placeholder="Add item"
-          onChange={(event) => setItemInput(event.target.value)}
-        />
-        <CMSButton
-          onClick={() => {
-            onAddItem(itemInput);
-            setItemInput("");
-          }}
-        >
-          Add Item
-        </CMSButton>
-        <CMSButton variant="danger" onClick={onRemoveRequirement}>
-          Remove
-        </CMSButton>
-      </div>
+    <div
+      style={{
+        border: "1px solid #eee",
+        borderRadius: 8,
+        padding: 12,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <CMSInput
+        label="Description"
+        value={requirement.descriptor}
+        placeholder="Description"
+        onChange={onDescriptorChange}
+        action={<FieldRowClearButton onClick={onRemoveRequirement} />}
+      />
+
+      <CMSInput
+        label="Add item"
+        value={itemInput}
+        placeholder="Add item"
+        onChange={setItemInput}
+        action={
+          <CMSButton
+            type="button"
+            className="admin-action-btn-fixed"
+            style={{ justifyContent: "center" }}
+            onClick={() => {
+              onAddItem(itemInput);
+              setItemInput("");
+            }}
+          >
+            Add Item
+          </CMSButton>
+        }
+      />
 
       {requirement.items.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 4 }}>
           {requirement.items.map((item, index) => (
             <div key={`${requirement.id}-${index}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ flex: 1 }}>{item}</span>
-              <CMSButton variant="danger" onClick={() => onRemoveItem(index)}>
-                Remove Item
-              </CMSButton>
+              <RemoveButton type="button" onClick={() => onRemoveItem(index)} />
             </div>
           ))}
         </div>
@@ -197,4 +207,3 @@ function RequirementRow({
     </div>
   );
 }
-

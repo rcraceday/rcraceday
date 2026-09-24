@@ -3,6 +3,8 @@ import { ChevronDownIcon } from "@heroicons/react/24/solid";
 import useTheme from "@/app/providers/useTheme";
 import {
   COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
+  getCmsSelectMenuStyle,
+  getCmsSelectTriggerStyle,
   getDropdownMenuStyle,
   getDropdownOptionStyle,
   getDropdownTriggerStyle,
@@ -30,7 +32,7 @@ export default function FilterDropdown({
   hideSelectedOption = false,
   menuScroll = true,
   onMenuToggle,
-  variant = "brand",
+  variant = "public",
 }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -43,7 +45,7 @@ export default function FilterDropdown({
   }, [options, value, hideSelectedOption]);
   const selectedOption = options.find((option) => option.value === value) || options[0];
   const primary = palette?.primary || "#00438a";
-  const isCms = variant === "cms";
+  const isCms = variant === "cms" || variant === "public";
   const chevronColor = primary;
 
   useEffect(() => {
@@ -88,7 +90,7 @@ export default function FilterDropdown({
       <button
         type="button"
         className={`filter-dropdown-trigger max-w-full ${fullWidth ? "w-full" : "w-auto"}`}
-        style={getDropdownTriggerStyle(palette, {
+        style={(isCms ? getCmsSelectTriggerStyle : getDropdownTriggerStyle)(palette, {
           ...(compact
             ? {
                 ...COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
@@ -118,7 +120,11 @@ export default function FilterDropdown({
           className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-40 overflow-y-auto" : ""}`}
           role="listbox"
           aria-label={ariaLabel}
-          style={getDropdownMenuStyle(palette, isCms ? { boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)" } : undefined)}
+          style={
+            isCms
+              ? getCmsSelectMenuStyle(palette, { boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)" })
+              : getDropdownMenuStyle(palette)
+          }
         >
           {menuOptions.map((option) => (
             <button

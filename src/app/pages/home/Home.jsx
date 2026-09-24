@@ -187,7 +187,7 @@ export default function Home() {
 
         {loadingEvent && (
           <Card>
-            <p className="text-text-muted">Loading event...</p>
+      <div style={{ padding: "16px" }}>Loading event…</div>
           </Card>
         )}
 
@@ -373,24 +373,6 @@ export default function Home() {
             </Button>
           </a>
         </div>
-
-        {isAdmin && (
-          <Button
-            className="!rounded-lg !py-4 w-full flex items-center justify-center gap-3"
-            style={{
-              backgroundColor: "#ececec",
-              border: "2px solid var(--admin-accent, #ed2024)",
-              color: "#111827",
-            }}
-            onClick={() => navigate(`/${clubSlug}/app/admin`)}
-          >
-            <Cog6ToothIcon
-              className="w-6 h-6"
-              style={{ color: "var(--admin-accent, #ed2024)" }}
-            />
-            <span className="font-medium text-base">Admin Dashboard</span>
-          </Button>
-        )}
       </section>
       </main>
     </div>

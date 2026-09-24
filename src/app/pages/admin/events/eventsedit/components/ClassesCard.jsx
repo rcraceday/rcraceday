@@ -52,6 +52,7 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
       date: d.date,
       label: d.label,
       classes: Array.isArray(existing?.classes) ? existing.classes : [],
+      is_practice: !!(existing?.is_practice ?? d?.is_practice),
     };
   });
 
@@ -69,6 +70,9 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
             date: d.date,
             label: d.label,
             classes: deduped,
+            is_practice: !!(
+              event.classes_by_day?.[dayIndex]?.is_practice ?? days[dayIndex]?.is_practice
+            ),
           };
         }
         const existing = event.classes_by_day?.[index];
@@ -78,12 +82,40 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
           classes: Array.isArray(existing?.classes)
             ? existing.classes
             : [],
+          is_practice: !!(existing?.is_practice ?? d?.is_practice),
         };
       });
 
       onClassesChange(next);
     },
     [days, event.classes_by_day, onClassesChange]
+  );
+
+  const setDayPractice = useCallback(
+    (dayIndex, isPractice) => {
+      const next = days.map((d, index) => {
+        const existing = event.classes_by_day?.[index];
+        return {
+          date: d.date,
+          label: d.label,
+          classes: Array.isArray(existing?.classes) ? existing.classes : [],
+          is_practice: index === dayIndex ? isPractice : !!(existing?.is_practice ?? d?.is_practice),
+        };
+      });
+      onClassesChange(next);
+
+      if (isMulti && Array.isArray(event.days)) {
+        const nextDays = event.days.map((d, index) =>
+          typeof d === "string"
+            ? d
+            : index === dayIndex
+              ? { ...d, is_practice: isPractice }
+              : d
+        );
+        onChange("days", nextDays);
+      }
+    },
+    [days, event.classes_by_day, event.days, isMulti, onClassesChange, onChange]
   );
 
   const addClassToDay = (dayIndex, classId = "") => {
@@ -164,7 +196,7 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
         <div style={{ width: 220 }}>
           <CMSInput
             type="number"
-            label={isMulti ? "Max Event Classes per Driver" : "Max Classes Per Driver Per Day"}
+            label={isMulti ? "Max Entries Per Event" : "Max Classes Per Driver Per Day"}
             value={event.class_limit == null ? "" : String(event.class_limit)}
             onChange={(v) => {
               const next = v === "" ? null : Math.max(0, Number(v));
@@ -268,9 +300,40 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
                   justifyContent: "space-between",
                   alignItems: "center",
                   marginBottom: 8,
+                  gap: 12,
+                  flexWrap: "wrap",
                 }}
               >
-                <div style={{ fontWeight: 600 }}>{dayLabel}</div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>{dayLabel}</div>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "#374151",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
+                    title="Practice day: class picks do not count toward max entries. Empty class list means all track classes are practicing (excluded from LiveTime export)."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!classesByDay[dayIndex]?.is_practice}
+                      onChange={(e) => setDayPractice(dayIndex, e.target.checked)}
+                    />
+                    Practice
+                  </label>
+                </div>
                 <div style={{ color: "#6B7280", fontSize: 13 }}>
                   {isMulti ? `Day ${dayIndex + 1}` : "Single day"}
                 </div>

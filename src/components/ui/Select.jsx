@@ -1,4 +1,6 @@
 import React from "react";
+import useTheme from "@/app/providers/useTheme";
+import { getNativeSelectStyle } from "@/components/ui/dropdownFieldStyles";
 
 export default function Select({
   label,
@@ -7,6 +9,8 @@ export default function Select({
   children,
   style = {},
 }) {
+  const { palette } = useTheme();
+
   return (
     <label style={{ display: "block", width: "100%" }}>
       {label && (
@@ -15,7 +19,7 @@ export default function Select({
             marginBottom: "6px",
             fontSize: "14px",
             fontWeight: 500,
-            color: "#333",
+            color: palette?.text || "#333",
           }}
         >
           {label}
@@ -26,14 +30,12 @@ export default function Select({
         value={value}
         onChange={onChange}
         style={{
-          width: "100%",
-          padding: "8px 10px",
-          fontSize: "14px",
-          borderRadius: "6px",
-          border: "2px solid #ccc",
-          background: "white",
-          color: "#333",
-          appearance: "auto",
+          ...getNativeSelectStyle(palette, {
+            width: "100%",
+            padding: "8px 10px",
+            fontSize: "14px",
+            appearance: "auto",
+          }),
           ...style,
         }}
       >

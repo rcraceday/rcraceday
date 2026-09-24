@@ -4,7 +4,15 @@ import { UserCircleIcon, PhotoIcon } from "@heroicons/react/24/solid";
 import useTheme from "@/app/providers/useTheme";
 import Input from "@/components/ui/Input";
 import CustomFlagSelect from "@/components/ui/CustomFlagSelect";
-import { COUNTRIES } from "@/data/countries";
+import FilterDropdown from "@/components/ui/FilterDropdown";
+
+const GENDER_OPTIONS = [
+  { value: "", label: "Select gender" },
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" },
+  { value: "Non-Binary", label: "Non-Binary" },
+  { value: "Prefer Not To Say", label: "Prefer Not To Say" },
+];
 
 export default function AvatarAndBasicInfoSection({
   driver,
@@ -102,17 +110,14 @@ export default function AvatarAndBasicInfoSection({
           {/* GENDER */}
           <div>
             <label className="block text-sm font-medium mb-1">Gender</label>
-            <select
+            <FilterDropdown
+              variant="cms"
               value={driver.gender || ""}
-              onChange={(e) => update("gender", e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm"
-            >
-              <option value="">Select gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Non-Binary">Non-Binary</option>
-              <option value="Prefer Not To Say">Prefer Not To Say</option>
-            </select>
+              onChange={(value) => update("gender", value)}
+              options={GENDER_OPTIONS}
+              ariaLabel="Gender"
+              triggerStyleOverrides={{ fontSize: "0.875rem" }}
+            />
           </div>
 
           {/* COUNTRY */}

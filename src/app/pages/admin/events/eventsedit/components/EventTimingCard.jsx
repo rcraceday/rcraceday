@@ -2,7 +2,11 @@
 import React, { useMemo } from "react";
 import CMSInput from "@cms/CMSInput";
 import CMSButton from "@cms/CMSButton";
+import { ClearFieldButton } from "@cms/CMSButtonSet";
 import { cmsLayout } from "@cms/layout";
+import { cmsStyles } from "@cms/styles";
+
+const timeFieldLabelStyle = { ...cmsStyles.label, display: "block", marginBottom: 6 };
 
 export default function EventTimingCard({ event = {}, onChange }) {
   const isMulti = !!event.is_multi_day;
@@ -16,6 +20,7 @@ export default function EventTimingCard({ event = {}, onChange }) {
         practice_at: d.practice_at || "",
         drivers_brief_at: d.drivers_brief_at || "",
         race_start_at: d.race_start_at || "",
+        is_practice: !!d.is_practice,
       }));
     }
 
@@ -37,13 +42,6 @@ export default function EventTimingCard({ event = {}, onChange }) {
     onChange("days", next);
   };
 
-  const updateDayDate = (index, value) => {
-    const next = [...days];
-    next[index] = { ...next[index], date: value };
-    onChange("days", next);
-    if (!isMulti) onChange("event_date", value);
-  };
-
   const copyTimingToAllDays = () => {
     if (days.length < 2) return;
 
@@ -63,6 +61,22 @@ export default function EventTimingCard({ event = {}, onChange }) {
     onChange("days", next);
   };
 
+  const renderTimeField = (dayIndex, field, label) => (
+    <div style={{ minWidth: 0 }}>
+      <label style={timeFieldLabelStyle}>{label}</label>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <CMSInput
+            type="time"
+            value={days[dayIndex][field] || ""}
+            onChange={(v) => updateDayField(dayIndex, field, v)}
+          />
+        </div>
+        <ClearFieldButton onClick={() => updateDayField(dayIndex, field, null)} />
+      </div>
+    </div>
+  );
+
   const renderDayRow = (day, i) => {
     const displayLabel =
       day.label || (isMulti ? `Day ${i + 1}` : "Single Day");
@@ -81,6 +95,9 @@ export default function EventTimingCard({ event = {}, onChange }) {
           style={{
             display: "flex",
             justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 12,
+            flexWrap: "wrap",
             marginBottom: 8,
           }}
         >
@@ -90,145 +107,23 @@ export default function EventTimingCard({ event = {}, onChange }) {
           </div>
         </div>
 
-        {/* TIMING GRID WITH CLEAR BUTTONS */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr 1fr",
-            gap: 12,
-          }}
-        >
-          {/* Gates Open */}
-          <div>
-            <label style={{ marginBottom: 6, fontSize: 13 }}>
-              Gates Open
-            </label>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <CMSInput
-                type="time"
-                value={day.gates_open_at || ""}
-                onChange={(v) => updateDayField(i, "gates_open_at", v)}
-              />
-              <button
-                onClick={() => updateDayField(i, "gates_open_at", null)}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: 12,
-                  background: "#E5E7EB",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                }}
-              >
-                ×
-              </button>
-            </div>
-          </div>
-
-          {/* Practice */}
-          <div>
-            <label style={{ marginBottom: 6, fontSize: 13 }}>
-              Practice
-            </label>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <CMSInput
-                type="time"
-                value={day.practice_at || ""}
-                onChange={(v) => updateDayField(i, "practice_at", v)}
-              />
-              <button
-                onClick={() => updateDayField(i, "practice_at", null)}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: 12,
-                  background: "#E5E7EB",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                }}
-              >
-                ×
-              </button>
-            </div>
-          </div>
-
-          {/* Drivers Brief */}
-          <div>
-            <label style={{ marginBottom: 6, fontSize: 13 }}>
-              Drivers Brief
-            </label>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <CMSInput
-                type="time"
-                value={day.drivers_brief_at || ""}
-                onChange={(v) => updateDayField(i, "drivers_brief_at", v)}
-              />
-              <button
-                onClick={() => updateDayField(i, "drivers_brief_at", null)}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: 12,
-                  background: "#E5E7EB",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                }}
-              >
-                ×
-              </button>
-            </div>
-          </div>
-
-          {/* Race Start */}
-          <div>
-            <label style={{ marginBottom: 6, fontSize: 13 }}>
-              Race Start
-            </label>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <CMSInput
-                type="time"
-                value={day.race_start_at || ""}
-                onChange={(v) => updateDayField(i, "race_start_at", v)}
-              />
-              <button
-                onClick={() => updateDayField(i, "race_start_at", null)}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: 12,
-                  background: "#E5E7EB",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                }}
-              >
-                ×
-              </button>
-            </div>
-          </div>
+        <div className="event-timing-grid">
+          {renderTimeField(i, "gates_open_at", "Gates Open")}
+          {renderTimeField(i, "practice_at", "Practice")}
+          {renderTimeField(i, "drivers_brief_at", "Drivers Brief")}
+          {renderTimeField(i, "race_start_at", "Race Start")}
         </div>
 
-        {/* DATE + LABEL */}
-        <div style={{ marginTop: 12, display: "flex", gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ marginBottom: 6, fontSize: 13 }}>
-              Date
-            </label>
-            <CMSInput
-              type="date"
-              value={day.date || ""}
-              onChange={(v) => updateDayDate(i, v)}
-            />
-          </div>
-
-          <div style={{ flex: 1 }}>
-            <label style={{ marginBottom: 6, fontSize: 13 }}>
-              Day name (optional)
-            </label>
-            <CMSInput
-              value={day.label || ""}
-              onChange={(v) => {
-                const next = [...days];
-                next[i] = { ...next[i], label: v };
-                onChange("days", next);
-              }}
-            />
-          </div>
+        <div style={{ marginTop: 12 }}>
+          <CMSInput
+            label="Day name (optional)"
+            value={day.label || ""}
+            onChange={(v) => {
+              const next = [...days];
+              next[i] = { ...next[i], label: v };
+              onChange("days", next);
+            }}
+          />
         </div>
       </div>
     );

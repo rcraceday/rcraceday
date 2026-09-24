@@ -58,6 +58,7 @@ export default function Events() {
         .from("events")
         .select("*")
         .eq("club_id", club.id)
+        .eq("is_published", true)
         .order("event_date", { ascending: true });
 
       const { data: clubTracks = [] } = await supabase

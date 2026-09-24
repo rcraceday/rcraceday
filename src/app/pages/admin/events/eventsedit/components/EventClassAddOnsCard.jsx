@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
+import { RemoveButton } from "@cms/CMSButtonSet";
 import { supabase } from "@/supabaseClient";
 
 import ClassAddOnEditor from "./ClassAddOnEditor";
@@ -198,13 +199,7 @@ export default function EventClassAddOnsCard({
               >
                 Duplicate
               </CMSButton>
-              <CMSButton
-                type="button"
-                variant="danger"
-                onClick={() => deleteItem(item.id)}
-              >
-                Remove
-              </CMSButton>
+              <RemoveButton type="button" onClick={() => deleteItem(item.id)} />
             </div>
           </div>
         </CMSCard>

@@ -3,6 +3,8 @@ import { ChevronDownIcon } from "@heroicons/react/24/solid";
 import useTheme from "@/app/providers/useTheme";
 import {
   COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
+  getCmsSelectMenuStyle,
+  getCmsSelectTriggerStyle,
   getDropdownMenuStyle,
   getDropdownOptionStyle,
   getDropdownTriggerStyle,
@@ -24,7 +26,7 @@ export default function TransponderCombobox({
   placeholder = "Transponder",
   menuScroll = true,
   onMenuToggle,
-  variant = "brand",
+  variant = "public",
 }) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -33,7 +35,7 @@ export default function TransponderCombobox({
   const { palette } = useTheme();
   const primary = palette?.primary || "#00438a";
   const currentValue = sanitizeTransponder(value);
-  const isCms = variant === "cms";
+  const isCms = variant === "cms" || variant === "public";
   const chevronColor = primary;
 
   useEffect(() => {
@@ -96,7 +98,7 @@ export default function TransponderCombobox({
     >
       <div
         className="filter-dropdown-trigger flex w-full max-w-full items-center"
-        style={getDropdownTriggerStyle(palette, {
+        style={(isCms ? getCmsSelectTriggerStyle : getDropdownTriggerStyle)(palette, {
           ...COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
           cursor: "text",
         })}
@@ -152,10 +154,11 @@ export default function TransponderCombobox({
           className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-40 overflow-y-auto" : ""}`}
           role="listbox"
           aria-label={ariaLabel}
-          style={getDropdownMenuStyle(palette, {
-            minWidth: "100%",
-            ...(isCms ? { boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)" } : {}),
-          })}
+          style={
+            isCms
+              ? getCmsSelectMenuStyle(palette, { minWidth: "100%" })
+              : getDropdownMenuStyle(palette, { minWidth: "100%" })
+          }
         >
           {filteredSuggestions.length === 0 ? (
             <div className="px-2 py-1.5 text-xs text-text-muted">No other transponders</div>

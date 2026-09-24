@@ -6,6 +6,7 @@ import CMSTextarea from "@cms/CMSTextarea";
 import CMSToggle from "@cms/CMSToggle";
 import CMSImageUpload from "@cms/CMSImageUpload";
 import CMSButton from "@cms/CMSButton";
+import { ClearFieldButton, RemoveButton } from "@cms/CMSButtonSet";
 
 import OptionGroupEditor from "./OptionGroupEditor";
 
@@ -218,18 +219,16 @@ export default function MerchEditor({ item, setItem }) {
                   >
                     Add Item
                   </CMSButton>
-                  <CMSButton
+                  <ClearFieldButton
                     type="button"
-                    variant="danger"
                     onClick={() =>
                       update(
                         "requirements",
                         requirements.filter((_, index) => index !== ri)
                       )
                     }
-                  >
-                    Remove
-                  </CMSButton>
+                    style={{ alignSelf: "flex-end" }}
+                  />
                 </div>
 
                 {requirement.items.map((entry, ii) => (
@@ -253,9 +252,8 @@ export default function MerchEditor({ item, setItem }) {
                         }}
                       />
                     </div>
-                    <CMSButton
+                    <RemoveButton
                       type="button"
-                      variant="danger"
                       onClick={() => {
                         const nextRequirements = requirements.map((req, reqIndex) =>
                           reqIndex === ri
@@ -267,9 +265,8 @@ export default function MerchEditor({ item, setItem }) {
                         );
                         update("requirements", nextRequirements);
                       }}
-                    >
-                      Remove Item
-                    </CMSButton>
+                      style={{ alignSelf: "flex-end", marginBottom: 4 }}
+                    />
                   </div>
                 ))}
               </div>

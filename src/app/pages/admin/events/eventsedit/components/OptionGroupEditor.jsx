@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import CMSCard from "@cms/CMSCard";
 import CMSInput from "@cms/CMSInput";
 import CMSButton from "@cms/CMSButton";
+import { ClearFieldButton } from "@cms/CMSButtonSet";
 import CMSImageUpload from "@cms/CMSImageUpload";
 import { supabase } from "@/supabaseClient";
 
@@ -101,13 +102,12 @@ export default function OptionGroupEditor({
                 }}
               />
 
-              <CMSButton
-                variant="danger"
+              <ClearFieldButton
                 type="button"
                 onClick={() => onRemoveValue(vi)}
-              >
-                Remove Option
-              </CMSButton>
+                title="Remove option"
+                style={{ alignSelf: "flex-end" }}
+              />
             </div>
           ))}
         </div>
@@ -132,14 +132,12 @@ export default function OptionGroupEditor({
         </div>
       </div>
 
-      <CMSButton
-        variant="danger"
+      <ClearFieldButton
         type="button"
         onClick={onRemoveGroup}
+        title="Remove group"
         style={{ marginTop: 16 }}
-      >
-        Remove Group
-      </CMSButton>
+      />
     </CMSCard>
   );
 }

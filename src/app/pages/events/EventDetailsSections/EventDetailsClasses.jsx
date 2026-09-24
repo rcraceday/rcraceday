@@ -1,7 +1,12 @@
 // src/app/pages/events/EventDetailsSections/EventDetailsClasses.jsx
 
 import useTheme from "@/app/providers/useTheme";
-import { getDayClassLimit, getEventClassLimit } from "@/app/lib/eventClassLimit";
+import {
+  getDayClassLimit,
+  getEffectiveDayClassIds,
+  getEventClassLimit,
+  isOpenPracticeDay,
+} from "@/app/lib/eventClassLimit";
 
 /* ===========================
    HELPERS
@@ -22,7 +27,7 @@ function formatDate(dateString) {
    FLATTENED COMPONENT
    =========================== */
 
-export default function EventDetailsClasses({ event }) {
+export default function EventDetailsClasses({ event, trackClassIds = [], classNameMap = {} }) {
   const { palette } = useTheme();
   const classesByDay = Array.isArray(event.classes_by_day)
     ? event.classes_by_day
@@ -47,7 +52,8 @@ export default function EventDetailsClasses({ event }) {
       {classesByDay.map((day, index) => {
         const label = day.label?.trim() || `Day ${index + 1}`;
         const dateFormatted = formatDate(day.date);
-        const classes = Array.isArray(day.classes) ? day.classes : [];
+        const classes = getEffectiveDayClassIds(event, index, trackClassIds);
+        const openPractice = isOpenPracticeDay(event, index);
 
         return (
           <div key={index} className="space-y-2">
@@ -57,11 +63,15 @@ export default function EventDetailsClasses({ event }) {
               {label} — {dateFormatted}
             </div>
 
+            {openPractice && (
+              <p className="text-sm text-gray-600">Practice day — all track classes</p>
+            )}
+
             {/* CLASS LIST */}
             {classes.length > 0 ? (
               <ul className="text-sm leading-tight space-y-1">
                 {classes.map((cls, i) => (
-                  <li key={i}>• {cls}</li>
+                  <li key={i}>• {classNameMap[cls] || cls}</li>
                 ))}
               </ul>
             ) : (

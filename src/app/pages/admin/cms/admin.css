@@ -4,6 +4,146 @@
 
 .admin-root {
   --admin-accent: #ed2024; /* Default admin red */
+  --admin-control-height: 38px;
+  --admin-btn-height: 28px;
+}
+
+.admin-root .admin-clear-field-btn {
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  background: #e5e7eb;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--admin-accent);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.admin-root .admin-field-row-clear {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.admin-root .sortable-class-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 88px 38px;
+  gap: 12px;
+  align-items: end;
+  width: 100%;
+}
+
+.admin-root .sortable-class-row__label-row {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 2px;
+  line-height: 1.25;
+  min-height: calc(14px * 1.25);
+}
+
+.admin-root .sortable-class-row__label-row--hidden {
+  visibility: hidden;
+  user-select: none;
+}
+
+.admin-root .sortable-class-row__control-slot {
+  height: var(--admin-control-height);
+  min-height: var(--admin-control-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.admin-root .sortable-class-row__control-slot--fill {
+  justify-content: stretch;
+  width: 100%;
+}
+
+.admin-root .sortable-class-row__control-slot--fill > * {
+  width: 100%;
+}
+
+.admin-root .sortable-class-row__clear {
+  width: 38px;
+  min-width: 38px;
+  max-width: 38px;
+}
+
+.admin-root .sortable-class-row__clear .sortable-class-row__control-slot {
+  justify-content: flex-end;
+}
+
+.admin-root .sortable-class-row__clear .admin-field-row-clear {
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.admin-root select.admin-class-select {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-root .admin-cms-btn,
+.admin-root .admin-btn-danger {
+  height: var(--admin-btn-height);
+  min-height: var(--admin-btn-height);
+  max-height: var(--admin-btn-height);
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+.admin-root .admin-btn-danger {
+  background-color: var(--admin-accent);
+  border: 1px solid var(--admin-accent);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.admin-root .admin-btn-danger:hover:not(:disabled) {
+  background-color: #c81a1d;
+  border-color: #c81a1d;
+}
+
+.admin-root .admin-btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-root .admin-action-btn-fixed {
+  min-width: 97px;
+  justify-content: center;
+}
+
+.admin-root .admin-input-action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-root .admin-input-action-row .admin-field-row-clear {
+  align-self: center;
+}
+
+.admin-root .admin-input-action-row > input,
+.admin-root .admin-input-action-row > select {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* ============================================================
@@ -108,6 +248,24 @@
 /* Event list cards keep a neutral edge and stack actions on narrow screens. */
 .admin-root .admin-event-card {
   border-left-color: #E5E7EB !important;
+}
+
+.admin-root .event-timing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .admin-root .event-timing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-root .event-timing-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {

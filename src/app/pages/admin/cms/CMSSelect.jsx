@@ -8,19 +8,32 @@ export default function CMSSelect({
   options = [],
   placeholder = "Select...",
   style = {},
+  selectClassName = "",
+  title,
+  sortOptions = true,
 }) {
+  const sortedOptions = sortOptions
+    ? [...options].sort((a, b) =>
+        String(a.label ?? "").localeCompare(String(b.label ?? ""), undefined, {
+          sensitivity: "base",
+        })
+      )
+    : options;
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "6px",
+        gap: "4px",
         width: "100%",
       }}
     >
       {label && <label style={cmsStyles.label}>{label}</label>}
 
       <select
+        className={selectClassName}
+        title={title}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         style={{
@@ -42,7 +55,7 @@ export default function CMSSelect({
           {placeholder}
         </option>
 
-        {options.map((opt) => (
+        {sortedOptions.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>

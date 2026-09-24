@@ -8,7 +8,7 @@ import Button from "@/components/ui/Button";
 
 import AvatarAndBasicInfoSection from "@/components/driver/profile-sections/AvatarAndBasicInfoSection";
 import NumberAndColoursSection from "@/components/driver/profile-sections/NumberAndColoursSection";
-import SponsorsAndManufacturerSection from "@/components/driver/profile-sections/SponsorsAndManufacturerSection";
+import SponsorsSection from "@/components/driver/DriverProfileCard/sections/SponsorsSection";
 
 import PersonalDetailsSection from "@/components/driver/profile-sections/PersonalDetailsSection";
 import RacingInfoSection from "@/components/driver/profile-sections/RacingInfoSection";
@@ -99,7 +99,7 @@ export default function EditDriverProfileCard({
 
                 <hr className="border-surfaceBorder" />
 
-                <SponsorsAndManufacturerSection
+                <SponsorsSection
                   driver={driver}
                   update={() => {}}
                 />
@@ -138,7 +138,7 @@ export default function EditDriverProfileCard({
 
               <hr className="border-surfaceBorder" />
 
-              <SponsorsAndManufacturerSection
+              <SponsorsSection
                 driver={driver}
                 update={update}
               />

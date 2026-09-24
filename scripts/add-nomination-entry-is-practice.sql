@@ -1,0 +1,6 @@
+-- Practice day data lives on the nominations row (merchandise jsonb).
+-- The app saves:
+--   practice_days: integer[]     — open practice days (no class rows; not in LiveTime)
+--   practice_class_ids: uuid[]   — class_ids excluded from LiveTime export
+--
+-- No migration needed when nominations.merchandise is already jsonb.

@@ -62,19 +62,8 @@ a:hover {
 
 .filter-dropdown-option:hover,
 .filter-dropdown-option:focus-visible {
-  background: var(--dropdown-primary, #00438a);
-  color: #fff;
-  outline: none;
-}
-
-.filter-dropdown-menu--cms .filter-dropdown-option {
-  background: transparent;
-}
-
-.filter-dropdown-menu--cms .filter-dropdown-option:hover,
-.filter-dropdown-menu--cms .filter-dropdown-option:focus-visible {
-  background: #f3f4f6 !important;
-  color: #111827 !important;
+  background: #f3f4f6;
+  color: #111827;
   outline: none;
 }
 

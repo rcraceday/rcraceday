@@ -29,7 +29,7 @@ export function buildMenuItems({ clubSlug, isAdmin, user }) {
       to: `/${clubSlug}/app/calendar`,
     },
     {
-      label: "Manage Drivers",
+      label: "Driver Manager",
       icon: UsersIcon,
       to: `/${clubSlug}/app/profile/drivers`,
     },

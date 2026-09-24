@@ -148,24 +148,32 @@ export default function EventBasicsCard({
           {days.length === 0 && <div style={cmsLayout.muted}>No days added yet.</div>}
 
           {days.map((day, i) => (
-            <div key={i} style={cmsLayout.row}>
-              <div style={cmsLayout.column}>
-                <CMSInput
-                  label={requiredLabel(`Day ${i + 1} Date`)}
-                  type="date"
-                  value={day.date || ""}
-                  onChange={(value) => updateDayDate(i, value)}
-                  required
-                />
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: cmsLayout.spacing.md,
+              }}
+            >
+              <CMSInput
+                label={requiredLabel(`Day ${i + 1} Date`)}
+                type="date"
+                value={day.date || ""}
+                onChange={(value) => updateDayDate(i, value)}
+                required
+              />
 
-                <CMSInput
-                  label={`Day ${i + 1} Name`}
-                  value={day.label || ""}
-                  onChange={(value) => updateDayLabel(i, value)}
-                />
-              </div>
-
-              <DeleteButton onClick={() => removeDay(i)}>Remove</DeleteButton>
+              <CMSInput
+                label={`Day ${i + 1} Name`}
+                value={day.label || ""}
+                onChange={(value) => updateDayLabel(i, value)}
+                action={
+                  <DeleteButton type="button" onClick={() => removeDay(i)}>
+                    Remove
+                  </DeleteButton>
+                }
+              />
             </div>
           ))}
 

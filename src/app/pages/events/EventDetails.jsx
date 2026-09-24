@@ -15,7 +15,12 @@ import PageTitle from "@/components/ui/PageTitle";
 import useTheme from "@/app/providers/useTheme";
 import { supabase } from "@/supabaseClient";
 import DOMPurify from "dompurify";
-import { getDayClassLimit, getEventClassLimit } from "@/app/lib/eventClassLimit";
+import {
+  getDayClassLimit,
+  getEffectiveDayClassIds,
+  getEventClassLimit,
+  isOpenPracticeDay,
+} from "@/app/lib/eventClassLimit";
 
 // ---------------------------------------------
 // PAGE HEADER
@@ -214,6 +219,7 @@ export default function EventDetails() {
   const [loading, setLoading] = useState(true);
 
   const [classMap, setClassMap] = useState({});
+  const [trackClassIds, setTrackClassIds] = useState([]);
   const [classEntryCounts, setClassEntryCounts] = useState({});
 
   const logoSrc = event?.logourl
@@ -245,10 +251,27 @@ export default function EventDetails() {
     if (!event) return;
 
     const ids = new Set();
+    let trackClassIds = [];
+
+    if (event.track) {
+      const { data: trackRows } = await supabase
+        .from("club_track_classes")
+        .select("class_id, club_classes ( id, name )")
+        .eq("track_id", event.track);
+      trackClassIds = (trackRows || [])
+        .map((row) => row.club_classes?.id)
+        .filter(Boolean);
+      trackClassIds.forEach((cid) => ids.add(cid));
+    }
 
     if (event.classes_by_day) {
-      event.classes_by_day.forEach((info) => {
-        (info.classes || []).forEach((cid) => ids.add(cid));
+      event.classes_by_day.forEach((info, index) => {
+        const configured = (info.classes || []).filter(Boolean);
+        if (configured.length) {
+          configured.forEach((cid) => ids.add(cid));
+        } else if (isOpenPracticeDay(event, index)) {
+          trackClassIds.forEach((cid) => ids.add(cid));
+        }
       });
     }
 
@@ -265,6 +288,7 @@ export default function EventDetails() {
     });
 
     setClassMap(map);
+    setTrackClassIds(trackClassIds);
   }
 
   loadClasses();
@@ -672,7 +696,8 @@ return (
       >
         {event.classes_by_day.map((info, idx) => {
           const dayName = info.label?.trim() || "";
-          const classes = Array.isArray(info.classes) ? info.classes : [];
+          const classes = getEffectiveDayClassIds(event, idx, trackClassIds);
+          const openPractice = isOpenPracticeDay(event, idx);
 
           return (
             <div key={idx}>
@@ -687,6 +712,12 @@ return (
                   }}
                 >
                   {dayName}
+                </div>
+              )}
+
+              {openPractice && (
+                <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 6 }}>
+                  Practice day — all track classes
                 </div>
               )}
 

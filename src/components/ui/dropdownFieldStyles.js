@@ -13,19 +13,19 @@ export const COMPACT_DROPDOWN_TRIGGER_OVERRIDES = {
   minHeight: "2rem",
 };
 
-const DEFAULT_PRIMARY = "#00438a";
 const DEFAULT_TEXT = "#0a1a2f";
-
-function primaryColor(palette) {
-  return palette?.primary || DEFAULT_PRIMARY;
-}
 
 function textColor(palette) {
   return palette?.text || DEFAULT_TEXT;
 }
 
+/** Neutral border for app/public dropdowns (not admin CMSSelect). */
+export function getPublicDropdownBorderColor(palette) {
+  return palette?.surfaceBorder || CMS_SELECT_BORDER;
+}
+
 export function getDropdownTriggerStyle(palette, overrides = {}) {
-  const primary = primaryColor(palette);
+  const borderColor = getPublicDropdownBorderColor(palette);
   return {
     display: "flex",
     alignItems: "center",
@@ -33,7 +33,7 @@ export function getDropdownTriggerStyle(palette, overrides = {}) {
     gap: "0.75rem",
     minWidth: "10rem",
     padding: "0.5rem 0.75rem",
-    border: `${DROPDOWN_BORDER_WIDTH}px solid ${primary}`,
+    border: `${DROPDOWN_BORDER_WIDTH}px solid ${borderColor}`,
     borderRadius: DROPDOWN_BORDER_RADIUS,
     background: "#fff",
     color: textColor(palette),
@@ -44,7 +44,7 @@ export function getDropdownTriggerStyle(palette, overrides = {}) {
 }
 
 export function getDropdownMenuStyle(palette, overrides = {}) {
-  const primary = primaryColor(palette);
+  const borderColor = getPublicDropdownBorderColor(palette);
   return {
     position: "absolute",
     top: "calc(100% + 0.25rem)",
@@ -52,10 +52,10 @@ export function getDropdownMenuStyle(palette, overrides = {}) {
     zIndex: 300,
     minWidth: "100%",
     overflow: "hidden",
-    border: `${DROPDOWN_BORDER_WIDTH}px solid ${primary}`,
+    border: `${DROPDOWN_BORDER_WIDTH}px solid ${borderColor}`,
     borderRadius: DROPDOWN_BORDER_RADIUS,
     background: "#fff",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
     ...overrides,
   };
 }
@@ -63,7 +63,6 @@ export function getDropdownMenuStyle(palette, overrides = {}) {
 /** Matches admin CMSSelect (ClassesCard) — grey border, neutral surface. */
 export function getCmsSelectTriggerStyle(palette, overrides = {}) {
   return getDropdownTriggerStyle(palette, {
-    border: `${DROPDOWN_BORDER_WIDTH}px solid ${CMS_SELECT_BORDER}`,
     color: CMS_SELECT_TEXT,
     ...overrides,
   });
@@ -71,10 +70,8 @@ export function getCmsSelectTriggerStyle(palette, overrides = {}) {
 
 export function getCmsSelectMenuStyle(palette, overrides = {}) {
   return getDropdownMenuStyle(palette, {
-    border: `${DROPDOWN_BORDER_WIDTH}px solid ${CMS_SELECT_BORDER}`,
     zIndex: 300,
     background: "#FFFFFF",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
     ...overrides,
   });
 }
@@ -107,9 +104,9 @@ export function getDropdownOptionStyle(palette, overrides = {}) {
 }
 
 export function getNativeSelectStyle(palette, sizeOverrides = {}) {
-  const primary = primaryColor(palette);
+  const borderColor = getPublicDropdownBorderColor(palette);
   return {
-    border: `${DROPDOWN_BORDER_WIDTH}px solid ${primary}`,
+    border: `${DROPDOWN_BORDER_WIDTH}px solid ${borderColor}`,
     borderRadius: DROPDOWN_BORDER_RADIUS,
     background: "#fff",
     color: textColor(palette),

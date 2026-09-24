@@ -125,6 +125,7 @@ const normalizedDays = Array.isArray(data.days)
             practice_at: "",
             drivers_brief_at: "",
             race_start_at: "",
+            is_practice: false,
           }
         : {
             date: d.date || "",
@@ -133,14 +134,26 @@ const normalizedDays = Array.isArray(data.days)
             practice_at: d.practice_at || "",
             drivers_brief_at: d.drivers_brief_at || "",
             race_start_at: d.race_start_at || "",
+            is_practice: !!d.is_practice,
           }
     )
   : [];
+
+        const normalizedClassesByDay = Array.isArray(data.classes_by_day)
+          ? data.classes_by_day.map((entry, index) => ({
+              ...entry,
+              classes: Array.isArray(entry?.classes) ? entry.classes : [],
+              is_practice: !!(
+                entry?.is_practice ?? normalizedDays[index]?.is_practice
+              ),
+            }))
+          : [];
 
         setEventData({
           ...initialEventState,
           ...data,
           days: normalizedDays,
+          classes_by_day: normalizedClassesByDay,
           merchandise: Array.isArray(data.merchandise)
             ? data.merchandise
             : [],
@@ -159,9 +172,7 @@ const normalizedDays = Array.isArray(data.days)
           class_limit_scope:
             data.class_limit_scope === "per_day" ? "per_day" : "per_event",
           class_limit:
-            !!data.is_multi_day &&
-            data.class_limit_scope === "per_day" &&
-            (data.class_limit_per_day == null || data.class_limit_per_day === "")
+            !!data.is_multi_day && data.class_limit_scope === "per_day"
               ? null
               : data.class_limit,
           class_limit_per_day:
@@ -380,13 +391,16 @@ const normalizedDays = Array.isArray(data.days)
       typeof eventData.logourl === "string" ? eventData.logourl : null;
 
 // Normalize days
-const normalizedDays = (eventData.days || []).map((d) => ({
+const normalizedDays = (eventData.days || []).map((d, index) => ({
   date: normalizeDate(d?.date),
   label: d?.label ?? "",
   gates_open_at: d?.gates_open_at ?? "",
   practice_at: d?.practice_at ?? "",
   drivers_brief_at: d?.drivers_brief_at ?? "",
   race_start_at: d?.race_start_at ?? "",
+  is_practice: !!(
+    d?.is_practice ?? eventData.classes_by_day?.[index]?.is_practice
+  ),
 }));
 
 // FIX: classes_by_day must match normalizedDays
@@ -395,7 +409,10 @@ const normalizedClassesByDay = normalizedDays.map((d, index) => ({
   label: d.label,
   classes: Array.isArray(eventData.classes_by_day?.[index]?.classes)
     ? eventData.classes_by_day[index].classes
-    : []
+    : [],
+  is_practice: !!(
+    eventData.classes_by_day?.[index]?.is_practice ?? d.is_practice
+  ),
 }));
 
 const payload = {
@@ -427,11 +444,10 @@ const payload = {
     typeof eventData.is_published === "boolean"
       ? eventData.is_published
       : true,
-  class_limit: eventData.is_multi_day
-    ? eventData.class_limit == null || eventData.class_limit === ""
-      ? null
-      : eventData.class_limit
-    : eventData.class_limit ?? 3,
+  class_limit:
+    eventData.class_limit == null || eventData.class_limit === ""
+      ? 3
+      : Number(eventData.class_limit),
   class_limit_per_day: eventData.is_multi_day
     ? eventData.class_limit_per_day == null || eventData.class_limit_per_day === ""
       ? null
@@ -627,7 +643,15 @@ if (eventData.is_multi_day) {
             </CMSCard>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <CMSButton variant="primary" onClick={() => setPreviewOpen(true)}>
+              <CMSButton
+                variant="primary"
+                disabled={isNew}
+                onClick={() => {
+                  if (isNew) return;
+                  setPreviewOpen(true);
+                }}
+                style={{ width: "100%", justifyContent: "center" }}
+              >
                 Preview Event
               </CMSButton>
 
@@ -642,9 +666,10 @@ if (eventData.is_multi_day) {
           </div>
         )}
 
-        {previewOpen && (
+        {previewOpen && !isNew && (
           <EventPreviewModal
-            event={eventData}
+            clubSlug={clubSlug}
+            eventId={id}
             onClose={() => setPreviewOpen(false)}
           />
         )}

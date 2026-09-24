@@ -2,6 +2,7 @@ export function calculateUserPricing({
   event,
   pricing,
   selectedClasses,
+  selectedClassEntries,
   membershipType, // "member" | "non_member" | "junior"
   preferenceMap = {} // { classId: true/false }
 }) {
@@ -53,14 +54,38 @@ export function calculateUserPricing({
   // MODE: PER ENTRY PRICING
   // ============================================================
   if (mode === "per_entry") {
-    const base = Math.max(0, Number(pricing.global?.[membershipType] || 0));
-    total += base;
+    const entries =
+      Array.isArray(selectedClassEntries) && selectedClassEntries.length > 0
+        ? selectedClassEntries
+        : (selectedClasses || []).map((classId) => ({
+            classId,
+            isPractice: false,
+          }));
 
     const chargePrefs = pricing.charge_preferences;
+    const billable = entries.filter((entry) => {
+      if (entry?.openPractice) return true;
+      if (!entry?.classId) return false;
+      const isPref = preferenceMap[entry.classId] === true;
+      return !(isPref && !chargePrefs);
+    });
 
-    for (const classId of selectedClasses) {
-      const isPref = preferenceMap[classId] === true;
-      if (isPref && !chargePrefs) continue;
+    const hasRacing = billable.some(
+      (entry) => !entry.isPractice && !entry.openPractice
+    );
+    const hasPractice = billable.some(
+      (entry) => entry.isPractice || entry.openPractice
+    );
+
+    if (hasRacing) {
+      total += Math.max(0, Number(pricing.global?.[membershipType] || 0));
+    }
+
+    if (hasPractice) {
+      const practicePrice = pricing.global?.practice?.[membershipType];
+      if (practicePrice != null && practicePrice !== "") {
+        total += Math.max(0, Number(practicePrice));
+      }
     }
   }
 
@@ -75,20 +100,47 @@ export function calculateUserPricing({
 
     const chargePrefs = pricing.charge_preferences;
 
-    let classCount = 0;
+    const entries =
+      Array.isArray(selectedClassEntries) && selectedClassEntries.length > 0
+        ? selectedClassEntries
+        : (selectedClasses || []).map((classId) => ({
+            classId,
+            isPractice: false,
+          }));
 
-    for (const classId of selectedClasses) {
+    let racingClassCount = 0;
+
+    for (const entry of entries) {
+      if (entry?.openPractice) {
+        const practicePrice = tier.practice;
+        if (practicePrice != null && practicePrice !== "") {
+          total += Math.max(0, Number(practicePrice));
+        }
+        continue;
+      }
+
+      const classId = entry?.classId;
+      if (!classId) continue;
+
       const isPref = preferenceMap[classId] === true;
 
       if (isPref && !chargePrefs) continue;
 
-      if (classCount === 0) {
+      if (entry.isPractice) {
+        const practicePrice = tier.practice;
+        if (practicePrice != null && practicePrice !== "") {
+          total += Math.max(0, Number(practicePrice));
+        }
+        continue;
+      }
+
+      if (racingClassCount === 0) {
         total += firstClassPrice;
       } else {
         total += additionalClassPrice;
       }
 
-      classCount++;
+      racingClassCount++;
     }
   }
 
@@ -99,22 +151,36 @@ export function calculateUserPricing({
     const classPrices = pricing.class_prices || {};
     const chargePrefs = pricing.charge_preferences;
 
-    for (const classId of selectedClasses) {
+    const entries =
+      Array.isArray(selectedClassEntries) && selectedClassEntries.length > 0
+        ? selectedClassEntries
+        : (selectedClasses || []).map((classId) => ({
+            classId,
+            isPractice: false,
+          }));
+
+    for (const entry of entries) {
+      const classId = entry?.classId;
+      if (!classId) continue;
+
       const isPref = preferenceMap[classId] === true;
 
       if (isPref && !chargePrefs) continue;
 
       const override = classPrices[classId];
+      if (!override) continue;
 
-      if (override?.free) continue;
-
-      if (override) {
-        const price = Math.max(
-          0,
-          Number(override[membershipType] || 0)
-        );
-        total += price;
+      if (entry.isPractice) {
+        const practicePrice = override.practice?.[membershipType];
+        if (practicePrice != null && practicePrice !== "") {
+          total += Math.max(0, Number(practicePrice));
+        }
+        continue;
       }
+
+      if (override.free) continue;
+
+      total += Math.max(0, Number(override[membershipType] || 0));
     }
   }
 

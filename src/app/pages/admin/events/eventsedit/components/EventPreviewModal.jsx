@@ -1,8 +1,7 @@
 import CMSButton from "@cms/CMSButton";
 
-export default function EventPreviewModal({ event, onClose }) {
-  const isMulti = !!event.is_multi_day;
-  const days = Array.isArray(event.days) ? event.days : [];
+export default function EventPreviewModal({ clubSlug, eventId, onClose }) {
+  const previewUrl = `/${clubSlug}/app/events/${eventId}`;
 
   return (
     <div
@@ -21,94 +20,37 @@ export default function EventPreviewModal({ event, onClose }) {
     >
       <div
         style={{
-          width: "90%",
-          maxWidth: "800px",
+          width: "95%",
+          maxWidth: "1100px",
+          height: "90vh",
           background: "#FFF",
           borderRadius: "12px",
-          padding: "24px",
+          padding: "16px",
           boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-          overflowY: "auto",
-          maxHeight: "90vh",
           display: "flex",
           flexDirection: "column",
-          gap: "16px",
+          gap: "12px",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2 style={{ margin: 0 }}>Event Preview</h2>
           <CMSButton variant="secondary" onClick={onClose}>
             Close
           </CMSButton>
         </div>
 
-        {/* NAME */}
-        <h3 style={{ margin: "8px 0" }}>{event.name || "Untitled Event"}</h3>
-
-        {/* TYPE */}
-        {event.event_type && (
-          <div style={{ fontSize: "14px", color: "#555" }}>
-            Type: {event.event_type}
-          </div>
-        )}
-
-        {/* TRACK */}
-        {event.track && (
-          <div style={{ fontSize: "14px", color: "#555" }}>
-            Track: {event.track}
-          </div>
-        )}
-
-        {/* DATES */}
-        <div>
-          <strong>Event Dates</strong>
-          {!isMulti && (
-            <div style={{ marginTop: "4px" }}>
-              {event.event_date || "No date set"}
-            </div>
-          )}
-          {isMulti && (
-            <div
-              style={{
-                marginTop: "4px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              {days.length === 0 && <div>No days configured</div>}
-              {days.map((d, i) => (
-                <div key={i}>{d}</div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* DESCRIPTION */}
-        {event.description && (
-          <div>
-            <strong>Description</strong>
-            <div style={{ marginTop: "4px" }}>{event.description}</div>
-          </div>
-        )}
-
-        {/* LOGO */}
-        {event.logourl && (
-          <div>
-            <strong>Logo</strong>
-            <div style={{ marginTop: "4px" }}>
-              <img
-                src={event.logourl}
-                alt="Event Logo"
-                style={{
-                  maxWidth: "200px",
-                  height: "auto",
-                  borderRadius: "8px",
-                  objectFit: "contain",
-                }}
-              />
-            </div>
-          </div>
-        )}
+        <iframe
+          src={previewUrl}
+          title="Event Preview"
+          style={{
+            flex: 1,
+            width: "100%",
+            minHeight: 0,
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            background: "#fff",
+          }}
+        />
       </div>
     </div>
   );

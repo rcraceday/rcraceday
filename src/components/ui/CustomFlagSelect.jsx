@@ -2,19 +2,27 @@
 
 import { useState } from "react";
 import { COUNTRIES } from "@/data/countries";
+import useTheme from "@/app/providers/useTheme";
+import {
+  getCmsSelectMenuStyle,
+  getCmsSelectTriggerStyle,
+  getDropdownOptionStyle,
+} from "@/components/ui/dropdownFieldStyles";
 
 export default function CustomFlagSelect({ value, onChange, brand }) {
   const [open, setOpen] = useState(false);
+  const { palette } = useTheme();
+  const primary = brand || palette?.primary || "#00438a";
 
   const selected = COUNTRIES.find((c) => c.name === value);
 
   return (
-    <div className="relative">
-      {/* BUTTON */}
+    <div className="relative filter-dropdown" style={{ "--dropdown-primary": primary }}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm flex items-center justify-between"
+        className="filter-dropdown-trigger w-full text-sm"
+        style={getCmsSelectTriggerStyle(palette, { minWidth: "unset", width: "100%" })}
       >
         <span className="flex items-center gap-2">
           {selected && (
@@ -27,12 +35,14 @@ export default function CustomFlagSelect({ value, onChange, brand }) {
           {selected ? selected.name : "Select country"}
         </span>
 
-        <span style={{ color: brand }}>▼</span>
+        <span style={{ color: primary }}>▼</span>
       </button>
 
-      {/* DROPDOWN */}
       {open && (
-        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+        <div
+          className="filter-dropdown-menu filter-dropdown-menu--cms max-h-60 overflow-y-auto"
+          style={getCmsSelectMenuStyle(palette, { width: "100%" })}
+        >
           {COUNTRIES.map((c) => (
             <button
               key={c.code}
@@ -41,7 +51,8 @@ export default function CustomFlagSelect({ value, onChange, brand }) {
                 onChange(c.name);
                 setOpen(false);
               }}
-              className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100"
+              className="filter-dropdown-option text-sm flex items-center gap-2"
+              style={getDropdownOptionStyle(palette)}
             >
               <img
                 src={c.flag}

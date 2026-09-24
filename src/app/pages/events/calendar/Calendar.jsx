@@ -48,6 +48,7 @@ export default function Calendar() {
         .from("events")
         .select("*")
         .eq("club_id", club.id)
+        .eq("is_published", true)
         .or(
           `and(event_date.gte.${startDate},event_date.lte.${endDate}),is_multi_day.eq.true`,
         )

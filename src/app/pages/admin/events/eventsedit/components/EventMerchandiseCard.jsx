@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
+import { RemoveButton } from "@cms/CMSButtonSet";
 import { supabase } from "@/supabaseClient";
 
 import MerchEditor from "./MerchEditor";
@@ -173,9 +174,7 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
               <CMSButton variant="secondary" onClick={() => duplicateItem(item)}>
                 Duplicate
               </CMSButton>
-              <CMSButton variant="danger" onClick={() => deleteItem(item.id)}>
-                Remove
-              </CMSButton>
+              <RemoveButton type="button" onClick={() => deleteItem(item.id)} />
             </div>
           </div>
         </CMSCard>

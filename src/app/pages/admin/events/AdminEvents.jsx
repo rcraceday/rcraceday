@@ -374,7 +374,6 @@ const formatDateTime = (iso) => {
                 whiteSpace: "nowrap",
               }}
             >
-              <PlusIcon style={{ width: 16, height: 16, color: "#DC2626" }} />
               Create Event
             </CMSButton>
           }

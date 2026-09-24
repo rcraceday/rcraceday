@@ -4,6 +4,14 @@ function csvValue(value) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }
 
+function isPracticeLiveTimeEntry(nomination, entry) {
+  if (entry?.is_practice) return true;
+  const merch = nomination?.merchandise;
+  if (!merch || typeof merch !== "object") return false;
+  const practiceIds = merch.practice_class_ids || merch.practiceClassIds;
+  return Array.isArray(practiceIds) && practiceIds.includes(entry.class_id);
+}
+
 export function buildLiveTimeRows({ nominations, entries, drivers, classes, memberships, clubName }) {
   const driverMap = new Map(drivers.map((driver) => [driver.id, driver]));
   const classMap = new Map(classes.map((item) => [item.id, item.name || item.class_name || ""]));
@@ -14,7 +22,7 @@ export function buildLiveTimeRows({ nominations, entries, drivers, classes, memb
     const driver = driverMap.get(nomination.driver_id);
     if (!driver) return;
     const membership = membershipMap.get(driver.membership_id) || {};
-    entries.filter((entry) => entry.nomination_id === nomination.id && !entry.is_preference).sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).forEach((entry) => rows.push({
+    entries.filter((entry) => entry.nomination_id === nomination.id && !entry.is_preference && !isPracticeLiveTimeEntry(nomination, entry)).sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).forEach((entry) => rows.push({
       FirstName: driver.first_name,
       LastName: driver.last_name,
       NickName: driver.nickname,

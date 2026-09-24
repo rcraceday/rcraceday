@@ -1,4 +1,5 @@
 import CMSButton from "@cms/CMSButton";
+import { DeleteEventButton } from "@cms/CMSButtonSet";
 import { cmsLayout } from "@cms/layout";
 
 export default function SaveActions({
@@ -19,9 +20,9 @@ export default function SaveActions({
     >
       <div style={{ display: "flex", gap: cmsLayout.spacing.sm }}>
         {!isNew && (
-          <CMSButton variant="danger" onClick={onDelete} disabled={saving}>
+          <DeleteEventButton onClick={onDelete} disabled={saving}>
             Delete Event
-          </CMSButton>
+          </DeleteEventButton>
         )}
       </div>
 
