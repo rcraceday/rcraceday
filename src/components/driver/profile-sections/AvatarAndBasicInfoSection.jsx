@@ -21,6 +21,7 @@ export default function AvatarAndBasicInfoSection({
   brand: brandProp,
   handleAvatarSelect,
   handleRemoveAvatar,
+  showLivetimeNameNotice,
 }) {
   const { palette } = useTheme();
   const brand = brandProp || palette?.primary || "#0A66C2";
@@ -100,6 +101,19 @@ export default function AvatarAndBasicInfoSection({
             value={driver.last_name || ""}
             onChange={(e) => update("last_name", e.target.value)}
           />
+
+          {showLivetimeNameNotice && (
+            <div className="md:col-span-2 rounded-md bg-yellow-300 p-3 space-y-1 text-black">
+              <p className="text-sm font-semibold">Livetime name match</p>
+              <p className="text-sm">
+                If this driver has raced with this club before, the name must
+                match <strong>exactly</strong> how it appears in Livetime —
+                including spelling, spacing, and capitalisation. Any difference
+                will be treated as a new racer and previous results or seeding
+                will not link.
+              </p>
+            </div>
+          )}
 
           <Input
             label="Nickname"

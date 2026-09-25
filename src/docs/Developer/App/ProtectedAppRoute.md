@@ -27,6 +27,9 @@ It prevents users from accessing another club’s /app section.
 4. Membership must be active
 Suspended or expired members cannot access /app.
 
+5. Admin routes (`admin` prop)
+When `ProtectedAppRoute` is used with `admin`, the user's `profiles.role` must be `admin`. Non-admins with a valid membership are redirected to `/:clubSlug/app` (not login).
+
 If any check fails, the user is redirected to:
 
 Code

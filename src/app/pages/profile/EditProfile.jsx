@@ -31,6 +31,8 @@ export default function EditProfile() {
   const [dirty, setDirty] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [pendingDestination, setPendingDestination] = useState(null);
+  const [originalName, setOriginalName] = useState(null);
+  const [showNameWarning, setShowNameWarning] = useState(false);
 
   const [previewNumber, setPreviewNumber] = useState(null);
 
@@ -38,13 +40,23 @@ export default function EditProfile() {
   useEffect(() => {
     if (!loadingDrivers && drivers?.length > 0) {
       const d = drivers.find((dr) => String(dr.id) === String(id));
+
+      if (dirty) return;
+
       setDriver(d || null);
+
+      if (d) {
+        setOriginalName({
+          first_name: d.first_name || "",
+          last_name: d.last_name || "",
+        });
+      }
 
       if (d?.permanent_number !== undefined) {
         setPreviewNumber(d.permanent_number);
       }
     }
-  }, [loadingDrivers, drivers, id]);
+  }, [loadingDrivers, drivers, id, dirty]);
 
   // UPDATE FIELD
   const update = (field, value) => {
@@ -63,9 +75,21 @@ export default function EditProfile() {
     update("avatar_url", null);
   };
 
+  const nameChanged =
+    originalName &&
+    ((driver?.first_name || "") !== originalName.first_name ||
+      (driver?.last_name || "") !== originalName.last_name);
+
+  const showLivetimeNameNotice = Boolean(nameChanged);
+
   // SAVE DRIVER
-  const save = async () => {
-    if (!driver) return;
+  const save = async ({ skipNameWarning = false } = {}) => {
+    if (!driver) return false;
+
+    if (nameChanged && !skipNameWarning) {
+      setShowNameWarning(true);
+      return false;
+    }
 
     const updatePayload = { ...driver };
     delete updatePayload.avatar_file;
@@ -77,7 +101,7 @@ export default function EditProfile() {
 
     if (error) {
       console.error("Failed to update driver:", error);
-      return;
+      return false;
     }
 
     if (driver.avatar_file) {
@@ -101,7 +125,13 @@ export default function EditProfile() {
     }
 
     setDirty(false);
+    setOriginalName({
+      first_name: driver.first_name || "",
+      last_name: driver.last_name || "",
+    });
+    setShowNameWarning(false);
     refreshDrivers();
+    return true;
   };
 
   // GUARDED NAVIGATION
@@ -115,10 +145,21 @@ export default function EditProfile() {
   };
 
   const handleConfirmSave = async () => {
+    const saved = await save();
+    if (!saved) return;
     const target = pendingDestination ?? null;
     setShowPrompt(false);
     setPendingDestination(null);
-    await save();
+    if (target) navigate(target);
+  };
+
+  const handleConfirmNameChange = async () => {
+    const saved = await save({ skipNameWarning: true });
+    if (!saved) return;
+    const target = pendingDestination ?? null;
+    setShowNameWarning(false);
+    setShowPrompt(false);
+    setPendingDestination(null);
     if (target) navigate(target);
   };
 
@@ -203,11 +244,39 @@ export default function EditProfile() {
           handleRemoveAvatar={handleRemoveAvatar}
           save={save}
           deleteDriver={deleteDriver}
+          showLivetimeNameNotice={showLivetimeNameNotice}
         />
       </main>
 
+      {showNameWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <Card className="p-6 space-y-4 bg-white max-w-sm w-full">
+            <h3 className="text-lg font-semibold">Livetime name match</h3>
+            <p className="text-sm text-gray-700">
+              If this driver has raced with this club before, the name must
+              match <strong>exactly</strong> how it appears in Livetime —
+              including spelling, spacing, and capitalisation. Any difference
+              will be treated as a new racer and previous results or seeding
+              will not link.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => setShowNameWarning(false)}
+              >
+                Cancel
+              </Button>
+              <Button className="w-full" onClick={handleConfirmNameChange}>
+                Save anyway
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* UNSAVED CHANGES MODAL */}
-      {showPrompt && (
+      {showPrompt && !showNameWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <Card
             className="p-6 space-y-4 bg-white max-w-sm w-full"

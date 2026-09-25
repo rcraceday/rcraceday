@@ -1,4 +1,5 @@
 import { supabase } from "@/supabaseClient";
+import { countHouseholdSlots } from "@app/pages/profile/householdDriverLimits";
 
 export function getCalendarYear(date = new Date()) {
   return date.getFullYear();
@@ -68,26 +69,102 @@ export function listArchiveYears(events, currentYear = getCalendarYear()) {
   return [...years].sort((a, b) => b - a);
 }
 
-export function countMembershipTypes(memberships) {
+function normalizeMembershipType(raw) {
+  const type = (raw || "").toLowerCase().trim();
+  if (!type) return "unknown";
+  if (
+    type === "non_member" ||
+    type === "non-member" ||
+    type === "non member" ||
+    type === "nonmember"
+  ) {
+    return "non_member";
+  }
+  if (type === "single" || type === "adult" || type === "individual") return "adult";
+  if (type.includes("family")) return "family";
+  if (type === "junior") return "junior";
+  return type;
+}
+
+function countPeopleInMemberHousehold(membershipId, driverList, memberList) {
+  const householdDrivers = driverList.filter(
+    (driver) => driver.membership_id === membershipId
+  );
+  const householdMembers = memberList.filter(
+    (member) => member.membership_id === membershipId
+  );
+  const { adults, juniors } = countHouseholdSlots(
+    householdDrivers,
+    householdMembers
+  );
+  const listed = adults + juniors;
+  return Math.max(1, listed);
+}
+
+export function countMembershipMetrics(memberships, drivers = [], clubMembers = []) {
   const counts = {
-    active: 0,
+    totalMembers: 0,
     adult: 0,
     family: 0,
     junior: 0,
     nonMember: 0,
   };
 
-  (memberships || []).forEach((row) => {
-    if (isActiveMembership(row.status)) counts.active += 1;
+  const driverList = drivers || [];
+  const memberList = clubMembers || [];
 
-    const type = (row.membership_type || "").toLowerCase();
-    if (type === "adult" || type === "single") counts.adult += 1;
-    else if (type === "family") counts.family += 1;
-    else if (type === "junior") counts.junior += 1;
-    else if (type === "non_member") counts.nonMember += 1;
+  (memberships || []).forEach((row) => {
+    if (!isActiveMembership(row.status)) return;
+
+    const type = normalizeMembershipType(row.membership_type);
+
+    if (type === "non_member") {
+      counts.nonMember += 1;
+      return;
+    }
+
+    if (type === "adult") {
+      counts.adult += 1;
+      counts.totalMembers += countPeopleInMemberHousehold(
+        row.id,
+        driverList,
+        memberList
+      );
+      return;
+    }
+
+    if (type === "junior") {
+      counts.junior += 1;
+      counts.totalMembers += countPeopleInMemberHousehold(
+        row.id,
+        driverList,
+        memberList
+      );
+      return;
+    }
+
+    if (type === "family") {
+      counts.family += 1;
+      counts.totalMembers += countPeopleInMemberHousehold(
+        row.id,
+        driverList,
+        memberList
+      );
+    }
   });
 
   return counts;
+}
+
+export function countDriverMetrics(drivers, clubMembers = []) {
+  const list = drivers || [];
+
+  return {
+    total: list.length,
+    adult: list.filter((driver) => !driver.is_junior).length,
+    junior: list.filter((driver) => driver.is_junior).length,
+    nonDrivers: (clubMembers || []).filter((member) => !member.driver_id).length,
+  };
 }
 
 export function computeEventMetrics(events, trackNameById, metricsYear, referenceDate) {
@@ -183,11 +260,17 @@ export function computeNominationMetrics(
 
 export const emptyDashboardStats = () => ({
   membership: {
-    active: 0,
+    totalMembers: 0,
     adult: 0,
     family: 0,
     junior: 0,
     nonMember: 0,
+  },
+  drivers: {
+    total: 0,
+    adult: 0,
+    junior: 0,
+    nonDrivers: 0,
   },
   events: {
     total: 0,
@@ -244,7 +327,37 @@ export async function loadClubMetricsContext(clubSlug) {
         .eq("club_id", clubId),
     ]);
 
+  if (membershipsRes.error) {
+    console.error("Failed to load membership metrics:", membershipsRes.error);
+  }
+
+  const membershipIds = (membershipsRes.data || []).map((row) => row.id);
+
+  let clubMemberRows = [];
+  if (membershipIds.length > 0) {
+    const { data: clubMembersData, error: clubMembersErr } = await supabase
+      .from("club_members")
+      .select("id, membership_id, driver_id, is_junior")
+      .in("membership_id", membershipIds);
+
+    if (clubMembersErr) {
+      console.error("Failed to load club member metrics:", clubMembersErr);
+    } else {
+      clubMemberRows = clubMembersData || [];
+    }
+  }
+
+  const { data: driverRows, error: driversErr } = await supabase
+    .from("drivers")
+    .select("id, is_junior, membership_id")
+    .eq("club_id", clubId);
+
+  if (driversErr) {
+    console.error("Failed to load driver metrics:", driversErr);
+  }
+
   const clubEvents = eventsRes.data || [];
+  const clubDrivers = driverRows || [];
   const clubEventIds = clubEvents.map((event) => event.id);
 
   let nominationRows = [];
@@ -271,6 +384,8 @@ export async function loadClubMetricsContext(clubSlug) {
   return {
     clubId,
     clubEvents,
+    clubDrivers,
+    clubMembers: clubMemberRows,
     nominationRows,
     trackNameById,
     eventsById,
@@ -281,7 +396,15 @@ export async function loadClubMetricsContext(clubSlug) {
 
 export function buildStatsForYear(context, metricsYear) {
   const referenceDate = referenceDateForMetricsYear(metricsYear);
-  const membershipCounts = countMembershipTypes(context.memberships);
+  const membershipCounts = countMembershipMetrics(
+    context.memberships,
+    context.clubDrivers,
+    context.clubMembers
+  );
+  const driverMetrics = countDriverMetrics(
+    context.clubDrivers,
+    context.clubMembers
+  );
   const eventMetrics = computeEventMetrics(
     context.clubEvents,
     context.trackNameById,
@@ -297,6 +420,7 @@ export function buildStatsForYear(context, metricsYear) {
 
   return {
     membership: membershipCounts,
+    drivers: driverMetrics,
     events: eventMetrics,
     nominations: nominationMetrics,
   };

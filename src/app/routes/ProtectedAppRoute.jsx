@@ -2,25 +2,20 @@ import { Navigate, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import { useProfile } from "@/app/providers/ProfileProvider";
 
-export default function ProtectedAppRoute({ children }) {
+function isProfileAdmin(profile) {
+  return (profile?.role || "").toLowerCase() === "admin";
+}
+
+export default function ProtectedAppRoute({ children, admin = false }) {
   const { session, loadingUser } = useAuth();
   const { membership, loadingMembership } = useMembership();
   const { club, loadingClub } = useClub();
+  const { profile, loadingProfile } = useProfile();
   const { clubSlug } = useParams();
   const location = useLocation();
 
-  console.log("[ProtectedAppRoute]", {
-    session,
-    loadingUser,
-    membership,
-    loadingMembership,
-    club,
-    loadingClub,
-    clubSlug,
-  });
-
-  // Wait for auth first
   if (loadingUser) {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
@@ -29,7 +24,6 @@ export default function ProtectedAppRoute({ children }) {
     );
   }
 
-  // No session -> login immediately
   if (!session?.user) {
     return <Navigate to={`/${clubSlug}/public/login`} replace />;
   }
@@ -44,8 +38,7 @@ export default function ProtectedAppRoute({ children }) {
     );
   }
 
-  // User is logged in, now wait for club/membership
-  if (loadingClub || loadingMembership) {
+  if (loadingClub || loadingMembership || (admin && loadingProfile)) {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
         Checking access…
@@ -57,7 +50,7 @@ export default function ProtectedAppRoute({ children }) {
     return <Navigate to={`/${clubSlug}/public/login`} replace />;
   }
 
-  if (membership.club_id !== club.id) {
+  if (!club?.id || membership.club_id !== club.id) {
     return <Navigate to={`/${clubSlug}/public/login`} replace />;
   }
 
@@ -65,20 +58,8 @@ export default function ProtectedAppRoute({ children }) {
     return <Navigate to={`/${clubSlug}/public/login`} replace />;
   }
 
-  if (!session?.user) {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
-  }
-
-  if (!membership) {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
-  }
-
-  if (membership.club_id !== club.id) {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
-  }
-
-  if (membership.status !== "active") {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+  if (admin && !isProfileAdmin(profile)) {
+    return <Navigate to={`/${clubSlug}/app`} replace state={{ adminDenied: true }} />;
   }
 
   return children;

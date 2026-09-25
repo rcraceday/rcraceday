@@ -29,6 +29,7 @@ export default function EditDriverProfileCard({
   handleRemoveAvatar,
   save,
   deleteDriver,
+  showLivetimeNameNotice,
 }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -73,6 +74,7 @@ export default function EditDriverProfileCard({
             brand={brand}
             handleAvatarSelect={handleAvatarSelect}
             handleRemoveAvatar={handleRemoveAvatar}
+            showLivetimeNameNotice={showLivetimeNameNotice}
           />
 
           {/* NON-MEMBER LOCKED BLOCK */}

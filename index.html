@@ -8,31 +8,26 @@
 
     <!-- Required for Android/Samsung to stop forcing dark mode -->
     <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="RaceDay">
 
-    <title>Chargers RC Driver Portal</title>
+    <title>RC RaceDay</title>
 
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
     <!-- Load Poppins font -->
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
-
-    <!-- Load the root manifest only -->
-    <link rel="manifest" href="/manifest.json">
   </head>
 
   <body>
     <div id="root"></div>
 
     <script type="module" src="/src/main.jsx"></script>
-
-    <!-- Register the service worker (required for install prompt) -->
-    <script>
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js");
-      }
-    </script>
   </body>
 </html>

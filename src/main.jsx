@@ -7,11 +7,13 @@ import "./index.css";
 import AuthProvider from "@/app/providers/AuthProvider";
 import AppProviders from "@/app/providers/AppProviders";
 import RoutesFile from "@/app/routes";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import "uno.css";
 
 function Root() {
   return (
     <BrowserRouter>
+      <PwaInstallPrompt />
       <AuthProvider>
         <Routes>
           <Route element={<AppProviders />}>
@@ -25,31 +27,20 @@ function Root() {
 
 ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
 
-// ---------------------------------------------------------------------------
-// SERVICE WORKER REGISTRATION
-// ---------------------------------------------------------------------------
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").then((reg) => {
-      reg.update(); // force update check on every load
-    });
-  });
-}
-
-// ---------------------------------------------------------------------------
-// SERVICE WORKER UPDATE + AUTO-RELOAD
-// ---------------------------------------------------------------------------
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistration().then((reg) => {
-    if (!reg) return;
-
-    reg.addEventListener("updatefound", () => {
-      const newWorker = reg.installing;
-      newWorker.addEventListener("statechange", () => {
-        if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-          window.location.reload();
-        }
-      });
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  import("virtual:pwa-register").then(({ registerSW }) => {
+    registerSW({
+      immediate: true,
+      onRegisteredSW(_swUrl, registration) {
+        registration?.update();
+        caches.keys().then((keys) =>
+          Promise.all(
+            keys
+              .filter((key) => key.startsWith("app-cache-"))
+              .map((key) => caches.delete(key))
+          )
+        );
+      },
     });
   });
 }

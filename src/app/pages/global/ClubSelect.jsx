@@ -21,7 +21,7 @@ export default function ClubSelect() {
     async function loadClubs() {
       const { data, error } = await supabase
         .from("clubs")
-        .select("id, name, slug")
+        .select("id, name, slug, logo_url")
         .order("name");
 
       if (!error) {

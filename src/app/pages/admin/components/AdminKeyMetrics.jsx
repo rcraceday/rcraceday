@@ -2,9 +2,17 @@ import {
   formatMetricsCurrency,
 } from "@app/pages/admin/adminDashboardMetrics";
 
-const METRICS_GRID_STYLE = {
+const METRICS_MEMBERSHIP_GRID_STYLE = {
   display: "grid",
   gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: "8px",
+  width: "100%",
+  minWidth: 0,
+};
+
+const METRICS_DRIVER_GRID_STYLE = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
   gap: "8px",
   width: "100%",
   minWidth: 0,
@@ -34,6 +42,7 @@ function StatCard({ label, value }) {
         minHeight: "80px",
         boxSizing: "border-box",
         minWidth: 0,
+        width: "100%",
       }}
     >
       <span
@@ -68,11 +77,19 @@ function StatCard({ label, value }) {
   );
 }
 
-function MetricsGroup({ title, children }) {
+const METRICS_GRID_STYLE = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: "8px",
+  width: "100%",
+  minWidth: 0,
+};
+
+function MetricsGroup({ title, children, gridStyle = METRICS_GRID_STYLE }) {
   return (
-    <div style={{ marginBottom: "14px" }}>
+    <div style={{ marginBottom: "14px", width: "100%" }}>
       <h3 style={METRICS_SUBHEADING_STYLE}>{title}</h3>
-      <div style={METRICS_GRID_STYLE}>{children}</div>
+      <div style={gridStyle}>{children}</div>
     </div>
   );
 }
@@ -81,13 +98,40 @@ export default function AdminKeyMetrics({ stats, showMembership = true }) {
   return (
     <>
       {showMembership ? (
-        <MetricsGroup title="Membership Metrics">
-          <StatCard label="Active" value={stats.membership.active} />
-          <StatCard label="Adult" value={stats.membership.adult} />
-          <StatCard label="Family" value={stats.membership.family} />
-          <StatCard label="Junior" value={stats.membership.junior} />
-          <StatCard label="Non Member" value={stats.membership.nonMember} />
-        </MetricsGroup>
+        <>
+          <MetricsGroup
+            title="Membership Metrics"
+            gridStyle={METRICS_MEMBERSHIP_GRID_STYLE}
+          >
+            <StatCard
+              label="Total Members"
+              value={stats.membership.totalMembers}
+            />
+            <StatCard
+              label="Adult Memberships"
+              value={stats.membership.adult}
+            />
+            <StatCard
+              label="Family Memberships"
+              value={stats.membership.family}
+            />
+            <StatCard
+              label="Junior Memberships"
+              value={stats.membership.junior}
+            />
+            <StatCard
+              label="Non Member"
+              value={stats.membership.nonMember}
+            />
+          </MetricsGroup>
+
+          <MetricsGroup title="Driver Metrics" gridStyle={METRICS_DRIVER_GRID_STYLE}>
+            <StatCard label="Total Drivers" value={stats.drivers?.total ?? 0} />
+            <StatCard label="Adult" value={stats.drivers?.adult ?? 0} />
+            <StatCard label="Junior" value={stats.drivers?.junior ?? 0} />
+            <StatCard label="Non Drivers" value={stats.drivers?.nonDrivers ?? 0} />
+          </MetricsGroup>
+        </>
       ) : null}
 
       <MetricsGroup title="Event Metrics">

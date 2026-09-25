@@ -7,6 +7,10 @@ import { supabase } from "@/supabaseClient";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
+import {
+  canAddHouseholdDriver,
+  countHouseholdSlots,
+} from "@/app/pages/profile/householdDriverLimits";
 import { useClub } from "@/app/providers/ClubProvider";   // ⭐ FIXED — YOU FORGOT THIS
 import useTheme from "@/app/providers/useTheme";
 
@@ -30,7 +34,7 @@ export default function WelcomeAddDrivers() {
 
   const { membership, loadingMembership } = useMembership();
   const { user, loadingProfile } = useProfile();
-  const { refreshDrivers } = useDrivers();
+  const { refreshDrivers, drivers } = useDrivers();
   const { palette } = useTheme();
 
   const brand = palette.primary;
@@ -76,8 +80,8 @@ export default function WelcomeAddDrivers() {
     return <SimpleSpinner />;
   }
 
-  const adultCount = clubMembers.filter((m) => !m.is_junior).length;
-  const juniorCount = clubMembers.filter((m) => m.is_junior).length;
+  const adultCount = countHouseholdSlots(drivers, clubMembers).adults;
+  const juniorCount = countHouseholdSlots(drivers, clubMembers).juniors;
 
   const reloadMembers = async () => {
     if (isNonMember) return;
@@ -145,16 +149,20 @@ export default function WelcomeAddDrivers() {
       }
 
       if (membershipType === "family") {
-        if (!isJunior && adultCount >= maxAdults) {
+        if (
+          !canAddHouseholdDriver({
+            membershipType,
+            isJunior,
+            drivers,
+            clubMembers,
+            maxAdults,
+            maxJuniors,
+          })
+        ) {
           setError(
-            `Your club allows a maximum of ${maxAdults} adult members for a family membership.`
-          );
-          return;
-        }
-
-        if (isJunior && juniorCount >= maxJuniors) {
-          setError(
-            `Your club allows a maximum of ${maxJuniors} junior members for a family membership.`
+            isJunior
+              ? `Your club allows a maximum of ${maxJuniors} junior members for a family membership.`
+              : `Your club allows a maximum of ${maxAdults} adult members for a family membership.`
           );
           return;
         }

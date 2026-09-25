@@ -14,6 +14,10 @@ import PageTitle from "@/components/ui/PageTitle";
 
 import { supabase } from "@/supabaseClient";
 import { ArrowLeftIcon, UserPlusIcon, TrashIcon } from "@heroicons/react/24/solid";
+import {
+  canShowAddDriverButton,
+  countHouseholdSlots,
+} from "@/app/pages/profile/householdDriverLimits";
 
 export default function DriverManager() {
   const navigate = useNavigate();
@@ -78,11 +82,21 @@ export default function DriverManager() {
   // ------------------------------------------------------------
   // ADD DRIVER BUTTON VISIBILITY
   // ------------------------------------------------------------
-  const canAddDriver = (() => {
-    if (!membershipType) return true;
-    if (membershipType === "family") return driverList.length < 99;
-    return driverList.length === 0;
-  })();
+  const maxAdults = club?.max_adults ?? 0;
+  const maxJuniors = club?.max_juniors ?? 0;
+
+  const canAddDriver = canShowAddDriverButton({
+    membershipType,
+    drivers: driverList,
+    clubMembers,
+    maxAdults,
+    maxJuniors,
+  });
+
+  const householdCounts =
+    membershipType === "family"
+      ? countHouseholdSlots(driverList, clubMembers)
+      : null;
 
   const showClubMembers = membershipType === "family";
 
@@ -170,6 +184,13 @@ export default function DriverManager() {
               ))}
             </div>
 
+            {membershipType === "family" && householdCounts && (
+              <p className="text-xs text-text-muted">
+                Household slots: {householdCounts.adults}/{maxAdults} adults,{" "}
+                {householdCounts.juniors}/{maxJuniors} juniors
+              </p>
+            )}
+
             {canAddDriver && (
               <Button
                 onClick={() =>
@@ -179,6 +200,13 @@ export default function DriverManager() {
               >
                 Add Driver
               </Button>
+            )}
+
+            {!canAddDriver && membershipType === "family" && (
+              <p className="text-sm text-text-muted">
+                Your club allows up to {maxAdults} adult and {maxJuniors} junior
+                drivers for a family membership.
+              </p>
             )}
           </section>
 

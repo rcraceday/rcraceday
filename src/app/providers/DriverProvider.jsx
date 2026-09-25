@@ -79,8 +79,67 @@ export default function DriverProvider({ children }) {
         response = await supabase
           .from("drivers")
           .select("*")
-          .eq("membership_id", membershipId)
+          .eq("club_id", clubId)
+          .or(
+            `membership_id.eq.${membershipId},and(membership_id.is.null,created_by.eq.${user.id})`
+          )
           .order("created_at", { ascending: true });
+
+        if (!response.error && response.data) {
+          const orphans = response.data.filter((d) => !d.membership_id);
+
+          if (orphans.length > 0) {
+            const orphanIds = orphans.map((d) => d.id);
+
+            const { error: linkError } = await supabase
+              .from("drivers")
+              .update({ membership_id: membershipId })
+              .in("id", orphanIds);
+
+            if (!linkError) {
+              response.data = response.data.map((d) =>
+                !d.membership_id ? { ...d, membership_id: membershipId } : d
+              );
+
+              if (membershipType === "family") {
+                for (const driver of orphans) {
+                  const { data: linkedMember } = await supabase
+                    .from("club_members")
+                    .select("id")
+                    .eq("membership_id", membershipId)
+                    .eq("driver_id", driver.id)
+                    .maybeSingle();
+
+                  if (linkedMember) continue;
+
+                  const { data: nameMatch } = await supabase
+                    .from("club_members")
+                    .select("id, driver_id")
+                    .eq("membership_id", membershipId)
+                    .eq("first_name", driver.first_name)
+                    .eq("last_name", driver.last_name)
+                    .maybeSingle();
+
+                  if (nameMatch && !nameMatch.driver_id) {
+                    await supabase
+                      .from("club_members")
+                      .update({ driver_id: driver.id })
+                      .eq("id", nameMatch.id);
+                  } else if (!nameMatch) {
+                    await supabase.from("club_members").insert({
+                      membership_id: membershipId,
+                      club_id: clubId,
+                      driver_id: driver.id,
+                      first_name: driver.first_name,
+                      last_name: driver.last_name,
+                      is_junior: !!driver.is_junior,
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
       }
 
       if (response.error) {

@@ -1,6 +1,6 @@
 // src/app/pages/profile/AddDriver.jsx
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 
@@ -8,6 +8,9 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import useTheme from "@/app/providers/useTheme";
+import {
+  canAddHouseholdDriver,
+} from "@/app/pages/profile/householdDriverLimits";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -29,7 +32,7 @@ export default function AddDriver() {
 
   const { membership, loadingMembership } = useMembership();
   const { user, loadingProfile } = useProfile();
-  const { refreshDrivers } = useDrivers();
+  const { drivers, refreshDrivers } = useDrivers();
   const { palette } = useTheme();
 
   const brand = palette.primary;
@@ -37,12 +40,29 @@ export default function AddDriver() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isJunior, setIsJunior] = useState(false);
+  const [clubMembers, setClubMembers] = useState([]);
 
   // Only visible for MEMBERS
   const [isMemberOnly, setIsMemberOnly] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const maxAdults = club?.max_adults ?? 0;
+  const maxJuniors = club?.max_juniors ?? 0;
+
+  useEffect(() => {
+    if (!membership?.id || membership?.membership_type !== "family") {
+      setClubMembers([]);
+      return;
+    }
+
+    supabase
+      .from("club_members")
+      .select("*")
+      .eq("membership_id", membership.id)
+      .then(({ data }) => setClubMembers(data || []));
+  }, [membership?.id, membership?.membership_type]);
 
   if (loadingProfile || loadingMembership) {
     return <SimpleSpinner />;
@@ -72,6 +92,30 @@ export default function AddDriver() {
 
     if (!trimmedFirst || !trimmedLast) {
       setError("First and last name are required.");
+      setSaving(false);
+      return;
+    }
+
+    if (
+      !isNonMember &&
+      !canAddHouseholdDriver({
+        membershipType,
+        isJunior,
+        drivers,
+        clubMembers,
+        maxAdults,
+        maxJuniors,
+      })
+    ) {
+      if (membershipType === "family") {
+        setError(
+          isJunior
+            ? `Your club allows a maximum of ${maxJuniors} junior members for a family membership.`
+            : `Your club allows a maximum of ${maxAdults} adult members for a family membership.`
+        );
+      } else {
+        setError("Your membership only allows one driver profile.");
+      }
       setSaving(false);
       return;
     }
