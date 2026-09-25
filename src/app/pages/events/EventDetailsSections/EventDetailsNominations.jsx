@@ -2,6 +2,10 @@
 
 import { Link } from "react-router-dom";
 import Button from "@/components/ui/Button";
+import {
+  isLateEntryWindow,
+  isNominationsOpen,
+} from "../events-sections/helpers";
 
 /* ===========================
    HELPERS
@@ -29,8 +33,14 @@ function now() {
    =========================== */
 
 export default function EventDetailsNominations({ event, clubSlug, brand }) {
+  const nowTime = now();
+
   const open = event.nominations_open ? new Date(event.nominations_open) : null;
   const close = event.nominations_close ? new Date(event.nominations_close) : null;
+
+  const canNominate = isNominationsOpen(event, nowTime);
+  const nominationsNotOpenYet = open && nowTime < open;
+  const lateWindowActive = isLateEntryWindow(event, nowTime);
 
   const lateClose =
     event.late_entries_enabled && event.late_entries_close
@@ -42,41 +52,19 @@ export default function EventDetailsNominations({ event, clubSlug, brand }) {
       ? new Date(event.late_fee_activation)
       : null;
 
-  const nowTime = now();
-
-  const nominationsNotOpenYet = open && nowTime < open;
-  const nominationsOpen = open && close && nowTime >= open && nowTime <= close;
-  const nominationsClosed = close && nowTime > close;
-
-  const lateWindowActive =
-    event.late_entries_enabled &&
-    lateClose &&
-    nowTime > close &&
-    nowTime <= lateClose;
-
   const lateFeeActive =
     event.late_entries_enabled &&
     lateFee &&
     nowTime >= lateFee;
 
-  /* ===========================
-     BUTTON STATE
-     =========================== */
-
   let buttonLabel = "Nominate";
-  let buttonDisabled = false;
+  let buttonDisabled = !canNominate;
 
   if (nominationsNotOpenYet) {
     buttonLabel = "Nominations Not Open";
-    buttonDisabled = true;
-  }
-
-  if (nominationsClosed && !lateWindowActive) {
+  } else if (!canNominate) {
     buttonLabel = "Nominations Closed";
-    buttonDisabled = true;
-  }
-
-  if (lateWindowActive) {
+  } else if (lateWindowActive) {
     buttonLabel = "Late Nomination";
   }
 
@@ -114,8 +102,8 @@ export default function EventDetailsNominations({ event, clubSlug, brand }) {
         <p className="mt-2">
           <strong>Status:</strong>{" "}
           {nominationsNotOpenYet && "Not Open"}
-          {nominationsOpen && "Open"}
-          {nominationsClosed && !lateWindowActive && "Closed"}
+          {!nominationsNotOpenYet && canNominate && !lateWindowActive && "Open"}
+          {!canNominate && !nominationsNotOpenYet && "Closed"}
           {lateWindowActive && "Late Entry Window"}
         </p>
 

@@ -25,6 +25,7 @@ import Events from "@app/pages/events/Events";
 import EventDetails from "@app/pages/events/EventDetails";
 import EventNominate from "@app/pages/events/EventNominate";
 import NominationsView from "@app/pages/nominations/NominationsView";
+import NominationsReview from "@app/pages/nominations/NominationsReview";
 
 // CALENDAR
 import Calendar from "@app/pages/events/calendar/Calendar";
@@ -44,6 +45,7 @@ import DriverProvider from "@/app/providers/DriverProvider";
 
 // ADMIN PAGES
 import AdminDashboard from "@app/pages/admin/AdminDashboard";
+import AdminMetricsArchives from "@app/pages/admin/AdminMetricsArchives";
 import AdminEvents from "@app/pages/admin/events/AdminEvents";
 import AdminEventEdit from "@app/pages/admin/events/eventsedit/AdminEventEdit";
 import AdminEventNominations from "@app/pages/admin/nominations/AdminEventNominations";
@@ -137,6 +139,7 @@ export default function AppRoutes() {
         <Route path="events/:id" element={<EventDetails />} />
         <Route path="events/:eventId/nominate" element={<EventNominate />} />
         <Route path="events/:eventId/nominations" element={<NominationsView />} />
+        <Route path="nominations" element={<NominationsReview />} />
         <Route path="profile" element={<UserProfile />} />
         <Route path="profile/edit" element={<EditUser />} />
 
@@ -211,6 +214,7 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<AdminDashboard />} />
+        <Route path="archives" element={<AdminMetricsArchives />} />
         <Route path="settings" element={<AdminSettingsIndex />} />
         <Route path="settings/club-info" element={<ClubInfoSettings />} />
         <Route path="settings/branding" element={<BrandingSettings />} />

@@ -21,8 +21,17 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import useTheme from "@app/providers/useTheme";
 import { calculateUserPricing } from "@app/pages/events/events-sections/calculatePricing";
+import { resolveEventPricing } from "@app/pages/events/events-sections/helpers";
 import useRcraClubs from "@app/providers/useRcraClubs";
 import SearchableClubSelect from "@components/SearchableClubSelect";
+import {
+  aggregateMerchEntryCounts,
+  getMerchItemId,
+  isMerchItemVisibleForDriver,
+  numericEntryLimit,
+  remainingMerchEntrySlots,
+  sanitizeSelectionMerch,
+} from "@app/pages/events/merchandiseEntryLimit";
 import {
   flattenMultiDaySelections,
   getClassLimitNumber,
@@ -76,6 +85,7 @@ const emptySelection = () => ({
   addons: {},
   transponders: {},
   visibleClassSlotsByDay: {},
+  visibleClassSlots: 1,
 });
 
 function nominateDraftKey(eventId, membershipId) {
@@ -124,6 +134,7 @@ function nominationSelectionSnapshot(selection) {
     addons: selection.addons,
     transponders: selection.transponders,
     visibleClassSlotsByDay: selection.visibleClassSlotsByDay,
+    visibleClassSlots: selection.visibleClassSlots,
   };
 }
 
@@ -135,6 +146,10 @@ function selectionFromNominationEntries(event, entries, classLimit) {
     const slots = [...classIds];
     while (slots.length < classLimit) slots.push("");
     selection.classSlots = slots.slice(0, classLimit);
+    selection.visibleClassSlots = Math.min(
+      classLimit,
+      Math.max(1, classIds.length)
+    );
     const preferenceEntry = sorted.find((entry) => entry.is_preference);
     selection.preference = preferenceEntry?.class_id || "";
     return selection;
@@ -216,6 +231,7 @@ function padDriverSelectionsForEvent(current, event, drivers, classLimit) {
         classesByDay,
         racingDays,
         classSlots: Array.from({ length: classLimit }, () => ""),
+        visibleClassSlots: 1,
       };
       return;
     }
@@ -234,7 +250,21 @@ function padDriverSelectionsForEvent(current, event, drivers, classLimit) {
     } else {
       const slots = (existing.classSlots || []).slice();
       while (slots.length < classLimit) slots.push("");
-      next[driver.id] = { ...existing, classSlots: slots.slice(0, classLimit) };
+      const chosen = slots.filter(Boolean);
+      const visibleRaw = existing.visibleClassSlots;
+      const visibleClassSlots = Math.min(
+        classLimit,
+        Math.max(
+          visibleRaw == null ? 1 : Number(visibleRaw) || 0,
+          chosen.length,
+          chosen.length > 0 ? 1 : 1
+        )
+      );
+      next[driver.id] = {
+        ...existing,
+        classSlots: slots.slice(0, classLimit),
+        visibleClassSlots,
+      };
     }
   });
   return next;
@@ -287,16 +317,6 @@ function dayHeading(day, index) {
   const label = day?.label?.trim();
   if (label && dateLabel) return `${dateLabel} - ${label}`;
   return label || dateLabel || `Day ${index + 1}`;
-}
-
-function pricingConfigFor(event) {
-  if (event?.pricing?.mode) return event.pricing;
-  return {
-    mode: "per_entry",
-    global: { free: false, member: event?.member_price ?? 0, non_member: event?.non_member_price ?? 0, junior: event?.junior_price ?? 0 },
-    charge_preferences: false,
-    late_fee: 0,
-  };
 }
 
 function optionExtra(group, selectedLabel) {
@@ -661,6 +681,7 @@ export default function EventNominate() {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [otherEntryCounts, setOtherEntryCounts] = useState({});
+  const [externalMerchEntryCounts, setExternalMerchEntryCounts] = useState({});
   const [requirementSelections, setRequirementSelections] = useState({});
   const [clubAffiliationConfirmed, setClubAffiliationConfirmed] = useState(false);
   const [affiliatedClubId, setAffiliatedClubId] = useState("");
@@ -806,6 +827,31 @@ export default function EventNominate() {
     loadCounts();
   }, [event, membership?.id]);
 
+  useEffect(() => {
+    const items = Array.isArray(event?.merchandise) ? event.merchandise : [];
+    if (!event?.id || !items.some((m) => numericEntryLimit(m.max_entries))) {
+      setExternalMerchEntryCounts({});
+      return;
+    }
+
+    let cancelled = false;
+    async function loadMerchEntryCounts() {
+      const { data } = await supabase
+        .from("nominations")
+        .select("group_id, merchandise")
+        .eq("event_id", event.id);
+      if (cancelled) return;
+      setExternalMerchEntryCounts(
+        aggregateMerchEntryCounts(items, data || [], membership?.id)
+      );
+    }
+
+    loadMerchEntryCounts();
+    return () => {
+      cancelled = true;
+    };
+  }, [event?.id, event?.merchandise, membership?.id]);
+
   const classMap = useMemo(() => new Map(clubClasses.map((item) => [item.id, item.name])), [clubClasses]);
   const trackClassIds = useMemo(() => clubClasses.map((item) => item.id), [clubClasses]);
   const classLimit = getClassLimitNumber(event);
@@ -814,7 +860,24 @@ export default function EventNominate() {
   const requiresRcraClub = !!event?.requires_rcra_club;
   const merchandise = Array.isArray(event?.merchandise) ? event.merchandise : [];
   const addOns = Array.isArray(event?.class_add_ons) ? event.class_add_ons : [];
-  const pricing = useMemo(() => pricingConfigFor(event), [event]);
+
+  const merchLimitContext = useMemo(
+    () => ({
+      merchandise,
+      externalCounts: externalMerchEntryCounts,
+      selections,
+      drivers,
+      hasRacingClasses: (selection) => racingSelectionIds(selection).length > 0,
+    }),
+    [merchandise, externalMerchEntryCounts, selections, drivers]
+  );
+
+  function visibleMerchandiseForDriver(driverId) {
+    return merchandise.filter((item, idx) =>
+      isMerchItemVisibleForDriver(item, idx, driverId, merchLimitContext)
+    );
+  }
+  const pricing = useMemo(() => resolveEventPricing(event), [event]);
   const entryLimits = event?.class_entry_limits || {};
   const isFamily = membership?.membership_type === "family" || drivers.length > 1;
 
@@ -1180,10 +1243,29 @@ export default function EventNominate() {
   function setClassSlot(driverId, slotIndex, classId) {
     const current = selections[driverId] || emptySelection();
     const slots = current.classSlots.slice();
-    slots[slotIndex] = classId;
+    while (slots.length < classLimit) slots.push("");
+    slots[slotIndex] = classId || "";
+    let visibleClassSlots = Number(current.visibleClassSlots ?? 1) || 1;
+    if (!classId) {
+      const packed = slots.filter(Boolean);
+      for (let i = 0; i < classLimit; i += 1) {
+        slots[i] = packed[i] || "";
+      }
+      visibleClassSlots = Math.max(1, packed.length);
+    } else {
+      visibleClassSlots = Math.max(
+        visibleClassSlots,
+        slots.filter(Boolean).length
+      );
+    }
     const stillSelected = slots.includes(current.preference);
     const newTransponders = fillTransponder(driverId, classId, current.transponders);
-    updateSelection(driverId, { classSlots: slots, preference: stillSelected ? current.preference : "", transponders: newTransponders });
+    updateSelection(driverId, {
+      classSlots: slots.slice(0, classLimit),
+      visibleClassSlots: Math.min(visibleClassSlots, classLimit),
+      preference: stillSelected ? current.preference : "",
+      transponders: newTransponders,
+    });
   }
 
   function removeClassEntry(driverId, row) {
@@ -1410,9 +1492,13 @@ export default function EventNominate() {
       });
   }
 
-  function merchandiseCostFor(selection) {
+  function merchandiseCostFor(selection, driverId) {
     return merchandise.reduce((sum, item, idx) => {
-      const entry = selection.merch[item.id || `merch-${idx}`] || selection.merch[item.id];
+      if (driverId && !isMerchItemVisibleForDriver(item, idx, driverId, merchLimitContext)) {
+        return sum;
+      }
+      const itemId = getMerchItemId(item, idx);
+      const entry = selection.merch[itemId] || selection.merch[item.id];
       if (item.included) return sum;
       const lines = item.compulsory && !normalizePurchaseLines(entry).length
         ? [{ options: entry?.options || {}, qty: 1 }]
@@ -1452,7 +1538,7 @@ export default function EventNominate() {
       membershipType,
       preferenceMap: preferenceMapForSelection(event, selection),
     });
-    return (classResult.total || 0) + merchandiseCostFor(selection) + addonCostFor(selection);
+    return (classResult.total || 0) + merchandiseCostFor(selection, driver.id) + addonCostFor(selection);
   }
 
   function purchaseLinesForItem(item, entry, { locked }) {
@@ -1462,10 +1548,13 @@ export default function EventNominate() {
     return normalizePurchaseLines(entry);
   }
 
-  function validatePurchaseSelection(selection) {
+  function validatePurchaseSelection(selection, driverId) {
     for (let idx = 0; idx < merchandise.length; idx += 1) {
       const item = merchandise[idx];
-      const itemId = item.id || `merch-${idx}`;
+      if (driverId && !isMerchItemVisibleForDriver(item, idx, driverId, merchLimitContext)) {
+        continue;
+      }
+      const itemId = getMerchItemId(item, idx);
       const entry = selection.merch[itemId] || selection.merch[item.id];
       const locked = item.included || item.compulsory;
       const hasOptions = Array.isArray(item.options) && item.options.length > 0;
@@ -1512,7 +1601,7 @@ export default function EventNominate() {
 
   function validateActiveDriversPurchases(active) {
     for (const { driver, selection } of active) {
-      const purchaseErr = validatePurchaseSelection(selection);
+      const purchaseErr = validatePurchaseSelection(selection, driver.id);
       if (purchaseErr) {
         return {
           message: `${driver.first_name} ${driver.last_name}: ${purchaseErr.message}`,
@@ -1676,7 +1765,8 @@ export default function EventNominate() {
     }
 
     merchandise.forEach((item, idx) => {
-      const itemId = item.id || `merch-${idx}`;
+      if (!isMerchItemVisibleForDriver(item, idx, driver.id, merchLimitContext)) return;
+      const itemId = getMerchItemId(item, idx);
       const entry = selection.merch[itemId] || selection.merch[item.id];
       const lines = normalizePurchaseLines(entry);
       lines.forEach((line, lineIndex) => {
@@ -1855,7 +1945,7 @@ export default function EventNominate() {
             total_fee: driverTotal(driver),
             paid: markPaid,
             merchandise: {
-              merch: selection.merch,
+              merch: sanitizeSelectionMerch(merchandise, selection, driver.id, merchLimitContext),
               addons: selection.addons,
               requirements: requirementSelections,
               payment_method: paymentMethod,
@@ -1962,7 +2052,7 @@ export default function EventNominate() {
     if (entryError) return showCheckoutError(entryError.message || "Unable to save class entries.");
     clearNominateDraft(eventId, membership.id);
     setSaved(true);
-    navigate(`/${clubSlug}/app/events/${eventId}/nominations`);
+    navigate(`/${clubSlug}/app/nominations`);
   }
 
   function classOptions(ids, currentValue, takenIds = [], { ignoreEntryLimits } = {}) {
@@ -2478,40 +2568,99 @@ export default function EventNominate() {
                       </div>
                     )}
 
-                    {!event.is_multi_day &&
-                      Array.from({ length: classLimit }, (_, slotIndex) => {
-                          const currentValue = (selection.classSlots || [])[slotIndex] || "";
-                          return (
-                            <div key={slotIndex} className="space-y-1 mb-3">
-                              <div className="text-sm font-medium">{`Class ${slotIndex + 1}`}</div>
-                              <div className="flex w-full min-w-0 items-center gap-2">
-                                <div className="min-w-0 flex-1">
-                                  <FilterDropdown
-                                    variant="cms"
-                                    value={currentValue}
-                                    onChange={(value) => setClassSlot(selectedDriver.id, slotIndex, value)}
-                                    options={classOptions(
-                                      clubClasses.map((item) => item.id),
-                                      currentValue,
-                                      (selection.classSlots || []).filter((id) => id && id !== currentValue)
-                                    )}
-                                    ariaLabel={`Class ${slotIndex + 1}`}
-                                    triggerStyleOverrides={{ fontSize: "0.875rem" }}
-                                  />
-                                </div>
-                                {currentValue && (
-                                  <TransponderCombobox
-                                    variant="cms"
-                                    value={transponderFor(selectedDriver.id, currentValue)}
-                                    suggestions={savedTranspondersFor(selectedDriver.id)}
-                                    onChange={(value) => updateTransponder(selectedDriver.id, currentValue, value)}
-                                    ariaLabel="Transponder number"
-                                  />
-                                )}
-                              </div>
+                    {!event.is_multi_day && (() => {
+                      const eventClassIds = clubClasses.map((item) => item.id);
+                      const daySlots = (selection.classSlots || []).slice();
+                      const chosen = daySlots.filter(Boolean);
+                      const visibleFromState = Number(selection.visibleClassSlots ?? 1) || 1;
+                      const visibleSlotCount = Math.min(
+                        classLimit,
+                        Math.max(visibleFromState, chosen.length)
+                      );
+                      const canAddClass =
+                        chosen.length < classLimit &&
+                        visibleSlotCount < classLimit &&
+                        chosen.length >= visibleSlotCount &&
+                        chosen.length > 0;
+
+                      return (
+                        <div className="space-y-3">
+                          {eventClassLimit != null && (
+                            <div style={{ fontSize: 14, color: contentText }}>
+                              Max classes per driver: {eventClassLimit}
                             </div>
-                          );
-                        })}
+                          )}
+                          {Array.from({ length: visibleSlotCount }, (_, slotIndex) => {
+                            const currentValue = daySlots[slotIndex] || "";
+                            return (
+                              <div key={slotIndex} className="space-y-1">
+                                <div className="text-sm font-medium">
+                                  {visibleSlotCount > 1 ? `Class ${slotIndex + 1}` : "Class"}
+                                </div>
+                                <div className="flex w-full min-w-0 items-center gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <FilterDropdown
+                                      variant="cms"
+                                      value={currentValue}
+                                      onChange={(value) =>
+                                        setClassSlot(selectedDriver.id, slotIndex, value)
+                                      }
+                                      onClose={() => {
+                                        if (!currentValue) {
+                                          setClassSlot(selectedDriver.id, slotIndex, "");
+                                        }
+                                      }}
+                                      options={classOptions(
+                                        eventClassIds,
+                                        currentValue,
+                                        chosen.filter((id) => id !== currentValue)
+                                      )}
+                                      ariaLabel={
+                                        visibleSlotCount > 1
+                                          ? `Class ${slotIndex + 1}`
+                                          : "Class"
+                                      }
+                                      triggerStyleOverrides={{ fontSize: "0.875rem" }}
+                                    />
+                                  </div>
+                                  {currentValue && (
+                                    <TransponderCombobox
+                                      variant="cms"
+                                      value={transponderFor(selectedDriver.id, currentValue)}
+                                      suggestions={savedTranspondersFor(selectedDriver.id)}
+                                      onChange={(value) =>
+                                        updateTransponder(selectedDriver.id, currentValue, value)
+                                      }
+                                      ariaLabel="Transponder number"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {canAddClass && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                updateSelection(selectedDriver.id, (current) => ({
+                                  visibleClassSlots: Math.min(
+                                    classLimit,
+                                    Math.max(
+                                      Number(current.visibleClassSlots ?? 1) || 1,
+                                      visibleSlotCount
+                                    ) + 1
+                                  ),
+                                }))
+                              }
+                            >
+                              Add class
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {preferenceEnabled && !event.is_multi_day && (() => {
                       const chosenSlots = (selection.classSlots || []).filter(Boolean);
@@ -2539,7 +2688,7 @@ export default function EventNominate() {
                   </div>
                 </Section>
 
-                {merchandise.length > 0 && (
+                {visibleMerchandiseForDriver(selectedDriver.id).length > 0 && (
                   <Section
                     title="Merchandise"
                     icon={ShoppingBagIcon}
@@ -2549,7 +2698,17 @@ export default function EventNominate() {
                   >
                     <div className="flex flex-col gap-4 w-full mx-auto">
                       {merchandise.map((item, idx) => {
-                        const itemId = item.id || `merch-${idx}`;
+                        if (
+                          !isMerchItemVisibleForDriver(
+                            item,
+                            idx,
+                            selectedDriver.id,
+                            merchLimitContext
+                          )
+                        ) {
+                          return null;
+                        }
+                        const itemId = getMerchItemId(item, idx);
                         const entry = selection.merch[itemId] || selection.merch[item.id];
                         const locked = item.included || item.compulsory;
                         const hasOptions = Array.isArray(item.options) && item.options.length > 0;
@@ -2599,6 +2758,18 @@ export default function EventNominate() {
                               {item.max_qty != null && item.max_qty !== "" && (
                                 <div className="text-base">
                                   <strong>Max Qty:</strong> {item.max_qty}
+                                </div>
+                              )}
+                              {numericEntryLimit(item.max_entries) != null && (
+                                <div className="text-base" style={{ color: palette?.textMuted || "#6b7280" }}>
+                                  <strong>Limited:</strong>{" "}
+                                  {remainingMerchEntrySlots(
+                                    item,
+                                    idx,
+                                    merchLimitContext,
+                                    selectedDriver.id
+                                  )}{" "}
+                                  of {item.max_entries} entry slots left
                                 </div>
                               )}
                               {hasOptions && (

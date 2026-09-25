@@ -1,5 +1,8 @@
 -- Nominations + nomination_entries schema and RLS for EventNominate.jsx
 --
+-- Late entry windows (enabled, activation, close) and pricing.late_fee live on public.events,
+-- not on nominations. See scripts/add-event-late-entries.sql.
+--
 -- nominations row (per driver per event) written by confirmPaymentAndNominations():
 --   event_id, driver_id, group_id (household_memberships.id), club_id (hosting club),
 --   affiliated_club_id (legacy; app stores RCRA name in merchandise.affiliated_club_name),

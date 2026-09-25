@@ -6,6 +6,7 @@ import CMSCard from "../cms/CMSCard";
 import CMSButton from "../cms/CMSButton";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import { cmsStyles } from "../cms/styles";
+import { normalizeDayRecord } from "@app/pages/admin/events/eventDefaults";
 
 export default function AdminEvents() {
   const navigate = useNavigate();
@@ -92,20 +93,14 @@ async function loadEvents() {
   };
 
   const handleDuplicate = async (ev) => {
+    const { id: _id, created_at: _createdAt, ...eventFields } = ev;
+
     const newEvent = {
-      ...ev,
-      id: undefined,
+      ...eventFields,
       name: `${ev.name} (Copy)`,
       created_at: new Date().toISOString(),
-
       days: Array.isArray(ev.days)
-        ? ev.days.map((d) => ({
-            date: d.date,
-            label: d.label,
-            opens_at: d.opens_at,
-            briefing_at: d.briefing_at,
-            closes_at: d.closes_at,
-          }))
+        ? ev.days.map((day) => normalizeDayRecord(day))
         : [],
     };
 

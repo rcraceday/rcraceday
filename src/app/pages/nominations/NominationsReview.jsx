@@ -1,281 +1,259 @@
-// src/app/pages/nominations/NominationsReview.jsx
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { ClipboardDocumentCheckIcon } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import PageTitle from "@/components/ui/PageTitle";
 import useTheme from "@app/providers/useTheme";
-import { COUNTRIES } from "@/data/countries";
+import { useMembership } from "@/app/providers/MembershipProvider";
+
+function driverName(driver) {
+  return [driver?.first_name, driver?.last_name].filter(Boolean).join(" ").trim();
+}
+
+function getEventEndDate(event) {
+  const scheduledDays = [
+    ...(Array.isArray(event?.classes_by_day) ? event.classes_by_day : []),
+    ...(Array.isArray(event?.days) ? event.days : []),
+  ];
+  const scheduledDates = scheduledDays
+    .map((day) => day?.date)
+    .filter((date) => date && !Number.isNaN(new Date(date).getTime()))
+    .sort();
+  return scheduledDates.at(-1) || event?.event_date || null;
+}
+
+function isEventStillListed(event, now = new Date()) {
+  const endStr = getEventEndDate(event);
+  if (!endStr) return false;
+  const endDay = new Date(`${String(endStr).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(endDay.getTime())) return false;
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const removeOn = new Date(endDay);
+  removeOn.setHours(0, 0, 0, 0);
+  removeOn.setDate(removeOn.getDate() + 1);
+  return today < removeOn;
+}
+
+function transponderFor(nomination, classId, driverClassMap) {
+  const fromSnapshot = nomination?.merchandise?.selection_snapshot?.transponders?.[classId];
+  if (fromSnapshot && String(fromSnapshot).trim()) return String(fromSnapshot).trim();
+  return driverClassMap.get(`${nomination.driver_id}:${classId}`) || "";
+}
 
 export default function NominationsReview() {
-  const { clubSlug, eventId } = useParams();
-  const navigate = useNavigate();
-  const { theme } = useTheme();
+  const { clubSlug } = useParams();
+  const { membership } = useMembership();
+  const { palette } = useTheme();
+  const brand = palette?.primary || "#00438a";
+  const contentText = palette?.text || "#1f2937";
 
-  const [drivers, setDrivers] = useState([]);
-  const [event, setEvent] = useState(null);
-  const [classes, setClasses] = useState([]);
-  const [nominations, setNominations] = useState([]);
-  const [entries, setEntries] = useState([]);
+  const [eventCards, setEventCards] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    let cancelled = false;
 
-  async function loadData() {
-    try {
+    async function load() {
+      if (!membership?.id) {
+        setEventCards([]);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
-      setError(null);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: nominationRows } = await supabase
+        .from("nominations")
+        .select("id, event_id, driver_id, merchandise")
+        .eq("group_id", membership.id);
 
-      if (!user) {
-        setError("You must be logged in to review nominations.");
-        setLoading(false);
-        return;
-      }
+      const nominations = nominationRows || [];
+      const eventIds = [...new Set(nominations.map((row) => row.event_id).filter(Boolean))];
+      const driverIds = [...new Set(nominations.map((row) => row.driver_id).filter(Boolean))];
+      const nominationIds = nominations.map((row) => row.id);
 
-      const { data: household } = await supabase
-        .from("household_memberships")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+      const { data: eventRows } = eventIds.length
+        ? await supabase
+            .from("events")
+            .select("id, name, event_date, is_multi_day, days, classes_by_day, nominations_open, nominations_close, late_entries_enabled, late_entries_close, late_fee_activation")
+            .in("id", eventIds)
+        : { data: [] };
 
-      if (!household) {
-        setError("No household membership found.");
-        setLoading(false);
-        return;
-      }
+      const visibleEvents = (eventRows || []).filter((event) => isEventStillListed(event));
 
-      const { data: driverRows } = await supabase
-        .from("drivers")
-        .select(
-          `
-          *,
-          profile:driver_profiles(*)
-        `
-        )
-        .eq("membership_id", household.id);
-
-      const { data: eventRow } = await supabase
-        .from("events")
-        .select("*")
-        .eq("id", eventId)
-        .single();
-
-      const { data: classRows } = await supabase
-        .from("nomination_classes")
-        .select("*, event_classes(*)")
-        .eq("event_id", eventId)
-        .eq("is_enabled", true)
-        .order("order_index", { ascending: true });
-
-      const driverIds = driverRows?.map((d) => d.id) || [];
-
-      let nomRows = [];
-      let entryRows = [];
-
-      if (driverIds.length > 0) {
-        const { data: n } = await supabase
-          .from("nominations")
-          .select("*")
-          .eq("event_id", eventId)
-          .in("driver_id", driverIds);
-
-        nomRows = n || [];
-
-        const nomIds = nomRows.map((n) => n.id);
-
-        if (nomIds.length > 0) {
-          const { data: e } = await supabase
+      const { data: entryRows } = nominationIds.length
+        ? await supabase
             .from("nomination_entries")
-            .select("*")
-            .in("nomination_id", nomIds)
-            .order("order_index", { ascending: true });
+            .select("id, nomination_id, class_id, is_preference, order_index")
+            .in("nomination_id", nominationIds)
+            .order("order_index", { ascending: true })
+        : { data: [] };
 
-          entryRows = e || [];
-        }
-      }
+      const { data: driverRows } = driverIds.length
+        ? await supabase.from("drivers").select("id, first_name, last_name").in("id", driverIds)
+        : { data: [] };
 
-      setDrivers(driverRows || []);
-      setEvent(eventRow || null);
-      setClasses(classRows || []);
-      setNominations(nomRows);
-      setEntries(entryRows);
-    } catch (err) {
-      console.error(err);
-      setError("Something went wrong loading your nominations.");
-    } finally {
+      const classIds = [...new Set((entryRows || []).map((entry) => entry.class_id).filter(Boolean))];
+      const { data: classRows } = classIds.length
+        ? await supabase.from("club_classes").select("id, name").in("id", classIds)
+        : { data: [] };
+
+      const { data: driverClassRows } = driverIds.length
+        ? await supabase
+            .from("driver_classes")
+            .select("driver_id, class_id, transponder_number")
+            .in("driver_id", driverIds)
+        : { data: [] };
+
+      if (cancelled) return;
+
+      const driverMap = new Map((driverRows || []).map((driver) => [driver.id, driver]));
+      const classMap = new Map((classRows || []).map((item) => [item.id, item.name]));
+      const driverClassMap = new Map(
+        (driverClassRows || []).map((row) => [
+          `${row.driver_id}:${row.class_id}`,
+          row.transponder_number || "",
+        ])
+      );
+
+      const cards = visibleEvents
+        .map((event) => {
+          const eventNominations = nominations.filter((row) => row.event_id === event.id);
+          const drivers = eventNominations
+            .map((nomination) => {
+              const driver = driverMap.get(nomination.driver_id);
+              if (!driver) return null;
+              const classSeen = new Set();
+              const classes = [];
+              (entryRows || []).forEach((entry) => {
+                if (entry.nomination_id !== nomination.id || entry.is_preference) return;
+                if (!entry.class_id || classSeen.has(entry.class_id)) return;
+                classSeen.add(entry.class_id);
+                classes.push({
+                  id: entry.class_id,
+                  name: classMap.get(entry.class_id) || "Unknown class",
+                  transponder: transponderFor(nomination, entry.class_id, driverClassMap),
+                });
+              });
+              return { nomination, driver, classes };
+            })
+            .filter(Boolean)
+            .sort((a, b) =>
+              `${a.driver.last_name || ""} ${a.driver.first_name || ""}`.localeCompare(
+                `${b.driver.last_name || ""} ${b.driver.first_name || ""}`
+              )
+            );
+          return { event, drivers };
+        })
+        .filter((card) => card.drivers.length > 0)
+        .sort((a, b) => {
+          const aDate = getEventEndDate(a.event) || "";
+          const bDate = getEventEndDate(b.event) || "";
+          return String(aDate).localeCompare(String(bDate));
+        });
+
+      setEventCards(cards);
       setLoading(false);
     }
-  }
 
-  function getClassName(classId) {
-    const cls = classes.find((c) => c.class_id === classId);
-    return cls?.event_classes?.class_name || "";
-  }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [membership?.id]);
 
-  function getPricingForDriver(driver) {
-    const memberPrice = event?.member_price ?? 10;
-    const juniorPrice = event?.junior_price ?? 0;
-
-    if (driver.is_junior) return { perClass: juniorPrice };
-    return { perClass: memberPrice };
-  }
-
-  function calculateTotal(driver, primaryCount) {
-    const { perClass } = getPricingForDriver(driver);
-    return perClass * primaryCount;
-  }
-
-  function getDriverEntries(driverId) {
-    const driverNoms = nominations.filter((n) => n.driver_id === driverId);
-    const nomIds = driverNoms.map((n) => n.id);
-
-    const driverEntries = entries.filter((e) =>
-      nomIds.includes(e.nomination_id)
-    );
-
-    const primary = driverEntries.filter((e) => !e.is_preference);
-    const preference = driverEntries.find((e) => e.is_preference) || null;
-
-    return { primary, preference, nominationId: driverNoms[0]?.id || null };
-  }
-
-  async function submit() {
-    try {
-      setSubmitting(true);
-      setError(null);
-
-      const firstNomination = nominations[0];
-
-      if (!firstNomination) {
-        setError("No nomination found to submit.");
-        setSubmitting(false);
-        return;
-      }
-
-      navigate(`/${clubSlug}/nominations/${eventId}/complete`, {
-        state: { nominationId: firstNomination.id },
-      });
-    } catch (err) {
-      console.error(err);
-      setError("Something went wrong submitting your nominations.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const hasCards = useMemo(() => eventCards.length > 0, [eventCards]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full border-2 border-slate-700 border-t-emerald-400 animate-spin" />
-          <p className="text-slate-300 text-sm">Loading your nominations…</p>
-        </div>
+      <div className="min-h-screen w-full bg-background text-text-muted flex items-center justify-center">
+        Loading your nominations...
       </div>
     );
   }
 
-if (error) {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full rounded-2xl border border-red-500/40 bg-red-500/10 p-6">
-        <h2 className="text-lg font-semibold text-red-200">Error</h2>
-        <p className="mt-2 text-sm text-red-100/80">{error}</p>
-        <button
-          onClick={() => navigate(`/${clubSlug}/events`)}
-          className="mt-4 inline-flex items-center justify-center rounded-full bg-slate-50 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 transition-colors"
-        >
-          Return to events
-        </button>
-      </div>
-    </div>
-  );
-}
+    <div style={{ minHeight: "100vh", width: "100%", background: palette?.background || "#ffffff" }}>
+      <PageTitle
+        icon={ClipboardDocumentCheckIcon}
+        title="My Nominations"
+        style={{ color: brand }}
+        actions={
+          <Link to={`/${clubSlug}/app/events`} className="no-underline">
+            <Button variant="primary" size="sm" className="!py-1 !px-3 !text-xs !rounded-sm">
+              Back to events
+            </Button>
+          </Link>
+        }
+      />
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 px-4 py-10">
-      <div className="max-w-3xl mx-auto">
-        {/* PAGE TITLE */}
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-6">
-          Review your nominations
-        </h1>
+      <main
+        style={{
+          padding: "24px 0",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+        }}
+      >
+        {!hasCards ? (
+          <Card className="p-4">
+            <p className="text-sm text-text-muted">
+              You have no household nominations for upcoming events.
+            </p>
+          </Card>
+        ) : (
+          eventCards.map(({ event, drivers }) => (
+            <Card key={event.id} className="p-4 space-y-4">
+              <h2 className="font-semibold text-lg leading-tight" style={{ color: contentText }}>
+                {event.name}
+              </h2>
 
-        {/* DRIVER CARDS */}
-        <div className="space-y-4">
-          {drivers.map((driver) => {
-            const p = driver.profile || {};
-            const country = COUNTRIES.find((c) => c.code === p.country_code);
-
-            const { primary, preference } = getDriverEntries(driver.id);
-            const total = calculateTotal(driver, primary.length);
-
-            return (
-              <div
-                key={driver.id}
-                className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5"
-              >
-                {/* DRIVER HEADER */}
-                <div className="flex items-center gap-4 mb-4">
-                  <img
-                    src={p.avatar_url || "/default-avatar.png"}
-                    className="w-12 h-12 rounded-full object-cover border border-slate-700"
-                  />
-                  <div>
-                    <p className="text-lg font-semibold text-slate-50">
-                      {p.nickname ||
-                        `${driver.first_name} ${driver.last_name}`}
+              <div className="space-y-4">
+                {drivers.map(({ driver, classes }) => (
+                  <div key={driver.id} className="space-y-1">
+                    <p className="font-medium" style={{ color: contentText }}>
+                      {driverName(driver) || "Unnamed driver"}
                     </p>
-                    {country && (
-                      <span className="text-xl">{country.flag}</span>
+                    {classes.length === 0 ? (
+                      <p className="text-sm text-text-muted">No classes nominated.</p>
+                    ) : (
+                      classes.map((item) => (
+                        <p key={item.id} className="text-sm text-text-muted">
+                          {item.name}
+                          {item.transponder ? ` · Transponder ${item.transponder}` : " · Transponder not set"}
+                        </p>
+                      ))
                     )}
                   </div>
-                </div>
-
-                {/* CLASSES */}
-                <div className="space-y-1 mb-3">
-                  {primary.map((e) => (
-                    <p key={e.id} className="text-sm text-slate-300">
-                      {getClassName(e.class_id)}
-                    </p>
-                  ))}
-
-                  {preference && (
-                    <p className="text-sm text-slate-400 italic">
-                      {getClassName(preference.class_id)} (Preference)
-                    </p>
-                  )}
-                </div>
-
-                {/* TOTAL */}
-                <p className="text-sm text-slate-400">
-                  Total:{" "}
-                  <span className="font-semibold text-slate-50">
-                    ${total}
-                  </span>
-                </p>
+                ))}
               </div>
-            );
-          })}
-        </div>
 
-        {/* SUBMIT BUTTON */}
-        <button
-          onClick={submit}
-          disabled={submitting}
-          className={`w-full mt-8 rounded-full px-4 py-3 text-sm font-semibold transition-colors ${
-            submitting
-              ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-              : "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-          }`}
-        >
-          {submitting ? "Submitting…" : "Submit Nominations"}
-        </button>
-      </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to={`/${clubSlug}/app/events/${event.id}/nominate`}
+                  state={{ reloadSavedNominations: true }}
+                  className="no-underline"
+                >
+                  <Button variant="secondary" className="!py-1.5 !text-xs w-full sm:w-auto">
+                    Update Nominations
+                  </Button>
+                </Link>
+                <Link
+                  to={`/${clubSlug}/app/events/${event.id}/nominations`}
+                  className="no-underline"
+                >
+                  <Button className="!py-1.5 !text-xs w-full sm:w-auto">
+                    View Nominations
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          ))
+        )}
+      </main>
     </div>
   );
 }

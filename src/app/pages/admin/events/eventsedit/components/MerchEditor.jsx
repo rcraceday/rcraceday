@@ -55,6 +55,21 @@ export default function MerchEditor({ item, setItem }) {
             value={item.max_qty}
             onChange={(v) => update("max_qty", Number(v))}
           />
+
+          <CMSInput
+            label="First # Entries"
+            type="number"
+            value={item.max_entries == null || item.max_entries === "" ? "" : String(item.max_entries)}
+            onChange={(v) =>
+              update("max_entries", v === "" ? null : Math.max(1, Math.floor(Number(v))))
+            }
+            placeholder="No limit"
+          />
+        </div>
+
+        <div style={{ fontSize: 12, color: "#666", marginTop: -4 }}>
+          Entry limit is across the whole event (first N nominations). After that, the item is
+          hidden and not stored on later nominations.
         </div>
 
         <div style={{ display: "flex", gap: 12 }}>

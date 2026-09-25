@@ -44,7 +44,7 @@ export default function SearchableClubSelect({ clubs, selectedClubId, onSelectCl
 
   return (
     <div
-      className="relative filter-dropdown"
+      className={`relative filter-dropdown${isOpen ? " is-open" : ""}`}
       ref={dropdownRef}
       style={{ "--dropdown-primary": primary }}
     >
@@ -81,7 +81,7 @@ export default function SearchableClubSelect({ clubs, selectedClubId, onSelectCl
 
       {isOpen && (
         <ul
-          className="filter-dropdown-menu max-h-60 w-full overflow-auto text-base sm:text-sm list-none m-0 p-0"
+          className="filter-dropdown-menu filter-dropdown-menu-scroll max-h-[min(20rem,70vh)] w-full overflow-y-auto overscroll-contain text-base sm:text-sm list-none m-0 p-0"
           style={getDropdownMenuStyle(palette)}
           tabIndex="-1"
           role="listbox"

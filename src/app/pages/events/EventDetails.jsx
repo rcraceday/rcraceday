@@ -21,6 +21,39 @@ import {
   getEventClassLimit,
   isOpenPracticeDay,
 } from "@/app/lib/eventClassLimit";
+import { useMembership } from "@/app/providers/MembershipProvider";
+import {
+  isNominationsOpen,
+  perEntryFeeDisplayRows,
+  resolveEventPricing,
+} from "@/app/pages/events/events-sections/helpers";
+
+const EVENT_DETAIL_FIELDS =
+  "*, pricing, late_entries_enabled, late_fee_activation, late_entries_close";
+
+function formatNominationDateTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const date = d.toLocaleDateString("en-AU", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("en-AU", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${date} ${time}`;
+}
+
+function formatLateFeeAmount(pricing) {
+  const amount = Number(pricing?.late_fee);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return `$${amount}`;
+}
 
 // ---------------------------------------------
 // PAGE HEADER
@@ -144,6 +177,30 @@ function TwoColumnList({ items }) {
   );
 }
 
+function EntryFeeList({ items }) {
+  if (!items || items.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        fontSize: "14px",
+      }}
+    >
+      {items.map((it, i) => (
+        <div key={i} style={{ fontWeight: 500 }}>
+          {it.label}
+          {it.value && (
+            <span style={{ color: "#555", fontWeight: 400 }}> — {it.value}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ---------------------------------------------
 // SECTION
 // ---------------------------------------------
@@ -221,6 +278,9 @@ export default function EventDetails() {
   const [classMap, setClassMap] = useState({});
   const [trackClassIds, setTrackClassIds] = useState([]);
   const [classEntryCounts, setClassEntryCounts] = useState({});
+  const [hasExistingNomination, setHasExistingNomination] = useState(false);
+
+  const { membership } = useMembership();
 
   const logoSrc = event?.logourl
     ? event.logourl.startsWith("http")
@@ -235,7 +295,7 @@ export default function EventDetails() {
 
       const { data } = await supabase
         .from("events")
-        .select("*")
+        .select(EVENT_DETAIL_FIELDS)
         .eq("id", id)
         .single();
 
@@ -331,6 +391,25 @@ useEffect(() => {
   loadEntryCounts();
 }, [event]);
 
+useEffect(() => {
+  async function loadHouseholdNomination() {
+    if (!event?.id || !membership?.id) {
+      setHasExistingNomination(false);
+      return;
+    }
+
+    const { data } = await supabase
+      .from("nominations")
+      .select("id")
+      .eq("event_id", event.id)
+      .eq("group_id", membership.id)
+      .limit(1);
+
+    setHasExistingNomination((data?.length ?? 0) > 0);
+  }
+
+  loadHouseholdNomination();
+}, [event?.id, membership?.id]);
 
 if (loading) {
   return (
@@ -370,21 +449,23 @@ if (!event) {
 
 const primaryDate = formatEventDate(event);
 
-const now = new Date();
-const nominationsOpen = event.nominations_open
-  ? new Date(event.nominations_open)
-  : null;
-const nominationsClose = event.nominations_close
-  ? new Date(event.nominations_close)
-  : null;
-
-const nominationsAreOpen =
-  nominationsOpen &&
-  now >= nominationsOpen &&
-  (!nominationsClose || now <= nominationsClose);
+const nominationsAreOpen = isNominationsOpen(event);
 
 const nominateButtonClassName =
   "!py-2.5 !px-6 !text-sm font-semibold !rounded-sm";
+
+const nominateButtonVariant = hasExistingNomination ? "secondary" : "success";
+const nominateButtonLabel = hasExistingNomination
+  ? "Update Nominations"
+  : "Nominate";
+
+const entryPricing = resolveEventPricing(event);
+const showEntryFees =
+  entryPricing &&
+  (has(event.pricing) ||
+    has(event.member_price) ||
+    has(event.non_member_price) ||
+    has(event.junior_price));
 
 return (
   
@@ -485,37 +566,34 @@ return (
       </div>
     )}
 
-    {/* Nominations (single line, full width) */}
-    {(event.nominations_open || event.nominations_close) && (
+    {/* Nominations */}
+    {(event.nominations_open ||
+      event.nominations_close ||
+      event.late_entries_enabled) && (
       <div className="text-[14px] leading-[1.5] mb-1">
-        <strong>Nominations:</strong>{" "}
-        {event.nominations_open &&
-          `Open – ${new Date(event.nominations_open).toLocaleDateString("en-AU", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })} ${new Date(event.nominations_open).toLocaleTimeString("en-AU", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          })}`
-        }
-
-        {(event.nominations_open && event.nominations_close) && "   |   "}
-
-        {event.nominations_close &&
-          `Close – ${new Date(event.nominations_close).toLocaleDateString("en-AU", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })} ${new Date(event.nominations_close).toLocaleTimeString("en-AU", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          })}`
-        }
+        <strong>Nominations:</strong>
+        <div className="mt-1 space-y-0.5 font-normal">
+          {event.nominations_open && (
+            <div>Open – {formatNominationDateTime(event.nominations_open)}</div>
+          )}
+          {event.nominations_close && (
+            <div>Close – {formatNominationDateTime(event.nominations_close)}</div>
+          )}
+          {event.late_entries_enabled && event.late_fee_activation && (
+            <div>
+              Late fee from – {formatNominationDateTime(event.late_fee_activation)}
+            </div>
+          )}
+          {event.late_entries_enabled && event.late_entries_close && (
+            <div>
+              Late entries close –{" "}
+              {formatNominationDateTime(event.late_entries_close)}
+            </div>
+          )}
+          {event.late_entries_enabled && formatLateFeeAmount(event.pricing) && (
+            <div>Late fee – {formatLateFeeAmount(event.pricing)}</div>
+          )}
+        </div>
       </div>
     )}
   </div>
@@ -529,8 +607,11 @@ return (
           to={`/${clubSlug}/app/events/${id}/nominate`}
           className="no-underline"
         >
-          <Button variant="success" className={nominateButtonClassName}>
-            Nominate
+          <Button
+            variant={nominateButtonVariant}
+            className={nominateButtonClassName}
+          >
+            {nominateButtonLabel}
           </Button>
         </Link>
       </div>
@@ -565,7 +646,9 @@ return (
     color: contentText,
   }}
   dangerouslySetInnerHTML={{
-    __html: DOMPurify.sanitize(event.description || "")
+    __html: DOMPurify.sanitize(event.description || "", {
+      ADD_ATTR: ["target", "rel"],
+    }),
   }}
 />
 
@@ -770,62 +853,41 @@ return (
   </div>
 </Section>
 
-{/* Pricing */}
+{/* Entry Fees */}
 
-{has(event.pricing) && (
-  <Section title="Pricing" icon={BanknotesIcon} brand={brand}>
-    {event.pricing.mode === "per_entry" && (
-      <TwoColumnList
-        items={[
-          event.pricing.global && {
-            label: "Global",
-            value: [
-              event.pricing.global.free && "Free",
-              has(event.pricing.global.member) &&
-                `Member $${event.pricing.global.member}`,
-              has(event.pricing.global.non_member) &&
-                `Non‑Member $${event.pricing.global.non_member}`,
-              has(event.pricing.global.junior) &&
-                `Junior $${event.pricing.global.junior}`,
-            ]
-              .filter(Boolean)
-              .join(" · "),
-          },
-          has(event.pricing.late_fee) && {
-            label: "Late Fee",
-            value: `$${event.pricing.late_fee}`,
-          },
-        ].filter(Boolean)}
-      />
+{showEntryFees && (
+  <Section title="Entry Fees" icon={BanknotesIcon} brand={brand}>
+    {entryPricing.mode === "per_entry" && (
+      <EntryFeeList items={perEntryFeeDisplayRows(entryPricing)} />
     )}
 
-    {event.pricing.mode === "tiered" && (
+    {entryPricing.mode === "tiered" && (
       <TwoColumnList
         items={[
           {
             label: "Member",
-            value: `First $${event.pricing.tiered.member.first_class} · Additional $${event.pricing.tiered.member.additional_class}`,
+            value: `First $${entryPricing.tiered.member.first_class} · Additional $${entryPricing.tiered.member.additional_class}`,
           },
           {
             label: "Non‑Member",
-            value: `First $${event.pricing.tiered.non_member.first_class} · Additional $${event.pricing.tiered.non_member.additional_class}`,
+            value: `First $${entryPricing.tiered.non_member.first_class} · Additional $${entryPricing.tiered.non_member.additional_class}`,
           },
           {
             label: "Junior",
-            value: `First $${event.pricing.tiered.junior.first_class} · Additional $${event.pricing.tiered.junior.additional_class}`,
+            value: `First $${entryPricing.tiered.junior.first_class} · Additional $${entryPricing.tiered.junior.additional_class}`,
           },
-          has(event.pricing.late_fee) && {
+          has(entryPricing.late_fee) && {
             label: "Late Fee",
-            value: `$${event.pricing.late_fee}`,
+            value: `$${entryPricing.late_fee}`,
           },
         ].filter(Boolean)}
       />
     )}
 
-    {event.pricing.mode === "per_class" && (
+    {entryPricing.mode === "per_class" && (
       <TwoColumnList
         items={[
-          ...Object.entries(event.pricing.class_prices || {}).map(
+          ...Object.entries(entryPricing.class_prices || {}).map(
             ([classId, cp]) => ({
               label: classMap[classId] || `Class ${classId}`,
               value: cp.free
@@ -839,9 +901,9 @@ return (
                     .join(" · "),
             })
           ),
-          has(event.pricing.late_fee) && {
+          has(entryPricing.late_fee) && {
             label: "Late Fee",
-            value: `$${event.pricing.late_fee}`,
+            value: `$${entryPricing.late_fee}`,
           },
         ].filter(Boolean)}
       />
@@ -1140,8 +1202,11 @@ return (
       to={`/${clubSlug}/app/events/${id}/nominate`}
       className="no-underline"
     >
-      <Button variant="success" className={nominateButtonClassName}>
-        Nominate
+      <Button
+        variant={nominateButtonVariant}
+        className={nominateButtonClassName}
+      >
+        {nominateButtonLabel}
       </Button>
     </Link>
   </div>

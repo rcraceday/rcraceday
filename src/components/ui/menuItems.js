@@ -5,6 +5,7 @@ import {
   CalendarIcon,
   IdentificationIcon,
   UserCircleIcon,
+  UserPlusIcon,
   UsersIcon,
   Cog6ToothIcon,
   ShieldCheckIcon,
@@ -27,6 +28,11 @@ export function buildMenuItems({ clubSlug, isAdmin, user }) {
       label: "Calendar",
       icon: CalendarIcon,
       to: `/${clubSlug}/app/calendar`,
+    },
+    {
+      label: "My Noms",
+      icon: UserPlusIcon,
+      to: `/${clubSlug}/app/nominations`,
     },
     {
       label: "Driver Manager",

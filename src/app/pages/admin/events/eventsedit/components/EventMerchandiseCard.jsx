@@ -30,6 +30,7 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
       included: false,
       compulsory: false,
       max_qty: 1,
+      max_entries: null,
       photo_file: null,
       photo_url: null,
       options: [],
@@ -163,6 +164,9 @@ export default function EventMerchandiseCard({ event = {}, onChange = () => {} }
                 : `Price: $${item.price ?? 0}`}
             </div>
             <div>Max Qty: {item.max_qty ?? 1}</div>
+            {item.max_entries != null && item.max_entries !== "" && (
+              <div>First {item.max_entries} entries only</div>
+            )}
             {item.compulsory && (
               <div style={{ color: "#b91c1c", fontSize: 13 }}>
                 Compulsory item – nomination cannot be submitted without this.

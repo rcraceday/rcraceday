@@ -51,7 +51,6 @@ export function getDropdownMenuStyle(palette, overrides = {}) {
     left: 0,
     zIndex: 300,
     minWidth: "100%",
-    overflow: "hidden",
     border: `${DROPDOWN_BORDER_WIDTH}px solid ${borderColor}`,
     borderRadius: DROPDOWN_BORDER_RADIUS,
     background: "#fff",

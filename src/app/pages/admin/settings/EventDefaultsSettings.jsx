@@ -1,30 +1,41 @@
-import { useOutletContext } from "react-router-dom";
-import Card from "@/components/ui/Card";
-import { cmsStyles } from "../cms/styles";
+import { useNavigate } from "react-router-dom";
+import { useClub } from "@/app/providers/ClubProvider";
+import { cmsStyles } from "@cms/styles";
+import CMSButton from "@cms/CMSButton";
+import EventDefaultsSettingsCard from "./components/EventDefaultsSettingsCard";
 
 export default function EventDefaultsSettings() {
-  const { club } = useOutletContext();
+  const navigate = useNavigate();
+  const { club } = useClub();
 
   return (
     <div style={cmsStyles.pageContainer}>
       <div style={cmsStyles.pageContent}>
-        {/* HEADER */}
-        <header style={cmsStyles.sectionHeader}>
-          <h1 style={cmsStyles.sectionHeaderTitle}>Event Defaults Settings</h1>
-
-          <p style={cmsStyles.sectionHeaderSubtitle}>
-            Configure default event values, timings, limits, and behaviour.
-          </p>
-        </header>
-
-        {/* CARD — USING cmsStyles + canonical Card */}
-        <Card
-          style={cmsStyles.card}
-        >
-          <div style={cmsStyles.cardBody}>
-            <EventDefaultsSettingsCard />
+        <div style={cmsStyles.sectionHeaderWithActions}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={cmsStyles.sectionHeaderTitle}>Event Defaults</h1>
+            <p style={cmsStyles.sectionHeaderSubtitle}>
+              Set default timing, nominations open/close, pricing, class limits, and
+              nomination behaviour per event type and track. New events copy these values
+              when both are selected.
+            </p>
           </div>
-        </Card>
+
+          <CMSButton
+            variant="secondary"
+            onClick={() => navigate(`/${club?.slug}/app/admin/settings`)}
+            style={{
+              padding: "4px 10px",
+              fontSize: "12px",
+              borderRadius: "4px",
+              flexShrink: 0,
+            }}
+          >
+            ← Back
+          </CMSButton>
+        </div>
+
+        <EventDefaultsSettingsCard club={club} />
       </div>
     </div>
   );

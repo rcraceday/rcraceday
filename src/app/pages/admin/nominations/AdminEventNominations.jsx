@@ -72,7 +72,17 @@ export default function AdminEventNominations() {
     if (driver) groups[name] = [...(groups[name] || []), driver];
     return groups;
   }, {});
-  const csv = buildLiveTimeCsv(buildLiveTimeRows({ nominations, entries, drivers, classes, memberships, clubName }));
+  const csv = buildLiveTimeCsv(
+    buildLiveTimeRows({
+      nominations,
+      entries,
+      drivers,
+      classes,
+      memberships,
+      clubName,
+      event,
+    })
+  );
 
   const flatRequirements = useMemo(() => {
     const requirements = Array.isArray(event?.club_requirements) ? event.club_requirements : [];

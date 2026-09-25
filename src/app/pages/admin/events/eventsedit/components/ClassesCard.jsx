@@ -191,6 +191,32 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
         gap: cmsLayout.spacing.lg,
       }}
     >
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
+        <div style={{ width: 220 }}>
+          <CMSInput
+            type="number"
+            label="Class Minimum Entries"
+            value={
+              event.class_minimum_entries == null ? "" : String(event.class_minimum_entries)
+            }
+            onChange={(v) =>
+              onChange(
+                "class_minimum_entries",
+                v === "" ? null : Math.max(0, Number(v))
+              )
+            }
+            placeholder="From defaults"
+          />
+        </div>
+        <div style={{ paddingBottom: 8 }}>
+          <CMSToggle
+            label="LiveTime includes classes below minimum"
+            checked={!!event.class_minimum_livetime_when_unmet}
+            onChange={(checked) => onChange("class_minimum_livetime_when_unmet", checked)}
+          />
+        </div>
+      </div>
+
       {/* Max Classes Per Event */}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <div style={{ width: 220 }}>

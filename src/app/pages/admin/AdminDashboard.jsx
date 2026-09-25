@@ -8,46 +8,17 @@ import {
   IdentificationIcon,
   UserGroupIcon,
   Cog6ToothIcon,
+  ArchiveBoxIcon,
 } from "@heroicons/react/24/solid";
 
 import { cmsStyles } from "@cms/styles";
-
-function StatCard({ label, value }) {
-  return (
-    <div
-      style={{
-        backgroundColor: "#FFFFFF",
-        borderRadius: "8px",
-        border: "1px solid #E5E7EB",
-        padding: "16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "4px",
-      }}
-    >
-      <span
-        style={{
-          fontSize: "12px",
-          textTransform: "uppercase",
-          letterSpacing: "0.12em",
-          color: "#6B7280",
-          fontWeight: 600,
-        }}
-      >
-        {label}
-      </span>
-      <span
-        style={{
-          fontSize: "22px",
-          fontWeight: 700,
-          color: "#111827",
-        }}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
+import AdminKeyMetrics from "@app/pages/admin/components/AdminKeyMetrics";
+import {
+  buildStatsForYear,
+  emptyDashboardStats,
+  getCalendarYear,
+  loadClubMetricsContext,
+} from "@app/pages/admin/adminDashboardMetrics";
 
 function QuickAction({ to, icon: Icon, label }) {
   const content = (
@@ -169,62 +140,22 @@ function CurrentNominationsPanel({ events, totalCount }) {
 
 export default function AdminDashboard() {
   const { clubSlug } = useParams();
+  const metricsYear = getCalendarYear();
 
-  const [stats, setStats] = useState({
-    totalEvents: 0,
-    upcomingEvents: 0,
-    activeMembers: 0,
-    drivers: 0,
-  });
+  const [stats, setStats] = useState(() => emptyDashboardStats());
   const [nominationsByEvent, setNominationsByEvent] = useState([]);
 
   useEffect(() => {
     async function loadMetrics() {
-      // Load club ID first
-      const { data: club, error: clubErr } = await supabase
-        .from("clubs")
-        .select("id")
-        .eq("slug", clubSlug)
-        .single();
-
-      if (clubErr || !club?.id) {
-        console.error("Failed to load club:", clubErr);
+      const context = await loadClubMetricsContext(clubSlug);
+      if (context.error) {
+        console.error("Failed to load club:", context.error);
         return;
       }
 
-      const clubId = club.id;
+      setStats(buildStatsForYear(context, metricsYear));
 
-      // Fetch all metrics safely
-      const nowIso = new Date().toISOString();
-
-      const [
-        totalEventsRes,
-        upcomingEventsRes,
-        activeMembersRes,
-        driversRes,
-      ] = await Promise.all([
-        supabase
-          .from("events")
-          .select("id", { count: "exact" })
-          .eq("club_id", clubId),
-
-        supabase
-          .from("events")
-          .select("id, name, event_date")
-          .eq("club_id", clubId)
-          .gte("event_date", nowIso)
-          .order("event_date", { ascending: true }),
-
-        supabase
-          .from("club_members")
-          .select("id", { count: "exact" }),
-
-        supabase
-          .from("drivers")
-          .select("id", { count: "exact" }),
-      ]);
-
-      const upcomingEvents = upcomingEventsRes.data || [];
+      const upcomingEvents = context.upcomingEvents || [];
       const upcomingEventIds = upcomingEvents.map((event) => event.id);
 
       const nominationCounts = {};
@@ -247,16 +178,10 @@ export default function AdminDashboard() {
         }));
 
       setNominationsByEvent(eventsWithNominations);
-      setStats({
-        totalEvents: totalEventsRes.count || 0,
-        upcomingEvents: upcomingEventIds.length,
-        activeMembers: activeMembersRes.count || 0,
-        drivers: driversRes.count || 0,
-      });
     }
 
     loadMetrics();
-  }, [clubSlug]);
+  }, [clubSlug, metricsYear]);
 
   return (
     <div style={cmsStyles.pageContainer}>
@@ -282,23 +207,21 @@ export default function AdminDashboard() {
               marginBottom: "10px",
             }}
           >
-            Key Metrics
+            Key Metrics — {metricsYear}
           </h2>
 
-          <div
+          <p
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
-              gap: "12px",
-              width: "100%",
-              minWidth: 0,
+              fontSize: "13px",
+              color: "#6B7280",
+              margin: "0 0 12px",
+              lineHeight: 1.5,
             }}
           >
-            <StatCard label="Total Events" value={stats.totalEvents} />
-            <StatCard label="Upcoming Events" value={stats.upcomingEvents} />
-            <StatCard label="Drivers" value={stats.drivers} />
-            <StatCard label="Active Members" value={stats.activeMembers} />
-          </div>
+            Event and nomination figures are for the {metricsYear} calendar year and reset on January 1.
+          </p>
+
+          <AdminKeyMetrics stats={stats} />
 
           <div style={{ width: "100%", marginTop: "12px" }}>
             <CurrentNominationsPanel
@@ -335,6 +258,7 @@ export default function AdminDashboard() {
             <QuickAction to="membership" icon={IdentificationIcon} label="Manage Membership" />
             <QuickAction to="drivers" icon={UserGroupIcon} label="Manage Drivers" />
             <QuickAction to="settings" icon={Cog6ToothIcon} label="Admin Settings" />
+            <QuickAction to="archives" icon={ArchiveBoxIcon} label="Archives" />
           </div>
         </section>
 

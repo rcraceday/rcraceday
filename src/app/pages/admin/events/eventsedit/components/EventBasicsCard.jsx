@@ -108,15 +108,25 @@ export default function EventBasicsCard({
         onChange={(checked) => {
           onChange("is_multi_day", checked);
 
+          const first = days[0] || {};
+          const firstDate = first.date || event.event_date || "";
+          const timedDay = {
+            date: firstDate,
+            label: first.label || "",
+            gates_open_at: first.gates_open_at || "",
+            practice_at: first.practice_at || "",
+            drivers_brief_at: first.drivers_brief_at || "",
+            race_start_at: first.race_start_at || "",
+            is_practice: !!first.is_practice,
+          };
+
           if (!checked) {
-            const first = days[0]?.date || event.event_date || "";
-            onChange("event_date", first);
-            onChange("days", []);
+            onChange("event_date", firstDate);
+            onChange("days", firstDate || first.gates_open_at ? [timedDay] : []);
             onChange("class_limit_scope", "per_event");
             onChange("class_limit_per_day", null);
           } else {
-            const first = event.event_date || "";
-            onChange("days", first ? [{ date: first, label: "" }] : []);
+            onChange("days", firstDate || first.gates_open_at ? [timedDay] : []);
           }
         }}
       />

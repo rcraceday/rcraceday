@@ -124,7 +124,7 @@ export default function FilterDropdown({
       {open && (
         <div
           ref={menuRef}
-          className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-40 overflow-y-auto" : ""}`}
+          className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-[min(20rem,70vh)] overflow-y-auto overscroll-contain" : ""}`}
           role="listbox"
           aria-label={ariaLabel}
           style={

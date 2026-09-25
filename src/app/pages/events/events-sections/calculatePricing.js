@@ -1,3 +1,5 @@
+import { isNominationsOpen } from "./helpers";
+
 export function calculateUserPricing({
   event,
   pricing,
@@ -14,12 +16,14 @@ export function calculateUserPricing({
   // -----------------------------
   // 1. Determine Late Entry Status
   // -----------------------------
-  const nominationsClose = new Date(event.nominations_close);
+  const nominationsClose = event.nominations_close
+    ? new Date(event.nominations_close)
+    : null;
   const lateEnabled = !!event.late_entries_enabled;
 
   let isLate = false;
 
-  if (lateEnabled) {
+  if (lateEnabled && nominationsClose) {
     const lateStart = event.late_fee_activation
       ? new Date(event.late_fee_activation)
       : new Date(nominationsClose.getTime() + 1000);
@@ -33,8 +37,7 @@ export function calculateUserPricing({
     }
   }
 
-  // If late entries disabled AND nominations closed → no nomination allowed
-  if (!lateEnabled && now > nominationsClose) {
+  if (!isNominationsOpen(event, now)) {
     return { error: "Nominations are closed", total: 0 };
   }
 

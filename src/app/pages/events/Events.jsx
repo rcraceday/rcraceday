@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
+import { useMembership } from "@/app/providers/MembershipProvider";
 
 import useTheme from "@/app/providers/useTheme";
 
@@ -20,6 +21,7 @@ export default function Events() {
   const brand = palette.primary;
   const { clubSlug } = useParams();
   const { club } = useClub();
+  const { membership } = useMembership();
 
   const currentYear = new Date().getFullYear();
   const [view, setView] = useState("upcoming");
@@ -30,6 +32,8 @@ export default function Events() {
   const [tracks, setTracks] = useState([]);
   const [trackFilter, setTrackFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [nominatedEventIds, setNominatedEventIds] = useState(() => new Set());
+  const [eventsWithNominations, setEventsWithNominations] = useState(() => new Set());
 
   // -----------------------------
   // Multi‑day aware date helpers
@@ -96,12 +100,45 @@ export default function Events() {
         }
       }
 
+      const eventIds = data.map((event) => event.id).filter(Boolean);
+      if (eventIds.length > 0) {
+        const { data: nominationRows = [] } = await supabase
+          .from("nominations")
+          .select("event_id")
+          .in("event_id", eventIds);
+        setEventsWithNominations(
+          new Set(nominationRows.map((row) => row.event_id).filter(Boolean))
+        );
+      } else {
+        setEventsWithNominations(new Set());
+      }
+
       setEvents(data);
       setLoading(false);
     }
 
     loadEvents();
   }, [club?.id]);
+
+  useEffect(() => {
+    async function loadHouseholdNominations() {
+      if (!membership?.id) {
+        setNominatedEventIds(new Set());
+        return;
+      }
+
+      const { data } = await supabase
+        .from("nominations")
+        .select("event_id")
+        .eq("group_id", membership.id);
+
+      setNominatedEventIds(
+        new Set((data || []).map((row) => row.event_id).filter(Boolean))
+      );
+    }
+
+    loadHouseholdNominations();
+  }, [membership?.id]);
 
   const years = extractYearsFromEvents(events);
   const activeYear = years.includes(selectedYear) ? selectedYear : years[0];
@@ -188,6 +225,8 @@ export default function Events() {
               clubSlug={clubSlug}
               trackNames={trackNames}
               showResults={getEventEndDate(event) < now}
+              hasNomination={nominatedEventIds.has(event.id)}
+              hasReceivedNominations={eventsWithNominations.has(event.id)}
             />
           ))}
         </section>

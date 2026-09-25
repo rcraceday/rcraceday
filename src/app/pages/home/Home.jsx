@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useClub } from "@/app/providers/ClubProvider";
-import { useProfile } from "@/app/providers/ProfileProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import useTheme from "@/app/providers/useTheme";
@@ -14,7 +13,8 @@ import Button from "@/components/ui/Button";
 import Carousel from "@/components/Carousel";
 
 import PageTitle from "@/components/ui/PageTitle";
-import { formatDate } from "@/app/pages/events/events-sections/helpers";
+import { isNominationsOpen } from "@/app/pages/events/events-sections/helpers";
+import EventCard from "@/app/pages/events/EventCard";
 
 import {
   CalendarDaysIcon,
@@ -24,41 +24,25 @@ import {
   TrophyIcon,
   BoltIcon,
   HomeIcon,
-  Cog6ToothIcon,
 } from "@heroicons/react/24/solid";
 
-function formatEventDate(event) {
-  if (!event.is_multi_day || !Array.isArray(event.days)) {
-    return formatDate(event.event_date);
+function getEventStartDate(event) {
+  if (event.is_multi_day && Array.isArray(event.days) && event.days.length > 0) {
+    return new Date(event.days[0].date);
   }
-
-  const dates = event.days
-    .map((day) => day?.date)
-    .filter((date) => date && !Number.isNaN(new Date(date).getTime()))
-    .sort();
-
-  if (dates.length === 0) return formatDate(event.event_date);
-  if (dates.length === 1 || dates[0] === dates.at(-1)) return formatDate(dates[0]);
-
-  return `${formatDate(dates[0])} - ${formatDate(dates.at(-1))}`;
+  return new Date(event.event_date);
 }
 
-function formatNominationDate(dateString) {
-  const date = new Date(dateString);
-  const day = date.getDate();
-  const suffix = [11, 12, 13].includes(day % 100)
-    ? "th"
-    : ["th", "st", "nd", "rd"][day % 10] || "th";
-  const weekday = date.toLocaleDateString("en-AU", { weekday: "short" });
-  const month = date.toLocaleDateString("en-AU", { month: "short" });
-
-  return `${weekday}, ${day}${suffix} ${month}`;
+function getEventEndDate(event) {
+  if (event.is_multi_day && Array.isArray(event.days) && event.days.length > 0) {
+    return new Date(event.days[event.days.length - 1].date);
+  }
+  return new Date(event.event_date);
 }
 
 export default function Home() {
   const { club } = useClub();
-  const { profile } = useProfile();
-  const { loadingMembership } = useMembership();
+  const { membership, loadingMembership } = useMembership();
   const { drivers, loadingDrivers } = useDrivers();
   const { palette } = useTheme();
 
@@ -70,10 +54,10 @@ export default function Home() {
   const [events, setEvents] = useState([]);
   const [trackNames, setTrackNames] = useState({});
   const [loadingEvent, setLoadingEvent] = useState(true);
+  const [nominatedEventIds, setNominatedEventIds] = useState(() => new Set());
+  const [eventsWithNominations, setEventsWithNominations] = useState(() => new Set());
 
   const newsItems = [];
-
-  const isAdmin = profile?.role === "admin";
 
   useEffect(() => {
     if (!clubSlug) return;
@@ -115,39 +99,82 @@ export default function Home() {
         setTrackNames({});
       }
 
-      const now = new Date();
-      const today = now.toISOString().split("T")[0];
-      const nominationsOpen = data.filter((event) => {
-        const open = event.nominations_open
-          ? new Date(event.nominations_open)
-          : null;
-        const close = event.nominations_close
-          ? new Date(event.nominations_close)
-          : null;
+      const eventIds = data.map((event) => event.id).filter(Boolean);
+      if (eventIds.length > 0) {
+        const { data: nominationRows = [] } = await supabase
+          .from("nominations")
+          .select("event_id")
+          .in("event_id", eventIds);
+        setEventsWithNominations(
+          new Set(nominationRows.map((row) => row.event_id).filter(Boolean))
+        );
+      } else {
+        setEventsWithNominations(new Set());
+      }
 
-        return open && now >= open && (!close || now <= close);
-      });
-      const upcomingEvents = data.filter(
-        (event) => event.event_date && event.event_date >= today
-      );
-      const next = upcomingEvents[0];
-      const relevantEvents = data.filter(
-        (event) => upcomingEvents.includes(event) || nominationsOpen.includes(event)
-      );
-      const displayedEvents = [
-        next,
-        ...relevantEvents.filter((event) => event.id !== next?.id),
-      ].filter(Boolean);
-
-      setEvents(displayedEvents);
+      setEvents(data);
       setLoadingEvent(false);
     }
 
     fetchEvents();
   }, [club?.id]);
 
-  return (
+  useEffect(() => {
+    async function loadHouseholdNominations() {
+      if (!membership?.id) {
+        setNominatedEventIds(new Set());
+        return;
+      }
 
+      const { data } = await supabase
+        .from("nominations")
+        .select("event_id")
+        .eq("group_id", membership.id);
+
+      setNominatedEventIds(
+        new Set((data || []).map((row) => row.event_id).filter(Boolean))
+      );
+    }
+
+    loadHouseholdNominations();
+  }, [membership?.id]);
+
+  const { nextEvent, nextEventCard, openNominationEvents } = useMemo(() => {
+    const now = new Date();
+    const upcoming = events
+      .filter((event) => getEventEndDate(event) >= now)
+      .sort((a, b) => getEventStartDate(a) - getEventStartDate(b));
+    const next = upcoming[0] ?? null;
+    const openNoms = events
+      .filter((event) => isNominationsOpen(event, now))
+      .sort((a, b) => getEventStartDate(a) - getEventStartDate(b));
+
+    return {
+      nextEvent: next,
+      nextEventCard: next && !isNominationsOpen(next, now) ? next : null,
+      openNominationEvents: openNoms,
+    };
+  }, [events]);
+
+  const showNextEventSection =
+    loadingEvent || nextEventCard || !nextEvent;
+
+  const renderEventCard = (event) => {
+    const now = new Date();
+    return (
+      <EventCard
+        key={event.id}
+        event={event}
+        clubSlug={clubSlug}
+        trackNames={trackNames}
+        showResults={getEventEndDate(event) < now}
+        hasNomination={nominatedEventIds.has(event.id)}
+        hasReceivedNominations={eventsWithNominations.has(event.id)}
+      />
+    );
+  };
+
+  return (
     <div
       style={{
         minHeight: "100vh",
@@ -155,11 +182,7 @@ export default function Home() {
         backgroundColor: palette.background,
       }}
     >
-      <PageTitle
-        icon={HomeIcon}
-        title="Home"
-        style={{ color: brand }}
-      />
+      <PageTitle icon={HomeIcon} title="Home" style={{ color: brand }} />
 
       <main
         style={{
@@ -171,209 +194,135 @@ export default function Home() {
           margin: "0 auto",
         }}
       >
-
-      {/* NEWS */}
-      {newsItems.length > 0 && (
-        <section className="w-full max-w-screen-lg mx-auto space-y-3">
-          <Carousel brand={brand} items={newsItems} />
-        </section>
-      )}
-
-      {/* NEXT EVENT */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
-          Next Event
-        </h2>
-
-        {loadingEvent && (
-          <Card>
-      <div style={{ padding: "16px" }}>Loading event…</div>
-          </Card>
+        {newsItems.length > 0 && (
+          <section className="w-full max-w-screen-lg mx-auto space-y-3">
+            <Carousel brand={brand} items={newsItems} />
+          </section>
         )}
 
-        {!loadingEvent && events.length === 0 && (
-          <Card>
-            <p className="text-text-muted">No upcoming events scheduled.</p>
-          </Card>
+        {showNextEventSection && (
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
+              Next Event
+            </h2>
+
+            {loadingEvent && (
+              <Card>
+                <div style={{ padding: "16px" }}>Loading event…</div>
+              </Card>
+            )}
+
+            {!loadingEvent && !nextEvent && (
+              <Card>
+                <p className="text-text-muted">No upcoming events scheduled.</p>
+              </Card>
+            )}
+
+            {!loadingEvent && nextEventCard && (
+              <div className="space-y-2">{renderEventCard(nextEventCard)}</div>
+            )}
+          </section>
         )}
 
-        {!loadingEvent && events.length > 0 && (
-          <div className="space-y-2">
-            {events.map((event) => {
-              const track =
-                trackNames[event.track] ||
-                event.track_type ||
-                event.track ||
-                "Track not set";
-              const logoSrc = event.logo_preview_url ||
-                (event.logourl?.startsWith("http")
-                  ? event.logourl
-                  : event.logourl
-                    ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/club-assets/${event.logourl}`
-                    : null);
-              const nominationsOpen = event.nominations_open
-                ? new Date(event.nominations_open)
-                : null;
-              const nominationsClose = event.nominations_close
-                ? new Date(event.nominations_close)
-                : null;
-              const isOpen =
-                nominationsOpen &&
-                new Date() >= nominationsOpen &&
-                (!nominationsClose || new Date() <= nominationsClose);
-              const nominationDate = nominationsOpen
-                ? formatNominationDate(event.nominations_open)
-                : null;
+        {!loadingEvent && openNominationEvents.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
+              Open for Nominations
+            </h2>
+            <div className="space-y-2">
+              {openNominationEvents.map(renderEventCard)}
+            </div>
+          </section>
+        )}
 
-              return (
-                <Link
-                  key={event.id}
-                  to={`/${clubSlug}/app/events/${event.id}`}
-                  className="block no-underline"
-                >
-                  <Card className="!p-0 overflow-hidden">
-                    <div className="flex min-h-[76px] items-stretch">
-                      <div className="my-[3px] ml-[3px] w-24 shrink-0 overflow-hidden rounded-[14px] bg-white p-1 flex items-center justify-center">
-                        {logoSrc ? (
-                          <img
-                            src={logoSrc}
-                            alt=""
-                            className="max-h-full max-w-full rounded-[10px] object-contain"
-                          />
-                        ) : (
-                          <span className="text-xs text-text-muted">Event</span>
-                        )}
-                      </div>
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
+            Quick Actions
+          </h2>
 
-                      <div className="min-w-0 flex-1 pl-5 pr-3 py-2">
-                        <h3 className="break-words font-semibold leading-tight text-text-base">
-                          {event.name}
-                        </h3>
-                        <p className="flex min-w-0 flex-col items-start gap-y-0.5 text-sm font-semibold leading-tight text-text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1">
-                          <span className="min-w-0 max-w-full truncate sm:w-auto">{track}</span>
-                          <span aria-hidden="true" className="hidden sm:inline">•</span>
-                          <span className="min-w-0 max-w-full break-words sm:w-auto">{formatEventDate(event)}</span>
-                          {nominationsOpen && (
-                            <>
-                              <span aria-hidden="true" className="hidden sm:inline">•</span>
-                              <span
-                                className={`min-w-0 max-w-full break-words sm:w-auto ${
-                                  isOpen
-                                    ? "font-bold text-green-600"
-                                    : ""
-                                }`}
-                              >
-                                <span className="block sm:inline">Nominations Open:</span>
-                                <span className="block sm:inline sm:ml-1">{nominationDate}</span>
-                              </span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              );
-            })}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <Link to={`/${clubSlug}/app/events`} className="no-underline">
+              <Button
+                className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
+                style={{
+                  backgroundColor: palette.button,
+                  color: palette.buttonText,
+                }}
+              >
+                <CalendarDaysIcon className="h-7 w-7" />
+                <span className="text-sm font-medium">Events</span>
+              </Button>
+            </Link>
+
+            <Link to={`/${clubSlug}/app/calendar`} className="no-underline">
+              <Button
+                className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
+                style={{
+                  backgroundColor: palette.button,
+                  color: palette.buttonText,
+                }}
+              >
+                <CalendarIcon className="h-7 w-7" />
+                <span className="text-sm font-medium">Calendar</span>
+              </Button>
+            </Link>
+
+            <Link to={`/${clubSlug}/app/nominations`} className="no-underline">
+              <Button
+                className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
+                style={{
+                  backgroundColor: palette.button,
+                  color: palette.buttonText,
+                }}
+              >
+                <UserPlusIcon className="h-7 w-7" />
+                <span className="text-sm font-medium">My Nominations</span>
+              </Button>
+            </Link>
+
+            <Button
+              className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2 opacity-60"
+              style={{
+                backgroundColor: palette.button,
+                color: palette.buttonText,
+              }}
+            >
+              <TrophyIcon className="h-7 w-7" />
+              <span className="text-sm font-medium">Results</span>
+            </Button>
+
+            <Link to={`/${clubSlug}/app/membership`} className="no-underline">
+              <Button
+                className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
+                style={{
+                  backgroundColor: palette.button,
+                  color: palette.buttonText,
+                }}
+              >
+                <IdentificationIcon className="h-7 w-7" />
+                <span className="text-sm font-medium">Membership</span>
+              </Button>
+            </Link>
+
+            <a
+              href="https://chargersrc.liverc.com/results/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="no-underline"
+            >
+              <Button
+                className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
+                style={{
+                  backgroundColor: palette.button,
+                  color: palette.buttonText,
+                }}
+              >
+                <BoltIcon className="h-7 w-7" />
+                <span className="text-sm font-medium">LiveRC</span>
+              </Button>
+            </a>
           </div>
-        )}
-      </section>
-
-      {/* QUICK ACTIONS */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
-          Quick Actions
-        </h2>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {/* Events */}
-          <Link to={`/${clubSlug}/app/events`} className="no-underline">
-            <Button
-              className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
-              style={{
-                backgroundColor: palette.button,
-                color: palette.buttonText,
-              }}
-            >
-              <CalendarDaysIcon className="h-7 w-7" />
-              <span className="text-sm font-medium">Events</span>
-            </Button>
-          </Link>
-
-          {/* Calendar */}
-          <Link to={`/${clubSlug}/app/calendar`} className="no-underline">
-            <Button
-              className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
-              style={{
-                backgroundColor: palette.button,
-                color: palette.buttonText,
-              }}
-            >
-              <CalendarIcon className="h-7 w-7" />
-              <span className="text-sm font-medium">Calendar</span>
-            </Button>
-          </Link>
-
-          {/* Nominations */}
-          <Link to={`/${clubSlug}/app/nominate`} className="no-underline">
-            <Button
-              className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
-              style={{
-                backgroundColor: palette.button,
-                color: palette.buttonText,
-              }}
-            >
-              <UserPlusIcon className="h-7 w-7" />
-              <span className="text-sm font-medium">Nominations</span>
-            </Button>
-          </Link>
-
-          {/* Results */}
-          <Button
-            className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2 opacity-60"
-            style={{
-              backgroundColor: palette.button,
-              color: palette.buttonText,
-            }}
-          >
-            <TrophyIcon className="h-7 w-7" />
-            <span className="text-sm font-medium">Results</span>
-          </Button>
-
-          {/* Membership */}
-          <Link to={`/${clubSlug}/app/membership`} className="no-underline">
-            <Button
-              className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
-              style={{
-                backgroundColor: palette.button,
-                color: palette.buttonText,
-              }}
-            >
-              <IdentificationIcon className="h-7 w-7" />
-              <span className="text-sm font-medium">Membership</span>
-            </Button>
-          </Link>
-
-          {/* LiveRC */}
-          <a
-            href="https://chargersrc.liverc.com/results/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="no-underline"
-          >
-            <Button
-              className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
-              style={{
-                backgroundColor: palette.button,
-                color: palette.buttonText,
-              }}
-            >
-              <BoltIcon className="h-7 w-7" />
-              <span className="text-sm font-medium">LiveRC</span>
-            </Button>
-          </a>
-        </div>
-      </section>
+        </section>
       </main>
     </div>
   );

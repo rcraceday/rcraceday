@@ -3,7 +3,14 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { formatDate, isNominationsOpen } from "./events-sections/helpers";
 
-export default function EventCard({ event, clubSlug, trackNames, showResults }) {
+export default function EventCard({
+  event,
+  clubSlug,
+  trackNames,
+  showResults,
+  hasNomination = false,
+  hasReceivedNominations = false,
+}) {
   const track =
     trackNames?.[event.track] ||
     event.track_type ||
@@ -44,9 +51,12 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
       ? formatDate(eventDate)
       : "Date TBD";
   const nominationsOpen = isNominationsOpen(event);
-  const nominationLabel = event.nominations_open
-    ? `Nominations Open: ${formatDate(event.nominations_open)}`
-    : null;
+  const nominationStatusLabel = hasNomination
+    ? "You're nominated"
+    : event.nominations_open
+      ? `Nominations Open: ${formatDate(event.nominations_open)}`
+      : null;
+  const nominationStatusHighlight = hasNomination || nominationsOpen;
 
   return (
     <Card className="!p-0 overflow-hidden">
@@ -75,13 +85,13 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
               <p className="flex min-w-0 flex-col items-start gap-y-0.5 text-sm font-semibold leading-tight text-text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 md:flex-col md:items-start md:gap-x-0 md:gap-y-0.5">
                 <span className="min-w-0 max-w-full truncate sm:w-auto">{track}</span>
                 <span className="min-w-0 max-w-full break-words sm:w-auto">{eventDateLabel}</span>
-                {nominationLabel && (
+                {nominationStatusLabel && (
                   <span
                     className={`min-w-0 max-w-full break-words font-bold sm:w-auto ${
-                      nominationsOpen ? "text-green-600" : ""
+                      nominationStatusHighlight ? "text-green-600" : ""
                     }`}
                   >
-                    {nominationLabel}
+                    {nominationStatusLabel}
                   </span>
                 )}
               </p>
@@ -101,19 +111,24 @@ export default function EventCard({ event, clubSlug, trackNames, showResults }) 
               to={`/${clubSlug}/app/events/${event.id}/nominate`}
               className="block w-[120px] justify-self-center no-underline"
             >
-              <Button variant="success" className="!py-1.5 !text-xs w-full">
-                Nominate
+              <Button
+                variant={hasNomination ? "secondary" : "success"}
+                className="!py-1.5 !text-xs w-full"
+              >
+                {hasNomination ? "Update Nominations" : "Nominate"}
               </Button>
             </Link>
           )}
-          <Link
-            to={`/${clubSlug}/app/events/${event.id}/nominations`}
-            className="block w-[120px] justify-self-center no-underline"
-          >
-            <Button variant="secondary" className="!py-1.5 !text-xs w-full">
-              Nominations
-            </Button>
-          </Link>
+          {hasReceivedNominations && (
+            <Link
+              to={`/${clubSlug}/app/events/${event.id}/nominations`}
+              className="block w-[120px] justify-self-center no-underline"
+            >
+              <Button variant="secondary" className="!py-1.5 !text-xs w-full">
+                View Nominations
+              </Button>
+            </Link>
+          )}
           {showResults && (
             <Link
               to={`/${clubSlug}/app/events/${event.id}/results`}

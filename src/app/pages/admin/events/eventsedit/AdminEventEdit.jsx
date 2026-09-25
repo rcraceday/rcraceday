@@ -21,6 +21,27 @@ import EventRequirementsCard from "./components/EventRequirementsCard";
 import EventPreviewModal from "./components/EventPreviewModal";
 
 import { cmsStyles } from "@cms/styles";
+import {
+  applyEventTypeDefaults,
+  applyNominationsFromTypeDefaults,
+  dayDiffBetweenDates,
+  findEventType,
+  getEventAnchorDate,
+  nominationsNeedAutofill,
+  normalizeDayRecord,
+  shiftEventNominationDates,
+} from "@app/pages/admin/events/eventDefaults";
+
+const EVENT_EDIT_SELECT =
+  "*, pricing, late_entries_enabled, late_fee_activation, late_entries_close";
+
+function isoToDatetimeLocal(value) {
+  if (value == null || value === "") return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 const initialEventState = {
   id: null,
@@ -37,6 +58,8 @@ const initialEventState = {
   classes: [],
   classes_by_day: [],
   class_entry_limits: {},
+  class_minimum_entries: null,
+  class_minimum_livetime_when_unmet: false,
   class_limit: 3,
   class_limit_per_day: null,
   class_limit_scope: "per_event",
@@ -69,6 +92,7 @@ export default function AdminEventEdit() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [publishPromptOpen, setPublishPromptOpen] = useState(false);
 
   // LOAD CLUB FOR NEW EVENT
   useEffect(() => {
@@ -105,7 +129,7 @@ export default function AdminEventEdit() {
       try {
         const { data, error } = await supabase
           .from("events")
-          .select("*")
+          .select(EVENT_EDIT_SELECT)
           .eq("id", id)
           .maybeSingle();
 
@@ -152,6 +176,11 @@ const normalizedDays = Array.isArray(data.days)
         setEventData({
           ...initialEventState,
           ...data,
+          nominations_open: isoToDatetimeLocal(data.nominations_open),
+          nominations_close: isoToDatetimeLocal(data.nominations_close),
+          late_entries_enabled: !!data.late_entries_enabled,
+          late_fee_activation: isoToDatetimeLocal(data.late_fee_activation),
+          late_entries_close: isoToDatetimeLocal(data.late_entries_close),
           days: normalizedDays,
           classes_by_day: normalizedClassesByDay,
           merchandise: Array.isArray(data.merchandise)
@@ -202,7 +231,7 @@ const normalizedDays = Array.isArray(data.days)
       try {
         const { data } = await supabase
           .from("club_event_types")
-          .select("*")
+          .select("*, defaults")
           .eq("club_id", eventData.club_id)
           .order("sort_order", { ascending: true });
 
@@ -212,6 +241,27 @@ const normalizedDays = Array.isArray(data.days)
 
     loadEventTypes();
   }, [eventData.club_id]);
+
+  useEffect(() => {
+    if (!eventTypes.length) return;
+
+    setEventData((prev) => {
+      if (!prev.event_type || !prev.track || !getEventAnchorDate(prev)) return prev;
+      if (!nominationsNeedAutofill(prev, isNew)) return prev;
+
+      const next = applyNominationsFromTypeDefaults(prev, eventTypes, { overwrite: true });
+      if (
+        next.nominations_open === prev.nominations_open &&
+        next.nominations_close === prev.nominations_close &&
+        next.late_fee_activation === prev.late_fee_activation &&
+        next.late_entries_close === prev.late_entries_close &&
+        next.late_entries_enabled === prev.late_entries_enabled
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [eventTypes, isNew]);
 
   // LOAD TRACKS
   useEffect(() => {
@@ -268,13 +318,16 @@ const normalizedDays = Array.isArray(data.days)
 
   // AUTO-SET TRACK IF ONLY ONE EXISTS
   useEffect(() => {
-    if (tracks.length === 1 && eventData.track == null) {
-      setEventData((prev) => ({
-        ...prev,
-        track: tracks[0].id,
-      }));
-    }
-  }, [tracks, eventData.track]);
+    if (tracks.length !== 1 || eventData.track != null) return;
+
+    const trackId = tracks[0].id;
+    setEventData((prev) => {
+      const next = { ...prev, track: trackId };
+      if (!isNew || !prev.event_type) return next;
+      const typeRow = findEventType(eventTypes, prev.event_type);
+      return typeRow ? applyEventTypeDefaults(next, typeRow, trackId) : next;
+    });
+  }, [tracks, eventData.track, isNew, eventTypes]);
 
   // LOAD AVAILABLE CLASSES WHEN TRACK CHANGES
   useEffect(() => {
@@ -302,10 +355,47 @@ const normalizedDays = Array.isArray(data.days)
 
   // FIELD CHANGE HANDLER
   const handleFieldChange = (field, value) => {
-    setEventData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setEventData((prev) => {
+      let next = { ...prev, [field]: value };
+
+      if (field === "event_date" && !prev.is_multi_day) {
+        const dayDelta = dayDiffBetweenDates(prev.event_date, value);
+        if (Array.isArray(prev.days) && prev.days.length > 0) {
+          const days = [...prev.days];
+          days[0] = { ...days[0], date: value };
+          next.days = days;
+        }
+        if (nominationsNeedAutofill(prev, isNew)) {
+          next = applyNominationsFromTypeDefaults(next, eventTypes, { overwrite: true });
+        } else if (dayDelta !== 0) {
+          next = shiftEventNominationDates(next, dayDelta);
+        }
+      }
+
+      if (field === "days" && prev.is_multi_day && nominationsNeedAutofill(prev, isNew)) {
+        next = applyNominationsFromTypeDefaults(next, eventTypes, { overwrite: true });
+      }
+
+      if (
+        !isNew &&
+        nominationsNeedAutofill(prev, isNew) &&
+        (field === "event_type" || field === "track")
+      ) {
+        next = applyNominationsFromTypeDefaults(next, eventTypes, { overwrite: true });
+      }
+
+      if (!isNew || (field !== "event_type" && field !== "track")) {
+        return next;
+      }
+
+      const typeValue = field === "event_type" ? value : next.event_type;
+      const trackId = field === "track" ? value : next.track;
+      const typeRow = findEventType(eventTypes, typeValue);
+
+      if (!typeRow || !trackId) return next;
+
+      return applyEventTypeDefaults(next, typeRow, trackId);
+    });
   };
 
   // CLASSES CHANGE HANDLER
@@ -370,11 +460,25 @@ const normalizedDays = Array.isArray(data.days)
     if (v === null || v === undefined) return null;
     if (v instanceof Date) return v.toISOString();
     const s = String(v).trim();
-    return s === "" ? null : s;
+    if (s === "") return null;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s)) {
+      return new Date(s).toISOString();
+    }
+    return s;
   };
 
-  const handleSave = async () => {
+  const requestSave = () => {
     if (saving) return;
+    if (!eventData.is_published) {
+      setPublishPromptOpen(true);
+      return;
+    }
+    handleSave(true);
+  };
+
+  const handleSave = async (isPublished = eventData.is_published) => {
+    if (saving) return;
+    setPublishPromptOpen(false);
     setSaving(true);
     setError(null);
 
@@ -429,10 +533,18 @@ const payload = {
   days: normalizedDays,
   nominations_open: normalizeDate(eventData.nominations_open),
   nominations_close: normalizeDate(eventData.nominations_close),
+  late_entries_enabled: !!eventData.late_entries_enabled,
+  late_fee_activation: normalizeDate(eventData.late_fee_activation),
+  late_entries_close: normalizeDate(eventData.late_entries_close),
 
   classes_by_day: normalizedClassesByDay,
   classes: eventData.is_multi_day ? [] : eventData.classes ?? [],
   class_entry_limits: eventData.class_entry_limits ?? {},
+  class_minimum_entries:
+    eventData.class_minimum_entries == null || eventData.class_minimum_entries === ""
+      ? null
+      : Number(eventData.class_minimum_entries),
+  class_minimum_livetime_when_unmet: !!eventData.class_minimum_livetime_when_unmet,
   merchandise: eventData.merchandise ?? [],
   class_add_ons: eventData.class_add_ons ?? [],
   club_requirements: eventData.club_requirements ?? [],
@@ -440,10 +552,7 @@ const payload = {
   // ⭐ THIS WAS MISSING
   pricing: eventData.pricing ?? {},
 
-  is_published:
-    typeof eventData.is_published === "boolean"
-      ? eventData.is_published
-      : true,
+  is_published: !!isPublished,
   class_limit:
     eventData.class_limit == null || eventData.class_limit === ""
       ? 3
@@ -479,14 +588,14 @@ const payload = {
         res = await supabase
           .from("events")
           .insert(payload)
-          .select()
+          .select(EVENT_EDIT_SELECT)
           .maybeSingle();
       } else {
         res = await supabase
           .from("events")
           .update(payload)
           .eq("id", id)
-          .select()
+          .select(EVENT_EDIT_SELECT)
           .maybeSingle();
       }
 
@@ -658,7 +767,7 @@ if (eventData.is_multi_day) {
               <SaveActions
                 isNew={isNew}
                 saving={saving}
-                onSave={handleSave}
+                onSave={requestSave}
                 onCancel={handleCancel}
                 onDelete={handleDelete}
               />
@@ -672,6 +781,66 @@ if (eventData.is_multi_day) {
             eventId={id}
             onClose={() => setPreviewOpen(false)}
           />
+        )}
+
+        {publishPromptOpen && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              background: "rgba(0,0,0,0.5)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 99999,
+              padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "420px",
+                background: "#FFF",
+                borderRadius: "12px",
+                padding: "20px",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+              }}
+            >
+              <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>
+                Event is not published
+              </h2>
+              <p style={{ margin: 0, fontSize: "14px", color: "#4B5563" }}>
+                Would you like to publish the event?
+              </p>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                <CMSButton
+                  variant="secondary"
+                  onClick={() => {
+                    handleSave(false);
+                  }}
+                  disabled={saving}
+                >
+                  No
+                </CMSButton>
+                <CMSButton
+                  variant="primary"
+                  onClick={() => {
+                    setEventData((prev) => ({ ...prev, is_published: true }));
+                    handleSave(true);
+                  }}
+                  disabled={saving}
+                >
+                  Yes
+                </CMSButton>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

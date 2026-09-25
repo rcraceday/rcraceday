@@ -102,6 +102,12 @@ function MerchItem({ item }) {
           </div>
         )}
 
+        {item.max_entries != null && item.max_entries !== "" && (
+          <div>
+            <strong>Availability:</strong> First {item.max_entries} entries only
+          </div>
+        )}
+
         {/* OPTIONS */}
         {Array.isArray(item.options) && item.options.length > 0 && (
           <div className="mt-2">

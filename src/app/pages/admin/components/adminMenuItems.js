@@ -5,6 +5,7 @@ import {
   IdentificationIcon,
   UserGroupIcon,
   Cog6ToothIcon,
+  ArchiveBoxIcon,
   HomeIcon,
 } from "@heroicons/react/24/solid";
 
@@ -39,6 +40,11 @@ export function buildAdminMenuItems({ clubSlug }) {
       label: "Settings",
       icon: Cog6ToothIcon,
       to: `/${clubSlug}/app/admin/settings`,
+    },
+    {
+      label: "Archives",
+      icon: ArchiveBoxIcon,
+      to: `/${clubSlug}/app/admin/archives`,
     },
     {
       label: "Home",
