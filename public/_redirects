@@ -1,15 +1,12 @@
 /registerSW.js                 /registerSW.js                 200
 /chargers-rc/registerSW.js     /chargers-rc/registerSW.js     200
 
+/sw.js                         /sw.js                         200
+/manifest.webmanifest          /manifest.webmanifest          200
+/manifest.json                 /manifest.json                 200
+
 /chargers-rc/login             /chargers-rc/index.html        200
 /chargers-rc/*                 /chargers-rc/index.html        200
-/assets/*    /assets/:splat    200
-/*.png       /:splat           200
-/*.jpg       /:splat           200
-/*.jpeg      /:splat           200
-/*.svg       /:splat           200
-/*.webp      /:splat           200
-/*.css       /:splat           200
-/*.js        /:splat           200
-/*.json      /:splat           200
-/*           /index.html       200
+/assets/*                      /assets/:splat                 200
+/pwa/*                         /pwa/:splat                    200
+/*                             /index.html                    200
