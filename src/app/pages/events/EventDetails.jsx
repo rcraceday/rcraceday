@@ -472,18 +472,12 @@ return (
   <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
     <PageHeader brand={brand} clubSlug={clubSlug} />
 
-<main
-  style={{
-    padding: "40px 16px",
-    display: "flex",
-    justifyContent: "center",
-  }}
->
+<main className="app-page-main flex justify-center !py-10">
   <div
     className="event-details-content"
     style={{
       width: "100%",
-      maxWidth: "800px",
+      maxWidth: "100%",
       background: palette?.surface || "#ffffff",
       color: contentText,
       borderRadius: "8px",

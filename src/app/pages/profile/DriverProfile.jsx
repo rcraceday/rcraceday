@@ -47,7 +47,7 @@ export default function DriverProfile() {
 
   if (loading) {
     return (
-      <div className="p-4 max-w-xl mx-auto">
+      <div className="p-4 w-full">
         <p className="text-gray-600">Loading driver…</p>
       </div>
     );
@@ -55,7 +55,7 @@ export default function DriverProfile() {
 
   if (!driver) {
     return (
-      <div className="p-4 max-w-xl mx-auto">
+      <div className="p-4 w-full">
         <Card
           className="p-6 text-center space-y-4"
         >
@@ -89,7 +89,7 @@ export default function DriverProfile() {
       />
 
       {/* MAIN CONTENT */}
-      <main className="max-w-[720px] mx-auto px-4 flex-col items-center">
+      <main className="app-page-main flex flex-col items-center">
         <DriverProfileCard
           driver={driver}
           club={club}

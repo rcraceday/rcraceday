@@ -111,7 +111,7 @@ export default function RacerDirectory() {
     <div className="min-h-screen w-full bg-background text-text-base">
       <PageTitle title="Racer Directory" style={{ color: palette.primary }} />
 
-      <main className="p-4 max-w-5xl mx-auto space-y-6">
+      <main className="app-page-main space-y-6">
 
       {/* Search */}
       <input

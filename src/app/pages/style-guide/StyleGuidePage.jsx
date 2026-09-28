@@ -28,7 +28,7 @@ export default function StyleGuidePage() {
       />
 
       {/* MAIN */}
-      <main className="max-w-3xl mx-auto px-4 py-10 space-y-10">
+      <main className="app-page-main space-y-10">
 
         {/* ------------------------------------------------------------
             BUTTONS

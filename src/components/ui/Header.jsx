@@ -24,7 +24,7 @@ export default function Header({ hideMenu }) {
       >
         <div
           className="
-            w-full max-w-screen-lg mx-auto px-4 py-3
+            w-full max-w-[720px] mx-auto px-4 py-3
             flex items-center justify-between
             md:grid md:grid-cols-3 md:items-center md:py-0 md:h-24
           "

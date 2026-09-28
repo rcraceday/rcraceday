@@ -184,18 +184,9 @@ export default function Home() {
     >
       <PageTitle icon={HomeIcon} title="Home" style={{ color: brand }} />
 
-      <main
-        style={{
-          padding: "24px 16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "24px",
-          maxWidth: "768px",
-          margin: "0 auto",
-        }}
-      >
+      <main className="app-page-main">
         {newsItems.length > 0 && (
-          <section className="w-full max-w-screen-lg mx-auto space-y-3">
+          <section className="w-full space-y-3">
             <Carousel brand={brand} items={newsItems} />
           </section>
         )}

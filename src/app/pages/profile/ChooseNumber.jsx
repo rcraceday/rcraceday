@@ -142,7 +142,7 @@ export default function ChooseNumber() {
         }
       />
 
-      <main className="max-w-[720px] mx-auto px-4 py-8 space-y-8">
+      <main className="app-page-main space-y-8 !py-8">
 
         {error && (
           <div className="p-3 bg-red-100 text-red-700 rounded text-sm">

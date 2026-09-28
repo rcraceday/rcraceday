@@ -59,7 +59,7 @@ export default function ChangeMembership() {
       />
 
       {/* MAIN */}
-      <main className="max-w-6xl mx-auto px-4 pt-10 pb-12">
+      <main className="app-page-main !pt-10 !pb-12">
 
         <section className="rounded-xl border border-surfaceBorder bg-surface p-6 space-y-6 max-w-xl">
           <h2 className="text-lg font-semibold">Upgrade to Family</h2>

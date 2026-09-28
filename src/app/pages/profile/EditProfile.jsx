@@ -230,7 +230,7 @@ export default function EditProfile() {
       />
 
       {/* MAIN */}
-      <main className="max-w-[720px] mx-auto px-4 py-4">
+      <main className="app-page-main !py-4">
         <EditDriverProfileCard
           driver={driver}
           update={update}

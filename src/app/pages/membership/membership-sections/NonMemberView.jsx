@@ -8,7 +8,7 @@ import RaceFeesCard from "./RaceFeesCard";
 
 export default function NonMemberView({ brand, club }) {
   return (
-    <main className="max-w-[720px] mx-auto px-4 py-10 flex flex-col gap-8">
+    <main className="app-page-main flex flex-col gap-8">
 
       {/* INTRO CARD */}
       <NonMemberIntroCard brand={brand} />

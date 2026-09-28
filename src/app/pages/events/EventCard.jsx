@@ -65,8 +65,8 @@ export default function EventCard({
           to={`/${clubSlug}/app/events/${event.id}`}
           className="block min-w-0 flex-1 no-underline"
         >
-          <div className="flex min-h-[76px] items-stretch">
-            <div className="my-[3px] ml-[3px] w-24 shrink-0 overflow-hidden rounded-[14px] bg-white p-[6px_14px] flex items-center justify-center">
+          <div className="flex flex-col items-center text-center md:min-h-[76px] md:flex-row md:items-stretch md:text-left">
+            <div className="my-[3px] mx-[3px] w-24 shrink-0 overflow-hidden rounded-[14px] bg-white p-[6px_14px] flex items-center justify-center md:ml-[3px] md:mr-0">
               {logoSrc ? (
                 <img
                   src={logoSrc}
@@ -78,11 +78,11 @@ export default function EventCard({
               )}
             </div>
 
-            <div className="min-w-0 flex-1 py-2 pl-4 pr-4 sm:pl-5">
+            <div className="min-w-0 w-full flex-1 px-4 py-2 md:pl-5 md:pr-4">
               <h3 className="break-words font-semibold leading-tight text-text-base">
                 {event.name}
               </h3>
-              <p className="flex min-w-0 flex-col items-start gap-y-0.5 text-sm font-semibold leading-tight text-text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 md:flex-col md:items-start md:gap-x-0 md:gap-y-0.5">
+              <p className="flex min-w-0 flex-col items-center gap-y-0.5 text-sm font-semibold leading-tight text-text-muted md:items-start sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 md:flex-col md:gap-x-0">
                 <span className="min-w-0 max-w-full truncate sm:w-auto">{track}</span>
                 <span className="min-w-0 max-w-full break-words sm:w-auto">{eventDateLabel}</span>
                 {nominationStatusLabel && (

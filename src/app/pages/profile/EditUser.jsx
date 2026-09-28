@@ -123,7 +123,7 @@ export default function EditProfile() {
       />
 
       {/* MAIN */}
-<main className="max-w-[720px] mx-auto px-4 pt-6 pb-10 flex flex-col space-y-10">
+<main className="app-page-main flex flex-col space-y-10 !pt-6 !pb-10">
 
         <Card
           className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"

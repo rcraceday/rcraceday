@@ -119,7 +119,7 @@ export default function TrackEditor({ mode }) {
 
       {/* PAGE HEADER */}
       <section className="w-full border-b border-surfaceBorder bg-surface">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
+        <div className="w-full max-w-[720px] mx-auto px-4 py-4 flex items-center gap-2">
           <ArrowLeftIcon
             className="h-5 w-5 cursor-pointer"
             style={{ color: brand }}
@@ -134,7 +134,7 @@ export default function TrackEditor({ mode }) {
       </section>
 
       {/* MAIN */}
-      <main className="max-w-3xl mx-auto px-4 py-10 space-y-10">
+      <main className="app-page-main space-y-10">
 
         <Card
           className="rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"

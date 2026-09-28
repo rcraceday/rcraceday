@@ -38,7 +38,7 @@ export default function MemberView({ brand, club, membership }) {
     membership?.membership_type === "junior";
 
   return (
-    <main className="max-w-[720px] mx-auto px-4 py-6 flex flex-col gap-8">
+    <main className="app-page-main flex flex-col gap-8 !py-6">
 
       {/* STATUS CARD */}
       <Card

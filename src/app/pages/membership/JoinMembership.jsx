@@ -117,7 +117,7 @@ export default function JoinMembership() {
       />
 
       {/* MAIN */}
-      <main className="max-w-[720px] mx-auto px-4 py-10 space-y-8">
+      <main className="app-page-main space-y-8">
 
         {/* CARD */}
         <Card

@@ -92,16 +92,7 @@ export default function Calendar() {
       />
 
       {/* MAIN */}
-      <main
-        style={{
-          padding: "40px 16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "48px",
-          maxWidth: "768px",
-          margin: "0 auto",
-        }}
-      >
+      <main className="app-page-main !gap-12 !py-10">
         
         {/* YEAR VIEW */}
         <section className="transition-all duration-300">

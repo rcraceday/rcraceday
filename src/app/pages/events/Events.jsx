@@ -165,16 +165,7 @@ export default function Events() {
       />
 
       {/* RESTORED EXACTLY — only removed the container */}
-      <main
-        style={{
-          padding: "24px 16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "24px",
-          maxWidth: "768px",
-          margin: "0 auto",
-        }}
-      >
+      <main className="app-page-main">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <FilterDropdown
             value={view}

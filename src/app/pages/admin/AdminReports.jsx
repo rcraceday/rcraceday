@@ -259,8 +259,8 @@ export default function AdminReports() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 px-4 py-10">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="app-page-main space-y-10">
 
         {/* PAGE HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

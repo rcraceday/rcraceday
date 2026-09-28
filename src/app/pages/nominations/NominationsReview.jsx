@@ -190,14 +190,7 @@ export default function NominationsReview() {
         }
       />
 
-      <main
-        style={{
-          padding: "24px 0",
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px",
-        }}
-      >
+      <main className="app-page-main gap-4">
         {!hasCards ? (
           <Card className="p-4">
             <p className="text-sm text-text-muted">

@@ -45,7 +45,7 @@ export default function UserProfile() {
       <PageTitle icon={UserIcon} title="User Profile" style={{ color: brand }} />
 
       {/* MAIN CONTENT */}
-            <main className="max-w-[720px] mx-auto px-4 pb-16 space-y-12 flex flex-col items-center">
+      <main className="app-page-main space-y-12 flex flex-col items-center !pb-16">
 
         {/* ACCOUNT DETAILS */}
         <Card

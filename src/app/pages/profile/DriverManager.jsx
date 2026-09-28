@@ -150,7 +150,7 @@ export default function DriverManager() {
 
       {/* CENTERED CONTENT */}
       <div className="w-full flex justify-center">
-        <main className="max-w-[720px] w-full px-4 flex flex-col gap-10">
+        <main className="app-page-main flex flex-col gap-10">
 
           {/* DRIVERS */}
           <section className="space-y-4">

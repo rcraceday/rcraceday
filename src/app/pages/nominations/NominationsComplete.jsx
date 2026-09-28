@@ -149,7 +149,7 @@ const handleReturnToNominations = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-3xl">
+        <div className="w-full">
           {/* HEADER */}
           <div className="mb-6">
             <div className="inline-flex items-center gap-3 rounded-full bg-emerald-500/10 px-4 py-2 border border-emerald-500/30">

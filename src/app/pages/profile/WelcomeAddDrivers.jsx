@@ -21,7 +21,7 @@ import Input from "@/components/ui/Input";
 
 function SimpleSpinner() {
   return (
-    <div className="p-6 max-w-3xl mx-auto" aria-live="polite">
+    <div className="p-6 w-full" aria-live="polite">
       <p className="text-gray-600">Loading…</p>
     </div>
   );
@@ -303,7 +303,7 @@ export default function WelcomeAddDrivers() {
         centered
       />
 
-      <main className="max-w-[720px] mx-auto px-4 pt-8 pb-16 space-y-12 flex flex-col">
+      <main className="app-page-main space-y-12 flex flex-col !pt-8 !pb-16">
 
         <Card
           className="p-6 space-y-4"

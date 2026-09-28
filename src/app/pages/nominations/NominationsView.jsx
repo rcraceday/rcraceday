@@ -268,14 +268,7 @@ export default function NominationsView() {
         }
       />
 
-      <main
-        style={{
-          padding: "24px 0",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-        }}
-      >
+      <main className="app-page-main gap-5">
         <h2
           className="text-center text-lg font-semibold leading-tight px-2"
           style={{ color: contentText }}
