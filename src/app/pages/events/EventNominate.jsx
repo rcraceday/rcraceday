@@ -2181,10 +2181,8 @@ export default function EventNominate() {
 
       <main className="app-page-main flex justify-center !py-10">
         <div
-          className="event-details-content"
+          className="event-details-content box-border min-w-0 w-full max-w-full"
           style={{
-            width: "100%",
-            maxWidth: "100%",
             background: palette?.surface || "#ffffff",
             color: contentText,
             borderRadius: "8px",
