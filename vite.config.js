@@ -38,11 +38,11 @@ export default defineConfig({
             urlPattern: ({ request }) => request.mode === "navigate",
             handler: "NetworkFirst",
             options: {
-              cacheName: "html-pages",
-              networkTimeoutSeconds: 3,
+              cacheName: "html-pages-v2",
+              networkTimeoutSeconds: 2,
               expiration: {
-                maxEntries: 16,
-                maxAgeSeconds: 60 * 60 * 24,
+                maxEntries: 8,
+                maxAgeSeconds: 60,
               },
             },
           },
@@ -70,9 +70,11 @@ export default defineConfig({
         start_url: "/",
         scope: "/",
         display: "standalone",
+        display_override: ["standalone", "browser"],
         orientation: "portrait",
         background_color: "#000000",
         theme_color: "#000000",
+        prefer_related_applications: false,
         icons: [
           {
             src: "/pwa/icon-192.png",

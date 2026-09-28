@@ -8,6 +8,7 @@
 
     <!-- Required for Android/Samsung to stop forcing dark mode -->
     <meta name="theme-color" content="#000000">
+    <meta name="application-name" content="RaceDay">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -16,7 +17,18 @@
     <title>RC RaceDay</title>
 
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <script>
+      window.__pwaDeferredPrompt = null;
+      window.addEventListener("beforeinstallprompt", function (event) {
+        event.preventDefault();
+        window.__pwaDeferredPrompt = event;
+      });
+      window.addEventListener("appinstalled", function () {
+        window.__pwaDeferredPrompt = null;
+      });
+    </script>
 
     <!-- Load Poppins font -->
     <link
