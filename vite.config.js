@@ -31,37 +31,12 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ["**/*.{js,css,ico,png,svg,webp,woff,woff2}"],
-        navigateFallback: null,
-        runtimeCaching: [
-          {
-            urlPattern: ({ request }) => request.mode === "navigate",
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "html-pages-v2",
-              networkTimeoutSeconds: 2,
-              expiration: {
-                maxEntries: 8,
-                maxAgeSeconds: 60,
-              },
-            },
-          },
-          {
-            urlPattern: ({ url }) => url.pathname.startsWith("/assets/"),
-            handler: "CacheFirst",
-            options: {
-              cacheName: "hashed-assets",
-              expiration: {
-                maxEntries: 64,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-        ],
+        globPatterns: ["**/*.{js,css,html,ico,woff,woff2}"],
+        globIgnores: ["**/flags/**"],
+        navigateFallback: "index.html",
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
       },
+      showMaximumFileSizeToCacheInBytesWarning: true,
       manifest: {
         id: "/",
         name: "RC RaceDay",

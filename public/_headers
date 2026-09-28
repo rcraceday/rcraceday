@@ -10,8 +10,5 @@
 /manifest.json
   Cache-Control: no-cache
 
-/workbox-*.js
-  Cache-Control: no-cache, no-store, must-revalidate
-
 /*
   Cache-Control: no-cache
