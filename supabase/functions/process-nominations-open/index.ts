@@ -89,10 +89,14 @@ serve(async (req) => {
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
   let eventIdFilter: string | null = null;
+  let forceResend = false;
   try {
     const body = await req.json();
     if (body?.eventId && typeof body.eventId === "string") {
       eventIdFilter = body.eventId;
+    }
+    if (body?.force === true) {
+      forceResend = true;
     }
   } catch {
     // empty body is fine
@@ -138,8 +142,11 @@ serve(async (req) => {
         "id, club_id, name, track, nominations_open, notify_nominations_open, nominations_open_notified_at"
       )
       .not("nominations_open", "is", null)
-      .lte("nominations_open", nowIso)
-      .is("nominations_open_notified_at", null);
+      .lte("nominations_open", nowIso);
+
+    if (!forceResend) {
+      eventsQuery = eventsQuery.is("nominations_open_notified_at", null);
+    }
 
     if (eventIdFilter) {
       eventsQuery = eventsQuery.eq("id", eventIdFilter);
@@ -248,17 +255,35 @@ serve(async (req) => {
         pushSent = pushResult.sent;
       }
 
-      const { error: markError } = await supabase
-        .from("events")
-        .update({ nominations_open_notified_at: nowIso })
-        .eq("id", event.id)
-        .is("nominations_open_notified_at", null);
+      const delivered = inAppCount + emailCount + pushSent;
+      const eligible = (memberships || []).filter(
+        (m) => m.membership_type !== "non_member"
+      ).length;
 
-      if (markError) {
-        console.error("mark notified", markError);
+      if (delivered > 0 || eligible === 0) {
+        const { error: markError } = await supabase
+          .from("events")
+          .update({ nominations_open_notified_at: nowIso })
+          .eq("id", event.id);
+
+        if (markError) {
+          console.error("mark notified", markError);
+        }
+      } else {
+        console.warn(
+          "nominations-open: 0 delivered but eligible members exist; not marking notified",
+          event.id
+        );
       }
 
-      summary.push({ eventId: event.id, inApp: inAppCount, email: emailCount, push: pushSent });
+      summary.push({
+        eventId: event.id,
+        inApp: inAppCount,
+        email: emailCount,
+        push: pushSent,
+        eligible,
+        markedNotified: delivered > 0 || eligible === 0,
+      });
     }
 
     return new Response(JSON.stringify({ processed: summary.length, summary }), {
@@ -276,6 +301,7 @@ serve(async (req) => {
     );
   }
 });
+
 
 
 

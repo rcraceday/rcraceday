@@ -1,4 +1,5 @@
--- Nominations-open notification delivery (in-app + email).
+-- Nominations-open notification delivery (in-app + push + email).
+-- Also run scripts/create-notifications.sql (in-app feed).
 -- Run after create-notification-preferences.sql.
 -- Deploy edge functions: process-nominations-open, send-web-push (generic push API)
 -- Run scripts/create-push-subscriptions.sql and configure VAPID keys before push delivery.

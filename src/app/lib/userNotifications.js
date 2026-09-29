@@ -52,8 +52,15 @@ export function membershipRenewalChannelsForMember(membership) {
   return shouldNotifyMembershipRenewal(prefs);
 }
 
-/** Ask the server to send nominations-open alerts for due events (optional single event). */
-export function triggerNominationsOpenProcessing(supabase, eventId = null) {
-  const body = eventId ? { eventId } : {};
+/**
+ * Ask the server to send nominations-open alerts for due events.
+ * @param {object} [options]
+ * @param {boolean} [options.force] - Re-send even if already marked notified (admin retry).
+ */
+export function triggerNominationsOpenProcessing(supabase, eventId = null, options = {}) {
+  const body = {
+    ...(eventId ? { eventId } : {}),
+    ...(options.force ? { force: true } : {}),
+  };
   return supabase.functions.invoke("process-nominations-open", { body });
 }

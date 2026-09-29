@@ -114,6 +114,7 @@ export default function AdminEventEdit() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
   const [publishPromptOpen, setPublishPromptOpen] = useState(false);
+  const [sendingOpenNotifications, setSendingOpenNotifications] = useState(false);
   const eventDataRef = useRef(eventData);
 
   useEffect(() => {
@@ -533,6 +534,47 @@ const normalizedDays = Array.isArray(data.days)
     handleSave(true);
   };
 
+  async function runNominationsOpenNotifications(eventId, { force = false } = {}) {
+    if (!eventId) return null;
+    setSendingOpenNotifications(true);
+    try {
+      const { data, error: fnError } = await triggerNominationsOpenProcessing(
+        supabase,
+        eventId,
+        { force }
+      );
+      if (fnError) {
+        setError(
+          fnError.message ||
+            "Could not run nominations-open notifications. Check Edge Function logs."
+        );
+        return null;
+      }
+      if (data?.error) {
+        setError(String(data.error));
+        return null;
+      }
+      const row = Array.isArray(data?.summary) ? data.summary[0] : null;
+      if (row && row.inApp === 0 && row.push === 0 && row.email === 0) {
+        setError(
+          "Notification job ran but sent 0 in-app, 0 push, and 0 email. Check member accounts, notification settings, push subscription, and SQL migrations."
+        );
+      }
+      return data;
+    } finally {
+      setSendingOpenNotifications(false);
+    }
+  }
+
+  const handleSendOpenNotificationsNow = async () => {
+    if (isNew || !id) {
+      setError("Save the event first, then send notifications.");
+      return;
+    }
+    setError(null);
+    await runNominationsOpenNotifications(id, { force: true });
+  };
+
   const handleSave = async (
     isPublished = eventDataRef.current.is_published,
     { navigateAfter = true } = {}
@@ -681,7 +723,7 @@ const payload = {
         ? new Date(res.data.nominations_open)
         : null;
       if (nominationsOpenAt && nominationsOpenAt <= new Date()) {
-        triggerNominationsOpenProcessing(supabase, res.data.id).catch(() => {});
+        await runNominationsOpenNotifications(res.data.id);
       }
 
       setEventData((prev) => ({
@@ -812,6 +854,9 @@ if (data.is_multi_day) {
               <EventNominationsCard
                 event={eventData}
                 onChange={handleFieldChange}
+                onSendOpenNotifications={handleSendOpenNotificationsNow}
+                sendingOpenNotifications={sendingOpenNotifications}
+                canSendOpenNotifications={!isNew && !!id}
               />
             </CMSCard>
 

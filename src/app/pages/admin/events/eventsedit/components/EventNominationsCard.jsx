@@ -1,9 +1,16 @@
 // src/app/pages/admin/events/eventsedit/components/EventNominationsCard.jsx
 import CMSInput from "@cms/CMSInput";
 import CMSToggle from "@cms/CMSToggle";
+import CMSButton from "@cms/CMSButton";
 import { cmsLayout } from "@cms/layout";
 
-export default function EventNominationsCard({ event = {}, onChange }) {
+export default function EventNominationsCard({
+  event = {},
+  onChange,
+  onSendOpenNotifications,
+  sendingOpenNotifications = false,
+  canSendOpenNotifications = false,
+}) {
   const isMulti = !!event.is_multi_day;
 
   const days = Array.isArray(event.days)
@@ -47,8 +54,18 @@ export default function EventNominationsCard({ event = {}, onChange }) {
       />
       <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
         Sends in-app, push, and email when nominations open, even if members turned notifications off in
-        settings.
+        settings. Schedule the <code>process-nominations-open</code> Edge Function every few minutes, or
+        use the button below after nominations have opened.
       </p>
+      {canSendOpenNotifications && (
+        <CMSButton
+          type="button"
+          disabled={sendingOpenNotifications}
+          onClick={() => onSendOpenNotifications?.()}
+        >
+          {sendingOpenNotifications ? "Sending…" : "Send open notifications now"}
+        </CMSButton>
+      )}
 
       {/* LATE ENTRIES */}
       <div style={{ display: "flex", flexDirection: "column", gap: cmsLayout.spacing.md }}>
