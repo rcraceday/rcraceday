@@ -8,7 +8,7 @@ import {
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-secret",
+    "authorization, x-client-info, apikey, content-type, prefer, x-cron-secret",
 };
 
 function isServiceAuthorized(req: Request): boolean {

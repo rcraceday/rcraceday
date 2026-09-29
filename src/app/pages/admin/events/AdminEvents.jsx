@@ -67,7 +67,7 @@ async function loadEvents() {
   async function loadNominations() {
     const { data, error } = await supabase
       .from("nominations")
-      .select("id, event_id, classes");
+      .select("id, event_id, nomination_entries ( id )");
 
     if (error) {
       console.error(error);
@@ -195,17 +195,9 @@ const formatDateTime = (iso) => {
     const nominated = eventNoms.length;
 
     const classesEntered = eventNoms.reduce((sum, n) => {
-      if (!n.classes) return sum;
-      try {
-        const arr =
-          typeof n.classes === "string" ? JSON.parse(n.classes) : n.classes;
-        if (Array.isArray(arr)) {
-          return sum + arr.length;
-        }
-        return sum;
-      } catch {
-        return sum;
-      }
+      const entries = n.nomination_entries;
+      if (Array.isArray(entries)) return sum + entries.length;
+      return sum;
     }, 0);
 
     return { nominated, classesEntered };

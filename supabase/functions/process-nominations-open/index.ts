@@ -6,7 +6,7 @@ import { sendWebPushToUsers } from "./web_push.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-secret",
+    "authorization, x-client-info, apikey, content-type, prefer, x-cron-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -219,7 +219,7 @@ serve(async (req) => {
         }
 
         if (channels.email && membership.email) {
-          const subject = `Nominations open â€” ${event.name}`;
+          const subject = `Nominations open Ã¢â‚¬â€ ${event.name}`;
           const html = `<p>Nominations are now open for <strong>${event.name}</strong>.</p>${
             linkPath
               ? `<p><a href="${linkPath}">View event and nominate</a></p>`

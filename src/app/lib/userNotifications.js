@@ -86,10 +86,35 @@ export async function triggerNominationsOpenProcessing(supabase, eventId = null,
     ...(options.force ? { force: true } : {}),
   };
 
-  return supabase.functions.invoke("process-nominations-open", {
-    body,
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-  });
+  // Raw fetch avoids global Supabase client `Prefer` header (breaks Edge Function CORS).
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const url = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/process-nominations-open`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        data: null,
+        error: {
+          message: data?.error || `Edge Function returned ${response.status}`,
+        },
+      };
+    }
+    return { data, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: {
+        message: err instanceof Error ? err.message : "Failed to reach Edge Function",
+      },
+    };
+  }
 }
