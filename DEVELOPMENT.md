@@ -26,6 +26,10 @@ VITE_SUPABASE_ANON_KEY=your-key
 VITE_VAPID_PUBLIC_KEY=your-vapid-public-key
 These values come from your Supabase project settings. Generate VAPID keys with `npx web-push generate-vapid-keys` (public key in `.env`; private key only in Supabase Edge secrets as `VAPID_PRIVATE_KEY`, plus `VAPID_PUBLIC_KEY` and `VAPID_SUBJECT` e.g. `mailto:you@club.com`).
 
+**Edge Functions** (`process-nominations-open`, `send-web-push`): each folder includes its own `web_push.ts` (Supabase bundles one function at a time and does not ship `../_shared`). Deploy with CLI from the repo root:
+
+`supabase functions deploy process-nominations-open` and `supabase functions deploy send-web-push`
+
 ▶️ Running the App Locally
 Start the Vite dev server:
 

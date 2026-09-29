@@ -1,7 +1,7 @@
 ﻿// supabase/functions/process-nominations-open/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendWebPushToUsers } from "../_shared/web_push.ts";
+import { sendWebPushToUsers } from "./web_push.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -276,5 +276,6 @@ serve(async (req) => {
     );
   }
 });
+
 
 

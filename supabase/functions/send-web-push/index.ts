@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   sendWebPushToUsers,
   type WebPushNotification,
-} from "../_shared/web_push.ts";
+} from "./web_push.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -74,3 +74,4 @@ serve(async (req) => {
     );
   }
 });
+
