@@ -556,9 +556,9 @@ const normalizedDays = Array.isArray(data.days)
         return null;
       }
       const row = Array.isArray(data?.summary) ? data.summary[0] : null;
-      if (row && row.inApp === 0 && row.push === 0 && row.email === 0) {
+      if (row && row.push === 0) {
         setError(
-          "Notification job ran but sent 0 in-app, 0 push, and 0 email. Check member accounts, notification settings, push subscription, and SQL migrations."
+          `Push sent 0${row.pushNote ? ` (${row.pushNote})` : ""}. Open the installed app on the phone, Settings, turn Push on, Save, then send again. In-app rows created: ${row.inApp}.`
         );
       }
       return data;

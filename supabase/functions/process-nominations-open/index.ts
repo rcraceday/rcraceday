@@ -42,6 +42,21 @@ function normalizePrefs(raw: unknown): NotificationPrefs {
   };
 }
 
+
+function htmlToPlainText(value: unknown): string {
+  return String(value ?? "")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/p>\s*<p>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 function shouldNotifyForEventTrack(prefs: NotificationPrefs, eventTrackId: string | null) {
   if (!eventTrackId) return true;
   if (prefs.track_ids === null || prefs.track_ids === undefined) return true;
@@ -167,14 +182,18 @@ serve(async (req) => {
     for (const event of events || []) {
       const { data: clubRow } = await supabase
         .from("clubs")
-        .select("slug")
+        .select("slug, name")
         .eq("id", event.club_id)
         .maybeSingle();
 
       const clubSlug = clubRow?.slug || "";
+      const clubName = htmlToPlainText(clubRow?.name) || "Club";
+      const eventName = htmlToPlainText(event.name) || "Event";
+      const siteUrl = (Deno.env.get("SITE_URL") || "https://rcraceday.com").replace(/\/$/, "");
       const linkPath = clubSlug
-        ? `/${clubSlug}/app/events/${event.id}`
-        : null;
+        ? `/${clubSlug}/app/events/${event.id}/nominate`
+        : "/";
+      const linkUrl = `${siteUrl}${linkPath}`;
 
       const { data: memberships, error: membError } = await supabase
         .from("household_memberships")
@@ -199,8 +218,8 @@ serve(async (req) => {
         if (!channels.inApp && !channels.email && !channels.push) continue;
 
         if (channels.inApp && membership.user_id) {
-          const title = `Nominations open: ${event.name}`;
-          const body = "You can nominate for this event now.";
+          const title = `${clubName}: nominations open`;
+          const body = `${eventName}. Tap to nominate.`;
           const { error: notifError } = await supabase.from("notifications").insert({
             user_id: membership.user_id,
             club_id: event.club_id,
@@ -219,10 +238,10 @@ serve(async (req) => {
         }
 
         if (channels.email && membership.email) {
-          const subject = `Nominations open Ã¢â‚¬â€ ${event.name}`;
-          const html = `<p>Nominations are now open for <strong>${event.name}</strong>.</p>${
+          const subject = `${clubName}: nominations open - ${eventName}`;
+          const html = `<p>Nominations are now open for <strong>${eventName}</strong> at ${clubName}.</p>${
             linkPath
-              ? `<p><a href="${linkPath}">View event and nominate</a></p>`
+              ? `<p><a href="${linkUrl}">Nominate now</a></p>`
               : ""
           }`;
           const { error: emailError } = await supabase.functions.invoke(
@@ -246,15 +265,17 @@ serve(async (req) => {
       }
 
       let pushSent = 0;
+      let pushNote = "";
       if (pushUserIds.length > 0) {
         const pushResult = await sendWebPushToUsers(supabase, pushUserIds, {
-          title: `Nominations open: ${event.name}`,
-          body: "You can nominate for this event now.",
-          url: linkPath || "/",
+          title: `${clubName}: nominations open`,
+          body: `${eventName}. Tap to nominate.`,
+          url: linkUrl,
           tag: `nominations_open:${event.id}`,
           type: "nominations_open",
         });
         pushSent = pushResult.sent;
+        pushNote = pushResult.note || "";
       }
 
       const delivered = inAppCount + emailCount + pushSent;
@@ -283,6 +304,7 @@ serve(async (req) => {
         inApp: inAppCount,
         email: emailCount,
         push: pushSent,
+        pushNote,
         eligible,
         markedNotified: delivered > 0 || eligible === 0,
       });

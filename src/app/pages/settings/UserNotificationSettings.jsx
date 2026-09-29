@@ -109,9 +109,9 @@ export default function UserNotificationSettings() {
         <Card className="p-4 space-y-4">
           <h2 className="text-lg font-semibold">Notifications</h2>
           <p className="text-sm text-text-muted">
-            In-app alerts appear on Home when enabled. Push sends a phone or desktop banner when the
-            app is closed (install the PWA and allow notifications). Email uses your account address.
-            Club messages always appear in Messages.
+            Phone alerts use <strong>push</strong>. Install the app on your home screen, leave this
+            checkbox on, and tap Save once so the phone can receive banners when nominations open.
+            iPhone requires iOS 16.4+ and Add to Home Screen. Email is optional.
           </p>
 
           <label className="flex items-center gap-2 text-sm">

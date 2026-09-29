@@ -14,6 +14,9 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: false,
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
       includeAssets: [
         "favicon.png",
         "favicon.ico",
@@ -27,14 +30,9 @@ export default defineConfig({
       devOptions: {
         enabled: false,
       },
-      workbox: {
-        importScripts: ["/push-sw-handler.js"],
-        cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,woff,woff2}"],
         globIgnores: ["**/flags/**"],
-        navigateFallback: "index.html",
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
       },
       showMaximumFileSizeToCacheInBytesWarning: true,

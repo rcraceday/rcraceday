@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
-import { useNotification } from "@/app/providers/NotificationContext";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import useTheme from "@/app/providers/useTheme";
 
@@ -15,7 +14,6 @@ import Carousel from "@/components/Carousel";
 
 import PageTitle from "@/components/ui/PageTitle";
 import { isNominationsOpen } from "@/app/pages/events/events-sections/helpers";
-import { isNotificationUnread } from "@/app/lib/notificationRow";
 import EventCard from "@/app/pages/events/EventCard";
 
 import {
@@ -45,7 +43,6 @@ function getEventEndDate(event) {
 export default function Home() {
   const { club } = useClub();
   const { membership, loadingMembership } = useMembership();
-  const { notifications, loadingNotifications } = useNotification() || {};
   const { drivers, loadingDrivers } = useDrivers();
   const { palette } = useTheme();
 
@@ -61,9 +58,6 @@ export default function Home() {
   const [eventsWithNominations, setEventsWithNominations] = useState(() => new Set());
 
   const newsItems = [];
-
-  const recentNotifications = (notifications || []).slice(0, 5);
-  const hasUnreadNotifications = (notifications || []).some(isNotificationUnread);
 
   useEffect(() => {
     if (!clubSlug) return;
@@ -194,48 +188,6 @@ export default function Home() {
         {newsItems.length > 0 && (
           <section className="w-full space-y-3">
             <Carousel brand={brand} items={newsItems} />
-          </section>
-        )}
-
-        {(loadingNotifications || recentNotifications.length > 0) && (
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
-              Notifications
-              {hasUnreadNotifications ? " · New" : ""}
-            </h2>
-            {loadingNotifications && (
-              <Card>
-                <div style={{ padding: "16px" }}>Loading notifications…</div>
-              </Card>
-            )}
-            {!loadingNotifications && recentNotifications.length > 0 && (
-              <Card>
-                <ul className="divide-y divide-gray-100">
-                  {recentNotifications.map((item) => {
-                    const linkPath = item.metadata?.link_path;
-                    const content = (
-                      <div className="py-3 px-1">
-                        <div className="font-medium text-sm">{item.title}</div>
-                        {item.body ? (
-                          <div className="text-sm text-text-muted mt-0.5">{item.body}</div>
-                        ) : null}
-                      </div>
-                    );
-                    return (
-                      <li key={item.id}>
-                        {linkPath ? (
-                          <Link to={linkPath} className="no-underline text-inherit block">
-                            {content}
-                          </Link>
-                        ) : (
-                          content
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Card>
-            )}
           </section>
         )}
 

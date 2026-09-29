@@ -53,9 +53,9 @@ export default function EventNominationsCard({
         onChange={(v) => update("notify_nominations_open", v)}
       />
       <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
-        Sends in-app, push, and email when nominations open, even if members turned notifications off in
-        settings. Schedule the <code>process-nominations-open</code> Edge Function every few minutes, or
-        use the button below after nominations have opened.
+        Sends a phone push banner (and optional email) when nominations open. Members must enable Push in
+        Settings on the installed app. Schedule <code>process-nominations-open</code> every few minutes,
+        or use the button below after nominations have opened.
       </p>
       {canSendOpenNotifications && (
         <CMSButton

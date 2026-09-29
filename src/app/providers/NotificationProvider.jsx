@@ -12,6 +12,9 @@ import React, {
 import NotificationContext from "@/app/providers/NotificationContext";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useClub } from "@/app/providers/ClubProvider";
+import { useMembership } from "@/app/providers/MembershipProvider";
+import { normalizeNotificationPreferences } from "@/app/lib/notificationPreferences";
+import { isWebPushConfigured, isWebPushSupported, subscribeWebPush } from "@/app/lib/webPushClient";
 import { supabase } from "@/supabaseClient";
 
 // Local toast context
@@ -31,6 +34,7 @@ export function useNotifications() {
 export default function NotificationProvider({ children }) {
   const { user } = useAuth();
   const { club } = useClub();
+  const { membership } = useMembership();
 
   /* ============================================================
      EXISTING NOTIFICATION LOGIC (unchanged)
@@ -41,6 +45,7 @@ export default function NotificationProvider({ children }) {
   const mountedRef = useRef(false);
   const lastDataRef = useRef(null);
   const refreshTimerRef = useRef(null);
+  const pushSubscribeAttemptRef = useRef("");
 
   const loadNotifications = useCallback(async () => {
     if (!mountedRef.current) return;
@@ -111,6 +116,19 @@ export default function NotificationProvider({ children }) {
       }
     };
   }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!user?.id || !membership) return;
+    const prefs = normalizeNotificationPreferences(membership.notification_preferences);
+    if (!prefs.push_enabled) return;
+    if (!isWebPushConfigured() || !isWebPushSupported()) return;
+    const key = `${user.id}:${club?.id || ""}`;
+    if (pushSubscribeAttemptRef.current === key) return;
+    pushSubscribeAttemptRef.current = key;
+    subscribeWebPush(supabase, { userId: user.id, clubId: club?.id ?? null }).catch(() => {
+      pushSubscribeAttemptRef.current = "";
+    });
+  }, [user?.id, membership, club?.id]);
 
   useEffect(() => {
     if (!user?.id) return undefined;
