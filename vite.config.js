@@ -28,6 +28,7 @@ export default defineConfig({
         enabled: false,
       },
       workbox: {
+        importScripts: ["/push-sw-handler.js"],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,

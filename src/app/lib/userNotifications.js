@@ -42,7 +42,7 @@ export async function queueEmailNotification(supabase, { to, subject, html, temp
 export function nominationsOpenChannelsForMember(membership, event) {
   const prefs = normalizeNotificationPreferences(membership?.notification_preferences);
   if (!shouldNotifyForEventTrack(prefs, event?.track)) {
-    return { inApp: false, email: false, forced: false };
+    return { inApp: false, email: false, push: false, forced: false };
   }
   return shouldNotifyNominationsOpen(prefs, event);
 }
@@ -50,4 +50,10 @@ export function nominationsOpenChannelsForMember(membership, event) {
 export function membershipRenewalChannelsForMember(membership) {
   const prefs = normalizeNotificationPreferences(membership?.notification_preferences);
   return shouldNotifyMembershipRenewal(prefs);
+}
+
+/** Ask the server to send nominations-open alerts for due events (optional single event). */
+export function triggerNominationsOpenProcessing(supabase, eventId = null) {
+  const body = eventId ? { eventId } : {};
+  return supabase.functions.invoke("process-nominations-open", { body });
 }

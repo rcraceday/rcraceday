@@ -23,7 +23,8 @@ Create a .env file in the project root:
 Code
 VITE_SUPABASE_URL=your-url
 VITE_SUPABASE_ANON_KEY=your-key
-These values come from your Supabase project settings.
+VITE_VAPID_PUBLIC_KEY=your-vapid-public-key
+These values come from your Supabase project settings. Generate VAPID keys with `npx web-push generate-vapid-keys` (public key in `.env`; private key only in Supabase Edge secrets as `VAPID_PRIVATE_KEY`, plus `VAPID_PUBLIC_KEY` and `VAPID_SUBJECT` e.g. `mailto:you@club.com`).
 
 ▶️ Running the App Locally
 Start the Vite dev server:

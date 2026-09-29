@@ -43,6 +43,9 @@ export default function CMSInput({
     onBlur: (e) => {
       e.target.style.borderColor = "#D1D5DD";
       e.target.style.boxShadow = "none";
+      if (type === "datetime-local" || type === "date") {
+        handleValue(e);
+      }
     },
   };
 
@@ -107,6 +110,7 @@ export default function CMSInput({
             type={type}
             value={value || ""}
             onChange={handleValue}
+            onInput={type === "datetime-local" || type === "date" ? handleValue : undefined}
             style={baseInputStyle}
             {...focusHandlers}
           />

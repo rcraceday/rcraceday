@@ -10,6 +10,8 @@ import React, {
 } from "react";
 
 import NotificationContext from "@/app/providers/NotificationContext";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { useClub } from "@/app/providers/ClubProvider";
 import { supabase } from "@/supabaseClient";
 
 // Local toast context
@@ -27,6 +29,9 @@ export function useNotifications() {
  */
 
 export default function NotificationProvider({ children }) {
+  const { user } = useAuth();
+  const { club } = useClub();
+
   /* ============================================================
      EXISTING NOTIFICATION LOGIC (unchanged)
      ============================================================ */
@@ -39,14 +44,27 @@ export default function NotificationProvider({ children }) {
 
   const loadNotifications = useCallback(async () => {
     if (!mountedRef.current) return;
+    if (!user?.id) {
+      setNotifications([]);
+      setLoadingNotifications(false);
+      return;
+    }
+
     setLoadingNotifications(true);
 
     try {
-      const result = await supabase
+      let query = supabase
         .from("notifications")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(100);
+
+      if (club?.id) {
+        query = query.eq("club_id", club.id);
+      }
+
+      const result = await query;
 
       if (result?.error) {
         console.warn("NotificationProvider loadNotifications error", result.error);
@@ -79,7 +97,7 @@ export default function NotificationProvider({ children }) {
         setLoadingNotifications(false);
       }
     }
-  }, []);
+  }, [user?.id, club?.id]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -95,14 +113,17 @@ export default function NotificationProvider({ children }) {
   }, [loadNotifications]);
 
   useEffect(() => {
+    if (!user?.id) return undefined;
+
     const channel = supabase
-      .channel("notifications")
+      .channel(`notifications-${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "notifications",
+          filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
           console.debug("NotificationProvider realtime event", {
@@ -127,7 +148,7 @@ export default function NotificationProvider({ children }) {
         console.warn("NotificationProvider cleanup error", err);
       }
     };
-  }, [loadNotifications]);
+  }, [loadNotifications, user?.id]);
 
   /* ============================================================
      NEW TOAST SYSTEM (added)

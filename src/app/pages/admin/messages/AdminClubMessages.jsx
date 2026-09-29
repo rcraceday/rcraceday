@@ -5,10 +5,13 @@ import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { cmsStyles } from "@cms/styles";
+import Button from "@/components/ui/Button";
+import Textarea from "@/components/ui/Textarea";
 import MessageThreadPanel from "@/app/pages/messages/MessageThreadPanel";
 import {
   fetchClubMessagesForClub,
   groupMessagesByMembership,
+  sendAdminClubMessageToMemberships,
 } from "@/app/lib/clubMessages";
 import {
   enrichMembershipDisplayNameMapFromMessages,
@@ -21,11 +24,15 @@ export default function AdminClubMessages() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("household") || "";
+  const isBroadcast = selectedId === "all";
 
   const [threads, setThreads] = useState([]);
   const [labels, setLabels] = useState({});
   const [memberDirectory, setMemberDirectory] = useState([]);
   const [memberSearch, setMemberSearch] = useState("");
+  const [broadcastDraft, setBroadcastDraft] = useState("");
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastError, setBroadcastError] = useState("");
   const [loading, setLoading] = useState(true);
   const { refreshUnreadCount } = useClubMessageUnreadCount({
     clubId: club?.id,
@@ -136,6 +143,37 @@ export default function AdminClubMessages() {
     setLoading(false);
   }
 
+  async function handleBroadcastSend() {
+    const trimmed = broadcastDraft.trim();
+    if (!trimmed || broadcastSending || !club?.id) return;
+    const ids = memberDirectory.map((row) => row.id);
+    if (ids.length === 0) {
+      setBroadcastError("No active members to message.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `Send this message to all ${ids.length} active member${ids.length === 1 ? "" : "s"}? Each person gets a private copy.`
+    );
+    if (!confirmed) return;
+
+    setBroadcastSending(true);
+    setBroadcastError("");
+    const { error } = await sendAdminClubMessageToMemberships({
+      clubId: club.id,
+      membershipIds: ids,
+      body: trimmed,
+      senderUserId: user?.id,
+    });
+    setBroadcastSending(false);
+    if (error) {
+      setBroadcastError(error.message || "Unable to send message.");
+      return;
+    }
+    setBroadcastDraft("");
+    refreshUnreadCount();
+    loadThreads();
+  }
+
   return (
     <div style={cmsStyles.pageContainer}>
       <div style={cmsStyles.pageContent}>
@@ -154,7 +192,7 @@ export default function AdminClubMessages() {
         Messages
       </h1>
       <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 20 }}>
-        Reply to members privately. Conversations are not shared between households.
+        Reply to members privately. Conversations are not shared between members.
       </p>
 
       <div
@@ -170,6 +208,27 @@ export default function AdminClubMessages() {
         >
           <div style={{ padding: "10px 12px", borderBottom: "1px solid #e5e7eb" }}>
             <div style={{ fontWeight: 600, marginBottom: 8 }}>Message a member</div>
+            <button
+              type="button"
+              onClick={() => setSearchParams({ household: "all" })}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 6px",
+                marginBottom: 8,
+                border: "none",
+                borderRadius: 6,
+                background: isBroadcast ? "#fef2f2" : "#f9fafb",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: isBroadcast ? 600 : 500,
+              }}
+            >
+              All active members
+              {memberDirectory.length > 0 ? (
+                <span style={{ color: "#6b7280", fontWeight: 400 }}> ({memberDirectory.length})</span>
+              ) : null}
+            </button>
             <input
               type="search"
               placeholder="Search name or email…"
@@ -294,6 +353,37 @@ export default function AdminClubMessages() {
         >
           {!selectedId ? (
             <p style={{ fontSize: 14, color: "#6b7280" }}>Select a conversation from the inbox.</p>
+          ) : isBroadcast ? (
+            <div className="flex flex-col gap-4">
+              <p style={{ fontWeight: 600, marginBottom: 0 }}>
+                All active members
+                {memberDirectory.length > 0 ? (
+                  <span style={{ color: "#6b7280", fontWeight: 400 }}> ({memberDirectory.length})</span>
+                ) : null}
+              </p>
+              <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
+                Each member receives a private copy. Replies stay in their own thread.
+              </p>
+              <Textarea
+                label="Your message"
+                value={broadcastDraft}
+                onChange={(e) => setBroadcastDraft(e.target.value)}
+                rows={4}
+                placeholder="Type your message to all active members…"
+              />
+              {broadcastError ? (
+                <p className="text-sm text-red-600">{broadcastError}</p>
+              ) : null}
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  disabled={broadcastSending || !broadcastDraft.trim() || memberDirectory.length === 0}
+                  onClick={handleBroadcastSend}
+                >
+                  {broadcastSending ? "Sending…" : "Send to all"}
+                </Button>
+              </div>
+            </div>
           ) : (
             <>
               <p style={{ fontWeight: 600, marginBottom: 12 }}>

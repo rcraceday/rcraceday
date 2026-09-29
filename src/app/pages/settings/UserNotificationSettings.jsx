@@ -11,9 +11,17 @@ import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   normalizeNotificationPreferences,
 } from "@/app/lib/notificationPreferences";
+import { useAuth } from "@/app/providers/AuthProvider";
+import {
+  isWebPushConfigured,
+  isWebPushSupported,
+  subscribeWebPush,
+  unsubscribeWebPush,
+} from "@/app/lib/webPushClient";
 
 export default function UserNotificationSettings() {
   const { club } = useClub();
+  const { user } = useAuth();
   const { membership, refreshMembership } = useMembership();
   const { palette } = useTheme() || {};
   const brand = palette?.primary || "#0A66C2";
@@ -60,15 +68,36 @@ export default function UserNotificationSettings() {
     setError("");
     setMessage("");
     const normalized = normalizeNotificationPreferences(prefs);
+
+    if (!normalized.push_enabled) {
+      await unsubscribeWebPush(supabase);
+    }
+
     const { error: saveError } = await supabase
       .from("household_memberships")
       .update({ notification_preferences: normalized })
       .eq("id", membership.id);
-    setSaving(false);
+
     if (saveError) {
+      setSaving(false);
       setError(saveError.message || "Could not save settings.");
       return;
     }
+
+    if (normalized.push_enabled && user?.id && isWebPushConfigured() && isWebPushSupported()) {
+      const { error: pushError } = await subscribeWebPush(supabase, {
+        userId: user.id,
+        clubId: club?.id ?? null,
+      });
+      if (pushError) {
+        setSaving(false);
+        setError(pushError.message || "Settings saved, but push could not be enabled.");
+        refreshMembership?.();
+        return;
+      }
+    }
+
+    setSaving(false);
     setMessage("Settings saved.");
     refreshMembership?.();
   }
@@ -80,7 +109,8 @@ export default function UserNotificationSettings() {
         <Card className="p-4 space-y-4">
           <h2 className="text-lg font-semibold">Notifications</h2>
           <p className="text-sm text-text-muted">
-            In-app alerts appear in the app when enabled. Email uses the address on your account.
+            In-app alerts appear on Home when enabled. Push sends a phone or desktop banner when the
+            app is closed (install the PWA and allow notifications). Email uses your account address.
             Club messages always appear in Messages.
           </p>
 
@@ -100,6 +130,25 @@ export default function UserNotificationSettings() {
             />
             Email notifications
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={prefs.push_enabled}
+              disabled={!isWebPushConfigured() || !isWebPushSupported()}
+              onChange={(e) => setPrefs((p) => ({ ...p, push_enabled: e.target.checked }))}
+            />
+            Push notifications (PWA)
+          </label>
+          {!isWebPushConfigured() && (
+            <p className="text-xs text-text-muted pl-6">
+              Push is not configured for this environment (missing VITE_VAPID_PUBLIC_KEY).
+            </p>
+          )}
+          {isWebPushConfigured() && !isWebPushSupported() && (
+            <p className="text-xs text-text-muted pl-6">
+              Use a supported browser and install the app to enable push.
+            </p>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -169,7 +218,7 @@ export default function UserNotificationSettings() {
           <h3 className="font-semibold text-text-base">More settings you may add later</h3>
           <ul className="list-disc pl-5 space-y-1">
             <li>Preferred contact language and time zone</li>
-            <li>SMS / push notifications (PWA)</li>
+            <li>SMS notifications</li>
             <li>Marketing and newsletter opt-in</li>
             <li>Default nomination or payment preferences</li>
             <li>Privacy: show name on public results / leaderboards</li>

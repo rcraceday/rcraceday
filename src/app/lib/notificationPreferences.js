@@ -1,6 +1,7 @@
 export const DEFAULT_NOTIFICATION_PREFERENCES = {
   in_app_enabled: true,
   email_enabled: true,
+  push_enabled: true,
   nominations_open_enabled: true,
   membership_renewal_enabled: true,
   /** null = all club tracks; [] = none; [uuid, ...] = only those tracks */
@@ -19,6 +20,10 @@ export function normalizeNotificationPreferences(raw) {
       typeof source.email_enabled === "boolean"
         ? source.email_enabled
         : DEFAULT_NOTIFICATION_PREFERENCES.email_enabled,
+    push_enabled:
+      typeof source.push_enabled === "boolean"
+        ? source.push_enabled
+        : DEFAULT_NOTIFICATION_PREFERENCES.push_enabled,
     nominations_open_enabled:
       typeof source.nominations_open_enabled === "boolean"
         ? source.nominations_open_enabled
@@ -38,16 +43,18 @@ export function normalizeNotificationPreferences(raw) {
 
 /**
  * Whether to send nominations-open alerts for this member/event.
- * event.notify_nominations_open forces in-app + email regardless of user opt-out.
+ * event.notify_nominations_open forces in-app, push, and email regardless of user opt-out.
  */
 export function shouldNotifyNominationsOpen(preferences, event) {
   if (event?.notify_nominations_open) {
-    return { inApp: true, email: true, forced: true };
+    return { inApp: true, email: true, push: true, forced: true };
   }
   const prefs = normalizeNotificationPreferences(preferences);
+  const nom = prefs.nominations_open_enabled;
   return {
-    inApp: prefs.in_app_enabled && prefs.nominations_open_enabled,
-    email: prefs.email_enabled && prefs.nominations_open_enabled,
+    inApp: prefs.in_app_enabled && nom,
+    email: prefs.email_enabled && nom,
+    push: prefs.push_enabled && nom,
     forced: false,
   };
 }
@@ -62,8 +69,10 @@ export function shouldNotifyForEventTrack(preferences, eventTrackId) {
 
 export function shouldNotifyMembershipRenewal(preferences) {
   const prefs = normalizeNotificationPreferences(preferences);
+  const renewal = prefs.membership_renewal_enabled;
   return {
-    inApp: prefs.in_app_enabled && prefs.membership_renewal_enabled,
-    email: prefs.email_enabled && prefs.membership_renewal_enabled,
+    inApp: prefs.in_app_enabled && renewal,
+    email: prefs.email_enabled && renewal,
+    push: prefs.push_enabled && renewal,
   };
 }

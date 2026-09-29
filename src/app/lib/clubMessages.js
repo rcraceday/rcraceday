@@ -64,6 +64,29 @@ export async function sendAdminClubMessage({ clubId, membershipId, body, senderU
   });
 }
 
+export async function sendAdminClubMessageToMemberships({
+  clubId,
+  membershipIds,
+  body,
+  senderUserId,
+}) {
+  const trimmed = String(body || "").trim();
+  const ids = (membershipIds || []).filter(Boolean);
+  if (!clubId || !trimmed || ids.length === 0) {
+    return { data: null, error: { message: "Message is empty." } };
+  }
+  return supabase.from("club_messages").insert(
+    ids.map((membershipId) => ({
+      club_id: clubId,
+      membership_id: membershipId,
+      event_id: null,
+      body: trimmed,
+      sender_role: "admin",
+      sender_user_id: senderUserId || null,
+    }))
+  );
+}
+
 async function markMemberMessagesReadForAdminDirect({ clubId, membershipId }) {
   const now = new Date().toISOString();
   return supabase

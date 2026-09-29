@@ -164,12 +164,14 @@ export function nominationsDatetimeFromDefaults(anchorDate, nominationsRaw) {
   };
 }
 
-export function nominationsNeedAutofill(eventState, isNewEvent) {
-  if (isNewEvent) return true;
+export function nominationsNeedAutofill(eventState) {
+  if (eventState?.nominations_customized) return false;
   return !eventState.nominations_open && !eventState.nominations_close;
 }
 
 export function applyNominationsFromTypeDefaults(eventState, eventTypes, options = {}) {
+  if (eventState?.nominations_customized) return eventState;
+
   const { overwrite = false } = options;
   const typeRow = findEventType(eventTypes, eventState.event_type);
   if (!typeRow || !eventState.track) return eventState;
@@ -455,6 +457,17 @@ export function applyEventTypeDefaults(eventState, typeRow, trackId) {
 
   const anchor = getEventAnchorDate(withCore);
   const computed = nominationsDatetimeFromDefaults(anchor, defaults.nominations);
+
+  if (eventState.nominations_customized) {
+    return {
+      ...withCore,
+      nominations_open: eventState.nominations_open ?? "",
+      nominations_close: eventState.nominations_close ?? "",
+      late_fee_activation: eventState.late_fee_activation ?? "",
+      late_entries_close: eventState.late_entries_close ?? "",
+      nominations_customized: true,
+    };
+  }
 
   return {
     ...withCore,

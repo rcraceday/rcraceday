@@ -21,6 +21,7 @@ export default function EventNominationsCard({ event = {}, onChange }) {
       <div style={cmsLayout.row}>
         <div style={cmsLayout.column}>
           <CMSInput
+            name="nominations_open"
             label="Nominations Open"
             type="datetime-local"
             value={event.nominations_open || ""}
@@ -30,6 +31,7 @@ export default function EventNominationsCard({ event = {}, onChange }) {
 
         <div style={cmsLayout.column}>
           <CMSInput
+            name="nominations_close"
             label="Nominations Close"
             type="datetime-local"
             value={event.nominations_close || ""}
@@ -44,7 +46,7 @@ export default function EventNominationsCard({ event = {}, onChange }) {
         onChange={(v) => update("notify_nominations_open", v)}
       />
       <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
-        Sends in-app and email to members when nominations open, even if they turned notifications off in
+        Sends in-app, push, and email when nominations open, even if members turned notifications off in
         settings.
       </p>
 
@@ -59,6 +61,7 @@ export default function EventNominationsCard({ event = {}, onChange }) {
         {event.late_entries_enabled && (
           <>
             <CMSInput
+              name="late_fee_activation"
               label="Late Fee Activation (optional)"
               type="datetime-local"
               value={event.late_fee_activation || ""}
@@ -66,6 +69,7 @@ export default function EventNominationsCard({ event = {}, onChange }) {
             />
 
             <CMSInput
+              name="late_entries_close"
               label="Late Entries Close (optional)"
               type="datetime-local"
               value={event.late_entries_close || ""}

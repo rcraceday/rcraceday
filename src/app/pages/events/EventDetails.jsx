@@ -29,14 +29,15 @@ import {
   perEntryFeeDisplayRows,
   resolveEventPricing,
 } from "@/app/pages/events/events-sections/helpers";
+import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
 
 const EVENT_DETAIL_FIELDS =
   "*, pricing, late_entries_enabled, late_fee_activation, late_entries_close";
 
 function formatNominationDateTime(iso) {
   if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
+  const d = parseStoredTimestamp(iso);
+  if (!d) return "";
   const date = d.toLocaleDateString("en-AU", {
     weekday: "short",
     day: "numeric",

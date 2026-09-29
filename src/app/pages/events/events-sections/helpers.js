@@ -1,4 +1,5 @@
 import { normalizeEventDefaults } from "@/app/pages/admin/events/eventDefaults";
+import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
 
 export const TYPE_LABELS = {
   racing: "Racing",
@@ -10,9 +11,7 @@ export const TYPE_LABELS = {
 };
 
 function parseEventDate(value) {
-  if (value == null || value === "") return null;
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return parseStoredTimestamp(value);
 }
 
 /** True when drivers may nominate (standard window or late-entry window). */
@@ -67,9 +66,18 @@ export function extractYearsFromEvents(events) {
   return Array.from(years).sort((a, b) => b - a);
 }
 
-// Format date for display
+// Format date for display (calendar days vs timestamptz instants)
 export function formatDate(dateStr) {
-  const d = new Date(dateStr);
+  if (dateStr == null || dateStr === "") return "";
+  const s = String(dateStr).trim();
+  if (!s) return "";
+
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(s)
+    ? new Date(`${s}T12:00:00`)
+    : parseStoredTimestamp(s);
+
+  if (!d || Number.isNaN(d.getTime())) return s;
+
   return d.toLocaleDateString("en-AU", {
     weekday: "short",
     month: "short",

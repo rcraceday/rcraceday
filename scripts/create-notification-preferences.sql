@@ -1,11 +1,13 @@
 -- Member notification preferences + event-level nominations-open broadcast flag.
 -- In-app rows use public.notifications (existing table).
--- Email delivery: wire a Supabase Edge Function / cron to read preferences via shouldNotify* logic in app.
+-- Delivery: run scripts/process-nominations-open-notifications.sql and deploy
+-- supabase/functions/process-nominations-open (schedule every 1–5 minutes).
 
 alter table public.household_memberships
   add column if not exists notification_preferences jsonb not null default '{
     "in_app_enabled": true,
     "email_enabled": true,
+    "push_enabled": true,
     "nominations_open_enabled": true,
     "membership_renewal_enabled": true,
     "track_ids": null
@@ -15,7 +17,7 @@ alter table public.events
   add column if not exists notify_nominations_open boolean not null default false;
 
 comment on column public.events.notify_nominations_open is
-  'When true, send nominations-open in-app + email to all eligible members even if they disabled notifications.';
+  'When true, send nominations-open in-app, push, and email to all eligible members even if they disabled notifications.';
 
 -- Members update own preferences
 drop policy if exists "household_memberships_update_own_preferences" on public.household_memberships;

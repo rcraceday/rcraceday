@@ -1,5 +1,5 @@
 // src/app/pages/admin/events/eventsedit/AdminEventEdit.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 
@@ -22,6 +22,7 @@ import EventPreviewModal from "./components/EventPreviewModal";
 
 import { cmsStyles } from "@cms/styles";
 import { isRichTextEmpty } from "@/app/lib/richText";
+import { triggerNominationsOpenProcessing } from "@/app/lib/userNotifications";
 import {
   applyEventTypeDefaults,
   applyNominationsFromTypeDefaults,
@@ -32,16 +33,31 @@ import {
   normalizeDayRecord,
   shiftEventNominationDates,
 } from "@app/pages/admin/events/eventDefaults";
+import {
+  datetimeLocalToIso,
+  isoToDatetimeLocal,
+  mergeNominationFieldsFromDom,
+} from "@/app/lib/eventDatetime";
 
 const EVENT_EDIT_SELECT =
   "*, pricing, late_entries_enabled, late_fee_activation, late_entries_close";
 
-function isoToDatetimeLocal(value) {
-  if (value == null || value === "") return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function flushFocusedFieldValue() {
+  const el = document.activeElement;
+  if (
+    el &&
+    (el.tagName === "INPUT" || el.tagName === "TEXTAREA") &&
+    typeof el.blur === "function"
+  ) {
+    el.blur();
+  }
+}
+
+function waitForInputCommit() {
+  flushFocusedFieldValue();
+  return new Promise((resolve) => {
+    setTimeout(() => setTimeout(resolve, 0), 0);
+  });
 }
 
 const initialEventState = {
@@ -68,6 +84,7 @@ const initialEventState = {
   preference_enabled: true,
   nominations_open: "",
   nominations_close: "",
+  nominations_customized: false,
   notify_nominations_open: false,
   member_price: "",
   non_member_price: "",
@@ -97,6 +114,11 @@ export default function AdminEventEdit() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
   const [publishPromptOpen, setPublishPromptOpen] = useState(false);
+  const eventDataRef = useRef(eventData);
+
+  useEffect(() => {
+    eventDataRef.current = eventData;
+  }, [eventData]);
 
   // LOAD CLUB FOR NEW EVENT
   useEffect(() => {
@@ -186,6 +208,7 @@ const normalizedDays = Array.isArray(data.days)
           nominations_close: isoToDatetimeLocal(data.nominations_close),
           late_entries_enabled: !!data.late_entries_enabled,
           notify_nominations_open: !!data.notify_nominations_open,
+          nominations_customized: !!(data.nominations_open || data.nominations_close),
           late_fee_activation: isoToDatetimeLocal(data.late_fee_activation),
           late_entries_close: isoToDatetimeLocal(data.late_entries_close),
           days: normalizedDays,
@@ -254,7 +277,9 @@ const normalizedDays = Array.isArray(data.days)
 
     setEventData((prev) => {
       if (!prev.event_type || !prev.track || !getEventAnchorDate(prev)) return prev;
-      if (!nominationsNeedAutofill(prev, isNew)) return prev;
+      if (prev.nominations_customized) return prev;
+      if (!isNew && (prev.nominations_open || prev.nominations_close)) return prev;
+      if (!nominationsNeedAutofill(prev)) return prev;
 
       const next = applyNominationsFromTypeDefaults(prev, eventTypes, { overwrite: true });
       if (
@@ -361,9 +386,22 @@ const normalizedDays = Array.isArray(data.days)
   }, [eventData.track]);
 
   // FIELD CHANGE HANDLER
+  const nominationScheduleFields = new Set([
+    "nominations_open",
+    "nominations_close",
+    "late_fee_activation",
+    "late_entries_close",
+    "late_entries_enabled",
+  ]);
+
   const handleFieldChange = (field, value) => {
     setEventData((prev) => {
       let next = { ...prev, [field]: value };
+
+      if (nominationScheduleFields.has(field)) {
+        next.nominations_customized = true;
+        eventDataRef.current = next;
+      }
 
       if (field === "event_date" && !prev.is_multi_day) {
         const dayDelta = dayDiffBetweenDates(prev.event_date, value);
@@ -372,20 +410,19 @@ const normalizedDays = Array.isArray(data.days)
           days[0] = { ...days[0], date: value };
           next.days = days;
         }
-        if (nominationsNeedAutofill(prev, isNew)) {
+        if (nominationsNeedAutofill(prev)) {
           next = applyNominationsFromTypeDefaults(next, eventTypes, { overwrite: true });
         } else if (dayDelta !== 0) {
           next = shiftEventNominationDates(next, dayDelta);
         }
       }
 
-      if (field === "days" && prev.is_multi_day && nominationsNeedAutofill(prev, isNew)) {
+      if (field === "days" && prev.is_multi_day && nominationsNeedAutofill(prev)) {
         next = applyNominationsFromTypeDefaults(next, eventTypes, { overwrite: true });
       }
 
       if (
-        !isNew &&
-        nominationsNeedAutofill(prev, isNew) &&
+        nominationsNeedAutofill(prev) &&
         (field === "event_type" || field === "track")
       ) {
         next = applyNominationsFromTypeDefaults(next, eventTypes, { overwrite: true });
@@ -401,7 +438,10 @@ const normalizedDays = Array.isArray(data.days)
 
       if (!typeRow || !trackId) return next;
 
-      return applyEventTypeDefaults(next, typeRow, trackId);
+      return {
+        ...applyEventTypeDefaults(next, typeRow, trackId),
+        nominations_customized: next.nominations_customized,
+      };
     });
   };
 
@@ -478,14 +518,15 @@ const normalizedDays = Array.isArray(data.days)
     const s = String(v).trim();
     if (s === "") return null;
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s)) {
-      return new Date(s).toISOString();
+      return datetimeLocalToIso(s);
     }
     return s;
   };
 
-  const requestSave = () => {
+  const requestSave = async () => {
     if (saving) return;
-    if (!eventData.is_published) {
+    await waitForInputCommit();
+    if (!eventDataRef.current.is_published) {
       setPublishPromptOpen(true);
       return;
     }
@@ -493,17 +534,20 @@ const normalizedDays = Array.isArray(data.days)
   };
 
   const handleSave = async (
-    isPublished = eventData.is_published,
+    isPublished = eventDataRef.current.is_published,
     { navigateAfter = true } = {}
   ) => {
     if (saving) return false;
+    await waitForInputCommit();
+    const snapshot = mergeNominationFieldsFromDom(eventDataRef.current);
+    eventDataRef.current = snapshot;
     setPublishPromptOpen(false);
     setSaving(true);
     setError(null);
 
-    console.log("DEBUG classes_by_day:", eventData.classes_by_day);
+    console.log("DEBUG classes_by_day:", snapshot.classes_by_day);
 
-    const err = validateEvent();
+    const err = validateEvent(snapshot);
     if (err) {
       setError(err);
       setSaving(false);
@@ -511,10 +555,10 @@ const normalizedDays = Array.isArray(data.days)
     }
 
     const finalLogoUrl =
-      typeof eventData.logourl === "string" ? eventData.logourl : null;
+      typeof snapshot.logourl === "string" ? snapshot.logourl : null;
 
 // Normalize days
-const normalizedDays = (eventData.days || []).map((d, index) => ({
+const normalizedDays = (snapshot.days || []).map((d, index) => ({
   date: normalizeDate(d?.date),
   label: d?.label ?? "",
   gates_open_at: d?.gates_open_at ?? "",
@@ -522,7 +566,7 @@ const normalizedDays = (eventData.days || []).map((d, index) => ({
   drivers_brief_at: d?.drivers_brief_at ?? "",
   race_start_at: d?.race_start_at ?? "",
   is_practice: !!(
-    d?.is_practice ?? eventData.classes_by_day?.[index]?.is_practice
+    d?.is_practice ?? snapshot.classes_by_day?.[index]?.is_practice
   ),
 }));
 
@@ -530,74 +574,74 @@ const normalizedDays = (eventData.days || []).map((d, index) => ({
 const normalizedClassesByDay = normalizedDays.map((d, index) => ({
   date: d.date,
   label: d.label,
-  classes: Array.isArray(eventData.classes_by_day?.[index]?.classes)
-    ? eventData.classes_by_day[index].classes
+  classes: Array.isArray(snapshot.classes_by_day?.[index]?.classes)
+    ? snapshot.classes_by_day[index].classes
     : [],
   is_practice: !!(
-    eventData.classes_by_day?.[index]?.is_practice ?? d.is_practice
+    snapshot.classes_by_day?.[index]?.is_practice ?? d.is_practice
   ),
 }));
 
 const payload = {
-  club_id: eventData.club_id ?? null,
-  name: eventData.name ?? "",
-  description: eventData.description ?? null,
-  event_type: eventData.event_type ?? null,
-  track: eventData.track ?? null,
+  club_id: snapshot.club_id ?? null,
+  name: snapshot.name ?? "",
+  description: snapshot.description ?? null,
+  event_type: snapshot.event_type ?? null,
+  track: snapshot.track ?? null,
   logourl: finalLogoUrl,
-  is_multi_day: !!eventData.is_multi_day,
-  event_date: eventData.is_multi_day
+  is_multi_day: !!snapshot.is_multi_day,
+  event_date: snapshot.is_multi_day
     ? null
-    : normalizeDate(eventData.event_date || eventData.days?.[0]?.date),
+    : normalizeDate(snapshot.event_date || snapshot.days?.[0]?.date),
   days: normalizedDays,
-  nominations_open: normalizeDate(eventData.nominations_open),
-  nominations_close: normalizeDate(eventData.nominations_close),
-  late_entries_enabled: !!eventData.late_entries_enabled,
-  notify_nominations_open: !!eventData.notify_nominations_open,
-  late_fee_activation: normalizeDate(eventData.late_fee_activation),
-  late_entries_close: normalizeDate(eventData.late_entries_close),
+  nominations_open: normalizeDate(snapshot.nominations_open),
+  nominations_close: normalizeDate(snapshot.nominations_close),
+  late_entries_enabled: !!snapshot.late_entries_enabled,
+  notify_nominations_open: !!snapshot.notify_nominations_open,
+  late_fee_activation: normalizeDate(snapshot.late_fee_activation),
+  late_entries_close: normalizeDate(snapshot.late_entries_close),
 
   classes_by_day: normalizedClassesByDay,
-  classes: eventData.is_multi_day
+  classes: snapshot.is_multi_day
     ? []
-    : normalizedClassesByDay[0]?.classes ?? eventData.classes ?? [],
-  class_entry_limits: eventData.class_entry_limits ?? {},
+    : normalizedClassesByDay[0]?.classes ?? snapshot.classes ?? [],
+  class_entry_limits: snapshot.class_entry_limits ?? {},
   class_minimum_entries:
-    eventData.class_minimum_entries == null || eventData.class_minimum_entries === ""
+    snapshot.class_minimum_entries == null || snapshot.class_minimum_entries === ""
       ? null
-      : Number(eventData.class_minimum_entries),
-  class_minimum_livetime_when_unmet: !!eventData.class_minimum_livetime_when_unmet,
-  merchandise: eventData.merchandise ?? [],
-  class_add_ons: eventData.class_add_ons ?? [],
-  club_requirements: eventData.club_requirements ?? [],
+      : Number(snapshot.class_minimum_entries),
+  class_minimum_livetime_when_unmet: !!snapshot.class_minimum_livetime_when_unmet,
+  merchandise: snapshot.merchandise ?? [],
+  class_add_ons: snapshot.class_add_ons ?? [],
+  club_requirements: snapshot.club_requirements ?? [],
 
   // ⭐ THIS WAS MISSING
-  pricing: eventData.pricing ?? {},
+  pricing: snapshot.pricing ?? {},
 
   is_published: !!isPublished,
   class_limit:
-    eventData.class_limit == null || eventData.class_limit === ""
+    snapshot.class_limit == null || snapshot.class_limit === ""
       ? 3
-      : Number(eventData.class_limit),
-  class_limit_per_day: eventData.is_multi_day
-    ? eventData.class_limit_per_day == null || eventData.class_limit_per_day === ""
+      : Number(snapshot.class_limit),
+  class_limit_per_day: snapshot.is_multi_day
+    ? snapshot.class_limit_per_day == null || snapshot.class_limit_per_day === ""
       ? null
-      : eventData.class_limit_per_day
+      : snapshot.class_limit_per_day
     : null,
-  class_limit_scope: eventData.is_multi_day
-    ? eventData.class_limit_per_day != null &&
-      eventData.class_limit_per_day !== "" &&
-      (eventData.class_limit == null || eventData.class_limit === "")
+  class_limit_scope: snapshot.is_multi_day
+    ? snapshot.class_limit_per_day != null &&
+      snapshot.class_limit_per_day !== "" &&
+      (snapshot.class_limit == null || snapshot.class_limit === "")
       ? "per_day"
       : "per_event"
     : "per_event",
   preference_enabled:
-    typeof eventData.preference_enabled === "boolean"
-     ? eventData.preference_enabled
+    typeof snapshot.preference_enabled === "boolean"
+     ? snapshot.preference_enabled
       : true,
     requires_rcra_club: // <--- Add this line
-    typeof eventData.requires_rcra_club === "boolean" // <--- Add this line
-     ? eventData.requires_rcra_club // <--- Add this line
+    typeof snapshot.requires_rcra_club === "boolean" // <--- Add this line
+     ? snapshot.requires_rcra_club // <--- Add this line
     : false, // <--- Add this line
 };
     Object.keys(payload).forEach(
@@ -633,7 +677,27 @@ const payload = {
         return false;
       }
 
-      setEventData(res.data);
+      const nominationsOpenAt = res.data.nominations_open
+        ? new Date(res.data.nominations_open)
+        : null;
+      if (nominationsOpenAt && nominationsOpenAt <= new Date()) {
+        triggerNominationsOpenProcessing(supabase, res.data.id).catch(() => {});
+      }
+
+      setEventData((prev) => ({
+        ...prev,
+        ...res.data,
+        club_slug: clubSlug,
+        nominations_open: isoToDatetimeLocal(res.data.nominations_open),
+        nominations_close: isoToDatetimeLocal(res.data.nominations_close),
+        late_fee_activation: isoToDatetimeLocal(res.data.late_fee_activation),
+        late_entries_close: isoToDatetimeLocal(res.data.late_entries_close),
+        late_entries_enabled: !!res.data.late_entries_enabled,
+        notify_nominations_open: !!res.data.notify_nominations_open,
+        nominations_customized:
+          snapshot.nominations_customized ||
+          !!(res.data.nominations_open || res.data.nominations_close),
+      }));
       setSaving(false);
       if (navigateAfter) {
         navigate(`/${clubSlug}/app/admin/events`);
@@ -648,36 +712,36 @@ const payload = {
 
   const handlePreview = async () => {
     if (isNew || saving) return;
-    const saved = await handleSave(eventData.is_published, { navigateAfter: false });
+    const saved = await handleSave(eventDataRef.current.is_published, { navigateAfter: false });
     if (!saved) return;
     setPreviewRefreshKey(Date.now());
     setPreviewOpen(true);
   };
 
   // VALIDATION
-  const validateEvent = () => {
-    if (isRichTextEmpty(eventData.name)) return "Event name is required.";
-    if (!eventData.event_type) return "Event type is required.";
-    if (!eventData.track) return "Track is required.";
+  const validateEvent = (data = eventDataRef.current) => {
+    if (isRichTextEmpty(data.name)) return "Event name is required.";
+    if (!data.event_type) return "Event type is required.";
+    if (!data.track) return "Track is required.";
 
-    if (!eventData.is_multi_day && !eventData.event_date)
+    if (!data.is_multi_day && !data.event_date)
       return "Event date is required for single-day events.";
 
-    if (eventData.is_multi_day) {
-      if (!Array.isArray(eventData.days) || eventData.days.length === 0)
+    if (data.is_multi_day) {
+      if (!Array.isArray(data.days) || data.days.length === 0)
         return "At least one day is required.";
 
-      for (const d of eventData.days) {
+      for (const d of data.days) {
         if (!d.date) return "Each day must have a date.";
         if (typeof d.label !== "string") return "Day label must be a string.";
       }
     }
 
-if (eventData.is_multi_day) {
-  if (!Array.isArray(eventData.classes_by_day))
+if (data.is_multi_day) {
+  if (!Array.isArray(data.classes_by_day))
     return "classes_by_day must be an array.";
 
-  for (const item of eventData.classes_by_day) {
+  for (const item of data.classes_by_day) {
     if (!Array.isArray(item.classes))
       return "each classes_by_day entry must contain a classes array.";
   }
@@ -853,7 +917,8 @@ if (eventData.is_multi_day) {
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                 <CMSButton
                   variant="secondary"
-                  onClick={() => {
+                  onClick={async () => {
+                    await waitForInputCommit();
                     handleSave(false);
                   }}
                   disabled={saving}
@@ -862,8 +927,14 @@ if (eventData.is_multi_day) {
                 </CMSButton>
                 <CMSButton
                   variant="primary"
-                  onClick={() => {
-                    setEventData((prev) => ({ ...prev, is_published: true }));
+                  onClick={async () => {
+                    await waitForInputCommit();
+                    setEventData((prev) => {
+                      const next = { ...prev, is_published: true };
+                      eventDataRef.current = next;
+                      return next;
+                    });
+                    await waitForInputCommit();
                     handleSave(true);
                   }}
                   disabled={saving}
