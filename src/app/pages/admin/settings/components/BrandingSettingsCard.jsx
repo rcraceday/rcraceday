@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/supabaseClient";
+import {
+  brandingLogoPath,
+  uploadClubAsset,
+} from "@/app/lib/clubAssetStorage";
 import { useClub } from "@/app/providers/ClubProvider";
 import CMSButton from "@cms/CMSButton";
 import CMSColorPicker from "@cms/CMSColorPicker";
@@ -14,16 +18,6 @@ const getFormFromClub = (club) => ({
   button_color: club?.button_color || "",
   button_text_color: club?.button_text_color || "#FFFFFF",
 });
-
-const getStoragePath = (url) => {
-  if (!url) return null;
-
-  const marker = "/club-assets/";
-  const markerIndex = url.indexOf(marker);
-  if (markerIndex === -1) return null;
-
-  return decodeURIComponent(url.slice(markerIndex + marker.length).split("?")[0]);
-};
 
 export default function BrandingSettingsCard({ club }) {
   const { refreshClub } = useClub();
@@ -54,28 +48,19 @@ export default function BrandingSettingsCard({ club }) {
     setUploading(true);
 
     try {
-      const ext = file.name.split(".").pop().toLowerCase();
-      const filePath = `clubs/${club.id}-${fieldName}.${ext}`;
-      const oldPath = getStoragePath(oldUrl);
+      const filePath = brandingLogoPath(club.slug, fieldName, file);
+      const { publicUrl, error: uploadError } = await uploadClubAsset(supabase, {
+        objectPath: filePath,
+        file,
+        previousUrlOrPath: oldUrl,
+      });
 
-      const { error: uploadError } = await supabase.storage
-        .from("club-assets")
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) {
+      if (uploadError || !publicUrl) {
         alert("Upload failed.");
         return;
       }
 
-      if (oldPath && oldPath !== filePath) {
-        await supabase.storage.from("club-assets").remove([oldPath]);
-      }
-
-      const { data: publicUrl } = supabase.storage
-        .from("club-assets")
-        .getPublicUrl(filePath);
-
-      updateField(fieldName, `${publicUrl.publicUrl}?v=${Date.now()}`);
+      updateField(fieldName, publicUrl);
     } catch (error) {
       console.error(`Failed to upload ${label.toLowerCase()}:`, error);
       alert("Upload failed.");

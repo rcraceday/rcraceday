@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { formatDate, isNominationsOpen } from "./events-sections/helpers";
+import { richTextToPlainText } from "@/app/lib/richText";
 
 export default function EventCard({
   event,
@@ -80,7 +81,7 @@ export default function EventCard({
 
             <div className="min-w-0 w-full flex-1 px-4 py-2 md:pl-5 md:pr-4">
               <h3 className="break-words font-semibold leading-tight text-text-base">
-                {event.name}
+                {richTextToPlainText(event.name)}
               </h3>
               <p className="flex min-w-0 flex-col items-center gap-y-0.5 text-sm font-semibold leading-tight text-text-muted md:items-start sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 md:flex-col md:gap-x-0">
                 <span className="min-w-0 max-w-full truncate sm:w-auto">{track}</span>

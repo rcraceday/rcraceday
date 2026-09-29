@@ -1,4 +1,5 @@
 import React from "react";
+import { richTextToPlainText } from "@/app/lib/richText";
 
 export default function CalendarEventCard({ event, brand, onNavigate }) {
   const logoSrc = event.logo_preview_url ||
@@ -47,7 +48,7 @@ export default function CalendarEventCard({ event, brand, onNavigate }) {
         >
           <img
             src={logoSrc}
-            alt={event.name}
+            alt={richTextToPlainText(event.name)}
             style={{
               width: "100%",
               height: "100%",
@@ -76,7 +77,7 @@ export default function CalendarEventCard({ event, brand, onNavigate }) {
             overflow: "hidden",
           }}
         >
-          {event.name}
+          {richTextToPlainText(event.name)}
         </div>
       )}
 
@@ -88,7 +89,7 @@ export default function CalendarEventCard({ event, brand, onNavigate }) {
           lineHeight: 1.3,
         }}
       >
-        {event.name}
+        {richTextToPlainText(event.name)}
       </div>
     </div>
   );

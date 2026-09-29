@@ -15,6 +15,7 @@ import PageTitle from "@/components/ui/PageTitle";
 import useTheme from "@/app/providers/useTheme";
 import { supabase } from "@/supabaseClient";
 import DOMPurify from "dompurify";
+import { richTextToPlainText } from "@/app/lib/richText";
 import {
   getAllEventAssignedClassIds,
   getDayClassLimit,
@@ -515,7 +516,7 @@ return (
     {logoSrc ? (
       <img
         src={logoSrc}
-        alt={event.name}
+        alt={richTextToPlainText(event.name)}
         className="w-full h-full object-contain"
       />
     ) : (
@@ -530,9 +531,12 @@ return (
       sm:text-[30px]   /* ⭐ desktop unchanged */
     "
     style={{ color: contentText }}
-  >
-    {event.name}
-  </div>
+    dangerouslySetInnerHTML={{
+      __html: DOMPurify.sanitize(event.name || "", {
+        ADD_ATTR: ["target", "rel"],
+      }),
+    }}
+  />
 </div>
 
 {/* EVENT DETAILS AREA */}

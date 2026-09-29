@@ -11,6 +11,7 @@ import {
 } from "@heroicons/react/24/solid";
 
 import { cmsStyles as styles } from "../../cms/styles";
+import { richTextToPlainText } from "@/app/lib/richText";
 
 export default function EventsTable({ loading, events, clubSlug }) {
   const text = styles.eventCardText;
@@ -54,7 +55,7 @@ export default function EventsTable({ loading, events, clubSlug }) {
 
       {!loading &&
         events.map((event) => (
-          <CMSCard key={event.id} title={event.name}>
+          <CMSCard key={event.id} title={richTextToPlainText(event.name)}>
             <div
               style={{
                 display: "flex",

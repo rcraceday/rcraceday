@@ -7,6 +7,10 @@ import CMSImageUpload from "@cms/CMSImageUpload";
 import CMSButton from "@cms/CMSButton";
 import { ClearFieldButton, RemoveButton } from "@cms/CMSButtonSet";
 import { supabase } from "@/supabaseClient";
+import {
+  classAddonPhotoPath,
+  uploadClubAsset,
+} from "@/app/lib/clubAssetStorage";
 
 import OptionGroupEditor from "./OptionGroupEditor";
 import ClassAddOnRuleEditor from "./ClassAddOnRuleEditor";
@@ -50,24 +54,19 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
     }));
   };
 
-  const uploadPhoto = async (file, pathSuffix = "main") => {
-    if (!file || !event?.club_id) return null;
+  const uploadPhoto = async (file, pathSuffix = "main", previousUrl = null) => {
+    if (!file || !event?.club_slug) return null;
 
-    const safeName = file.name
-      .replace(/\s+/g, "_")
-      .replace(/[^a-zA-Z0-9_.-]/g, "");
-    const timestamp = Date.now();
     const baseId = item.id || "item";
-    const path = `${event.club_id}/merch/${baseId}_${pathSuffix}_${timestamp}_${safeName}`;
+    const objectPath = classAddonPhotoPath(event.club_slug, baseId, pathSuffix, file);
+    const { publicUrl, error } = await uploadClubAsset(supabase, {
+      objectPath,
+      file,
+      previousUrlOrPath: previousUrl,
+    });
 
-    const { error } = await supabase.storage
-      .from("club-assets")
-      .upload(path, file, { upsert: true });
-
-    if (error) return null;
-
-    const res = supabase.storage.from("club-assets").getPublicUrl(path);
-    return res?.publicURL ?? res?.data?.publicUrl ?? null;
+    if (error || !publicUrl) return null;
+    return publicUrl;
   };
 
   const saveItem = async () => {
@@ -75,7 +74,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
 
     // Main photo
     if (item.photo_file instanceof File) {
-      const url = await uploadPhoto(item.photo_file, "main");
+      const url = await uploadPhoto(item.photo_file, "main", item.photo_url);
       if (url) photoUrl = url;
     }
 
@@ -87,7 +86,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
             let vPhotoUrl = val.photo_url;
 
             if (val.photo_file instanceof File) {
-              const url = await uploadPhoto(val.photo_file, `opt_${gi}_${vi}`);
+              const url = await uploadPhoto(val.photo_file, `opt_${gi}_${vi}`, val.photo_url);
               if (url) vPhotoUrl = url;
             }
 
@@ -115,7 +114,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
       let rPhotoUrl = rule.photo_url;
 
       if (rule.photo_file instanceof File) {
-        const url = await uploadPhoto(rule.photo_file, `class_${cid}`);
+        const url = await uploadPhoto(rule.photo_file, `class_${cid}`, rule.photo_url);
         if (url) rPhotoUrl = url;
       }
 

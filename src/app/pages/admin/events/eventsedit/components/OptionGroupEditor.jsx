@@ -5,6 +5,10 @@ import CMSButton from "@cms/CMSButton";
 import { ClearFieldButton } from "@cms/CMSButtonSet";
 import CMSImageUpload from "@cms/CMSImageUpload";
 import { supabase } from "@/supabaseClient";
+import {
+  classAddonPhotoPath,
+  uploadClubAsset,
+} from "@/app/lib/clubAssetStorage";
 
 export default function OptionGroupEditor({
   group,
@@ -19,24 +23,19 @@ export default function OptionGroupEditor({
 }) {
   const [newValue, setNewValue] = useState("");
 
-  const uploadOptionPhoto = async (file) => {
-    if (!file || !event?.club_id) return null;
+  const uploadOptionPhoto = async (file, previousUrl, slot) => {
+    if (!file || !event?.club_slug) return null;
 
-    const safeName = file.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_.-]/g, "");
-    const timestamp = Date.now();
     const baseId = item?.id || "item";
-    const groupName = (group.name || "group").replace(/\s+/g, "_");
+    const objectPath = classAddonPhotoPath(event.club_slug, baseId, slot, file);
+    const { publicUrl, error } = await uploadClubAsset(supabase, {
+      objectPath,
+      file,
+      previousUrlOrPath: previousUrl,
+    });
 
-    const path = `${event.club_id}/merch/${baseId}_opt_${groupName}_${timestamp}_${safeName}`;
-
-    const { error } = await supabase.storage
-      .from("club-assets")
-      .upload(path, file, { upsert: true });
-
-    if (error) return null;
-
-    const res = supabase.storage.from("club-assets").getPublicUrl(path);
-    return res?.publicURL ?? res?.data?.publicUrl ?? null;
+    if (error || !publicUrl) return null;
+    return publicUrl;
   };
 
   const addValue = () => {
@@ -87,7 +86,8 @@ export default function OptionGroupEditor({
                   }
 
                   if (fileOrUrl instanceof File) {
-                    const url = await uploadOptionPhoto(fileOrUrl);
+                    const slot = `opt_${(group.name || "group").replace(/\s+/g, "_")}_${vi}`;
+                    const url = await uploadOptionPhoto(fileOrUrl, val.photo_url, slot);
                     onUpdateValuePhoto(vi, {
                       photo_file: null,
                       photo_url: url,

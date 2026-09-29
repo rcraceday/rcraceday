@@ -1,6 +1,7 @@
 // src/app/pages/events/EventDetailsSections/EventDetailsICS.jsx
 
 import Button from "@/components/ui/Button";
+import { richTextToPlainText } from "@/app/lib/richText";
 
 /* ===========================
    HELPERS
@@ -12,6 +13,7 @@ function formatICSDate(date) {
 }
 
 function buildICS(event) {
+  const eventTitle = richTextToPlainText(event.name);
   const lines = [];
 
   lines.push("BEGIN:VCALENDAR");
@@ -31,7 +33,7 @@ function buildICS(event) {
       lines.push(`DTSTAMP:${formatICSDate(new Date())}`);
       lines.push(`DTSTART:${formatICSDate(startDate)}`);
       lines.push(`DTEND:${formatICSDate(endDate)}`);
-      lines.push(`SUMMARY:${event.name} — ${day.label || `Day ${index + 1}`}`);
+      lines.push(`SUMMARY:${eventTitle} — ${day.label || `Day ${index + 1}`}`);
       lines.push(`LOCATION:${event.track || "Unknown Track"}`);
       if (event.description) {
         lines.push(`DESCRIPTION:${event.description.replace(/\n/g, "\\n")}`);
@@ -47,7 +49,7 @@ function buildICS(event) {
     lines.push(`DTSTAMP:${formatICSDate(new Date())}`);
     lines.push(`DTSTART:${formatICSDate(startDate)}`);
     lines.push(`DTEND:${formatICSDate(endDate)}`);
-    lines.push(`SUMMARY:${event.name}`);
+    lines.push(`SUMMARY:${eventTitle}`);
     lines.push(`LOCATION:${event.track || "Unknown Track"}`);
     if (event.description) {
       lines.push(`DESCRIPTION:${event.description.replace(/\n/g, "\\n")}`);
@@ -67,7 +69,7 @@ function downloadICS(event) {
 
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${event.name.replace(/\s+/g, "_")}.ics`;
+  a.download = `${richTextToPlainText(event.name).replace(/\s+/g, "_")}.ics`;
   a.click();
 
   URL.revokeObjectURL(url);

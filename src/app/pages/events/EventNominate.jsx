@@ -11,6 +11,8 @@ import {
   UserIcon,
 } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
+import DOMPurify from "dompurify";
+import { richTextToPlainText } from "@/app/lib/richText";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
 import Input from "@/components/ui/Input";
@@ -2215,14 +2217,24 @@ export default function EventNominate() {
                 style={{ background: palette?.surface || "#ffffff", borderColor: palette?.surfaceBorder || "#e5e7eb" }}
               >
                 {logoSrc ? (
-                  <img src={logoSrc} alt={event.name} className="w-full h-full object-contain" />
+                  <img
+                    src={logoSrc}
+                    alt={richTextToPlainText(event.name)}
+                    className="w-full h-full object-contain"
+                  />
                 ) : (
                   <div className="w-full h-full bg-[#f0f0f0]" />
                 )}
               </div>
-              <div className="font-semibold text-center leading-tight text-[18px] sm:text-[30px]" style={{ color: contentText }}>
-                {event.name}
-              </div>
+              <div
+                className="font-semibold text-center leading-tight text-[18px] sm:text-[30px]"
+                style={{ color: contentText }}
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(event.name || "", {
+                    ADD_ATTR: ["target", "rel"],
+                  }),
+                }}
+              />
             </div>
 
             <div className="mb-4 md:mb-6">

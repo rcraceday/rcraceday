@@ -59,7 +59,7 @@ export default function EditProfile() {
   const { palette } = useTheme();
   const brand = palette.primary;
 
-  const { id } = useParams();
+  const { id, clubSlug } = useParams();
   const { drivers, loadingDrivers, refreshDrivers, deleteDriver } = useDrivers();
   const { membership } = useMembership();
 
@@ -177,6 +177,7 @@ export default function EditProfile() {
             driverId: driver.id,
             file: driver.avatar_file,
             previousAvatarUrl: driver.avatar_previous_url,
+            clubOrSlug: club?.slug || clubSlug,
           }
         );
 

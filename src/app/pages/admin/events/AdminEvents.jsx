@@ -7,6 +7,7 @@ import CMSButton from "../cms/CMSButton";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import { cmsStyles } from "../cms/styles";
 import { normalizeDayRecord } from "@app/pages/admin/events/eventDefaults";
+import { richTextToPlainText } from "@/app/lib/richText";
 
 export default function AdminEvents() {
   const navigate = useNavigate();
@@ -97,7 +98,7 @@ async function loadEvents() {
 
     const newEvent = {
       ...eventFields,
-      name: `${ev.name} (Copy)`,
+      name: `${richTextToPlainText(ev.name) || "Event"} (Copy)`,
       created_at: new Date().toISOString(),
       days: Array.isArray(ev.days)
         ? ev.days.map((day) => normalizeDayRecord(day))
@@ -216,7 +217,7 @@ const formatDateTime = (iso) => {
     const q = query.toLowerCase();
 
     const matchesQuery =
-      ev.name?.toLowerCase().includes(q) ||
+      richTextToPlainText(ev.name).toLowerCase().includes(q) ||
       ev.track?.toLowerCase().includes(q);
 
     const matchesTrack =
@@ -430,7 +431,7 @@ const formatDateTime = (iso) => {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", flexDirection: "column" }}>
                           <div style={{ fontSize: 15, fontWeight: 700 }}>
-                            {ev.name}
+                            {richTextToPlainText(ev.name)}
                           </div>
 
                           <div style={{ fontSize: 13, color: "#6B7280" }}>

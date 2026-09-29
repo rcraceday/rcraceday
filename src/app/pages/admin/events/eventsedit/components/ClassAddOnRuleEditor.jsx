@@ -5,6 +5,10 @@ import CMSTextarea from "@cms/CMSTextarea";
 import CMSToggle from "@cms/CMSToggle";
 import CMSImageUpload from "@cms/CMSImageUpload";
 import { supabase } from "@/supabaseClient";
+import {
+  classAddonPhotoPath,
+  uploadClubAsset,
+} from "@/app/lib/clubAssetStorage";
 
 export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event }) {
   const rule = item.class_rules?.[cid] || {
@@ -30,23 +34,19 @@ export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event })
     }));
   };
 
-  const uploadPhoto = async (file) => {
-    if (!file || !event?.club_id) return null;
+  const uploadPhoto = async (file, previousUrl = null) => {
+    if (!file || !event?.club_slug) return null;
 
-    const safeName = file.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_.-]/g, "");
-    const timestamp = Date.now();
     const baseId = item.id || "item";
-    const suffix = `_${cid}`;
-    const path = `${event.club_id}/merch/${baseId}${suffix}_${timestamp}_${safeName}`;
+    const objectPath = classAddonPhotoPath(event.club_slug, baseId, `class_${cid}`, file);
+    const { publicUrl, error } = await uploadClubAsset(supabase, {
+      objectPath,
+      file,
+      previousUrlOrPath: previousUrl,
+    });
 
-    const { error } = await supabase.storage
-      .from("club-assets")
-      .upload(path, file, { upsert: true });
-
-    if (error) return null;
-
-    const res = supabase.storage.from("club-assets").getPublicUrl(path);
-    return res?.publicURL ?? res?.data?.publicUrl ?? null;
+    if (error || !publicUrl) return null;
+    return publicUrl;
   };
 
   return (
@@ -98,7 +98,7 @@ export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event })
       updateRule("photo_file", fileOrNull);
 
       // Upload immediately for class‑specific override
-      const url = await uploadPhoto(fileOrNull);
+      const url = await uploadPhoto(fileOrNull, rule.photo_url);
       if (url) updateRule("photo_url", url);
 
       return;

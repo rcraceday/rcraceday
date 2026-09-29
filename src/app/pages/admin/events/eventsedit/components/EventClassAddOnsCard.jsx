@@ -3,6 +3,10 @@ import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import { RemoveButton } from "@cms/CMSButtonSet";
 import { supabase } from "@/supabaseClient";
+import {
+  classAddonPhotoPath,
+  uploadClubAsset,
+} from "@/app/lib/clubAssetStorage";
 
 import ClassAddOnEditor from "./ClassAddOnEditor";
 
@@ -65,32 +69,27 @@ export default function EventClassAddOnsCard({
     onChange("class_add_ons", updated);
   };
 
-  const uploadPhoto = async (file, pathSuffix) => {
+  const uploadPhoto = async (file, pathSuffix, previousUrl) => {
     if (!file) return null;
-    if (!event?.club_id) return null;
+    if (!event?.club_slug) return null;
 
-    const safeName = file.name
-      .replace(/\s+/g, "_")
-      .replace(/[^a-zA-Z0-9_.-]/g, "");
-    const timestamp = Date.now();
-    const baseId = editingItem?.id || "addon";
-    const path = `${event.club_id}/merch/${baseId}_${pathSuffix}_${timestamp}_${safeName}`;
+    const itemId = editingItem?.id || "addon";
+    const objectPath = classAddonPhotoPath(event.club_slug, itemId, pathSuffix, file);
+    const { publicUrl, error } = await uploadClubAsset(supabase, {
+      objectPath,
+      file,
+      previousUrlOrPath: previousUrl,
+    });
 
-    const { error } = await supabase.storage
-      .from("club-assets")
-      .upload(path, file, { upsert: true });
-
-    if (error) return null;
-
-    const res = supabase.storage.from("club-assets").getPublicUrl(path);
-    return res?.publicURL ?? res?.data?.publicUrl ?? null;
+    if (error || !publicUrl) return null;
+    return publicUrl;
   };
 
   const saveItem = async (item) => {
     let photoUrl = item.photo_url;
 
     if (item.photo_file instanceof File) {
-      const url = await uploadPhoto(item.photo_file, "main");
+      const url = await uploadPhoto(item.photo_file, "main", item.photo_url);
       if (url) photoUrl = url;
     }
 
@@ -103,7 +102,8 @@ export default function EventClassAddOnsCard({
             if (val.photo_file instanceof File) {
               const url = await uploadPhoto(
                 val.photo_file,
-                `opt_${gi}_${vi}`
+                `opt_${gi}_${vi}`,
+                val.photo_url
               );
               if (url) vPhotoUrl = url;
             }
@@ -132,7 +132,7 @@ export default function EventClassAddOnsCard({
       let rPhotoUrl = rule.photo_url;
 
       if (rule.photo_file instanceof File) {
-        const url = await uploadPhoto(rule.photo_file, `class_${cid}`);
+        const url = await uploadPhoto(rule.photo_file, `class_${cid}`, rule.photo_url);
         if (url) rPhotoUrl = url;
       }
 

@@ -8,6 +8,9 @@ import CMSToggle from "@cms/CMSToggle";
 import { AddButton, DeleteButton } from "@cms/CMSButtonSet";
 import { cmsLayout } from "@cms/layout";
 import LogoPicker from "../../../components/LogoPicker";
+import { supabase } from "@/supabaseClient";
+import { eventLogoPath, removeClubAssetPath } from "@/app/lib/clubAssetStorage";
+import { clubStorageFolder } from "@/app/lib/storageLayout";
 
 
 export default function EventBasicsCard({
@@ -61,6 +64,11 @@ export default function EventBasicsCard({
         event.description?.richText ||
         "";
 
+  const safeName =
+    typeof event.name === "string"
+      ? event.name
+      : event.name?.value || event.name?.text || event.name?.richText || "";
+
   const trackOptions = tracks.map((t) => ({
     label: t.name,
     value: t.id,
@@ -74,7 +82,31 @@ export default function EventBasicsCard({
   );
 
   // Build prefix for logos so each club's logos are grouped
-  const logoPrefix = event.club_id ? `${event.club_id}/event-logos` : "";
+  const logoPrefix = event.club_slug
+    ? `${clubStorageFolder(event.club_slug)}/event-logos`
+    : "";
+
+  const releaseUnusedEventLogo = async (previousPath) => {
+    if (!previousPath || previousPath === event.logourl) return;
+    const { data: others } = await supabase
+      .from("events")
+      .select("id")
+      .eq("logourl", previousPath)
+      .neq("id", event.id || "")
+      .limit(1);
+    if (!others?.length) {
+      await removeClubAssetPath(supabase, previousPath);
+    }
+  };
+
+  const handleLogoPathChange = (filePath, publicUrl) => {
+    const previousPath = event.logourl;
+    onChange("logourl", filePath);
+    onChange("logo_preview_url", publicUrl || null);
+    if (previousPath && previousPath !== filePath) {
+      releaseUnusedEventLogo(previousPath);
+    }
+  };
 
   const isTitleEvent =
     ["state_titles", "national_titles"].includes(
@@ -95,12 +127,15 @@ export default function EventBasicsCard({
         gap: cmsLayout.spacing.lg,
       }}
     >
-      <CMSInput
-        label={requiredLabel("Event Name")}
-        value={event.name || ""}
-        onChange={(value) => onChange("name", value)}
-        required
-      />
+      <div>
+        <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
+          {requiredLabel("Event Name")}
+        </label>
+        <CMSRichTextEditor
+          value={safeName}
+          onChange={(value) => onChange("name", value)}
+        />
+      </div>
 
       <CMSToggle
         label="Multi-Day Event?"
@@ -260,15 +295,13 @@ export default function EventBasicsCard({
           prefix={logoPrefix}
           value={event.logourl || ""}
           useSignedUrls={false}
-          onSelect={(filePath, publicUrl) => {
-            // store the storage path in logourl; keep preview url separately if desired
-            onChange("logourl", filePath);
-            onChange("logo_preview_url", publicUrl || null);
-          }}
-          onUpload={(filePath, publicUrl) => {
-            onChange("logourl", filePath);
-            onChange("logo_preview_url", publicUrl || null);
-          }}
+          buildUploadPath={
+            event.club_slug && event.id
+              ? (file) => eventLogoPath(event.club_slug, event.id, file)
+              : null
+          }
+          onSelect={handleLogoPathChange}
+          onUpload={handleLogoPathChange}
         />
       </div>
 

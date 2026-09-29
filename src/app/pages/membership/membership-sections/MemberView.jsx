@@ -4,7 +4,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { canUpgradeMembershipToFamily } from "@/app/pages/profile/householdDriverLimits";
-import Card from "@/components/ui/Card";
+import {
+  CLUB_ASSETS_BUCKET,
+  clubMemberBadgePath,
+} from "@/app/lib/clubAssetStorage";
+
+function defaultMemberBadgeUrl(club) {
+  if (!club?.slug || !import.meta.env.VITE_SUPABASE_URL) return null;
+  const path = clubMemberBadgePath(club.slug, "chargers-member-badge-01.png");
+  return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${CLUB_ASSETS_BUCKET}/${path}`;
+}
 import Button from "@/components/ui/Button";
 
 export default function MemberView({ brand, club, membership }) {
@@ -67,7 +76,8 @@ export default function MemberView({ brand, club, membership }) {
           <img
             src={
               club?.member_badge_url ||
-              "https://mvcttnmclrvaatdgzhpb.supabase.co/storage/v1/object/public/club-assets/Chargers/chargers-member-badge-01.png"
+              defaultMemberBadgeUrl(club) ||
+              undefined
             }
             alt={`${club?.name} Member Badge`}
             style={{

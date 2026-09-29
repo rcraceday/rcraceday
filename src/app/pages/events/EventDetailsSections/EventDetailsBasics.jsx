@@ -1,4 +1,5 @@
 // src/app/pages/events/EventDetailsSections/EventDetailsBasics.jsx
+import { richTextToPlainText } from "@/app/lib/richText";
 
 /* ===========================
    DATE HELPERS
@@ -89,7 +90,7 @@ export default function EventDetailsBasics({ event, brand }) {
 
         {/* NAME */}
         <div className="text-xl font-bold leading-snug">
-          {event.name}
+          {richTextToPlainText(event.name)}
         </div>
 
         {/* TYPE BADGE */}

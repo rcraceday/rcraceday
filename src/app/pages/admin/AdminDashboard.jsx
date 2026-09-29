@@ -12,6 +12,7 @@ import {
 } from "@heroicons/react/24/solid";
 
 import { cmsStyles } from "@cms/styles";
+import { richTextToPlainText } from "@/app/lib/richText";
 import AdminKeyMetrics from "@app/pages/admin/components/AdminKeyMetrics";
 import {
   buildStatsForYear,
@@ -126,7 +127,9 @@ function CurrentNominationsPanel({ events, totalCount }) {
                 border: "1px solid #E5E7EB",
               }}
             >
-              <span style={{ fontSize: "14px", fontWeight: 500, color: "#111827" }}>{event.name}</span>
+              <span style={{ fontSize: "14px", fontWeight: 500, color: "#111827" }}>
+                {richTextToPlainText(event.name)}
+              </span>
               <span style={{ fontSize: "14px", fontWeight: 700, color: "#111827", whiteSpace: "nowrap" }}>
                 {event.nominationCount}
               </span>
@@ -173,7 +176,7 @@ export default function AdminDashboard() {
         .filter((event) => nominationCounts[event.id] > 0)
         .map((event) => ({
           id: event.id,
-          name: event.name || "Untitled event",
+          name: richTextToPlainText(event.name) || "Untitled event",
           nominationCount: nominationCounts[event.id],
         }));
 

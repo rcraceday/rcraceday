@@ -5,6 +5,7 @@ import {
 } from "@heroicons/react/24/solid";
 
 import { cmsStyles as styles } from "../../cms/styles";
+import { richTextToPlainText } from "@/app/lib/richText";
 
 export default function EventRow({ event, clubSlug }) {
   return (
@@ -17,7 +18,7 @@ export default function EventRow({ event, clubSlug }) {
           fontSize: "15px",
         }}
       >
-        {event.name}
+        {richTextToPlainText(event.name)}
       </td>
 
       {/* DATE */}

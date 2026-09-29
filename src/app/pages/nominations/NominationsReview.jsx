@@ -6,6 +6,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
 import useTheme from "@app/providers/useTheme";
+import { richTextToPlainText } from "@/app/lib/richText";
 import { useMembership } from "@/app/providers/MembershipProvider";
 
 function driverName(driver) {
@@ -201,7 +202,7 @@ export default function NominationsReview() {
           eventCards.map(({ event, drivers }) => (
             <Card key={event.id} className="p-4 space-y-4">
               <h2 className="font-semibold text-lg leading-tight" style={{ color: contentText }}>
-                {event.name}
+                {richTextToPlainText(event.name)}
               </h2>
 
               <div className="space-y-4">

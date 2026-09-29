@@ -21,6 +21,7 @@ import EventRequirementsCard from "./components/EventRequirementsCard";
 import EventPreviewModal from "./components/EventPreviewModal";
 
 import { cmsStyles } from "@cms/styles";
+import { isRichTextEmpty } from "@/app/lib/richText";
 import {
   applyEventTypeDefaults,
   applyNominationsFromTypeDefaults,
@@ -46,6 +47,7 @@ function isoToDatetimeLocal(value) {
 const initialEventState = {
   id: null,
   club_id: null,
+  club_slug: null,
   name: "",
   description: "",
   event_type: "",
@@ -110,6 +112,7 @@ export default function AdminEventEdit() {
           setEventData((prev) => ({
             ...prev,
             club_id: data.id,
+            club_slug: clubSlug,
           }));
         }
       } catch {}
@@ -176,6 +179,7 @@ const normalizedDays = Array.isArray(data.days)
         setEventData({
           ...initialEventState,
           ...data,
+          club_slug: clubSlug,
           nominations_open: isoToDatetimeLocal(data.nominations_open),
           nominations_close: isoToDatetimeLocal(data.nominations_close),
           late_entries_enabled: !!data.late_entries_enabled,
@@ -622,7 +626,7 @@ const payload = {
 
   // VALIDATION
   const validateEvent = () => {
-    if (!eventData.name) return "Event name is required.";
+    if (isRichTextEmpty(eventData.name)) return "Event name is required.";
     if (!eventData.event_type) return "Event type is required.";
     if (!eventData.track) return "Track is required.";
 

@@ -1,86 +1,97 @@
-export const DRIVER_AVATARS_BUCKET = "driver-avatars";
-
-const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
-
-export function getDriverAvatarStoragePathFromUrl(url) {
-  if (!url || typeof url !== "string") return null;
-  if (url.startsWith("blob:")) return null;
-
-  const marker = `/${DRIVER_AVATARS_BUCKET}/`;
-  const markerIndex = url.indexOf(marker);
-  if (markerIndex === -1) return null;
-
-  return decodeURIComponent(
-    url.slice(markerIndex + marker.length).split("?")[0]
-  );
-}
-
-export function getDriverAvatarExtension(file) {
-  if (!file) return "jpg";
-
-  const fromName = file.name?.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  if (fromName && ALLOWED_EXTENSIONS.has(fromName)) {
-    return fromName === "jpeg" ? "jpg" : fromName;
-  }
-
-  const type = file.type?.toLowerCase() || "";
-  if (type.includes("png")) return "png";
-  if (type.includes("gif")) return "gif";
-  if (type.includes("webp")) return "webp";
-  return "jpg";
-}
-
-export function getDriverAvatarObjectPath(driverId, file) {
-  const ext = getDriverAvatarExtension(file);
-  return `${driverId}.${ext}`;
-}
-
-export async function removeDriverAvatarFromStorage(supabase, avatarUrl) {
-  const path = getDriverAvatarStoragePathFromUrl(avatarUrl);
-  if (!path) return { error: null };
-
-  const { error } = await supabase.storage
-    .from(DRIVER_AVATARS_BUCKET)
-    .remove([path]);
-
-  if (error) {
-    console.warn("[driverAvatarStorage] remove failed (non-blocking):", path, error);
-  }
-
-  return { error: null };
-}
-
-export async function uploadDriverAvatar(supabase, { driverId, file, previousAvatarUrl }) {
-  if (!driverId || !file) {
-    return { publicUrl: null, error: new Error("Missing driver or file") };
-  }
-
-  const filePath = getDriverAvatarObjectPath(driverId, file);
-  const previousPath = getDriverAvatarStoragePathFromUrl(previousAvatarUrl);
-
-  const { error: uploadError } = await supabase.storage
-    .from(DRIVER_AVATARS_BUCKET)
-    .upload(filePath, file, { upsert: true, cacheControl: "3600" });
-
-  if (uploadError) {
-    return { publicUrl: null, error: uploadError };
-  }
-
-  if (previousPath && previousPath !== filePath) {
-    await supabase.storage.from(DRIVER_AVATARS_BUCKET).remove([previousPath]);
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from(DRIVER_AVATARS_BUCKET)
-    .getPublicUrl(filePath);
-
-  const baseUrl = publicUrlData?.publicUrl;
-  if (!baseUrl) {
-    return { publicUrl: null, error: new Error("Public URL missing after upload") };
-  }
-
-  return {
-    publicUrl: `${baseUrl}?v=${Date.now()}`,
-    error: null,
-  };
-}
+import {
+  CLUB_ASSETS_BUCKET,
+  driverAvatarPath,
+  getClubAssetPathFromUrl,
+  removeClubAssetPath,
+  uploadClubAsset,
+} from "@/app/lib/clubAssetStorage";
+
+/** @deprecated Legacy bucket; new uploads use club-assets/{slug}/drivers/ */
+export const LEGACY_DRIVER_AVATARS_BUCKET = "driver-avatars";
+
+export const DRIVER_AVATARS_BUCKET = CLUB_ASSETS_BUCKET;
+
+export function getLegacyDriverAvatarPathFromUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  if (url.startsWith("blob:")) return null;
+
+  const marker = `/${LEGACY_DRIVER_AVATARS_BUCKET}/`;
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex === -1) return null;
+
+  return decodeURIComponent(
+    url.slice(markerIndex + marker.length).split("?")[0]
+  );
+}
+
+export function getDriverAvatarStoragePathFromUrl(url) {
+  return getClubAssetPathFromUrl(url) || getLegacyDriverAvatarPathFromUrl(url);
+}
+
+export function getDriverAvatarObjectPath(driverId, file, clubOrSlug) {
+  return driverAvatarPath(clubOrSlug, driverId, file);
+}
+
+export async function removeDriverAvatarFromStorage(supabase, avatarUrl) {
+  const clubPath = getClubAssetPathFromUrl(avatarUrl);
+  if (clubPath) {
+    return removeClubAssetPath(supabase, avatarUrl);
+  }
+
+  const legacyPath = getLegacyDriverAvatarPathFromUrl(avatarUrl);
+  if (!legacyPath) return { error: null };
+
+  const { error } = await supabase.storage
+    .from(LEGACY_DRIVER_AVATARS_BUCKET)
+    .remove([legacyPath]);
+
+  if (error) {
+    console.warn("[driverAvatarStorage] legacy remove failed (non-blocking):", legacyPath, error);
+  }
+
+  return { error: null };
+}
+
+export async function uploadDriverAvatar(
+  supabase,
+  { driverId, file, previousAvatarUrl, clubOrSlug }
+) {
+  if (!driverId || !file) {
+    return { publicUrl: null, error: new Error("Missing driver or file") };
+  }
+
+  const objectPath = getDriverAvatarObjectPath(driverId, file, clubOrSlug);
+
+  const { publicUrl, error: uploadError } = await uploadClubAsset(supabase, {
+    objectPath,
+    file,
+    previousUrlOrPath: previousAvatarUrl,
+    cacheBust: true,
+  });
+
+  if (uploadError) {
+    return { publicUrl: null, error: uploadError };
+  }
+
+  const { error: verifyError } = await supabase.storage
+    .from(CLUB_ASSETS_BUCKET)
+    .download(objectPath);
+
+  if (verifyError) {
+    console.error(
+      "[driverAvatarStorage] upload reported success but object missing:",
+      objectPath,
+      verifyError
+    );
+    return {
+      publicUrl: null,
+      error: new Error(
+        verifyError.message ||
+          "Photo upload did not appear in storage. Check club-assets policies for driver photos."
+      ),
+    };
+  }
+
+  return { publicUrl, error: null };
+}
+

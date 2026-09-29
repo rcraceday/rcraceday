@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
 import { supabase } from "@/supabaseClient";
+import { uploadClubAsset } from "@/app/lib/clubAssetStorage";
 
 /**
  * LogoPicker
@@ -19,6 +20,7 @@ import { supabase } from "@/supabaseClient";
  * - onUpload(filePath, publicUrl) called after a successful upload
  * - pageSize number optional default 24
  * - useSignedUrls boolean optional default false
+ * - buildUploadPath function optional — stable object path (uses uploadClubAsset when set)
  */
 export default function LogoPicker({
   bucketName = "logos",
@@ -28,6 +30,7 @@ export default function LogoPicker({
   onUpload = () => {},
   pageSize = 24,
   useSignedUrls = false,
+  buildUploadPath = null,
 }) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -135,21 +138,41 @@ export default function LogoPicker({
     if (!file) return;
     setUploading(true);
     try {
-      const timestamp = Date.now();
-      const safeName = file.name.replace(/\s+/g, "_");
-      const filePath = buildPath(`${timestamp}_${safeName}`);
+      let filePath;
+      let url;
 
-      const { error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file, { cacheControl: "3600", upsert: false });
+      if (typeof buildUploadPath === "function") {
+        filePath = buildUploadPath(file);
+        const { publicUrl, error } = await uploadClubAsset(supabase, {
+          objectPath: filePath,
+          file,
+          previousUrlOrPath: value,
+          cacheBust: !useSignedUrls,
+        });
+        if (error || !publicUrl) {
+          console.error("LogoPicker upload error", error);
+          setUploading(false);
+          return;
+        }
+        url = useSignedUrls ? await getUrlFor(filePath) : publicUrl;
+      } else {
+        const timestamp = Date.now();
+        const safeName = file.name.replace(/\s+/g, "_");
+        filePath = buildPath(`${timestamp}_${safeName}`);
 
-      if (error) {
-        console.error("LogoPicker upload error", error);
-        setUploading(false);
-        return;
+        const { error } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, { cacheControl: "3600", upsert: false });
+
+        if (error) {
+          console.error("LogoPicker upload error", error);
+          setUploading(false);
+          return;
+        }
+
+        url = await getUrlFor(filePath);
       }
 
-      const url = await getUrlFor(filePath);
       if (modalOpen) await listFiles();
       onUpload(filePath, url);
       onSelect(filePath, url);
