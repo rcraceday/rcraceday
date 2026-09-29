@@ -4,6 +4,7 @@ import rcracedayLogo from "@/assets/rcraceday_logo.png";
 import { supabase } from "@/supabaseClient";
 
 import HamburgerMenu from "@/components/ui/HamburgerMenu";
+import ClubMessagesNavLink from "@/components/ui/ClubMessagesNavLink";
 import { buildAdminMenuItems } from "./adminMenuItems";
 
 export default function AdminTopBar() {
@@ -83,7 +84,8 @@ export default function AdminTopBar() {
           </div>
 
           {/* RIGHT: Admin menu */}
-          <div className="hidden md:flex items-center justify-end gap-4">
+          <div className="hidden md:flex items-center justify-end gap-1 shrink-0">
+            <ClubMessagesNavLink variant="admin" />
             <HamburgerMenu
               clubSlug={clubSlug}
               adminItems={adminItems}
@@ -92,7 +94,8 @@ export default function AdminTopBar() {
             />
           </div>
 
-          <div className="flex md:hidden items-center justify-end pr-4">
+          <div className="flex md:hidden items-center justify-end gap-1 pr-2 shrink-0">
+            <ClubMessagesNavLink variant="admin" />
             <HamburgerMenu
               clubSlug={clubSlug}
               adminItems={adminItems}

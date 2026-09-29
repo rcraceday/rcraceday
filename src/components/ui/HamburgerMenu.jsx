@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
+import { useClub } from "@/app/providers/ClubProvider";
+import { useMembership } from "@/app/providers/MembershipProvider";
 import useTheme from "@/app/providers/useTheme";
+import { useClubMessageUnreadCount } from "@/app/hooks/useClubMessageUnreadCount";
 
 import DesktopDropdown from "@/components/ui/DesktopDropdown";
 import MobileDrawer from "@/components/ui/MobileDrawer";
@@ -23,11 +26,21 @@ export default function HamburgerMenu({
   const primaryColor = palette?.primary || "#00438a";
 
   const isAdminUser = profile?.role === "admin";
+  const { club } = useClub();
+  const { membership } = useMembership();
+  const messageAudience = isAdmin ? "admin" : "member";
+  const { unreadCount: messageUnreadCount } = useClubMessageUnreadCount({
+    clubId: club?.id,
+    membershipId: membership?.id,
+    audience: messageAudience,
+  });
 
-  // If adminItems are provided (admin header) use them,
-  // otherwise fall back to the normal user menu.
-  const items =
-    adminItems ?? buildMenuItems({ clubSlug, isAdmin: isAdminUser, user });
+  const items = useMemo(() => {
+    const base = adminItems ?? buildMenuItems({ clubSlug, isAdmin: isAdminUser, user });
+    return base.map((item) =>
+      item.messagesMenu ? { ...item, unreadCount: messageUnreadCount } : item
+    );
+  }, [adminItems, clubSlug, isAdminUser, user, messageUnreadCount]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);

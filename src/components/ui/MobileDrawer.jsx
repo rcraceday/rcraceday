@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import useTheme from "@/app/providers/useTheme";
+import MenuUnreadBadge from "@/components/ui/MenuUnreadBadge";
 
 export default function MobileDrawer({
   open,
@@ -77,7 +78,13 @@ export default function MobileDrawer({
                     : { color: primaryColor }
                 }
               />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              <MenuUnreadBadge
+                count={item.unreadCount}
+                accentColor={
+                  isAdmin && !item.usePrimaryColor ? accentColor : primaryColor
+                }
+              />
             </Link>
           );
         })}

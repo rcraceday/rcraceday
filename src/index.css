@@ -253,6 +253,11 @@ a:hover {
   transform: translateY(0);
 }
 
+.avatar-dropdown-left {
+  left: 0;
+  right: auto;
+}
+
 .avatar-dropdown nav a {
   display: block;
   padding: 10px 14px;

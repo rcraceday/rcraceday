@@ -10,6 +10,7 @@ import {
   Cog6ToothIcon,
   ShieldCheckIcon,
   ArrowRightOnRectangleIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/solid";
 
 export function buildMenuItems({ clubSlug, isAdmin, user }) {
@@ -33,6 +34,12 @@ export function buildMenuItems({ clubSlug, isAdmin, user }) {
       label: "My Noms",
       icon: UserPlusIcon,
       to: `/${clubSlug}/app/nominations`,
+    },
+    {
+      label: "Messages",
+      icon: ChatBubbleLeftRightIcon,
+      to: `/${clubSlug}/app/messages`,
+      messagesMenu: true,
     },
     {
       label: "Driver Manager",

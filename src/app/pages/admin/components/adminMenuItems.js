@@ -7,6 +7,7 @@ import {
   Cog6ToothIcon,
   ArchiveBoxIcon,
   HomeIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/solid";
 
 export function buildAdminMenuItems({ clubSlug }) {
@@ -25,6 +26,12 @@ export function buildAdminMenuItems({ clubSlug }) {
       label: "Nominations",
       icon: UserPlusIcon,
       to: `/${clubSlug}/app/admin/nominations`,
+    },
+    {
+      label: "Messages",
+      icon: ChatBubbleLeftRightIcon,
+      to: `/${clubSlug}/app/admin/messages`,
+      messagesMenu: true,
     },
     {
       label: "Membership",

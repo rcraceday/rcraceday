@@ -11,6 +11,7 @@ import {
   classMeetsMinimumEntryCount,
   eventClassMinimumEntries,
 } from "@app/pages/nominations/classMinimumEntries";
+import { richTextToPlainText } from "@/app/lib/richText";
 
 function driverName(driver) {
   return [driver?.first_name, driver?.last_name].filter(Boolean).join(" ").trim();
@@ -273,7 +274,7 @@ export default function NominationsView() {
           className="text-center text-lg font-semibold leading-tight px-2"
           style={{ color: contentText }}
         >
-          {event?.name || "Event"}
+          {richTextToPlainText(event?.name).replace(/\s+/g, " ") || "Event"}
         </h2>
 
         <Card className="p-3 space-y-3 !text-text-base">

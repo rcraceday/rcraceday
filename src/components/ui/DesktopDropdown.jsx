@@ -2,6 +2,7 @@
 import { Link } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import useTheme from "@/app/providers/useTheme";
+import MenuUnreadBadge from "@/components/ui/MenuUnreadBadge";
 
 export default function DesktopDropdown({
   open,
@@ -63,7 +64,13 @@ export default function DesktopDropdown({
                     : { color: primaryColor }
                 }
               />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              <MenuUnreadBadge
+                count={item.unreadCount}
+                accentColor={
+                  isAdmin && !item.usePrimaryColor ? accentColor : primaryColor
+                }
+              />
             </Link>
           );
         })}

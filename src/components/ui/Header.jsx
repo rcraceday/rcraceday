@@ -5,6 +5,7 @@ import { useProfile } from "@/app/providers/ProfileProvider";
 import useTheme from "@/app/providers/useTheme";
 import AvatarMenu from "@/components/ui/AvatarMenu";
 import HamburgerMenu from "@/components/ui/HamburgerMenu";
+import ClubMessagesNavLink from "@/components/ui/ClubMessagesNavLink";
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
 
 export default function Header({ hideMenu }) {
@@ -29,7 +30,7 @@ export default function Header({ hideMenu }) {
             md:grid md:grid-cols-3 md:items-center md:py-0 md:h-24
           "
         >
-          <div className="flex items-center">
+          <div className="flex items-center gap-2 shrink-0">
             <Link to="/" className="flex items-center">
               <img
                 src={rcracedayLogo}
@@ -37,6 +38,9 @@ export default function Header({ hideMenu }) {
                 className="h-8 md:h-10 w-auto object-contain cursor-pointer transition-transform hover:scale-[1.03] hover:drop-shadow-sm"
               />
             </Link>
+            {!hideMenu && user && (
+              <AvatarMenu isAdmin={isAdmin} variant="header" />
+            )}
           </div>
 
           <div className="flex items-center justify-center md:justify-center px-1 md:px-0">
@@ -53,12 +57,13 @@ export default function Header({ hideMenu }) {
 
           {!hideMenu && user && (
             <>
-              <div className="hidden md:flex items-center justify-end gap-4">
-                <AvatarMenu isAdmin={isAdmin} />
+              <div className="hidden md:flex items-center justify-end gap-1 shrink-0">
+                <ClubMessagesNavLink variant="user" />
                 <HamburgerMenu clubSlug={clubSlug} />
               </div>
 
-              <div className="flex md:hidden items-center justify-end pr-4">
+              <div className="flex md:hidden items-center justify-end gap-1 pr-2 shrink-0">
+                <ClubMessagesNavLink variant="user" />
                 <HamburgerMenu clubSlug={clubSlug} showAvatarInside />
               </div>
             </>

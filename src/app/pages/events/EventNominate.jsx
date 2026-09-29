@@ -9,6 +9,7 @@ import {
   ShoppingBagIcon,
   PlusCircleIcon,
   UserIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
 import DOMPurify from "dompurify";
@@ -18,8 +19,11 @@ import PageTitle from "@/components/ui/PageTitle";
 import Input from "@/components/ui/Input";
 import FilterDropdown from "@/components/ui/FilterDropdown";
 import TransponderCombobox from "@/components/ui/TransponderCombobox";
+import Textarea from "@/components/ui/Textarea";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { sendMemberClubMessage } from "@/app/lib/clubMessages";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import useTheme from "@app/providers/useTheme";
 import { calculateUserPricing } from "@app/pages/events/events-sections/calculatePricing";
@@ -699,6 +703,8 @@ export default function EventNominate() {
   const [paidBreakdownSnapshot, setPaidBreakdownSnapshot] = useState([]);
   const [accountCreditBalance, setAccountCreditBalance] = useState(0);
   const paidSnapshotCapturedRef = useRef(false);
+  const [clubMessageNote, setClubMessageNote] = useState("");
+  const { user } = useAuth();
 
   const logoSrc = event?.logourl
     ? event.logourl.startsWith("http")
@@ -741,9 +747,7 @@ export default function EventNominate() {
         setTrackName("");
       }
 
-      const eventClassIds = eventRow?.is_multi_day
-        ? (eventRow.classes_by_day || []).flatMap((day) => day.classes || []).filter(Boolean)
-        : (eventRow?.classes || []).filter(Boolean);
+      const eventClassIds = getAllEventAssignedClassIds(eventRow);
       const eventClassIdSet = new Set(eventClassIds);
 
       let trackIds = [];
@@ -1720,21 +1724,42 @@ export default function EventNominate() {
         const isPref = preferenceMap[entry.classId] === true;
         return !(isPref && !chargePrefs);
       });
-      const hasRacing = billable.some((entry) => !entry.isPractice && !entry.openPractice);
-      const hasPractice = billable.some((entry) => entry.isPractice || entry.openPractice);
-      if (hasRacing) {
+      const entryPrice = Math.max(0, Number(pricing.global?.[membershipType] || 0));
+      const practiceUnit = pricing.global?.practice?.[membershipType];
+      billable.forEach((entry) => {
+        if (entry?.openPractice) {
+          const amount =
+            practiceUnit != null && practiceUnit !== "" ? Math.max(0, Number(practiceUnit)) : 0;
+          rows.push({ kind: "class", driverId: driver.id, label: "Open practice day", amount, dayIndex: entry.dayIndex });
+          return;
+        }
+        const classId = entry?.classId;
+        if (!classId) return;
+        if (entry.isPractice) {
+          const amount =
+            practiceUnit != null && practiceUnit !== "" ? Math.max(0, Number(practiceUnit)) : 0;
+          rows.push({
+            kind: "class",
+            driverId: driver.id,
+            classId,
+            dayIndex: entry.dayIndex,
+            slotIndex: entry.slotIndex,
+            label: `${classMap.get(classId) || classId} (practice)`,
+            amount,
+          });
+          return;
+        }
+        const suffix = preferenceMap[classId] ? " (preference)" : "";
         rows.push({
           kind: "fee",
-          label: "Event entry",
-          amount: Math.max(0, Number(pricing.global?.[membershipType] || 0)),
+          driverId: driver.id,
+          classId,
+          dayIndex: entry.dayIndex,
+          slotIndex: entry.slotIndex,
+          label: `Event entry${classMap.get(classId) ? ` — ${classMap.get(classId)}` : ""}${suffix}`,
+          amount: entryPrice,
         });
-      }
-      if (hasPractice) {
-        const practicePrice = pricing.global?.practice?.[membershipType];
-        if (practicePrice != null && practicePrice !== "") {
-          rows.push({ label: "Practice", amount: Math.max(0, Number(practicePrice)) });
-        }
-      }
+      });
     }
 
     const appendPreferenceRow = (classId) => {
@@ -1752,6 +1777,8 @@ export default function EventNominate() {
             (entry) => entry?.classId && !entry.isPractice && !entry.openPractice && !(preferenceMap[entry.classId] && !chargePrefs)
           ).length;
           amount = racingCount === 0 ? Math.max(0, Number(tier.first_class || 0)) : Math.max(0, Number(tier.additional_class || 0));
+        } else if (mode === "per_entry") {
+          amount = Math.max(0, Number(pricing.global?.[membershipType] || 0));
         }
       }
         rows.push({
@@ -2056,6 +2083,20 @@ export default function EventNominate() {
     if (driverClassesToUpdate.length > 0) {
       const { error: upsertError } = await supabase.from("driver_classes").upsert(driverClassesToUpdate, { onConflict: ["driver_id", "class_id"] });
       if (upsertError) console.error("Error upserting transponder numbers:", upsertError);
+    }
+
+    if (!entryError && clubMessageNote.trim()) {
+      const messageClubId = event?.club_id ?? club?.id;
+      const { error: messageError } = await sendMemberClubMessage({
+        clubId: messageClubId,
+        membershipId: membership.id,
+        eventId,
+        body: clubMessageNote.trim(),
+        senderUserId: user?.id,
+      });
+      if (messageError) {
+        console.error("Error sending club message:", messageError);
+      }
     }
 
     setSaving(false);
@@ -3034,6 +3075,20 @@ export default function EventNominate() {
                     </label>
                   </div>
                 )}
+
+                <Section title="Message to club" icon={ChatBubbleLeftRightIcon} brand={brand}>
+                  <p className="text-sm text-text-muted mb-3">
+                    Optional. Sent with your nomination. You can continue the conversation anytime from{" "}
+                    <span className="font-medium">Messages</span> in the menu.
+                  </p>
+                  <Textarea
+                    label="Note for the club"
+                    value={clubMessageNote}
+                    onChange={(e) => setClubMessageNote(e.target.value)}
+                    rows={4}
+                    placeholder="Questions, special requests, or anything the club should know…"
+                  />
+                </Section>
 
                 <Section title="Payment" icon={BanknotesIcon} brand={brand}>
                   <div className="rounded-md p-4 space-y-3" style={{ background: palette?.surfaceAlt || "#f9fafb", border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}` }}>

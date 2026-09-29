@@ -68,6 +68,7 @@ const initialEventState = {
   preference_enabled: true,
   nominations_open: "",
   nominations_close: "",
+  notify_nominations_open: false,
   member_price: "",
   non_member_price: "",
   junior_price: "",
@@ -184,6 +185,7 @@ const normalizedDays = Array.isArray(data.days)
           nominations_open: isoToDatetimeLocal(data.nominations_open),
           nominations_close: isoToDatetimeLocal(data.nominations_close),
           late_entries_enabled: !!data.late_entries_enabled,
+          notify_nominations_open: !!data.notify_nominations_open,
           late_fee_activation: isoToDatetimeLocal(data.late_fee_activation),
           late_entries_close: isoToDatetimeLocal(data.late_entries_close),
           days: normalizedDays,
@@ -405,10 +407,19 @@ const normalizedDays = Array.isArray(data.days)
 
   // CLASSES CHANGE HANDLER
   const handleClassesChange = (classesByDay) => {
-    setEventData((prev) => ({
-      ...prev,
-      classes_by_day: classesByDay,
-    }));
+    setEventData((prev) => {
+      const next = {
+        ...prev,
+        classes_by_day: classesByDay,
+      };
+      if (!prev.is_multi_day) {
+        const dayClasses = Array.isArray(classesByDay?.[0]?.classes)
+          ? classesByDay[0].classes
+          : [];
+        next.classes = dayClasses;
+      }
+      return next;
+    });
   };
 
   // DELETE HANDLER
@@ -542,11 +553,14 @@ const payload = {
   nominations_open: normalizeDate(eventData.nominations_open),
   nominations_close: normalizeDate(eventData.nominations_close),
   late_entries_enabled: !!eventData.late_entries_enabled,
+  notify_nominations_open: !!eventData.notify_nominations_open,
   late_fee_activation: normalizeDate(eventData.late_fee_activation),
   late_entries_close: normalizeDate(eventData.late_entries_close),
 
   classes_by_day: normalizedClassesByDay,
-  classes: eventData.is_multi_day ? [] : eventData.classes ?? [],
+  classes: eventData.is_multi_day
+    ? []
+    : normalizedClassesByDay[0]?.classes ?? eventData.classes ?? [],
   class_entry_limits: eventData.class_entry_limits ?? {},
   class_minimum_entries:
     eventData.class_minimum_entries == null || eventData.class_minimum_entries === ""

@@ -73,22 +73,18 @@ export function calculateUserPricing({
       return !(isPref && !chargePrefs);
     });
 
-    const hasRacing = billable.some(
-      (entry) => !entry.isPractice && !entry.openPractice
-    );
-    const hasPractice = billable.some(
-      (entry) => entry.isPractice || entry.openPractice
-    );
+    const entryPrice = Math.max(0, Number(pricing.global?.[membershipType] || 0));
+    const practiceUnit = pricing.global?.practice?.[membershipType];
 
-    if (hasRacing) {
-      total += Math.max(0, Number(pricing.global?.[membershipType] || 0));
-    }
-
-    if (hasPractice) {
-      const practicePrice = pricing.global?.practice?.[membershipType];
-      if (practicePrice != null && practicePrice !== "") {
-        total += Math.max(0, Number(practicePrice));
+    for (const entry of billable) {
+      if (entry?.openPractice || entry?.isPractice) {
+        if (practiceUnit != null && practiceUnit !== "") {
+          total += Math.max(0, Number(practiceUnit));
+        }
+        continue;
       }
+      if (!entry?.classId) continue;
+      total += entryPrice;
     }
   }
 

@@ -38,6 +38,16 @@ export default function EventNominationsCard({ event = {}, onChange }) {
         </div>
       </div>
 
+      <CMSToggle
+        label="Notify when nominations open"
+        checked={!!event.notify_nominations_open}
+        onChange={(v) => update("notify_nominations_open", v)}
+      />
+      <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
+        Sends in-app and email to members when nominations open, even if they turned notifications off in
+        settings.
+      </p>
+
       {/* LATE ENTRIES */}
       <div style={{ display: "flex", flexDirection: "column", gap: cmsLayout.spacing.md }}>
         <CMSToggle
