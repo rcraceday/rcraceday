@@ -1,5 +1,6 @@
 import {
   formatMetricsCurrency,
+  getCalendarYear,
 } from "@app/pages/admin/adminDashboardMetrics";
 
 const METRICS_MEMBERSHIP_GRID_STYLE = {
@@ -94,7 +95,13 @@ function MetricsGroup({ title, children, gridStyle = METRICS_GRID_STYLE }) {
   );
 }
 
-export default function AdminKeyMetrics({ stats, showMembership = true }) {
+export default function AdminKeyMetrics({
+  stats,
+  showMembership = true,
+  metricsYear = getCalendarYear(),
+}) {
+  const eventsYearLabel = `${metricsYear} Events`;
+
   return (
     <>
       {showMembership ? (
@@ -108,15 +115,15 @@ export default function AdminKeyMetrics({ stats, showMembership = true }) {
               value={stats.membership.totalMembers}
             />
             <StatCard
-              label="Adult Memberships"
+              label="Adult Members"
               value={stats.membership.adult}
             />
             <StatCard
-              label="Family Memberships"
+              label="Family Members"
               value={stats.membership.family}
             />
             <StatCard
-              label="Junior Memberships"
+              label="Junior Members"
               value={stats.membership.junior}
             />
             <StatCard
@@ -135,11 +142,11 @@ export default function AdminKeyMetrics({ stats, showMembership = true }) {
       ) : null}
 
       <MetricsGroup title="Event Metrics">
-        <StatCard label="Total Events" value={stats.events.total} />
-        <StatCard label="Modern Track" value={stats.events.modern} />
-        <StatCard label="Dirt Track" value={stats.events.dirt} />
-        <StatCard label="Events Cancelled" value={stats.events.cancelled} />
-        <StatCard label="Events Remaining" value={stats.events.remaining} />
+        <StatCard label={eventsYearLabel} value={stats.events.total} />
+        <StatCard label="Modern" value={stats.events.modern} />
+        <StatCard label="Dirt" value={stats.events.dirt} />
+        <StatCard label="Cancelled" value={stats.events.cancelled} />
+        <StatCard label="Remaining" value={stats.events.remaining} />
       </MetricsGroup>
 
       <MetricsGroup title="Nomination Metrics">

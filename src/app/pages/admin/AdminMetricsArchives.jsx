@@ -164,7 +164,11 @@ export default function AdminMetricsArchives() {
               >
                 {selectedYear} Metrics
               </h2>
-              <AdminKeyMetrics stats={stats} showMembership={false} />
+              <AdminKeyMetrics
+                stats={stats}
+                showMembership={false}
+                metricsYear={selectedYear}
+              />
             </section>
           </>
         )}

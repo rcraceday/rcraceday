@@ -224,7 +224,7 @@ export default function AdminDashboard() {
             Event and nomination figures are for the {metricsYear} calendar year and reset on January 1.
           </p>
 
-          <AdminKeyMetrics stats={stats} />
+          <AdminKeyMetrics stats={stats} metricsYear={metricsYear} />
 
           <div style={{ width: "100%", marginTop: "12px" }}>
             <CurrentNominationsPanel
