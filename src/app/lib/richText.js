@@ -1,3 +1,12 @@
+import DOMPurify from "dompurify";
+
+const SANITIZE_OPTIONS = { ADD_ATTR: ["target", "rel"] };
+
+/** Safe HTML for read-only rich text (names, descriptions). */
+export function sanitizeRichTextHtml(html) {
+  return DOMPurify.sanitize(html || "", SANITIZE_OPTIONS);
+}
+
 /** Strip HTML to plain text for labels, alt text, and validation. */
 export function richTextToPlainText(html) {
   if (html == null || html === "") return "";

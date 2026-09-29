@@ -94,6 +94,7 @@ export default function AdminEventEdit() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
   const [publishPromptOpen, setPublishPromptOpen] = useState(false);
 
   // LOAD CLUB FOR NEW EVENT
@@ -480,8 +481,11 @@ const normalizedDays = Array.isArray(data.days)
     handleSave(true);
   };
 
-  const handleSave = async (isPublished = eventData.is_published) => {
-    if (saving) return;
+  const handleSave = async (
+    isPublished = eventData.is_published,
+    { navigateAfter = true } = {}
+  ) => {
+    if (saving) return false;
     setPublishPromptOpen(false);
     setSaving(true);
     setError(null);
@@ -492,7 +496,7 @@ const normalizedDays = Array.isArray(data.days)
     if (err) {
       setError(err);
       setSaving(false);
-      return;
+      return false;
     }
 
     const finalLogoUrl =
@@ -606,22 +610,34 @@ const payload = {
       if (res.error) {
         setError(res.error.message || "Failed to save event.");
         setSaving(false);
-        return;
+        return false;
       }
 
       if (!res.data) {
         setError("Save completed but no event was returned.");
         setSaving(false);
-        return;
+        return false;
       }
 
       setEventData(res.data);
       setSaving(false);
-      navigate(`/${clubSlug}/app/admin/events`);
+      if (navigateAfter) {
+        navigate(`/${clubSlug}/app/admin/events`);
+      }
+      return true;
     } catch {
       setError("Unexpected error saving event.");
       setSaving(false);
+      return false;
     }
+  };
+
+  const handlePreview = async () => {
+    if (isNew || saving) return;
+    const saved = await handleSave(eventData.is_published, { navigateAfter: false });
+    if (!saved) return;
+    setPreviewRefreshKey(Date.now());
+    setPreviewOpen(true);
   };
 
   // VALIDATION
@@ -758,14 +774,11 @@ if (eventData.is_multi_day) {
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <CMSButton
                 variant="primary"
-                disabled={isNew}
-                onClick={() => {
-                  if (isNew) return;
-                  setPreviewOpen(true);
-                }}
+                disabled={isNew || saving}
+                onClick={handlePreview}
                 style={{ width: "100%", justifyContent: "center" }}
               >
-                Preview Event
+                {saving ? "Saving…" : "Preview Event"}
               </CMSButton>
 
               <SaveActions
@@ -783,6 +796,7 @@ if (eventData.is_multi_day) {
           <EventPreviewModal
             clubSlug={clubSlug}
             eventId={id}
+            refreshKey={previewRefreshKey}
             onClose={() => setPreviewOpen(false)}
           />
         )}

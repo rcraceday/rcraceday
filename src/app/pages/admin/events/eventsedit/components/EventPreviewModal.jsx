@@ -1,7 +1,7 @@
 import CMSButton from "@cms/CMSButton";
 
-export default function EventPreviewModal({ clubSlug, eventId, onClose }) {
-  const previewUrl = `/${clubSlug}/app/events/${eventId}`;
+export default function EventPreviewModal({ clubSlug, eventId, refreshKey = 0, onClose }) {
+  const previewUrl = `/${clubSlug}/app/events/${eventId}?_preview=${refreshKey || Date.now()}`;
 
   return (
     <div
