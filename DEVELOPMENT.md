@@ -28,7 +28,9 @@ These values come from your Supabase project settings. Generate VAPID keys with 
 
 **Edge Functions** (`process-nominations-open`, `send-web-push`): each folder includes its own `web_push.ts` (Supabase bundles one function at a time and does not ship `../_shared`). Deploy with CLI from the repo root:
 
-`supabase functions deploy process-nominations-open` and `supabase functions deploy send-web-push`
+`supabase functions deploy process-nominations-open --no-verify-jwt` and `supabase functions deploy send-web-push`
+
+If the admin UI shows **Failed to send a request to the Edge Function**, redeploy with `--no-verify-jwt` (auth is enforced inside the function), confirm `VITE_SUPABASE_URL` matches the project where functions were deployed, and check the browser Network tab for `/functions/v1/process-nominations-open`.
 
 ▶️ Running the App Locally
 Start the Vite dev server:

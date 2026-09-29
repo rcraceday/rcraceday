@@ -15,3 +15,15 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/lookup-membership/deno.json"
 entrypoint = "./functions/lookup-membership/index.ts"
+[functions.process-nominations-open]
+enabled = true
+# Custom auth inside the function (admin JWT or service role / cron secret).
+verify_jwt = false
+import_map = "./functions/process-nominations-open/deno.json"
+entrypoint = "./functions/process-nominations-open/index.ts"
+
+[functions.send-web-push]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send-web-push/deno.json"
+entrypoint = "./functions/send-web-push/index.ts"

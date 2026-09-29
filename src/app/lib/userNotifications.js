@@ -23,6 +23,7 @@ export async function createInAppNotification(supabase, {
     title,
     body: body ?? "",
     read: false,
+    is_read: false,
     metadata: linkPath ? { link_path: linkPath } : {},
   };
   return supabase.from("notifications").insert(payload);
@@ -57,10 +58,38 @@ export function membershipRenewalChannelsForMember(membership) {
  * @param {object} [options]
  * @param {boolean} [options.force] - Re-send even if already marked notified (admin retry).
  */
-export function triggerNominationsOpenProcessing(supabase, eventId = null, options = {}) {
+export async function triggerNominationsOpenProcessing(supabase, eventId = null, options = {}) {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl) {
+    return {
+      data: null,
+      error: { message: "VITE_SUPABASE_URL is not set in the app environment." },
+    };
+  }
+
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session?.access_token) {
+    return {
+      data: null,
+      error: { message: "Sign in again, then retry sending notifications." },
+    };
+  }
+
+  await supabase.auth.refreshSession();
+
   const body = {
     ...(eventId ? { eventId } : {}),
     ...(options.force ? { force: true } : {}),
   };
-  return supabase.functions.invoke("process-nominations-open", { body });
+
+  return supabase.functions.invoke("process-nominations-open", {
+    body,
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
 }

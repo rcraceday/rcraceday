@@ -23,6 +23,7 @@ import EventPreviewModal from "./components/EventPreviewModal";
 import { cmsStyles } from "@cms/styles";
 import { isRichTextEmpty } from "@/app/lib/richText";
 import { triggerNominationsOpenProcessing } from "@/app/lib/userNotifications";
+import { formatEdgeFunctionInvokeError } from "@/app/lib/edgeFunctionErrors";
 import {
   applyEventTypeDefaults,
   applyNominationsFromTypeDefaults,
@@ -545,7 +546,7 @@ const normalizedDays = Array.isArray(data.days)
       );
       if (fnError) {
         setError(
-          fnError.message ||
+          formatEdgeFunctionInvokeError(fnError, "process-nominations-open") ||
             "Could not run nominations-open notifications. Check Edge Function logs."
         );
         return null;

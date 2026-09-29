@@ -1,4 +1,4 @@
-﻿import webpush from "https://esm.sh/web-push@3.6.7";
+import webpush from "https://esm.sh/web-push@3.6.7";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export type WebPushNotification = {

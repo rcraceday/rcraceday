@@ -1,4 +1,4 @@
-﻿// supabase/functions/process-nominations-open/index.ts
+// supabase/functions/process-nominations-open/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendWebPushToUsers } from "./web_push.ts";
@@ -7,6 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-cron-secret",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 type NotificationPrefs = {
@@ -206,6 +207,7 @@ serve(async (req) => {
             title,
             body,
             read: false,
+            is_read: false,
             metadata: {
               type: "nominations_open",
               event_id: event.id,
@@ -217,7 +219,7 @@ serve(async (req) => {
         }
 
         if (channels.email && membership.email) {
-          const subject = `Nominations open — ${event.name}`;
+          const subject = `Nominations open â€” ${event.name}`;
           const html = `<p>Nominations are now open for <strong>${event.name}</strong>.</p>${
             linkPath
               ? `<p><a href="${linkPath}">View event and nominate</a></p>`
@@ -301,6 +303,7 @@ serve(async (req) => {
     );
   }
 });
+
 
 
 

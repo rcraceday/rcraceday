@@ -61,11 +61,13 @@ begin
   ) then
     execute $q$
       update public.notifications
-      set read = coalesce(read, is_read)
-      where read is distinct from is_read;
+      set read = coalesce(read, is_read, false),
+          is_read = coalesce(is_read, read, false);
     $q$;
   end if;
 end $$;
+
+-- Run scripts/fix-notifications-read-columns.sql for the read/is_read sync trigger.
 
 create index if not exists notifications_user_club_created_idx
   on public.notifications (user_id, club_id, created_at desc);

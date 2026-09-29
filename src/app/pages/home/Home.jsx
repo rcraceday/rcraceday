@@ -15,6 +15,7 @@ import Carousel from "@/components/Carousel";
 
 import PageTitle from "@/components/ui/PageTitle";
 import { isNominationsOpen } from "@/app/pages/events/events-sections/helpers";
+import { isNotificationUnread } from "@/app/lib/notificationRow";
 import EventCard from "@/app/pages/events/EventCard";
 
 import {
@@ -62,7 +63,7 @@ export default function Home() {
   const newsItems = [];
 
   const recentNotifications = (notifications || []).slice(0, 5);
-  const hasUnreadNotifications = (notifications || []).some((n) => !n.read);
+  const hasUnreadNotifications = (notifications || []).some(isNotificationUnread);
 
   useEffect(() => {
     if (!clubSlug) return;
