@@ -115,6 +115,24 @@ export default function WelcomeAddDrivers() {
       }
 
       if (isNonMember) {
+        if (
+          !canAddHouseholdDriver({
+            membershipType,
+            isJunior,
+            drivers,
+            clubMembers,
+            maxAdults,
+            maxJuniors,
+          })
+        ) {
+          setError(
+            isJunior
+              ? `Your club allows a maximum of ${maxJuniors} junior drivers for your household.`
+              : `Your club allows a maximum of ${maxAdults} adult drivers for your household.`
+          );
+          return;
+        }
+
         const { data: existingDrivers } = await supabase
           .from("drivers")
           .select("id")

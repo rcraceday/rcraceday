@@ -93,10 +93,12 @@ export default function DriverManager() {
     maxJuniors,
   });
 
-  const householdCounts =
-    membershipType === "family"
-      ? countHouseholdSlots(driverList, clubMembers)
-      : null;
+  const householdSlotLimits =
+    membershipType === "family" || membershipType === "non_member";
+
+  const householdCounts = householdSlotLimits
+    ? countHouseholdSlots(driverList, clubMembers)
+    : null;
 
   const showClubMembers = membershipType === "family";
 
@@ -184,7 +186,7 @@ export default function DriverManager() {
               ))}
             </div>
 
-            {membershipType === "family" && householdCounts && (
+            {householdSlotLimits && householdCounts && (
               <p className="text-xs text-text-muted">
                 Household slots: {householdCounts.adults}/{maxAdults} adults,{" "}
                 {householdCounts.juniors}/{maxJuniors} juniors
@@ -202,10 +204,10 @@ export default function DriverManager() {
               </Button>
             )}
 
-            {!canAddDriver && membershipType === "family" && (
+            {!canAddDriver && householdSlotLimits && (
               <p className="text-sm text-text-muted">
                 Your club allows up to {maxAdults} adult and {maxJuniors} junior
-                drivers for a family membership.
+                drivers for your household.
               </p>
             )}
           </section>

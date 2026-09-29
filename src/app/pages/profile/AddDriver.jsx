@@ -97,7 +97,6 @@ export default function AddDriver() {
     }
 
     if (
-      !isNonMember &&
       !canAddHouseholdDriver({
         membershipType,
         isJunior,
@@ -107,11 +106,11 @@ export default function AddDriver() {
         maxJuniors,
       })
     ) {
-      if (membershipType === "family") {
+      if (membershipType === "family" || membershipType === "non_member") {
         setError(
           isJunior
-            ? `Your club allows a maximum of ${maxJuniors} junior members for a family membership.`
-            : `Your club allows a maximum of ${maxAdults} adult members for a family membership.`
+            ? `Your club allows a maximum of ${maxJuniors} junior drivers for your household.`
+            : `Your club allows a maximum of ${maxAdults} adult drivers for your household.`
         );
       } else {
         setError("Your membership only allows one driver profile.");
@@ -132,6 +131,7 @@ export default function AddDriver() {
           first_name: trimmedFirst,
           last_name: trimmedLast,
           is_junior: isJunior,
+          created_by: user.id,
         });
 
       if (insertError) {

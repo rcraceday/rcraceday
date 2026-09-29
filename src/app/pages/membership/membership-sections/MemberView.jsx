@@ -1,11 +1,14 @@
 // src/app/pages/membership/membership-sections/MemberView.jsx
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
+import { canUpgradeMembershipToFamily } from "@/app/pages/profile/householdDriverLimits";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 
 export default function MemberView({ brand, club, membership }) {
+  const navigate = useNavigate();
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
 
@@ -32,10 +35,9 @@ export default function MemberView({ brand, club, membership }) {
   const primaryMember = members?.[0];
   const firstName = primaryMember?.first_name;
 
-  // Determine if user is Single or Junior
-  const isSingleOrJunior =
-    membership?.membership_type === "adult" ||
-    membership?.membership_type === "junior";
+  const showUpgradeToFamily = canUpgradeMembershipToFamily(
+    membership?.membership_type
+  );
 
   return (
     <main className="app-page-main flex flex-col gap-8 !py-6">
@@ -147,16 +149,13 @@ export default function MemberView({ brand, club, membership }) {
             Edit Members &amp; Drivers
           </Button>
 
-          {/* SECONDARY BUTTON — Change Membership Type */}
-          {isSingleOrJunior && (
+          {showUpgradeToFamily && (
             <Button
               variant="secondary"
               className="w-full !py-2.5 !text-sm"
-              onClick={() => {
-                window.location.href = `/${club.slug}/app/membership/renew`;
-              }}
+              onClick={() => navigate(`/${club.slug}/app/membership/upgrade`)}
             >
-              Change Membership Type
+              Upgrade to Family Membership
             </Button>
           )}
 

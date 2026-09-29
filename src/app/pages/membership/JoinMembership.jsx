@@ -1,11 +1,17 @@
 // src/app/pages/membership/JoinMembership.jsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { IdentificationIcon } from "@heroicons/react/24/solid";
 
 import { useClub } from "@/app/providers/ClubProvider";
+import { useDrivers } from "@/app/providers/DriverProvider";
 import useTheme from "@/app/providers/useTheme";
+import {
+  allowedMembershipProductTypesFromDrivers,
+  membershipJoinDriverNote,
+  normalizeMembershipProductType,
+} from "@/app/pages/profile/householdDriverLimits";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
@@ -17,6 +23,7 @@ export default function JoinMembership() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
   const { club } = useClub();
+  const { drivers, loadingDrivers } = useDrivers();
   const { palette } = useTheme();
 
   const brand = palette?.primary || "#00438a";
@@ -51,14 +58,39 @@ export default function JoinMembership() {
     loadProducts();
   }, [club?.id]);
 
+  const allowedProductTypes = useMemo(
+    () => allowedMembershipProductTypesFromDrivers(drivers),
+    [drivers]
+  );
+
+  const eligibleProducts = useMemo(
+    () =>
+      products.filter((product) =>
+        allowedProductTypes.has(normalizeMembershipProductType(product.type))
+      ),
+    [products, allowedProductTypes]
+  );
+
+  const driverJoinNote = useMemo(
+    () => membershipJoinDriverNote(drivers),
+    [drivers]
+  );
+
+  const selectedEligibleProduct = useMemo(() => {
+    if (!selectedProduct) return null;
+    const normalized = normalizeMembershipProductType(selectedProduct.type);
+    if (!allowedProductTypes.has(normalized)) return null;
+    return selectedProduct;
+  }, [selectedProduct, allowedProductTypes]);
+
   /* ------------------------------------------------------------
      GROUP + SORT PRODUCTS BY TYPE
      ORDER: Full → Half H1 → Half H2
   ------------------------------------------------------------ */
-  const types = [...new Set(products.map((p) => p.type))];
+  const types = [...new Set(eligibleProducts.map((p) => p.type))];
 
   const productsByType = types.reduce((acc, type) => {
-    acc[type] = products
+    acc[type] = eligibleProducts
       .filter((p) => p.type === type)
       .sort((a, b) => {
         // Full year always first
@@ -81,7 +113,7 @@ export default function JoinMembership() {
      HANDLE JOIN
   ------------------------------------------------------------ */
   const handleJoin = async () => {
-    if (!selectedProduct) {
+    if (!selectedEligibleProduct) {
       setError("Please select a membership option.");
       return;
     }
@@ -91,7 +123,7 @@ export default function JoinMembership() {
 
     const { error } = await applyMembership({
       action: "join",
-      membership_product_id: selectedProduct.id,
+      membership_product_id: selectedEligibleProduct.id,
       club_slug: clubSlug,
     });
 
@@ -142,12 +174,23 @@ export default function JoinMembership() {
           <div className="p-6 space-y-6">
 
             {/* LOADING */}
-            {loading && (
+            {(loading || loadingDrivers) && (
               <p className="text-sm text-text-muted">Loading membership options…</p>
             )}
 
+            {driverJoinNote && !loading && !loadingDrivers && (
+              <p className="text-sm text-text-muted">{driverJoinNote}</p>
+            )}
+
             {/* MEMBERSHIP TYPES */}
-            {!loading && (
+            {!loading && !loadingDrivers && types.length === 0 && (
+              <p className="text-sm text-text-muted">
+                No membership options match your current drivers. Adjust your drivers in
+                Driver Manager or contact the club.
+              </p>
+            )}
+
+            {!loading && !loadingDrivers && types.length > 0 && (
               <div className="space-y-6">
                 {types.map((type) => (
                   <div key={type} className="space-y-3">
@@ -160,7 +203,7 @@ export default function JoinMembership() {
                     {/* PRODUCT OPTIONS FOR THIS TYPE */}
                     <div className="space-y-3">
                       {productsByType[type].map((product) => {
-                        const isSelected = selectedProduct?.id === product.id;
+                        const isSelected = selectedEligibleProduct?.id === product.id;
 
                         return (
                           <button
@@ -204,7 +247,7 @@ export default function JoinMembership() {
             <div className="flex justify-end pt-2">
               <Button
                 className="w-auto px-5 py-2"
-                disabled={!selectedProduct || processing}
+                disabled={!selectedEligibleProduct || processing}
                 onClick={handleJoin}
               >
                 {processing ? "Processing…" : "Join the Club"}
