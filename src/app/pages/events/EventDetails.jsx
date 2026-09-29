@@ -16,6 +16,7 @@ import useTheme from "@/app/providers/useTheme";
 import { supabase } from "@/supabaseClient";
 import DOMPurify from "dompurify";
 import {
+  getAllEventAssignedClassIds,
   getDayClassLimit,
   getEffectiveDayClassIds,
   getEventClassLimit,
@@ -325,15 +326,11 @@ export default function EventDetails() {
     }
 
     if (event.classes_by_day) {
-      event.classes_by_day.forEach((info, index) => {
-        const configured = (info.classes || []).filter(Boolean);
-        if (configured.length) {
-          configured.forEach((cid) => ids.add(cid));
-        } else if (isOpenPracticeDay(event, index)) {
-          trackClassIds.forEach((cid) => ids.add(cid));
-        }
+      event.classes_by_day.forEach((_, index) => {
+        getEffectiveDayClassIds(event, index, trackClassIds).forEach((cid) => ids.add(cid));
       });
     }
+    getAllEventAssignedClassIds(event).forEach((cid) => ids.add(cid));
 
     if (ids.size === 0) return;
 
@@ -791,7 +788,9 @@ return (
 
               {openPractice && (
                 <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 6 }}>
-                  Practice day — all track classes
+                  {getAllEventAssignedClassIds(event).length > 0
+                    ? "Practice day — event classes only"
+                    : "Practice day — all track classes"}
                 </div>
               )}
 

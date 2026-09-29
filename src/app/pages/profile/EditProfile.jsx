@@ -16,6 +16,42 @@ import EditDriverProfileCard from "@/components/driver/EditDriverProfileCard";
 import { ArrowLeftIcon, PencilSquareIcon } from "@heroicons/react/24/solid";
 
 import { supabase } from "@/supabaseClient";
+import {
+  removeDriverAvatarFromStorage,
+  uploadDriverAvatar,
+} from "@/app/lib/driverAvatarStorage";
+
+const INTEGER_DRIVER_FIELDS = ["permanent_number", "year_of_birth", "year_started"];
+
+function buildDriverUpdatePayload(driver) {
+  const updatePayload = { ...driver };
+
+  delete updatePayload.id;
+  delete updatePayload.created_at;
+  delete updatePayload.avatar_file;
+  delete updatePayload.avatar_preview_url;
+  delete updatePayload.avatar_removed;
+  delete updatePayload.avatar_previous_url;
+
+  if (
+    typeof updatePayload.avatar_url === "string" &&
+    updatePayload.avatar_url.startsWith("blob:")
+  ) {
+    delete updatePayload.avatar_url;
+  }
+
+  for (const field of INTEGER_DRIVER_FIELDS) {
+    const value = updatePayload[field];
+    if (value === "" || value === undefined) {
+      updatePayload[field] = null;
+    } else if (value !== null && value !== "") {
+      const parsed = Number(value);
+      updatePayload[field] = Number.isNaN(parsed) ? null : parsed;
+    }
+  }
+
+  return updatePayload;
+}
 
 export default function EditProfile() {
   const navigate = useNavigate();
@@ -35,6 +71,8 @@ export default function EditProfile() {
   const [showNameWarning, setShowNameWarning] = useState(false);
 
   const [previewNumber, setPreviewNumber] = useState(null);
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   // LOAD DRIVER
   useEffect(() => {
@@ -66,13 +104,48 @@ export default function EditProfile() {
 
   // AVATAR HANDLERS
   const handleAvatarSelect = (file) => {
+    if (!file) return;
     setDirty(true);
-    update("avatar_file", file);
+    const previewUrl = URL.createObjectURL(file);
+    setDriver((prev) => {
+      if (prev?.avatar_preview_url) {
+        URL.revokeObjectURL(prev.avatar_preview_url);
+      }
+      const previousAvatarUrl =
+        prev?.avatar_url && !prev.avatar_url.startsWith("blob:")
+          ? prev.avatar_url
+          : prev?.avatar_previous_url ?? null;
+      return {
+        ...prev,
+        avatar_file: file,
+        avatar_preview_url: previewUrl,
+        avatar_url: previewUrl,
+        avatar_previous_url: previousAvatarUrl,
+        avatar_removed: false,
+      };
+    });
   };
 
   const handleRemoveAvatar = () => {
     setDirty(true);
-    update("avatar_url", null);
+    setDriver((prev) => {
+      if (prev?.avatar_preview_url) {
+        URL.revokeObjectURL(prev.avatar_preview_url);
+      }
+      const previousAvatarUrl =
+        prev?.avatar_url && !prev.avatar_url.startsWith("blob:")
+          ? prev.avatar_url
+          : prev?.avatar_previous_url ?? null;
+      const next = {
+        ...prev,
+        avatar_url: null,
+        avatar_file: null,
+        avatar_previous_url: previousAvatarUrl,
+        avatar_removed: true,
+      };
+      delete next.avatar_preview_url;
+      return next;
+    });
   };
 
   const nameChanged =
@@ -84,54 +157,98 @@ export default function EditProfile() {
 
   // SAVE DRIVER
   const save = async ({ skipNameWarning = false } = {}) => {
-    if (!driver) return false;
+    if (!driver || saving) return false;
 
     if (nameChanged && !skipNameWarning) {
       setShowNameWarning(true);
       return false;
     }
 
-    const updatePayload = { ...driver };
-    delete updatePayload.avatar_file;
+    setSaving(true);
+    setSaveError("");
 
-    const { error } = await supabase
-      .from("drivers")
-      .update(updatePayload)
-      .eq("id", driver.id);
+    let savedAvatarUrl;
 
-    if (error) {
-      console.error("Failed to update driver:", error);
-      return false;
-    }
+    try {
+      if (driver.avatar_file) {
+        const { publicUrl, error: uploadError } = await uploadDriverAvatar(
+          supabase,
+          {
+            driverId: driver.id,
+            file: driver.avatar_file,
+            previousAvatarUrl: driver.avatar_previous_url,
+          }
+        );
 
-    if (driver.avatar_file) {
-      const file = driver.avatar_file;
-      const filePath = `avatars/${driver.id}-${Date.now()}`;
+        if (uploadError || !publicUrl) {
+          const message =
+            uploadError?.message || "Could not upload profile photo.";
+          setSaveError(message);
+          console.error("Failed to upload avatar:", uploadError);
+          return false;
+        }
 
-      const { error: uploadError } = await supabase.storage
-        .from("driver-avatars")
-        .upload(filePath, file, { upsert: true });
-
-      if (!uploadError) {
-        const { data: publicUrl } = supabase.storage
-          .from("driver-avatars")
-          .getPublicUrl(filePath);
-
-        await supabase
-          .from("drivers")
-          .update({ avatar_url: publicUrl.publicUrl })
-          .eq("id", driver.id);
+        savedAvatarUrl = publicUrl;
+      } else if (driver.avatar_removed) {
+        savedAvatarUrl = null;
+        await removeDriverAvatarFromStorage(
+          supabase,
+          driver.avatar_previous_url
+        );
       }
-    }
 
-    setDirty(false);
-    setOriginalName({
-      first_name: driver.first_name || "",
-      last_name: driver.last_name || "",
-    });
-    setShowNameWarning(false);
-    refreshDrivers();
-    return true;
+      const updatePayload = buildDriverUpdatePayload(driver);
+
+      if (savedAvatarUrl !== undefined) {
+        updatePayload.avatar_url = savedAvatarUrl;
+      }
+
+      const { error } = await supabase
+        .from("drivers")
+        .update(updatePayload)
+        .eq("id", driver.id);
+
+      if (error) {
+        setSaveError(error.message || "Could not save driver profile.");
+        console.error("Failed to update driver:", error);
+        return false;
+      }
+
+      if (driver.avatar_preview_url) {
+        URL.revokeObjectURL(driver.avatar_preview_url);
+      }
+
+      if (savedAvatarUrl !== undefined) {
+        setDriver((prev) => {
+          const next = { ...prev, avatar_url: savedAvatarUrl };
+          delete next.avatar_file;
+          delete next.avatar_preview_url;
+          delete next.avatar_removed;
+          delete next.avatar_previous_url;
+          return next;
+        });
+      } else {
+        setDriver((prev) => {
+          const next = { ...prev };
+          delete next.avatar_file;
+          delete next.avatar_preview_url;
+          delete next.avatar_removed;
+          delete next.avatar_previous_url;
+          return next;
+        });
+      }
+
+      setDirty(false);
+      setOriginalName({
+        first_name: driver.first_name || "",
+        last_name: driver.last_name || "",
+      });
+      setShowNameWarning(false);
+      await refreshDrivers();
+      return true;
+    } finally {
+      setSaving(false);
+    }
   };
 
   // GUARDED NAVIGATION
@@ -243,6 +360,8 @@ export default function EditProfile() {
           handleAvatarSelect={handleAvatarSelect}
           handleRemoveAvatar={handleRemoveAvatar}
           save={save}
+          saving={saving}
+          saveError={saveError}
           deleteDriver={deleteDriver}
           showLivetimeNameNotice={showLivetimeNameNotice}
         />

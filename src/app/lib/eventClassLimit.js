@@ -49,6 +49,29 @@ export function getConfiguredDayClassIds(event, dayIndex) {
   return Array.isArray(raw) ? raw.filter(Boolean) : [];
 }
 
+/** Union of class IDs configured on the event (any day or single-day `classes`). */
+export function getAllEventAssignedClassIds(event) {
+  const ids = [];
+  const seen = new Set();
+  const add = (id) => {
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    ids.push(id);
+  };
+
+  if (Array.isArray(event?.classes)) {
+    event.classes.forEach(add);
+  }
+  if (Array.isArray(event?.classes_by_day)) {
+    event.classes_by_day.forEach((day) => {
+      if (Array.isArray(day?.classes)) {
+        day.classes.forEach(add);
+      }
+    });
+  }
+  return ids;
+}
+
 export function isOpenPracticeDay(event, dayIndex) {
   return (
     isPracticeDay(event, dayIndex) &&
@@ -60,6 +83,8 @@ export function getEffectiveDayClassIds(event, dayIndex, trackClassIds = []) {
   const configured = getConfiguredDayClassIds(event, dayIndex);
   if (!isPracticeDay(event, dayIndex)) return configured;
   if (configured.length > 0) return configured;
+  const eventAssigned = getAllEventAssignedClassIds(event);
+  if (eventAssigned.length > 0) return eventAssigned;
   return Array.isArray(trackClassIds) ? trackClassIds.filter(Boolean) : [];
 }
 
@@ -97,10 +122,6 @@ export function getDayClassSlots(classesByDay, dayIndex, slotCount) {
 
 export function multiDaySlotsPerDay(event, dayIndex) {
   if (isOpenPracticeDay(event, dayIndex)) return 0;
-  if (isPracticeDay(event, dayIndex)) {
-    const classCount = getConfiguredDayClassIds(event, dayIndex).length;
-    return Math.max(classCount, 1);
-  }
   return getDayClassLimit(event) ?? getEventClassLimit(event) ?? 1;
 }
 
@@ -125,9 +146,38 @@ export function canSetMultiDayClass(args) {
   return !multiDayClassLimitError(args);
 }
 
-export function validateDriverClassSelections(event, selection) {
-  if (!event?.is_multi_day) return null;
+export function validateDriverClassSelections(event, selection, trackClassIds = []) {
+  if (!event?.is_multi_day) {
+    const allowed = new Set(getAllEventAssignedClassIds(event));
+    if (allowed.size > 0) {
+      for (const classId of (selection?.classSlots || []).filter(Boolean)) {
+        if (!allowed.has(classId)) {
+          return "One or more selected classes are not available for this event.";
+        }
+      }
+    }
+    return null;
+  }
+
   const classesByDay = selection?.classesByDay || {};
+  const racingDays = selection?.racingDays || {};
+
+  for (const dayIndex of Object.keys(classesByDay)) {
+    if (!racingDays[dayIndex]) continue;
+    if (isOpenPracticeDay(event, dayIndex)) continue;
+    const allowed = new Set(
+      getEffectiveDayClassIds(event, Number(dayIndex), trackClassIds)
+    );
+    if (allowed.size === 0) continue;
+    const raw = classesByDay[dayIndex];
+    const picked = Array.isArray(raw) ? raw.filter(Boolean) : raw ? [raw] : [];
+    for (const classId of picked) {
+      if (!allowed.has(classId)) {
+        return "One or more selected classes are not available for this day.";
+      }
+    }
+  }
+
   const dayLimit = getDayClassLimit(event);
   const eventLimit = getEventClassLimit(event);
   if (dayLimit != null) {

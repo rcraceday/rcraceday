@@ -59,7 +59,11 @@ export default function AvatarAndBasicInfoSection({
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={handleAvatarSelect}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarSelect(file);
+                    e.target.value = "";
+                  }}
                 />
               </label>
 

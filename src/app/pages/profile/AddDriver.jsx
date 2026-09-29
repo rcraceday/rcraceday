@@ -141,7 +141,7 @@ export default function AddDriver() {
       }
 
       await refreshDrivers();
-      navigate(`/${clubSlug}/app`);
+      navigate(`/${clubSlug}/app/profile/drivers`);
       return;
     }
 

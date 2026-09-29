@@ -28,6 +28,8 @@ export default function EditDriverProfileCard({
   handleAvatarSelect,
   handleRemoveAvatar,
   save,
+  saving = false,
+  saveError = "",
   deleteDriver,
   showLivetimeNameNotice,
 }) {
@@ -168,11 +170,17 @@ export default function EditDriverProfileCard({
 
           {/* SAVE + PREVIEW BUTTONS */}
           <div className="flex flex-col items-center gap-4 pt-4">
+            {saveError ? (
+              <p className="text-sm text-red-600 text-center max-w-md" role="alert">
+                {saveError}
+              </p>
+            ) : null}
             <Button
               className="!w-auto px-6 py-3"
               onClick={() => save()}
+              disabled={saving}
             >
-              Save Changes
+              {saving ? "Saving…" : "Save Changes"}
             </Button>
 
             <Button

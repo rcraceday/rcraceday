@@ -38,6 +38,7 @@ import {
   getDayClassLimit,
   getDayClassSlots,
   getEventClassLimit,
+  getAllEventAssignedClassIds,
   getEffectiveDayClassIds,
   isOpenPracticeDay,
   isPracticeDay,
@@ -669,6 +670,8 @@ export default function EventNominate() {
   const [event, setEvent] = useState(null);
   const [trackName, setTrackName] = useState("");
   const [clubClasses, setClubClasses] = useState([]);
+  const [classCatalog, setClassCatalog] = useState([]);
+  const [trackClassIds, setTrackClassIds] = useState([]);
   const [selections, setSelections] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -736,29 +739,35 @@ export default function EventNominate() {
         setTrackName("");
       }
 
-      const classIdSet = new Set(
-        eventRow?.is_multi_day
-          ? (eventRow.classes_by_day || []).flatMap((day) => day.classes || []).filter(Boolean)
-          : (eventRow?.classes || []).filter(Boolean)
-      );
+      const eventClassIds = eventRow?.is_multi_day
+        ? (eventRow.classes_by_day || []).flatMap((day) => day.classes || []).filter(Boolean)
+        : (eventRow?.classes || []).filter(Boolean);
+      const eventClassIdSet = new Set(eventClassIds);
+
+      let trackIds = [];
       if (eventRow?.track) {
         const { data: trackClassRows } = await supabase
           .from("club_track_classes")
           .select("class_id, club_classes ( id, name )")
           .eq("track_id", eventRow.track);
-        (trackClassRows || []).forEach((row) => {
-          if (row.club_classes?.id) classIdSet.add(row.club_classes.id);
-        });
+        trackIds = (trackClassRows || []).map((row) => row.club_classes?.id).filter(Boolean);
       }
-      if (classIdSet.size) {
+      if (cancelled) return;
+      setTrackClassIds(trackIds);
+
+      const nameLookupIds = new Set([...eventClassIds, ...trackIds]);
+      if (nameLookupIds.size) {
         const { data: classRows, error: classError } = await supabase
           .from("club_classes")
           .select("id, name")
-          .in("id", Array.from(classIdSet));
+          .in("id", Array.from(nameLookupIds));
         if (cancelled) return;
         if (classError) showPageError("Unable to load this event nomination.");
-        setClubClasses(classRows || []);
+        const rows = classRows || [];
+        setClassCatalog(rows);
+        setClubClasses(rows.filter((row) => eventClassIdSet.has(row.id)));
       } else if (!cancelled) {
+        setClassCatalog([]);
         setClubClasses([]);
       }
       if (!cancelled) setLoading(false);
@@ -852,8 +861,7 @@ export default function EventNominate() {
     };
   }, [event?.id, event?.merchandise, membership?.id]);
 
-  const classMap = useMemo(() => new Map(clubClasses.map((item) => [item.id, item.name])), [clubClasses]);
-  const trackClassIds = useMemo(() => clubClasses.map((item) => item.id), [clubClasses]);
+  const classMap = useMemo(() => new Map(classCatalog.map((item) => [item.id, item.name])), [classCatalog]);
   const classLimit = getClassLimitNumber(event);
   const classLimitPerDay = getDayClassLimit(event);
   const preferenceEnabled = !!event?.preference_enabled;
@@ -1895,7 +1903,7 @@ export default function EventNominate() {
     }
 
     for (const { selection } of active) {
-      const limitErr = validateDriverClassSelections(event, selection);
+      const limitErr = validateDriverClassSelections(event, selection, trackClassIds);
       if (limitErr) return showCheckoutError(limitErr, "classes");
     }
     const purchaseErr = validateActiveDriversPurchases(active);
@@ -2431,8 +2439,9 @@ export default function EventNominate() {
                                 {selected && openPractice && (
                                   <div className="text-sm" style={{ color: contentText }}>
                                     <p>
-                                      Practice day — all track classes. No class selection is required. This day is not
-                                      included in the LiveTime export.
+                                      {getAllEventAssignedClassIds(event).length > 0
+                                        ? "Practice day — event classes only. No class selection is required. This day is not included in the LiveTime export."
+                                        : "Practice day — all track classes. No class selection is required. This day is not included in the LiveTime export."}
                                     </p>
                                     {dayClassIds.length > 0 && (
                                       <p className="mt-2 text-xs opacity-80">

@@ -2,6 +2,7 @@
 
 import useTheme from "@/app/providers/useTheme";
 import {
+  getAllEventAssignedClassIds,
   getDayClassLimit,
   getEffectiveDayClassIds,
   getEventClassLimit,
@@ -64,7 +65,11 @@ export default function EventDetailsClasses({ event, trackClassIds = [], classNa
             </div>
 
             {openPractice && (
-              <p className="text-sm text-gray-600">Practice day — all track classes</p>
+              <p className="text-sm text-gray-600">
+                {getAllEventAssignedClassIds(event).length > 0
+                  ? "Practice day — event classes only"
+                  : "Practice day — all track classes"}
+              </p>
             )}
 
             {/* CLASS LIST */}
