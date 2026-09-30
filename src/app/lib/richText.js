@@ -28,6 +28,43 @@ export function isRichTextEmpty(html) {
   return !richTextToPlainText(html);
 }
 
+/** Fix bad editor URLs like `https:///club/app/...` → `/club/app/...` */
+function defaultOrigin() {
+  return typeof window !== "undefined" ? window.location.origin : "";
+}
+
+export function resolveRichTextLinkHref(href, origin = defaultOrigin()) {
+  if (!href || typeof href !== "string") return null;
+  const trimmed = href.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("https:///") || trimmed.startsWith("http:///")) {
+    return trimmed.replace(/^https?:\/\//i, "");
+  }
+  if (trimmed.startsWith("/") || trimmed.startsWith("#")) return trimmed;
+  if (/^(mailto:|tel:)/i.test(trimmed)) return trimmed;
+  try {
+    const url = new URL(trimmed, origin);
+    if (url.origin === origin) {
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+    return url.href;
+  } catch {
+    return trimmed;
+  }
+}
+
+export function isExternalRichTextLink(href, origin = defaultOrigin()) {
+  const resolved = resolveRichTextLinkHref(href, origin);
+  if (!resolved) return false;
+  if (resolved.startsWith("/") || resolved.startsWith("#")) return false;
+  if (/^(mailto:|tel:)/i.test(resolved)) return true;
+  try {
+    return new URL(resolved).origin !== origin;
+  } catch {
+    return true;
+  }
+}
+
 export function normalizeRichTextValue(value) {
   if (typeof value === "string") return value;
   if (value?.value) return String(value.value);

@@ -8,7 +8,7 @@ import PageTitle from "@/components/ui/PageTitle";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { newsDetailHeaderStyle } from "@/components/news/NewsItemImage";
-import { sanitizeRichTextHtml } from "@/app/lib/richText";
+import RichTextContent from "@/components/ui/RichTextContent";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
 
 function formatPublished(iso) {
@@ -144,12 +144,10 @@ export default function NewsDetails() {
                 {formatPublished(item.published_at)}
               </p>
             )}
-            <div
+            <RichTextContent
               className="tiptap !min-h-0"
               style={{ marginTop: 12 }}
-              dangerouslySetInnerHTML={{
-                __html: sanitizeRichTextHtml(item.body),
-              }}
+              html={item.body}
             />
           </div>
         )}

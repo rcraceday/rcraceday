@@ -3,13 +3,36 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import { useEffect, useRef, useState } from "react";
-
 function normalizeLinkHref(url) {
   const trimmed = url.trim();
   if (!trimmed) return "";
+  if (trimmed.startsWith("https:///") || trimmed.startsWith("http:///")) {
+    return trimmed.replace(/^https?:\/\//i, "");
+  }
   if (/^(https?:\/\/|mailto:|tel:)/i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("/") || trimmed.startsWith("#")) return trimmed;
   return `https://${trimmed}`;
 }
+
+const AppLink = Link.extend({
+  renderHTML({ HTMLAttributes }) {
+    const href = HTMLAttributes.href || "";
+    const attrs = { ...HTMLAttributes, rel: "noopener noreferrer" };
+    const isRelative = href.startsWith("/") || href.startsWith("#");
+    let isSameOrigin = false;
+    if (/^https?:\/\//i.test(href)) {
+      try {
+        isSameOrigin = new URL(href).origin === window.location.origin;
+      } catch {
+        isSameOrigin = false;
+      }
+    }
+    if (!isRelative && !isSameOrigin) {
+      attrs.target = "_blank";
+    }
+    return ["a", attrs, 0];
+  },
+});
 
 function toolbarButtonProps(onClick) {
   return {
@@ -30,14 +53,10 @@ export default function CMSRichTextEditor({ value, onChange }) {
     extensions: [
       StarterKit,
       Underline,
-      Link.configure({
+      AppLink.configure({
         openOnClick: false,
         autolink: true,
         defaultProtocol: "https",
-        HTMLAttributes: {
-          rel: "noopener noreferrer",
-          target: "_blank",
-        },
       }),
     ],
     content: value || "",
@@ -143,9 +162,9 @@ export default function CMSRichTextEditor({ value, onChange }) {
         >
           <input
             ref={linkInputRef}
-            type="url"
+            type="text"
             value={linkDraft}
-            placeholder="https://example.com"
+            placeholder="/your-club/app/events/… or https://…"
             onChange={(e) => setLinkDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
