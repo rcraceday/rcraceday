@@ -51,7 +51,9 @@ export default function JoinMembership() {
         .eq("club_id", club.id)
         .order("type", { ascending: true });
 
-      if (!error) setProducts(data || []);
+      if (!error) {
+        setProducts((data || []).filter((row) => row.is_active !== false));
+      }
       setLoading(false);
     }
 

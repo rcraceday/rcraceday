@@ -47,7 +47,9 @@ export default function RenewMembership() {
         .eq("club_id", club.id)
         .order("type", { ascending: true });
 
-      if (!error) setProducts(data || []);
+      if (!error) {
+        setProducts((data || []).filter((row) => row.is_active !== false));
+      }
       setLoading(false);
     }
 
@@ -76,17 +78,36 @@ export default function RenewMembership() {
     return acc;
   }, {});
 
+  const isLifeMember = membership?.is_life_member === true;
+
   /* ------------------------------------------------------------
      HANDLE RENEW
   ------------------------------------------------------------ */
-  const handleRenew = async () => {
-    if (!selectedProduct) {
+  const handleRenew = async ({ skipPayment = false } = {}) => {
+    if (!skipPayment && !selectedProduct) {
       setError("Please select a membership option.");
       return;
     }
 
     setProcessing(true);
     setError("");
+
+    if (skipPayment) {
+      const { error: updateError } = await supabase
+        .from("household_memberships")
+        .update({
+          status: "active",
+        })
+        .eq("id", membership.id);
+
+      setProcessing(false);
+      if (updateError) {
+        setError(updateError.message || "Could not continue as a life member.");
+        return;
+      }
+      navigate(`/${clubSlug}/app/membership`);
+      return;
+    }
 
     const { error } = await applyMembership({
       action: "renew",
@@ -101,7 +122,7 @@ export default function RenewMembership() {
       return;
     }
 
-    navigate(`/${clubSlug}/membership`);
+    navigate(`/${clubSlug}/app/membership`);
   };
 
   /* ------------------------------------------------------------
@@ -200,14 +221,31 @@ export default function RenewMembership() {
 
             {error && <p className="text-sm text-red-500">{error}</p>}
 
+            {isLifeMember && (
+              <p className="text-sm text-text-muted">
+                You are a life member, so renewal is optional and there is no
+                membership fee. You can still pay if you want to support the club.
+              </p>
+            )}
+
             {/* CTA */}
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+              {isLifeMember && (
+                <Button
+                  variant="secondary"
+                  className="w-auto px-5 py-2"
+                  disabled={processing}
+                  onClick={() => handleRenew({ skipPayment: true })}
+                >
+                  {processing ? "Saving…" : "Continue without paying"}
+                </Button>
+              )}
               <Button
                 className="w-auto px-5 py-2"
                 disabled={!selectedProduct || processing}
-                onClick={handleRenew}
+                onClick={() => handleRenew()}
               >
-                {processing ? "Processing…" : "Renew Membership"}
+                {processing ? "Processing…" : isLifeMember ? "Pay to renew" : "Renew Membership"}
               </Button>
             </div>
 

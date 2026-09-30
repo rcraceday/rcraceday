@@ -5,6 +5,7 @@ import { supabase } from "@/supabaseClient";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
 
 export function HouseholdMembersCard({
   membership,
@@ -21,8 +22,10 @@ export function HouseholdMembersCard({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
-  const maxAdults = club?.max_adults || 0;
-  const maxJuniors = club?.max_juniors || 0;
+  const { maxAdults, maxJuniors } = resolveHouseholdLimits(
+    club,
+    membership?.membership_type
+  );
 
   /* ------------------------------------------------------------
      MERGE DRIVERS + MEMBERS INTO UNIFIED STRUCTURE

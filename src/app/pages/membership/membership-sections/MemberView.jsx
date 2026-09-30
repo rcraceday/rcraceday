@@ -4,17 +4,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { canUpgradeMembershipToFamily } from "@/app/pages/profile/householdDriverLimits";
-import {
-  CLUB_ASSETS_BUCKET,
-  clubMemberBadgePath,
-} from "@/app/lib/clubAssetStorage";
-
-function defaultMemberBadgeUrl(club) {
-  if (!club?.slug || !import.meta.env.VITE_SUPABASE_URL) return null;
-  const path = clubMemberBadgePath(club.slug, "chargers-member-badge-01.png");
-  return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${CLUB_ASSETS_BUCKET}/${path}`;
-}
 import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
 
 export default function MemberView({ brand, club, membership }) {
   const navigate = useNavigate();
@@ -72,20 +63,22 @@ export default function MemberView({ brand, club, membership }) {
         {/* CENTERED CONTENT */}
         <div className="p-6 flex flex-col items-center text-center space-y-6">
 
-          {/* CLUB MEMBER BADGE */}
-          <img
-            src={
-              club?.member_badge_url ||
-              defaultMemberBadgeUrl(club) ||
-              undefined
-            }
-            alt={`${club?.name} Member Badge`}
-            style={{
-              height: "200px",
-              width: "200px",
-              objectFit: "contain",
-            }}
-          />
+          {/* CLUB MEMBER BADGE — upload in Admin → Settings → Membership */}
+          {club?.member_badge_url ? (
+            <img
+              src={club.member_badge_url}
+              alt={`${club?.name} Member Badge`}
+              style={{
+                height: "200px",
+                width: "200px",
+                objectFit: "contain",
+              }}
+            />
+          ) : (
+            <p className="text-sm text-text-muted">
+              Member badge not configured yet.
+            </p>
+          )}
 
           {/* THANK YOU MESSAGE */}
           {firstName && (
@@ -177,7 +170,7 @@ export default function MemberView({ brand, club, membership }) {
               window.location.href = `/${club.slug}/app/membership/renew`;
             }}
           >
-            Renew Membership
+            {membership?.is_life_member ? "Renew Membership (optional)" : "Renew Membership"}
           </Button>
         </div>
       </Card>

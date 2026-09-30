@@ -11,6 +11,7 @@ import {
   canAddHouseholdDriver,
   countHouseholdSlots,
 } from "@/app/pages/profile/householdDriverLimits";
+import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
 import { useClub } from "@/app/providers/ClubProvider";   // ⭐ FIXED — YOU FORGOT THIS
 import useTheme from "@/app/providers/useTheme";
 
@@ -53,8 +54,7 @@ export default function WelcomeAddDrivers() {
   const membershipId = membership?.id;
   const isNonMember = membershipType === "non_member";
 
-  const maxAdults = club?.max_adults ?? 0;
-  const maxJuniors = club?.max_juniors ?? 0;
+  const { maxAdults, maxJuniors } = resolveHouseholdLimits(club, membershipType);
 
   useEffect(() => {
     if (isNonMember) return;

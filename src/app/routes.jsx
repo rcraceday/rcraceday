@@ -52,7 +52,8 @@ import AdminDashboard from "@app/pages/admin/AdminDashboard";
 import AdminMetricsArchives from "@app/pages/admin/AdminMetricsArchives";
 import AdminEvents from "@app/pages/admin/events/AdminEvents";
 import AdminEventEdit from "@app/pages/admin/events/eventsedit/AdminEventEdit";
-import AdminEventNominations from "@app/pages/admin/nominations/AdminEventNominations";
+import AdminNominations from "@app/pages/admin/AdminNominations";
+import AdminNominationsEvent from "@app/pages/admin/AdminNominationsEvent";
 import AdminClubMessages from "@app/pages/admin/messages/AdminClubMessages";
 import AdminClubNews from "@app/pages/admin/news/AdminClubNews";
 import AdminClubNewsEdit from "@app/pages/admin/news/AdminClubNewsEdit";
@@ -88,6 +89,10 @@ import MembershipSettings from "@app/pages/admin/settings/MembershipSettings";
 import EventDefaultsSettings from "@app/pages/admin/settings/EventDefaultsSettings";
 import DriverSettings from "@app/pages/admin/settings/DriverSettings";
 import TracksClassesSettings from "@app/pages/admin/settings/TracksClassesSettings";
+import AdminMemberships from "@app/pages/admin/AdminMemberships";
+import AdminMembershipEdit from "@app/pages/admin/AdminMembershipEdit";
+import AdminDrivers from "@app/pages/admin/AdminDrivers";
+import AdminDriverEdit from "@app/pages/admin/AdminDriverEdit";
 
 function ClubRootRedirect() {
   const { clubSlug } = useParams();
@@ -229,6 +234,14 @@ export default function AppRoutes() {
         <Route path="news" element={<AdminClubNews />} />
         <Route path="news/new" element={<AdminClubNewsEdit />} />
         <Route path="news/:id" element={<AdminClubNewsEdit />} />
+        <Route path="membership" element={<AdminMemberships />} />
+        <Route path="membership/new" element={<AdminMembershipEdit />} />
+        <Route path="membership/:id" element={<AdminMembershipEdit />} />
+        <Route path="drivers" element={<AdminDrivers />} />
+        <Route path="drivers/new" element={<AdminDriverEdit />} />
+        <Route path="drivers/:id" element={<AdminDriverEdit />} />
+        <Route path="nominations" element={<AdminNominations />} />
+        <Route path="nominations/:eventId" element={<AdminNominationsEvent />} />
         <Route path="archives" element={<AdminMetricsArchives />} />
         <Route path="settings" element={<AdminSettingsIndex />} />
         <Route path="settings/club-info" element={<ClubInfoSettings />} />
@@ -243,7 +256,7 @@ export default function AppRoutes() {
         <Route path="events" element={<AdminEvents />} />
         <Route path="events/new" element={<AdminEventEdit />} />
         <Route path="events/:id" element={<AdminEventEdit />} />
-        <Route path="events/:id/nominations" element={<AdminEventNominations />} />
+        <Route path="events/:id/nominations" element={<AdminNominationsEvent />} />
         <Route path="events/:id/nominations/export" element={<NominationsExport />} />
         <Route path="championships" element={<ChampionshipsList />} />
         <Route path="championships/create" element={<CreateChampionship />} />

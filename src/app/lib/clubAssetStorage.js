@@ -148,6 +148,13 @@ export function clubMemberBadgePath(clubOrSlug, fileName = "member-badge-01.png"
   return `${root}/member-badges/${safeName}`;
 }
 
+/** Stable path for the club member badge shown on the membership page. */
+export function membershipBadgePath(clubOrSlug, file) {
+  const root = clubStorageFolder(clubOrSlug);
+  const ext = getExtensionFromFile(file);
+  return `${root}/member-badges/member-badge.${ext}`;
+}
+
 export function clubNewsImagePath(clubOrSlug, newsId, file) {
   const root = clubStorageFolder(clubOrSlug);
   const ext = getExtensionFromFile(file);

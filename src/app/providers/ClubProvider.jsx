@@ -111,11 +111,23 @@ export default function ClubProvider({ children }) {
         theme.colors = theme.colors || {};
         theme.hero = theme.hero || {};
 
+        let membership_type_configs = [];
+        const { data: typeConfigs, error: typesError } = await supabase
+          .from("club_membership_types")
+          .select("*")
+          .eq("club_id", data.id)
+          .order("sort_order", { ascending: true });
+
+        if (!typesError) {
+          membership_type_configs = typeConfigs || [];
+        }
+
         // ⭐ Set club with theme and badge URL
         setClub({
           ...data,
           theme,
           member_badge_url: data.member_badge_url || null,
+          membership_type_configs,
         });
         setLoadingClub(false);
         console.log("✅ Club data loaded successfully:", data);

@@ -18,6 +18,7 @@ import {
   canShowAddDriverButton,
   countHouseholdSlots,
 } from "@/app/pages/profile/householdDriverLimits";
+import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
 
 export default function DriverManager() {
   const navigate = useNavigate();
@@ -82,8 +83,7 @@ export default function DriverManager() {
   // ------------------------------------------------------------
   // ADD DRIVER BUTTON VISIBILITY
   // ------------------------------------------------------------
-  const maxAdults = club?.max_adults ?? 0;
-  const maxJuniors = club?.max_juniors ?? 0;
+  const { maxAdults, maxJuniors } = resolveHouseholdLimits(club, membershipType);
 
   const canAddDriver = canShowAddDriverButton({
     membershipType,

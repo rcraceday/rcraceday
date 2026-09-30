@@ -11,6 +11,7 @@ import useTheme from "@/app/providers/useTheme";
 import {
   canAddHouseholdDriver,
 } from "@/app/pages/profile/householdDriverLimits";
+import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -48,8 +49,10 @@ export default function AddDriver() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const maxAdults = club?.max_adults ?? 0;
-  const maxJuniors = club?.max_juniors ?? 0;
+  const { maxAdults, maxJuniors } = resolveHouseholdLimits(
+    club,
+    membership?.membership_type
+  );
 
   useEffect(() => {
     if (!membership?.id || membership?.membership_type !== "family") {
