@@ -18,7 +18,8 @@
   flex-shrink: 0;
 }
 
-.news-item-image-club-bg {
+.news-item-image-club-bg,
+.news-item-image-item-bg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -26,6 +27,10 @@
   object-fit: cover;
   object-position: center;
   pointer-events: none;
+}
+
+.news-item-image-item-bg {
+  opacity: 0.22;
 }
 
 .news-item-image-fg {
@@ -51,4 +56,12 @@
 
 .news-item-image--thumb .news-item-image-placeholder {
   font-size: 10px;
+}
+
+.news-item-image--thumb .news-item-image-fg--thumb-cover {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
 }

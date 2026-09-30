@@ -20,6 +20,15 @@ export default function NewsItemImage({
     .join(" ");
 
   const placeholder = title || "News";
+  const useItemImageBackdrop =
+    !newsBackgroundUrl && imageUrl && variant === "carousel";
+
+  const fgClass = [
+    "news-item-image-fg",
+    variant === "thumb" && !newsBackgroundUrl ? "news-item-image-fg--thumb-cover" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className={rootClass}>
@@ -31,8 +40,16 @@ export default function NewsItemImage({
           aria-hidden="true"
         />
       ) : null}
+      {useItemImageBackdrop ? (
+        <img
+          className="news-item-image-item-bg"
+          src={imageUrl}
+          alt=""
+          aria-hidden="true"
+        />
+      ) : null}
       {imageUrl ? (
-        <img className="news-item-image-fg" src={imageUrl} alt="" />
+        <img className={fgClass} src={imageUrl} alt="" />
       ) : (
         <span className="news-item-image-placeholder">{placeholder}</span>
       )}
