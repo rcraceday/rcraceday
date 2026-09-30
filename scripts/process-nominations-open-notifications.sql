@@ -3,7 +3,7 @@
 -- Run after create-notification-preferences.sql.
 -- Deploy edge functions: process-nominations-open, send-web-push (generic push API)
 -- Run scripts/create-push-subscriptions.sql and configure VAPID keys before push delivery.
--- Schedule it every 1–5 minutes (Supabase Dashboard → Edge Functions → Schedules, or pg_cron + http).
+-- Automatic send: run scripts/schedule-nominations-open-cron.sql (pg_cron + pg_net every minute).
 
 alter table public.events
   add column if not exists nominations_open_notified_at timestamptz;

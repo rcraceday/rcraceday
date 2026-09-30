@@ -1,7 +1,8 @@
 -- Member notification preferences + event-level nominations-open broadcast flag.
 -- In-app rows use public.notifications (existing table).
--- Delivery: run scripts/process-nominations-open-notifications.sql and deploy
--- supabase/functions/process-nominations-open (schedule every 1–5 minutes).
+-- Delivery: run scripts/process-nominations-open-notifications.sql,
+-- deploy supabase/functions/process-nominations-open, then
+-- scripts/schedule-nominations-open-cron.sql.
 
 alter table public.household_memberships
   add column if not exists notification_preferences jsonb not null default '{

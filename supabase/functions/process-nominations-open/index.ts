@@ -83,16 +83,37 @@ function channelsForMember(
   };
 }
 
+function bearerToken(req: Request): string {
+  const auth = req.headers.get("authorization") || "";
+  if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
+  return "";
+}
+
+function requestApiKey(req: Request): string {
+  return (req.headers.get("apikey") || "").trim();
+}
+
 function isServiceAuthorized(req: Request): boolean {
   const cronSecret = Deno.env.get("CRON_SECRET");
   if (cronSecret) {
     const header = req.headers.get("x-cron-secret");
     if (header === cronSecret) return true;
   }
-  const auth = req.headers.get("authorization") || "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  if (serviceKey && auth === `Bearer ${serviceKey}`) return true;
-  return false;
+  if (!serviceKey) return false;
+  const token = bearerToken(req);
+  const apiKey = requestApiKey(req);
+  return token === serviceKey || apiKey === serviceKey;
+}
+
+// pg_cron + pg_net sends the publishable/anon key in `apikey` (and sometimes Bearer), not the service role.
+function isScheduledInvoke(req: Request): boolean {
+  if (isServiceAuthorized(req)) return true;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  if (!anonKey) return false;
+  const token = bearerToken(req);
+  const apiKey = requestApiKey(req);
+  return token === anonKey || apiKey === anonKey;
 }
 
 serve(async (req) => {
@@ -119,6 +140,10 @@ serve(async (req) => {
   }
 
   let authorized = isServiceAuthorized(req);
+  // Automatic/cron runs have no eventId and cannot force-resend.
+  if (!authorized && !eventIdFilter && !forceResend && isScheduledInvoke(req)) {
+    authorized = true;
+  }
   if (!authorized && eventIdFilter && anonKey) {
     const authHeader = req.headers.get("authorization") || "";
     if (authHeader.startsWith("Bearer ")) {
@@ -162,6 +187,7 @@ serve(async (req) => {
 
     if (!forceResend) {
       eventsQuery = eventsQuery.is("nominations_open_notified_at", null);
+      eventsQuery = eventsQuery.eq("is_published", true);
     }
 
     if (eventIdFilter) {
