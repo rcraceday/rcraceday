@@ -11,6 +11,8 @@ export default function CMSInput({
   options = null,
   inputStyle = {},
   action = null,
+  maxLength,
+  placeholder,
 }) {
   const baseInputStyle = {
     ...cmsStyles.input,
@@ -100,6 +102,8 @@ export default function CMSInput({
           name={name}
           value={value || ""}
           onChange={handleValue}
+          maxLength={maxLength}
+          placeholder={placeholder}
           style={baseTextareaStyle}
           {...focusHandlers}
         />
@@ -111,6 +115,8 @@ export default function CMSInput({
             value={value || ""}
             onChange={handleValue}
             onInput={type === "datetime-local" || type === "date" ? handleValue : undefined}
+            maxLength={maxLength}
+            placeholder={placeholder}
             style={baseInputStyle}
             {...focusHandlers}
           />

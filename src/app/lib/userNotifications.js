@@ -54,9 +54,11 @@ export function membershipRenewalChannelsForMember(membership) {
 }
 
 /**
- * Ask the server to send nominations-open alerts for due events.
+ * Ask the server to send scheduled alerts (nominations open, reminders, club news).
  * @param {object} [options]
  * @param {boolean} [options.force] - Re-send even if already marked notified (admin retry).
+ * @param {string} [options.type] - nominations_open | nominations_reminder | club_news
+ * @param {string} [options.newsId]
  */
 export async function triggerNominationsOpenProcessing(supabase, eventId = null, options = {}) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -83,7 +85,9 @@ export async function triggerNominationsOpenProcessing(supabase, eventId = null,
 
   const body = {
     ...(eventId ? { eventId } : {}),
+    ...(options.newsId ? { newsId: options.newsId } : {}),
     ...(options.force ? { force: true } : {}),
+    ...(options.type ? { type: options.type } : {}),
   };
 
   // Raw fetch avoids global Supabase client `Prefer` header (breaks Edge Function CORS).

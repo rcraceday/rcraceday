@@ -21,6 +21,8 @@ import ForgotEmail from "@app/pages/public/ForgotEmail";
 
 // USER PAGES
 import Home from "@app/pages/home/Home";
+import ClubNews from "@app/pages/home/ClubNews";
+import NewsDetails from "@app/pages/home/NewsDetails";
 import Events from "@app/pages/events/Events";
 import EventDetails from "@app/pages/events/EventDetails";
 import EventNominate from "@app/pages/events/EventNominate";
@@ -52,6 +54,8 @@ import AdminEvents from "@app/pages/admin/events/AdminEvents";
 import AdminEventEdit from "@app/pages/admin/events/eventsedit/AdminEventEdit";
 import AdminEventNominations from "@app/pages/admin/nominations/AdminEventNominations";
 import AdminClubMessages from "@app/pages/admin/messages/AdminClubMessages";
+import AdminClubNews from "@app/pages/admin/news/AdminClubNews";
+import AdminClubNewsEdit from "@app/pages/admin/news/AdminClubNewsEdit";
 import NominationsExport from "@app/pages/admin/NominationsExport";
 
 // CHAMPIONSHIPS
@@ -131,6 +135,8 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<Home />} />
+        <Route path="news" element={<ClubNews />} />
+        <Route path="news/:id" element={<NewsDetails />} />
         <Route path="membership" element={<Membership />} />
         <Route path="membership/join" element={<JoinMembership />} />
         <Route path="membership/renew" element={<RenewMembership />} />
@@ -220,6 +226,9 @@ export default function AppRoutes() {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="messages" element={<AdminClubMessages />} />
+        <Route path="news" element={<AdminClubNews />} />
+        <Route path="news/new" element={<AdminClubNewsEdit />} />
+        <Route path="news/:id" element={<AdminClubNewsEdit />} />
         <Route path="archives" element={<AdminMetricsArchives />} />
         <Route path="settings" element={<AdminSettingsIndex />} />
         <Route path="settings/club-info" element={<ClubInfoSettings />} />

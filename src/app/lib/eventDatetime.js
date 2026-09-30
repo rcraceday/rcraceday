@@ -62,6 +62,7 @@ const NOMINATION_DATETIME_FIELDS = [
   "nominations_close",
   "late_fee_activation",
   "late_entries_close",
+  "nominations_reminder_at",
 ];
 
 /** Read live datetime-local input values at save time (avoids stale React state). */

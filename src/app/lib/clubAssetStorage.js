@@ -145,6 +145,12 @@ export function clubMemberBadgePath(clubOrSlug, fileName = "member-badge-01.png"
   return `${root}/member-badges/${safeName}`;
 }
 
+export function clubNewsImagePath(clubOrSlug, newsId, file) {
+  const root = clubStorageFolder(clubOrSlug);
+  const ext = getExtensionFromFile(file);
+  return `${root}/news/${newsId}.${ext}`;
+}
+
 export function driverAvatarPath(clubOrSlug, driverId, file) {
   const root = clubStorageFolder(clubOrSlug);
   const ext = getExtensionFromFile(file);

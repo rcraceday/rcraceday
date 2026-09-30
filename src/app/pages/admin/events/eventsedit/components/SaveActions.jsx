@@ -8,6 +8,8 @@ export default function SaveActions({
   onSave,
   onCancel,
   onDelete,
+  saveLabel = "Save Event",
+  deleteLabel = "Delete Event",
 }) {
   return (
     <div
@@ -21,7 +23,7 @@ export default function SaveActions({
       <div style={{ display: "flex", gap: cmsLayout.spacing.sm }}>
         {!isNew && (
           <DeleteEventButton onClick={onDelete} disabled={saving}>
-            Delete Event
+            {deleteLabel}
           </DeleteEventButton>
         )}
       </div>
@@ -31,7 +33,7 @@ export default function SaveActions({
           Cancel
         </CMSButton>
         <CMSButton variant="primary" onClick={onSave} disabled={saving}>
-          {saving ? "Saving…" : "Save Event"}
+          {saving ? "Saving…" : saveLabel}
         </CMSButton>
       </div>
     </div>

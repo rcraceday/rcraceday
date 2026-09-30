@@ -10,6 +10,9 @@ export default function EventNominationsCard({
   onSendOpenNotifications,
   sendingOpenNotifications = false,
   canSendOpenNotifications = false,
+  onSendReminderNotifications,
+  sendingReminderNotifications = false,
+  canSendReminderNotifications = false,
 }) {
   const isMulti = !!event.is_multi_day;
 
@@ -66,6 +69,50 @@ export default function EventNominationsCard({
         >
           {sendingOpenNotifications ? "Sending…" : "Send open notifications now"}
         </CMSButton>
+      )}
+
+      <CMSToggle
+        label="Nomination reminder"
+        checked={!!event.notify_nominations_reminder}
+        onChange={(v) => {
+          update("notify_nominations_reminder", v);
+          if (!v) {
+            update("nominations_reminder_at", "");
+            update("nominations_reminder_message", "");
+          }
+        }}
+      />
+      {!!event.notify_nominations_reminder && (
+        <>
+          <CMSInput
+            name="nominations_reminder_at"
+            label="Reminder date & time"
+            type="datetime-local"
+            value={event.nominations_reminder_at || ""}
+            onChange={(v) => update("nominations_reminder_at", v)}
+          />
+          <CMSInput
+            name="nominations_reminder_message"
+            label="Short message"
+            type="textarea"
+            maxLength={160}
+            value={event.nominations_reminder_message || ""}
+            onChange={(v) => update("nominations_reminder_message", String(v).slice(0, 160))}
+          />
+          <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
+            {(event.nominations_reminder_message || "").length}/160. Sent only to members who have
+            not nominated for this event yet.
+          </p>
+          {canSendReminderNotifications && (
+            <CMSButton
+              type="button"
+              disabled={sendingReminderNotifications}
+              onClick={() => onSendReminderNotifications?.()}
+            >
+              {sendingReminderNotifications ? "Sending…" : "Send reminder now"}
+            </CMSButton>
+          )}
+        </>
       )}
 
       {/* LATE ENTRIES */}

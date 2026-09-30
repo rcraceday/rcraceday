@@ -8,6 +8,7 @@ import {
   ArchiveBoxIcon,
   HomeIcon,
   ChatBubbleLeftRightIcon,
+  NewspaperIcon,
 } from "@heroicons/react/24/solid";
 
 export function buildAdminMenuItems({ clubSlug }) {
@@ -32,6 +33,11 @@ export function buildAdminMenuItems({ clubSlug }) {
       icon: ChatBubbleLeftRightIcon,
       to: `/${clubSlug}/app/admin/messages`,
       messagesMenu: true,
+    },
+    {
+      label: "News",
+      icon: NewspaperIcon,
+      to: `/${clubSlug}/app/admin/news`,
     },
     {
       label: "Membership",

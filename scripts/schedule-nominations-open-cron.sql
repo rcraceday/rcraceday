@@ -1,4 +1,4 @@
--- Automatic nominations-open delivery.
+-- Automatic nominations-open, nomination-reminder, and club-news delivery.
 -- Invokes process-nominations-open every minute via pg_cron + pg_net.
 --
 -- Prerequisites:

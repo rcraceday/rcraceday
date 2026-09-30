@@ -59,12 +59,12 @@ export default function Header({ hideMenu }) {
 
           {!hideMenu && user && (
             <>
-              <div className="hidden md:flex items-center justify-end gap-1 shrink-0">
+              <div className="hidden md:flex items-center justify-end gap-2 shrink-0 justify-self-end">
                 <ClubMessagesNavLink variant="user" />
                 <HamburgerMenu clubSlug={clubSlug} />
               </div>
 
-              <div className="flex md:hidden items-center justify-end gap-1 pr-2 shrink-0">
+              <div className="flex md:hidden items-center justify-end gap-2 shrink-0 justify-self-end">
                 <ClubMessagesNavLink variant="user" />
                 <HamburgerMenu clubSlug={clubSlug} showAvatarInside />
               </div>

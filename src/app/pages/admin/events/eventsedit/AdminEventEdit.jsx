@@ -87,6 +87,9 @@ const initialEventState = {
   nominations_close: "",
   nominations_customized: false,
   notify_nominations_open: false,
+  notify_nominations_reminder: false,
+  nominations_reminder_at: "",
+  nominations_reminder_message: "",
   member_price: "",
   non_member_price: "",
   junior_price: "",
@@ -116,6 +119,7 @@ export default function AdminEventEdit() {
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
   const [publishPromptOpen, setPublishPromptOpen] = useState(false);
   const [sendingOpenNotifications, setSendingOpenNotifications] = useState(false);
+  const [sendingReminderNotifications, setSendingReminderNotifications] = useState(false);
   const [sendNotice, setSendNotice] = useState(null);
   const eventDataRef = useRef(eventData);
 
@@ -211,6 +215,9 @@ const normalizedDays = Array.isArray(data.days)
           nominations_close: isoToDatetimeLocal(data.nominations_close),
           late_entries_enabled: !!data.late_entries_enabled,
           notify_nominations_open: !!data.notify_nominations_open,
+          notify_nominations_reminder: !!data.notify_nominations_reminder,
+          nominations_reminder_at: isoToDatetimeLocal(data.nominations_reminder_at),
+          nominations_reminder_message: data.nominations_reminder_message || "",
           nominations_customized: !!(data.nominations_open || data.nominations_close),
           late_fee_activation: isoToDatetimeLocal(data.late_fee_activation),
           late_entries_close: isoToDatetimeLocal(data.late_entries_close),
@@ -536,6 +543,24 @@ const normalizedDays = Array.isArray(data.days)
     handleSave(true);
   };
 
+  function applyNotificationSummary(data, emptyLabel) {
+    const row = Array.isArray(data?.summary)
+      ? data.summary.find((item) => item?.inApp != null) || data.summary[0]
+      : null;
+    if (!row) {
+      setSendNotice(emptyLabel);
+      return;
+    }
+    const bits = `In-app: ${row.inApp}. Email: ${row.email}. Push: ${row.push}.`;
+    if (row.push === 0) {
+      setSendNotice(
+        `${bits} No devices are registered for lock-screen alerts yet. Phone Settings → Apps → RaceDay (or RCRaceday) is not enough. Each member must open the RCRaceday app, go to Settings, tap Enable push on this device, and Allow. Then send again.${row.pushNote ? ` (${row.pushNote})` : ""}`
+      );
+    } else {
+      setSendNotice(bits);
+    }
+  }
+
   async function runNominationsOpenNotifications(eventId, { force = false } = {}) {
     if (!eventId) return null;
     setSendingOpenNotifications(true);
@@ -557,20 +582,38 @@ const normalizedDays = Array.isArray(data.days)
         setError(String(data.error));
         return null;
       }
-      const row = Array.isArray(data?.summary) ? data.summary[0] : null;
-      if (row) {
-        const bits = `In-app: ${row.inApp}. Email: ${row.email}. Push: ${row.push}.`;
-        if (row.push === 0) {
-          setSendNotice(
-            `${bits} No devices are registered for lock-screen alerts yet. Phone Settings → Apps → RaceDay (or RCRaceday) is not enough. Each member must open the RCRaceday app, go to Settings, tap Enable push on this device, and Allow. Then send again.${row.pushNote ? ` (${row.pushNote})` : ""}`
-          );
-        } else {
-          setSendNotice(bits);
-        }
-      }
+      applyNotificationSummary(data);
       return data;
     } finally {
       setSendingOpenNotifications(false);
+    }
+  }
+
+  async function runNominationsReminderNotifications(eventId, { force = false } = {}) {
+    if (!eventId) return null;
+    setSendingReminderNotifications(true);
+    setSendNotice(null);
+    try {
+      const { data, error: fnError } = await triggerNominationsOpenProcessing(
+        supabase,
+        eventId,
+        { force, type: "nominations_reminder" }
+      );
+      if (fnError) {
+        setError(
+          formatEdgeFunctionInvokeError(fnError, "process-nominations-open") ||
+            "Could not run nomination reminder notifications. Check Edge Function logs."
+        );
+        return null;
+      }
+      if (data?.error) {
+        setError(String(data.error));
+        return null;
+      }
+      applyNotificationSummary(data, "No un-nominated members to remind.");
+      return data;
+    } finally {
+      setSendingReminderNotifications(false);
     }
   }
 
@@ -581,6 +624,15 @@ const normalizedDays = Array.isArray(data.days)
     }
     setError(null);
     await runNominationsOpenNotifications(id, { force: true });
+  };
+
+  const handleSendReminderNotificationsNow = async () => {
+    if (isNew || !id) {
+      setError("Save the event first, then send the reminder.");
+      return;
+    }
+    setError(null);
+    await runNominationsReminderNotifications(id, { force: true });
   };
 
   const handleSave = async (
@@ -648,6 +700,13 @@ const payload = {
   nominations_close: normalizeDate(snapshot.nominations_close),
   late_entries_enabled: !!snapshot.late_entries_enabled,
   notify_nominations_open: !!snapshot.notify_nominations_open,
+  notify_nominations_reminder: !!snapshot.notify_nominations_reminder,
+  nominations_reminder_at: snapshot.notify_nominations_reminder
+    ? normalizeDate(snapshot.nominations_reminder_at)
+    : null,
+  nominations_reminder_message: snapshot.notify_nominations_reminder
+    ? String(snapshot.nominations_reminder_message || "").trim().slice(0, 160)
+    : null,
   late_fee_activation: normalizeDate(snapshot.late_fee_activation),
   late_entries_close: normalizeDate(snapshot.late_entries_close),
 
@@ -733,6 +792,16 @@ const payload = {
       if (nominationsOpenAt && nominationsOpenAt <= new Date()) {
         await runNominationsOpenNotifications(res.data.id);
       }
+      const reminderAt = res.data.nominations_reminder_at
+        ? new Date(res.data.nominations_reminder_at)
+        : null;
+      if (
+        res.data.notify_nominations_reminder &&
+        reminderAt &&
+        reminderAt <= new Date()
+      ) {
+        await runNominationsReminderNotifications(res.data.id);
+      }
 
       setEventData((prev) => ({
         ...prev,
@@ -744,6 +813,9 @@ const payload = {
         late_entries_close: isoToDatetimeLocal(res.data.late_entries_close),
         late_entries_enabled: !!res.data.late_entries_enabled,
         notify_nominations_open: !!res.data.notify_nominations_open,
+        notify_nominations_reminder: !!res.data.notify_nominations_reminder,
+        nominations_reminder_at: isoToDatetimeLocal(res.data.nominations_reminder_at),
+        nominations_reminder_message: res.data.nominations_reminder_message || "",
         nominations_customized:
           snapshot.nominations_customized ||
           !!(res.data.nominations_open || res.data.nominations_close),
@@ -773,6 +845,13 @@ const payload = {
     if (isRichTextEmpty(data.name)) return "Event name is required.";
     if (!data.event_type) return "Event type is required.";
     if (!data.track) return "Track is required.";
+
+    if (data.notify_nominations_reminder) {
+      if (!data.nominations_reminder_at)
+        return "Reminder date and time is required.";
+      if (!String(data.nominations_reminder_message || "").trim())
+        return "Reminder message is required.";
+    }
 
     if (!data.is_multi_day && !data.event_date)
       return "Event date is required for single-day events.";
@@ -880,6 +959,9 @@ if (data.is_multi_day) {
                 onSendOpenNotifications={handleSendOpenNotificationsNow}
                 sendingOpenNotifications={sendingOpenNotifications}
                 canSendOpenNotifications={!isNew && !!id}
+                onSendReminderNotifications={handleSendReminderNotificationsNow}
+                sendingReminderNotifications={sendingReminderNotifications}
+                canSendReminderNotifications={!isNew && !!id}
               />
             </CMSCard>
 

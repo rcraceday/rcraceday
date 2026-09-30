@@ -56,8 +56,7 @@ export default function Home() {
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [nominatedEventIds, setNominatedEventIds] = useState(() => new Set());
   const [eventsWithNominations, setEventsWithNominations] = useState(() => new Set());
-
-  const newsItems = [];
+  const [newsItems, setNewsItems] = useState([]);
 
   useEffect(() => {
     if (!clubSlug) return;
@@ -117,6 +116,33 @@ export default function Home() {
     }
 
     fetchEvents();
+  }, [club?.id]);
+
+  useEffect(() => {
+    if (!club?.id) return undefined;
+    let cancelled = false;
+
+    async function fetchNews() {
+      const { data, error } = await supabase
+        .from("club_news")
+        .select("id, title, body, image_url, published_at, created_at")
+        .eq("club_id", club.id)
+        .eq("is_published", true)
+        .order("published_at", { ascending: false });
+
+      if (cancelled) return;
+      if (error) {
+        console.warn(error);
+        setNewsItems([]);
+        return;
+      }
+      setNewsItems(data || []);
+    }
+
+    fetchNews();
+    return () => {
+      cancelled = true;
+    };
   }, [club?.id]);
 
   useEffect(() => {
@@ -187,7 +213,11 @@ export default function Home() {
       <main className="app-page-main">
         {newsItems.length > 0 && (
           <section className="w-full space-y-3">
-            <Carousel brand={brand} items={newsItems} />
+            <Carousel
+              brand={brand}
+              items={newsItems}
+              onOpenItem={(item) => navigate(`/${clubSlug}/app/news/${item.id}`)}
+            />
           </section>
         )}
 

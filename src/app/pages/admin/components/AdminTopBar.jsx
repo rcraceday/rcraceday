@@ -84,7 +84,7 @@ export default function AdminTopBar() {
           </div>
 
           {/* RIGHT: Admin menu */}
-          <div className="hidden md:flex items-center justify-end gap-1 shrink-0">
+          <div className="hidden md:flex items-center justify-end gap-2 shrink-0 justify-self-end">
             <ClubMessagesNavLink variant="admin" />
             <HamburgerMenu
               clubSlug={clubSlug}
@@ -94,7 +94,7 @@ export default function AdminTopBar() {
             />
           </div>
 
-          <div className="flex md:hidden items-center justify-end gap-1 pr-2 shrink-0">
+          <div className="flex md:hidden items-center justify-end gap-2 shrink-0 justify-self-end">
             <ClubMessagesNavLink variant="admin" />
             <HamburgerMenu
               clubSlug={clubSlug}

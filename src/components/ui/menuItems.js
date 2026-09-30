@@ -11,6 +11,7 @@ import {
   ShieldCheckIcon,
   ArrowRightOnRectangleIcon,
   ChatBubbleLeftRightIcon,
+  NewspaperIcon,
 } from "@heroicons/react/24/solid";
 
 export function buildMenuItems({ clubSlug, isAdmin, user }) {
@@ -29,6 +30,11 @@ export function buildMenuItems({ clubSlug, isAdmin, user }) {
       label: "Calendar",
       icon: CalendarIcon,
       to: `/${clubSlug}/app/calendar`,
+    },
+    {
+      label: "News",
+      icon: NewspaperIcon,
+      to: `/${clubSlug}/app/news`,
     },
     {
       label: "My Noms",

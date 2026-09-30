@@ -5,7 +5,11 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useClubMessageUnreadCount } from "@/app/hooks/useClubMessageUnreadCount";
 
-export default function ClubMessagesNavLink({ variant = "user", compact = false }) {
+export default function ClubMessagesNavLink({
+  variant = "user",
+  compact = false,
+  className = "",
+}) {
   const { clubSlug } = useParams();
   const { club } = useClub();
   const { membership } = useMembership();
@@ -33,7 +37,7 @@ export default function ClubMessagesNavLink({ variant = "user", compact = false 
       to={to}
       className={`relative inline-flex items-center justify-center rounded-md transition-colors hover:bg-black/5 ${
         compact ? "p-1" : "p-2"
-      }`}
+      } ${className}`}
       aria-label={unreadCount > 0 ? `Messages, ${unreadCount} unread` : "Messages"}
       title="Messages"
     >
