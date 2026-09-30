@@ -29,7 +29,7 @@ export default defineConfig({
         enabled: false,
       },
       workbox: {
-        importScripts: ["push-sw-handler.js"],
+        importScripts: ["/push-sw-handler.js"],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
@@ -41,8 +41,8 @@ export default defineConfig({
       showMaximumFileSizeToCacheInBytesWarning: true,
       manifest: {
         id: "/",
-        name: "RC RaceDay",
-        short_name: "RaceDay",
+        name: "RCRaceday",
+        short_name: "RCRaceday",
         description: "Race day management for RC clubs",
         start_url: "/",
         scope: "/",

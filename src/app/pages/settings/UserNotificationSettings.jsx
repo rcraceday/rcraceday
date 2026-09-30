@@ -13,6 +13,7 @@ import {
 } from "@/app/lib/notificationPreferences";
 import { useAuth } from "@/app/providers/AuthProvider";
 import {
+  getPushDeviceStatus,
   isWebPushConfigured,
   isWebPushSupported,
   subscribeWebPush,
@@ -29,13 +30,30 @@ export default function UserNotificationSettings() {
   const [prefs, setPrefs] = useState(DEFAULT_NOTIFICATION_PREFERENCES);
   const [tracks, setTracks] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [enablingDevice, setEnablingDevice] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [deviceStatus, setDeviceStatus] = useState(null);
 
   useEffect(() => {
     if (!membership) return;
     setPrefs(normalizeNotificationPreferences(membership.notification_preferences));
   }, [membership]);
+
+  async function refreshDeviceStatus() {
+    const status = await getPushDeviceStatus();
+    setDeviceStatus(status);
+    return status;
+  }
+
+  useEffect(() => {
+    refreshDeviceStatus();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshDeviceStatus();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   useEffect(() => {
     if (!club?.id) return;
@@ -88,18 +106,61 @@ export default function UserNotificationSettings() {
       const { error: pushError } = await subscribeWebPush(supabase, {
         userId: user.id,
         clubId: club?.id ?? null,
+        requestPermission: true,
       });
       if (pushError) {
         setSaving(false);
-        setError(pushError.message || "Settings saved, but push could not be enabled.");
+        setError(pushError.message || "Settings saved, but this device is not registered for push.");
         refreshMembership?.();
+        await refreshDeviceStatus();
         return;
       }
     }
 
     setSaving(false);
-    setMessage("Settings saved.");
+    setMessage(
+      normalized.push_enabled
+        ? "Settings saved. This device is registered for lock-screen alerts."
+        : "Settings saved."
+    );
     refreshMembership?.();
+    await refreshDeviceStatus();
+  }
+
+  async function handleEnableThisDevice() {
+    if (!membership?.id || !user?.id) return;
+    setEnablingDevice(true);
+    setError("");
+    setMessage("");
+    const next = normalizeNotificationPreferences({ ...prefs, push_enabled: true });
+    setPrefs(next);
+
+    const { error: saveError } = await supabase
+      .from("household_memberships")
+      .update({ notification_preferences: next })
+      .eq("id", membership.id);
+
+    if (saveError) {
+      setEnablingDevice(false);
+      setError(saveError.message || "Could not save settings.");
+      return;
+    }
+
+    const { error: pushError } = await subscribeWebPush(supabase, {
+      userId: user.id,
+      clubId: club?.id ?? null,
+      requestPermission: true,
+    });
+
+    setEnablingDevice(false);
+    refreshMembership?.();
+    await refreshDeviceStatus();
+
+    if (pushError) {
+      setError(pushError.message || "Could not register this device for push.");
+      return;
+    }
+    setMessage("This device is registered. Lock-screen alerts can be sent here.");
   }
 
   return (
@@ -109,9 +170,10 @@ export default function UserNotificationSettings() {
         <Card className="p-4 space-y-4">
           <h2 className="text-lg font-semibold">Notifications</h2>
           <p className="text-sm text-text-muted">
-            Phone alerts use <strong>push</strong>. Install the app on your home screen, leave this
-            checkbox on, and tap Save once so the phone can receive banners when nominations open.
-            iPhone requires iOS 16.4+ and Add to Home Screen. Email is optional.
+            Lock-screen alerts need a one-time Allow inside this app. Turning notifications on in the
+            phone&apos;s Settings → Apps list is not enough on its own. The installed app may still
+            appear as RaceDay until you remove it from the home screen and add RCRaceday again.
+            iPhone needs iOS 16.4+ and Home Screen.
           </p>
 
           <label className="flex items-center gap-2 text-sm">
@@ -146,8 +208,39 @@ export default function UserNotificationSettings() {
           )}
           {isWebPushConfigured() && !isWebPushSupported() && (
             <p className="text-xs text-text-muted pl-6">
-              Use a supported browser and install the app to enable push.
+              Use Chrome or Safari on the installed app to enable push.
             </p>
+          )}
+          {deviceStatus && (
+            <div className="text-xs pl-6 space-y-1">
+              <p>
+                This device:{" "}
+                {deviceStatus.subscribed
+                  ? "registered for lock-screen alerts."
+                  : deviceStatus.permission === "denied"
+                    ? "blocked by the phone. Allow notifications for RCRaceday, then tap Enable below."
+                    : deviceStatus.iosNeedsHomeScreen
+                      ? "open RCRaceday from the Home Screen, then tap Enable."
+                      : "not registered yet."}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  enablingDevice ||
+                  !isWebPushConfigured() ||
+                  !isWebPushSupported() ||
+                  deviceStatus.subscribed
+                }
+                onClick={handleEnableThisDevice}
+              >
+                {enablingDevice
+                  ? "Enabling…"
+                  : deviceStatus.subscribed
+                    ? "This device is enabled"
+                    : "Enable push on this device"}
+              </Button>
+            </div>
           )}
           <label className="flex items-center gap-2 text-sm">
             <input

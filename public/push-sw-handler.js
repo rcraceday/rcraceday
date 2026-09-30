@@ -1,7 +1,7 @@
 /* Web Push handlers (imported by the Vite PWA / Workbox service worker). */
 
 self.addEventListener("push", (event) => {
-  let payload = { title: "RC RaceDay", body: "", url: "/", tag: "rcraceday" };
+  let payload = { title: "RCRaceday", body: "", url: "/", tag: "rcraceday" };
   try {
     if (event.data) {
       const parsed = event.data.json();
@@ -22,7 +22,7 @@ self.addEventListener("push", (event) => {
     },
   };
 
-  event.waitUntil(self.registration.showNotification(payload.title || "RC RaceDay", options));
+  event.waitUntil(self.registration.showNotification(payload.title || "RCRaceday", options));
 });
 
 self.addEventListener("notificationclick", (event) => {

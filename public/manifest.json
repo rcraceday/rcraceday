@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "RC RaceDay",
-  "short_name": "RaceDay",
+  "name": "RCRaceday",
+  "short_name": "RCRaceday",
   "description": "Race day management for RC clubs",
   "start_url": "/",
   "scope": "/",

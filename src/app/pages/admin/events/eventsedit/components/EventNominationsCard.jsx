@@ -53,9 +53,10 @@ export default function EventNominationsCard({
         onChange={(v) => update("notify_nominations_open", v)}
       />
       <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
-        Sends a phone push banner (and optional email) when nominations open. Members must enable Push in
-        Settings on the installed app. Schedule <code>process-nominations-open</code> every few minutes,
-        or use the button below after nominations have opened.
+        Sends a lock-screen push (and optional email) when nominations open. Members must tap
+        Enable push on this device in RCRaceday Settings. Phone Settings → Apps notifications
+        alone will not register the device. Schedule <code>process-nominations-open</code> every
+        few minutes, or use the button below after nominations have opened.
       </p>
       {canSendOpenNotifications && (
         <CMSButton

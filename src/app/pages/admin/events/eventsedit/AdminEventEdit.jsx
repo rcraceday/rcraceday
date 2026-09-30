@@ -116,6 +116,7 @@ export default function AdminEventEdit() {
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
   const [publishPromptOpen, setPublishPromptOpen] = useState(false);
   const [sendingOpenNotifications, setSendingOpenNotifications] = useState(false);
+  const [sendNotice, setSendNotice] = useState(null);
   const eventDataRef = useRef(eventData);
 
   useEffect(() => {
@@ -538,6 +539,7 @@ const normalizedDays = Array.isArray(data.days)
   async function runNominationsOpenNotifications(eventId, { force = false } = {}) {
     if (!eventId) return null;
     setSendingOpenNotifications(true);
+    setSendNotice(null);
     try {
       const { data, error: fnError } = await triggerNominationsOpenProcessing(
         supabase,
@@ -556,10 +558,15 @@ const normalizedDays = Array.isArray(data.days)
         return null;
       }
       const row = Array.isArray(data?.summary) ? data.summary[0] : null;
-      if (row && row.push === 0) {
-        setError(
-          `Push sent 0${row.pushNote ? ` (${row.pushNote})` : ""}. Open the installed app on the phone, Settings, turn Push on, Save, then send again. In-app rows created: ${row.inApp}.`
-        );
+      if (row) {
+        const bits = `In-app: ${row.inApp}. Email: ${row.email}. Push: ${row.push}.`;
+        if (row.push === 0) {
+          setSendNotice(
+            `${bits} No devices are registered for lock-screen alerts yet. Phone Settings → Apps → RaceDay (or RCRaceday) is not enough. Each member must open the RCRaceday app, go to Settings, tap Enable push on this device, and Allow. Then send again.${row.pushNote ? ` (${row.pushNote})` : ""}`
+          );
+        } else {
+          setSendNotice(bits);
+        }
       }
       return data;
     } finally {
@@ -818,6 +825,21 @@ if (data.is_multi_day) {
             }}
           >
             {error}
+          </div>
+        )}
+
+        {sendNotice && (
+          <div
+            style={{
+              padding: "12px 16px",
+              borderRadius: "6px",
+              backgroundColor: "#FEF3C7",
+              color: "#92400E",
+              fontSize: "14px",
+              marginBottom: "20px",
+            }}
+          >
+            {sendNotice}
           </div>
         )}
 

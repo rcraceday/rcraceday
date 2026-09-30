@@ -14,7 +14,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { normalizeNotificationPreferences } from "@/app/lib/notificationPreferences";
-import { isWebPushConfigured, isWebPushSupported, subscribeWebPush } from "@/app/lib/webPushClient";
+import { isWebPushConfigured, isWebPushSupported, syncWebPushIfPermitted } from "@/app/lib/webPushClient";
 import { supabase } from "@/supabaseClient";
 
 // Local toast context
@@ -45,7 +45,6 @@ export default function NotificationProvider({ children }) {
   const mountedRef = useRef(false);
   const lastDataRef = useRef(null);
   const refreshTimerRef = useRef(null);
-  const pushSubscribeAttemptRef = useRef("");
 
   const loadNotifications = useCallback(async () => {
     if (!mountedRef.current) return;
@@ -118,16 +117,32 @@ export default function NotificationProvider({ children }) {
   }, [loadNotifications]);
 
   useEffect(() => {
-    if (!user?.id || !membership) return;
+    if (!user?.id || !membership) return undefined;
     const prefs = normalizeNotificationPreferences(membership.notification_preferences);
-    if (!prefs.push_enabled) return;
-    if (!isWebPushConfigured() || !isWebPushSupported()) return;
-    const key = `${user.id}:${club?.id || ""}`;
-    if (pushSubscribeAttemptRef.current === key) return;
-    pushSubscribeAttemptRef.current = key;
-    subscribeWebPush(supabase, { userId: user.id, clubId: club?.id ?? null }).catch(() => {
-      pushSubscribeAttemptRef.current = "";
-    });
+    if (!prefs.push_enabled) return undefined;
+    if (!isWebPushConfigured() || !isWebPushSupported()) return undefined;
+
+    let cancelled = false;
+    const sync = () => {
+      if (cancelled) return;
+      syncWebPushIfPermitted(supabase, {
+        userId: user.id,
+        clubId: club?.id ?? null,
+      }).catch(() => {});
+    };
+
+    sync();
+    const retrySoon = setTimeout(sync, 2000);
+    const retryLater = setTimeout(sync, 8000);
+    document.addEventListener("visibilitychange", sync);
+    navigator.serviceWorker?.ready?.then(() => sync());
+
+    return () => {
+      cancelled = true;
+      clearTimeout(retrySoon);
+      clearTimeout(retryLater);
+      document.removeEventListener("visibilitychange", sync);
+    };
   }, [user?.id, membership, club?.id]);
 
   useEffect(() => {

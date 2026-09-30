@@ -186,7 +186,7 @@ export async function sendWebPushToUsers(
     return { sent: 0, failed: 0, removed: 0, note: error.message };
   }
   if (!rows?.length) {
-    return { sent: 0, failed: 0, removed: 0, note: "no device subscriptions â€” open Settings on the phone, turn Push on, Save" };
+    return { sent: 0, failed: 0, removed: 0, note: "no device subscriptions; members must tap Enable push in RCRaceday Settings" };
   }
 
   const payload = JSON.stringify({

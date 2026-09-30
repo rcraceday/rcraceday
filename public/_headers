@@ -1,6 +1,9 @@
 /sw.js
   Cache-Control: no-cache, no-store, must-revalidate
 
+/push-sw-handler.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
 
