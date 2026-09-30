@@ -3,22 +3,79 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import { useEffect, useRef, useState } from "react";
-function normalizeLinkHref(url) {
-  const trimmed = url.trim();
+import { fixRichTextLinkHtml } from "@/app/lib/richText";
+
+export function normalizeLinkHref(url) {
+  const trimmed = String(url || "").trim();
   if (!trimmed) return "";
   if (trimmed.startsWith("https:///") || trimmed.startsWith("http:///")) {
     return trimmed.replace(/^https?:\/\//i, "");
   }
   if (/^(https?:\/\/|mailto:|tel:)/i.test(trimmed)) return trimmed;
   if (trimmed.startsWith("/") || trimmed.startsWith("#")) return trimmed;
+  // `chargers-rc/app/events/...` without a leading slash
+  if (/^[a-z0-9][a-z0-9-]*\/app\//i.test(trimmed)) return `/${trimmed}`;
   return `https://${trimmed}`;
 }
 
+function isInternalLinkHref(href) {
+  if (!href) return false;
+  return href.startsWith("/") || href.startsWith("#");
+}
+
+function linkAllowedUri(url, ctx) {
+  const href = String(url || "").trim();
+  if (!href) return false;
+  if (isInternalLinkHref(href)) return true;
+  return ctx.defaultValidate(href);
+}
+
+function defaultShouldAutoLink(url) {
+  if (!url) return false;
+  const hasProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(url);
+  const hasMaybeProtocol = /^[a-z][a-z0-9+.-]*:/i.test(url);
+  if (hasProtocol || (hasMaybeProtocol && !url.includes("@"))) return true;
+  const hostname = (url.includes("@") ? url.split("@").pop() : url).split(/[/?#:]/)[0];
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return false;
+  if (!/\./.test(hostname)) return false;
+  return true;
+}
+
 const AppLink = Link.extend({
+  parseHTML() {
+    return [
+      {
+        tag: "a[href]",
+        getAttrs: (dom) => {
+          const href = dom.getAttribute("href");
+          if (!href) return false;
+          const normalized = normalizeLinkHref(href);
+          if (isInternalLinkHref(normalized)) return null;
+          if (
+            !this.options.isAllowedUri(normalized, {
+              defaultValidate: (url) => {
+                try {
+                  const parsed = new URL(url, window.location.origin);
+                  return ["http:", "https:", "mailto:", "tel:"].includes(parsed.protocol);
+                } catch {
+                  return false;
+                }
+              },
+              protocols: this.options.protocols,
+              defaultProtocol: this.options.defaultProtocol,
+            })
+          ) {
+            return false;
+          }
+          return null;
+        },
+      },
+    ];
+  },
   renderHTML({ HTMLAttributes }) {
-    const href = HTMLAttributes.href || "";
-    const attrs = { ...HTMLAttributes, rel: "noopener noreferrer" };
-    const isRelative = href.startsWith("/") || href.startsWith("#");
+    const href = normalizeLinkHref(HTMLAttributes.href || "");
+    const attrs = { ...HTMLAttributes, href, rel: "noopener noreferrer" };
+    const isRelative = isInternalLinkHref(href);
     let isSameOrigin = false;
     if (/^https?:\/\//i.test(href)) {
       try {
@@ -29,8 +86,41 @@ const AppLink = Link.extend({
     }
     if (!isRelative && !isSameOrigin) {
       attrs.target = "_blank";
+    } else {
+      delete attrs.target;
     }
     return ["a", attrs, 0];
+  },
+  addCommands() {
+    return {
+      ...this.parent?.(),
+      setLink:
+        (attributes) =>
+        ({ chain }) => {
+          const href = normalizeLinkHref(attributes?.href);
+          if (!href) {
+            return chain().unsetLink().run();
+          }
+          if (
+            !linkAllowedUri(href, {
+              defaultValidate: (url) => {
+                try {
+                  const parsed = new URL(url, window.location.origin);
+                  return ["http:", "https:", "mailto:", "tel:"].includes(parsed.protocol);
+                } catch {
+                  return false;
+                }
+              },
+            })
+          ) {
+            return false;
+          }
+          return chain()
+            .setMark(this.name, { ...attributes, href })
+            .setMeta("preventAutolink", true)
+            .run();
+        },
+    };
   },
 });
 
@@ -56,12 +146,20 @@ export default function CMSRichTextEditor({ value, onChange }) {
       AppLink.configure({
         openOnClick: false,
         autolink: true,
+        linkOnPaste: true,
         defaultProtocol: "https",
+        isAllowedUri: linkAllowedUri,
+        shouldAutoLink: (url) => {
+          if (isInternalLinkHref(url) || /^[a-z0-9][a-z0-9-]*\/app\//i.test(url)) {
+            return false;
+          }
+          return defaultShouldAutoLink(url);
+        },
       }),
     ],
     content: value || "",
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      onChange(fixRichTextLinkHtml(editor.getHTML()));
     },
   });
 

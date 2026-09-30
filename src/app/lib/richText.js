@@ -2,9 +2,15 @@ import DOMPurify from "dompurify";
 
 const SANITIZE_OPTIONS = { ADD_ATTR: ["target", "rel"] };
 
+/** Undo TipTap/linkify turning `/path` into `https:///path`. */
+export function fixRichTextLinkHtml(html) {
+  if (!html) return html;
+  return html.replace(/href="https:\/\/\//gi, 'href="/');
+}
+
 /** Safe HTML for read-only rich text (names, descriptions). */
 export function sanitizeRichTextHtml(html) {
-  return DOMPurify.sanitize(html || "", SANITIZE_OPTIONS);
+  return fixRichTextLinkHtml(DOMPurify.sanitize(html || "", SANITIZE_OPTIONS));
 }
 
 /** Strip HTML to plain text for labels, alt text, and validation. */
