@@ -51,8 +51,8 @@ export default function AdminTopBar() {
         <div
           className="
             app-column py-3
-            flex items-center justify-between
-            md:grid md:grid-cols-3 md:items-center md:py-0 md:h-24
+            grid grid-cols-3 items-center
+            md:py-0 md:h-24
           "
         >
           {/* LEFT: RC RaceDay logo */}
