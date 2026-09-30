@@ -83,37 +83,58 @@ function channelsForMember(
   };
 }
 
+function trimKey(value: string | null | undefined): string {
+  return (value || "").trim();
+}
+
 function bearerToken(req: Request): string {
   const auth = req.headers.get("authorization") || "";
-  if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
+  if (auth.toLowerCase().startsWith("bearer ")) return trimKey(auth.slice(7));
   return "";
 }
 
 function requestApiKey(req: Request): string {
-  return (req.headers.get("apikey") || "").trim();
+  return trimKey(req.headers.get("apikey"));
+}
+
+function keyMatchesRequest(req: Request, expected: string): boolean {
+  const key = trimKey(expected);
+  if (!key) return false;
+  const token = bearerToken(req);
+  const apiKey = requestApiKey(req);
+  return token === key || apiKey === key;
 }
 
 function isServiceAuthorized(req: Request): boolean {
-  const cronSecret = Deno.env.get("CRON_SECRET");
+  const cronSecret = trimKey(Deno.env.get("CRON_SECRET"));
   if (cronSecret) {
-    const header = req.headers.get("x-cron-secret");
+    const header = trimKey(req.headers.get("x-cron-secret"));
     if (header === cronSecret) return true;
   }
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  if (!serviceKey) return false;
-  const token = bearerToken(req);
-  const apiKey = requestApiKey(req);
-  return token === serviceKey || apiKey === serviceKey;
+  const serviceKey = trimKey(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
+  if (serviceKey && keyMatchesRequest(req, serviceKey)) return true;
+  return false;
 }
 
-// pg_cron + pg_net sends the publishable/anon key in `apikey` (and sometimes Bearer), not the service role.
-function isScheduledInvoke(req: Request): boolean {
+/** pg_cron batch run: empty body, no eventId, no force. */
+function isScheduledBatchInvoke(
+  req: Request,
+  eventIdFilter: string | null,
+  forceResend: boolean
+): boolean {
+  if (eventIdFilter || forceResend) return false;
+  const cronSecret = trimKey(Deno.env.get("CRON_SECRET"));
+  const header = trimKey(req.headers.get("x-cron-secret"));
+  if (cronSecret && header === cronSecret) return true;
   if (isServiceAuthorized(req)) return true;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
-  if (!anonKey) return false;
-  const token = bearerToken(req);
-  const apiKey = requestApiKey(req);
-  return token === anonKey || apiKey === anonKey;
+  const anonCandidates = [
+    trimKey(Deno.env.get("SUPABASE_ANON_KEY")),
+    trimKey(Deno.env.get("SUPABASE_PUBLISHABLE_KEY")),
+  ].filter(Boolean);
+  for (const anonKey of anonCandidates) {
+    if (keyMatchesRequest(req, anonKey)) return true;
+  }
+  return false;
 }
 
 serve(async (req) => {
@@ -140,8 +161,7 @@ serve(async (req) => {
   }
 
   let authorized = isServiceAuthorized(req);
-  // Automatic/cron runs have no eventId and cannot force-resend.
-  if (!authorized && !eventIdFilter && !forceResend && isScheduledInvoke(req)) {
+  if (!authorized && isScheduledBatchInvoke(req, eventIdFilter, forceResend)) {
     authorized = true;
   }
   if (!authorized && eventIdFilter && anonKey) {
@@ -177,6 +197,12 @@ serve(async (req) => {
 
     const nowIso = new Date().toISOString();
 
+    const lookbackHours = Math.max(
+      1,
+      Number(Deno.env.get("NOMINATIONS_OPEN_LOOKBACK_HOURS") || "168")
+    );
+    const lookbackIso = new Date(Date.now() - lookbackHours * 60 * 60 * 1000).toISOString();
+
     let eventsQuery = supabase
       .from("events")
       .select(
@@ -188,13 +214,18 @@ serve(async (req) => {
     if (!forceResend) {
       eventsQuery = eventsQuery.is("nominations_open_notified_at", null);
       eventsQuery = eventsQuery.eq("is_published", true);
+      // Skip ancient backlog; cron should fire near real open time only.
+      eventsQuery = eventsQuery.gte("nominations_open", lookbackIso);
     }
 
     if (eventIdFilter) {
       eventsQuery = eventsQuery.eq("id", eventIdFilter);
     }
 
-    const { data: events, error: eventsError } = await eventsQuery.limit(20);
+    const perRunLimit = eventIdFilter ? 1 : Number(Deno.env.get("NOMINATIONS_OPEN_BATCH_SIZE") || "1");
+    const { data: events, error: eventsError } = await eventsQuery
+      .order("nominations_open", { ascending: true })
+      .limit(perRunLimit);
 
     if (eventsError) {
       return new Response(JSON.stringify({ error: eventsError.message }), {
@@ -292,8 +323,9 @@ serve(async (req) => {
 
       let pushSent = 0;
       let pushNote = "";
-      if (pushUserIds.length > 0) {
-        const pushResult = await sendWebPushToUsers(supabase, pushUserIds, {
+      const uniquePushUserIds = [...new Set(pushUserIds)];
+      if (uniquePushUserIds.length > 0) {
+        const pushResult = await sendWebPushToUsers(supabase, uniquePushUserIds, {
           title: `${clubName}: nominations open`,
           body: `${eventName}. Tap to nominate.`,
           url: linkUrl,

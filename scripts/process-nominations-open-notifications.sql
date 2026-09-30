@@ -3,7 +3,8 @@
 -- Run after create-notification-preferences.sql.
 -- Deploy edge functions: process-nominations-open, send-web-push (generic push API)
 -- Run scripts/create-push-subscriptions.sql and configure VAPID keys before push delivery.
--- Automatic send: run scripts/schedule-nominations-open-cron.sql (pg_cron + pg_net every minute).
+-- Automatic send: setup-nominations-open-cron-vault.sql, schedule-nominations-open-cron.sql.
+-- Backlog: mark-past-nominations-open-notified.sql (once, so old events never re-fire).
 
 alter table public.events
   add column if not exists nominations_open_notified_at timestamptz;

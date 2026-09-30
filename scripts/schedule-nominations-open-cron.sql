@@ -1,35 +1,34 @@
 -- Automatic nominations-open delivery.
 -- Invokes process-nominations-open every minute via pg_cron + pg_net.
--- Run after process-nominations-open-notifications.sql and deploying the Edge Function.
+--
+-- Prerequisites:
+--   1. process-nominations-open-notifications.sql
+--   2. Deploy process-nominations-open (--no-verify-jwt) after auth changes
+--   3. setup-nominations-open-cron-vault.sql (CRON_SECRET in Edge + Vault cron_secret)
+--   4. This file
 
 create extension if not exists pg_cron with schema pg_catalog;
 create extension if not exists pg_net with schema extensions;
 
--- Store project URL + anon/publishable key in Vault if missing.
--- Replace the placeholders only if these secret names do not already exist.
 do $$
-declare
-  has_url boolean;
-  has_key boolean;
 begin
-  select exists (
-    select 1 from vault.decrypted_secrets where name = 'project_url'
-  ) into has_url;
-  select exists (
-    select 1 from vault.decrypted_secrets where name = 'anon_key'
-  ) into has_key;
+  if not exists (
+    select 1 from vault.decrypted_secrets where name = 'cron_secret'
+  ) and not exists (
+    select 1 from vault.decrypted_secrets where name = 'service_role_key'
+  ) then
+    raise exception
+      'Add cron_secret to Vault (and matching CRON_SECRET Edge secret) OR service_role_key. See scripts/setup-nominations-open-cron-vault.sql';
+  end if;
 
-  if not has_url then
+  if not exists (
+    select 1 from vault.decrypted_secrets where name = 'project_url'
+  ) then
     perform vault.create_secret(
       'https://mvcttnmclrvaatdgzhpb.supabase.co',
       'project_url',
       'Supabase project URL for scheduled Edge Function calls'
     );
-  end if;
-
-  if not has_key then
-    raise exception
-      'Vault secret anon_key is missing. In SQL Editor run: select vault.create_secret(''<anon/publishable key>'', ''anon_key''); then rerun this script.';
   end if;
 end $$;
 
@@ -42,8 +41,10 @@ as $$
 declare
   request_id bigint;
   project_url text;
+  service_role_key text;
   anon_key text;
   cron_secret text;
+  gateway_key text;
   headers jsonb;
 begin
   select decrypted_secret into project_url
@@ -51,25 +52,32 @@ begin
   where name = 'project_url'
   limit 1;
 
-  select decrypted_secret into anon_key
+  select trim(decrypted_secret) into service_role_key
+  from vault.decrypted_secrets
+  where name = 'service_role_key'
+  limit 1;
+
+  select trim(decrypted_secret) into anon_key
   from vault.decrypted_secrets
   where name = 'anon_key'
   limit 1;
 
-  select decrypted_secret into cron_secret
+  select trim(decrypted_secret) into cron_secret
   from vault.decrypted_secrets
   where name = 'cron_secret'
   limit 1;
 
-  if project_url is null or anon_key is null then
-    raise warning 'invoke_process_nominations_open: missing vault secrets project_url/anon_key';
+  gateway_key := coalesce(nullif(service_role_key, ''), nullif(anon_key, ''));
+
+  if project_url is null or gateway_key is null then
+    raise warning 'invoke_process_nominations_open: missing project_url or anon_key/service_role_key for gateway';
     return null;
   end if;
 
   headers := jsonb_build_object(
     'Content-Type', 'application/json',
-    'apikey', anon_key,
-    'Authorization', 'Bearer ' || anon_key
+    'apikey', gateway_key,
+    'Authorization', 'Bearer ' || gateway_key
   );
 
   if cron_secret is not null and length(cron_secret) > 0 then
