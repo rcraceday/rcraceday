@@ -216,6 +216,7 @@ export default function Home() {
             <Carousel
               brand={brand}
               items={newsItems}
+              newsBackgroundUrl={club?.news_background_url}
               onOpenItem={(item) => navigate(`/${clubSlug}/app/news/${item.id}`)}
             />
           </section>

@@ -7,6 +7,7 @@ import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import { newsDetailHeaderStyle } from "@/components/news/NewsItemImage";
 import { sanitizeRichTextHtml } from "@/app/lib/richText";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
 
@@ -118,11 +119,11 @@ export default function NewsDetails() {
             {item.image_url && (
               <div
                 className="flex flex-col items-center mb-4"
-                style={{
-                  background: `linear-gradient(180deg, ${brand} 0%, ${palette?.surfaceAlt || "#f9fafb"} 70%)`,
-                  padding: "24px 0",
-                  borderRadius: "8px",
-                }}
+                style={newsDetailHeaderStyle({
+                  newsBackgroundUrl: club?.news_background_url,
+                  brand,
+                  surfaceAlt: palette?.surfaceAlt,
+                })}
               >
                 <img
                   src={item.image_url}

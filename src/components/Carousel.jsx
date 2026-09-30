@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import Card from "@/components/ui/Card";
+import NewsItemImage from "@/components/news/NewsItemImage";
 import { richTextToPlainText } from "@/app/lib/richText";
 import "./carousel.css";
 
-export default function Carousel({ brand, items, onOpenItem }) {
+export default function Carousel({ brand, items, onOpenItem, newsBackgroundUrl }) {
   const [index, setIndex] = useState(0);
   const list = Array.isArray(items) ? items : [];
 
@@ -30,24 +31,40 @@ export default function Carousel({ brand, items, onOpenItem }) {
     <div className="carousel-wrapper">
       <div className="carousel-mobile" onClick={showSides ? goNext : undefined}>
         <div className="carousel-card carousel-mobile-card">
-          <NewsCard brand={brand} item={list[index]} onOpen={onOpenItem} />
+          <NewsCard
+            item={list[index]}
+            onOpen={onOpenItem}
+            newsBackgroundUrl={newsBackgroundUrl}
+          />
         </div>
       </div>
 
       <div className="carousel-desktop">
         {showSides && (
           <div className="carousel-card ghost-left" onClick={goPrev}>
-            <NewsCard brand={brand} item={list[prevIndex]} onOpen={onOpenItem} />
+            <NewsCard
+              item={list[prevIndex]}
+              onOpen={onOpenItem}
+              newsBackgroundUrl={newsBackgroundUrl}
+            />
           </div>
         )}
 
         <div className="carousel-card center" onClick={showSides ? goNext : undefined}>
-          <NewsCard brand={brand} item={list[index]} onOpen={onOpenItem} />
+          <NewsCard
+            item={list[index]}
+            onOpen={onOpenItem}
+            newsBackgroundUrl={newsBackgroundUrl}
+          />
         </div>
 
         {showSides && (
           <div className="carousel-card ghost-right" onClick={goNext}>
-            <NewsCard brand={brand} item={list[nextIndex]} onOpen={onOpenItem} />
+            <NewsCard
+              item={list[nextIndex]}
+              onOpen={onOpenItem}
+              newsBackgroundUrl={newsBackgroundUrl}
+            />
           </div>
         )}
       </div>
@@ -55,7 +72,7 @@ export default function Carousel({ brand, items, onOpenItem }) {
   );
 }
 
-function NewsCard({ item, onOpen }) {
+function NewsCard({ item, onOpen, newsBackgroundUrl }) {
   const excerpt = richTextToPlainText(item?.body).slice(0, 140);
 
   const open = (e) => {
@@ -65,21 +82,12 @@ function NewsCard({ item, onOpen }) {
 
   return (
     <Card className="news-card">
-      <div className="news-card-image">
-        {item?.image_url ? (
-          <>
-            <img
-              className="news-card-image-bg"
-              src={item.image_url}
-              alt=""
-              aria-hidden="true"
-            />
-            <img className="news-card-image-fg" src={item.image_url} alt="" />
-          </>
-        ) : (
-          <span>{item?.title || "News"}</span>
-        )}
-      </div>
+      <NewsItemImage
+        variant="carousel"
+        newsBackgroundUrl={newsBackgroundUrl}
+        imageUrl={item?.image_url}
+        title={item?.title}
+      />
       <div className="news-card-body">
         <h3 className="news-card-title">{item?.title}</h3>
         {excerpt ? <p className="news-card-excerpt">{excerpt}</p> : null}

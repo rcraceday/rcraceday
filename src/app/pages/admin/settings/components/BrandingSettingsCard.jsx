@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/supabaseClient";
 import {
   brandingLogoPath,
+  removeClubAssetPath,
   uploadClubAsset,
 } from "@/app/lib/clubAssetStorage";
 import { useClub } from "@/app/providers/ClubProvider";
@@ -17,6 +18,7 @@ const getFormFromClub = (club) => ({
   text_color: club?.text_color || "#FFFFFF",
   button_color: club?.button_color || "",
   button_text_color: club?.button_text_color || "#FFFFFF",
+  news_background_url: club?.news_background_url || "",
 });
 
 export default function BrandingSettingsCard({ club }) {
@@ -79,6 +81,24 @@ export default function BrandingSettingsCard({ club }) {
     uploadImage(file, "admin_logo_url", form.admin_logo_url, 1, "Admin logo");
   };
 
+  const handleNewsBackgroundUpload = (e) => {
+    const file = e.target.files?.[0];
+    uploadImage(file, "news_background_url", form.news_background_url, 2, "News background");
+  };
+
+  const handleClearNewsBackground = async () => {
+    if (!form.news_background_url) return;
+    const confirmed = window.confirm("Remove the news background image?");
+    if (!confirmed) return;
+    setUploading(true);
+    try {
+      await removeClubAssetPath(supabase, form.news_background_url);
+      updateField("news_background_url", "");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // -------------------------------------------------------
   // SAVE
   // -------------------------------------------------------
@@ -98,6 +118,7 @@ export default function BrandingSettingsCard({ club }) {
 
       button_color: form.button_color || form.primary_color,
       button_text_color: form.button_text_color,
+      news_background_url: form.news_background_url || null,
     };
 
     try {
@@ -105,7 +126,9 @@ export default function BrandingSettingsCard({ club }) {
         .from("clubs")
         .update(payload)
         .eq("id", club.id)
-        .select("id, logo_url, admin_logo_url, primary_color, text_color, button_color, button_text_color")
+        .select(
+          "id, logo_url, admin_logo_url, news_background_url, primary_color, text_color, button_color, button_text_color"
+        )
         .maybeSingle();
 
       if (error || !savedClub) {
@@ -206,6 +229,45 @@ export default function BrandingSettingsCard({ club }) {
               Recommended: 400×400px • Max 1MB
             </div>
           </>
+        )}
+      </div>
+
+      {/* ------------------------------------------------------- */}
+      {/* NEWS BACKGROUND */}
+      {/* ------------------------------------------------------- */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        <label style={{ fontSize: "14px", fontWeight: 600 }}>News background</label>
+        <p style={{ fontSize: "12px", color: "#666", margin: 0 }}>
+          Shown behind news images on Home, News list, and article pages. Recommended:
+          1600×900px (16:9) • Max 2MB
+        </p>
+
+        {form.news_background_url && (
+          <img
+            src={form.news_background_url}
+            alt="News background preview"
+            style={{
+              width: "100%",
+              maxHeight: "120px",
+              objectFit: "cover",
+              border: "1px solid #ddd",
+              borderRadius: "6px",
+            }}
+          />
+        )}
+
+        <input type="file" accept="image/*" onChange={handleNewsBackgroundUpload} />
+
+        {form.news_background_url && (
+          <CMSButton
+            type="button"
+            variant="secondary"
+            onClick={handleClearNewsBackground}
+            disabled={uploading || saving}
+            style={{ alignSelf: "flex-start", fontSize: "12px", padding: "4px 10px" }}
+          >
+            Remove background
+          </CMSButton>
         )}
       </div>
 

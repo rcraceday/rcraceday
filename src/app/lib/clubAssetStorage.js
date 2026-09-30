@@ -116,6 +116,9 @@ export function brandingLogoPath(clubOrSlug, fieldName, file) {
   if (fieldName === "admin_logo_url") {
     return `${root}/branding/admin-logo.${ext}`;
   }
+  if (fieldName === "news_background_url") {
+    return `${root}/branding/news-background.${ext}`;
+  }
   return `${root}/branding/logo.${ext}`;
 }
 

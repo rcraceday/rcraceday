@@ -6,6 +6,7 @@ import { useClub } from "@/app/providers/ClubProvider";
 import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
 import Card from "@/components/ui/Card";
+import NewsItemImage from "@/components/news/NewsItemImage";
 import { richTextToPlainText } from "@/app/lib/richText";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
 
@@ -94,20 +95,21 @@ export default function ClubNews() {
                 >
                   <Card className="!p-0 overflow-hidden hover:opacity-[0.98]">
                     <div className="flex gap-3 p-3 sm:p-4 items-center">
-                      <div
-                        className="shrink-0 rounded-lg overflow-hidden bg-[#F3F4F6] flex items-center justify-center"
-                        style={{ width: 72, height: 72 }}
-                      >
-                        {item.image_url ? (
-                          <img
-                            src={item.image_url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
+                      {item.image_url ? (
+                        <NewsItemImage
+                          variant="thumb"
+                          newsBackgroundUrl={club?.news_background_url}
+                          imageUrl={item.image_url}
+                          title={item.title}
+                        />
+                      ) : (
+                        <div
+                          className="shrink-0 rounded-lg overflow-hidden bg-[#F3F4F6] flex items-center justify-center"
+                          style={{ width: 72, height: 72 }}
+                        >
                           <NewspaperIcon className="h-8 w-8 text-text-muted opacity-50" />
-                        )}
-                      </div>
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <h2 className="text-base font-semibold text-text-base m-0">
                           {item.title}

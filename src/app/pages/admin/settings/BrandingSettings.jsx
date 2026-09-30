@@ -18,7 +18,7 @@ export default function BrandingSettings() {
             <h1 style={cmsStyles.sectionHeaderTitle}>Branding Settings</h1>
 
             <p style={cmsStyles.sectionHeaderSubtitle}>
-              Manage your platform name, logo, and brand colours.
+              Manage your platform name, logos, news background, and brand colours.
             </p>
           </div>
 
