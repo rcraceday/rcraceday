@@ -14,6 +14,7 @@ import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import Button from "@/components/ui/Button";
 
 export default function UserProfile() {
@@ -24,6 +25,7 @@ export default function UserProfile() {
   const { membership } = useMembership();
   const { drivers } = useDrivers();
   const { palette } = useTheme();
+  const { t } = useTranslation();
 
   const brand = palette.primary;
 
@@ -42,7 +44,7 @@ export default function UserProfile() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      <PageTitle icon={UserIcon} title="User Profile" style={{ color: brand }} />
+      <PageTitle icon={UserIcon} title={t("drivers.userProfileTitle")} style={{ color: brand }} />
 
       {/* MAIN CONTENT */}
       <main className="app-page-main space-y-12 flex flex-col items-center !pb-16">

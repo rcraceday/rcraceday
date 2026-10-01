@@ -1,6 +1,7 @@
 // src/app/pages/events/EventDetailsSections/EventDetailsClasses.jsx
 
 import useTheme from "@/app/providers/useTheme";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   getAllEventAssignedClassIds,
   getDayClassLimit,
@@ -30,6 +31,7 @@ function formatDate(dateString) {
 
 export default function EventDetailsClasses({ event, trackClassIds = [], classNameMap = {} }) {
   const { palette } = useTheme();
+  const { t } = useTranslation();
   const classesByDay = Array.isArray(event.classes_by_day)
     ? event.classes_by_day
     : [];
@@ -42,10 +44,10 @@ export default function EventDetailsClasses({ event, trackClassIds = [], classNa
       {event.is_multi_day && (getEventClassLimit(event) != null || getDayClassLimit(event) != null) && (
         <div className="text-sm space-y-1">
           {getEventClassLimit(event) != null && (
-            <div>Max classes per driver (event): {getEventClassLimit(event)}</div>
+            <div>{t("nominate.maxClassesEvent", { count: getEventClassLimit(event) })}</div>
           )}
           {getDayClassLimit(event) != null && (
-            <div>Max classes per day: {getDayClassLimit(event)}</div>
+            <div>{t("nominate.maxClassesDay", { count: getDayClassLimit(event) })}</div>
           )}
         </div>
       )}

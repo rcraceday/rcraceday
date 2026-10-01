@@ -1,5 +1,6 @@
 import {
   normalizeNotificationPreferences,
+  shouldNotifyClubNews,
   shouldNotifyForEventTrack,
   shouldNotifyMembershipRenewal,
   shouldNotifyNominationsOpen,
@@ -51,6 +52,11 @@ export function nominationsOpenChannelsForMember(membership, event) {
 export function membershipRenewalChannelsForMember(membership) {
   const prefs = normalizeNotificationPreferences(membership?.notification_preferences);
   return shouldNotifyMembershipRenewal(prefs);
+}
+
+export function clubNewsChannelsForMember(membership) {
+  const prefs = normalizeNotificationPreferences(membership?.notification_preferences);
+  return shouldNotifyClubNews(prefs);
 }
 
 /**

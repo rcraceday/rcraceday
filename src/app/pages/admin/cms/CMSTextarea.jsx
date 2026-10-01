@@ -1,6 +1,8 @@
 import { cmsStyles } from "./styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function CMSTextarea({ label, value, onChange, name }) {
+  const { t } = useTranslation();
   const handleValue = (eOrValue) => {
     const value =
       typeof eOrValue === "string" || typeof eOrValue === "number"

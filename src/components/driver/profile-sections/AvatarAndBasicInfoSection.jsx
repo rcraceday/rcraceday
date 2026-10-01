@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/profile-sections/AvatarAndBasicInfoSection.jsx
 
 import { UserCircleIcon, PhotoIcon } from "@heroicons/react/24/solid";
@@ -5,14 +6,6 @@ import useTheme from "@/app/providers/useTheme";
 import Input from "@/components/ui/Input";
 import CustomFlagSelect from "@/components/ui/CustomFlagSelect";
 import FilterDropdown from "@/components/ui/FilterDropdown";
-
-const GENDER_OPTIONS = [
-  { value: "", label: "Select gender" },
-  { value: "Male", label: "Male" },
-  { value: "Female", label: "Female" },
-  { value: "Non-Binary", label: "Non-Binary" },
-  { value: "Prefer Not To Say", label: "Prefer Not To Say" },
-];
 
 export default function AvatarAndBasicInfoSection({
   driver,
@@ -23,8 +16,17 @@ export default function AvatarAndBasicInfoSection({
   handleRemoveAvatar,
   showLivetimeNameNotice,
 }) {
+  const { t } = useTranslation();
   const { palette } = useTheme();
   const brand = brandProp || palette?.primary || "#0A66C2";
+
+  const genderOptions = [
+    { value: "", label: t("driverProfile.genderSelect") },
+    { value: "Male", label: t("driverProfile.genderMale") },
+    { value: "Female", label: t("driverProfile.genderFemale") },
+    { value: "Non-Binary", label: t("driverProfile.genderNonBinary") },
+    { value: "Prefer Not To Say", label: t("driverProfile.genderPreferNot") },
+  ];
 
   return (
     <section className="space-y-10">
@@ -33,14 +35,14 @@ export default function AvatarAndBasicInfoSection({
       ------------------------------------------------------------ */}
       <div className="space-y-4">
         <h3 className="text-sm font-semibold flex items-center gap-2">
-          Profile Photo
+          {t("driverProfile.profilePhoto")}
         </h3>
 
         <div className="flex flex-col items-center gap-4">
           {driver.avatar_url ? (
             <img
               src={driver.avatar_url}
-              alt="Avatar"
+              alt={t("driverUi.avatarAlt")}
               className="h-32 w-32 rounded-full object-cover border border-gray-300"
             />
           ) : (
@@ -54,7 +56,7 @@ export default function AvatarAndBasicInfoSection({
                 style={{ color: brand }}
               >
                 <PhotoIcon className="h-5 w-5" />
-                Change Photo
+                {t("driverProfile.changePhoto")}
                 <input
                   type="file"
                   accept="image/*"
@@ -73,13 +75,13 @@ export default function AvatarAndBasicInfoSection({
                   onClick={handleRemoveAvatar}
                   className="text-red-600 text-xs font-medium"
                 >
-                  Remove Photo
+                  {t("driverProfile.removePhoto")}
                 </button>
               )}
             </div>
           ) : (
             <p className="text-xs text-gray-500">
-              Only club members can change their profile photo.
+              {t("driverProfile.membersOnlyPhoto")}
             </p>
           )}
         </div>
@@ -91,56 +93,50 @@ export default function AvatarAndBasicInfoSection({
           BASIC INFO
       ------------------------------------------------------------ */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold">Basic Info</h3>
+        <h3 className="text-sm font-semibold">{t("driverProfile.basicInfo")}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="First Name"
+            label={t("driverProfile.firstName")}
             value={driver.first_name || ""}
             onChange={(e) => update("first_name", e.target.value)}
           />
 
           <Input
-            label="Last Name"
+            label={t("driverProfile.lastName")}
             value={driver.last_name || ""}
             onChange={(e) => update("last_name", e.target.value)}
           />
 
           {showLivetimeNameNotice && (
             <div className="md:col-span-2 rounded-md bg-yellow-300 p-3 space-y-1 text-black">
-              <p className="text-sm font-semibold">Livetime name match</p>
-              <p className="text-sm">
-                If this driver has raced with this club before, the name must
-                match <strong>exactly</strong> how it appears in Livetime —
-                including spelling, spacing, and capitalisation. Any difference
-                will be treated as a new racer and previous results or seeding
-                will not link.
-              </p>
+              <p className="text-sm font-semibold">{t("driverProfile.livetimeNameMatch")}</p>
+              <p className="text-sm">{t("driverProfile.livetimeNoticeBody")}</p>
             </div>
           )}
 
           <Input
-            label="Nickname"
+            label={t("driverProfile.nickname")}
             value={driver.nickname || ""}
             onChange={(e) => update("nickname", e.target.value)}
           />
 
           {/* GENDER */}
           <div>
-            <label className="block text-sm font-medium mb-1">Gender</label>
+            <label className="block text-sm font-medium mb-1">{t("driverProfile.gender")}</label>
             <FilterDropdown
               variant="cms"
               value={driver.gender || ""}
               onChange={(value) => update("gender", value)}
-              options={GENDER_OPTIONS}
-              ariaLabel="Gender"
+              options={genderOptions}
+              ariaLabel={t("driverProfile.gender")}
               triggerStyleOverrides={{ fontSize: "0.875rem" }}
             />
           </div>
 
           {/* COUNTRY */}
           <div>
-            <label className="block text-sm font-medium mb-1">Country</label>
+            <label className="block text-sm font-medium mb-1">{t("driverProfile.country")}</label>
             <CustomFlagSelect
               value={driver.country}
               onChange={(val) => update("country", val)}

@@ -9,6 +9,7 @@ import { cmsLayout } from "@cms/layout";
 import EventPricingCard from "@app/pages/admin/events/eventsedit/components/EventPricingCard";
 import EventTimingCard from "@app/pages/admin/events/eventsedit/components/EventTimingCard";
 import NominationsTimingDefaultsFields from "@app/pages/admin/events/eventsedit/components/NominationsTimingDefaultsFields";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   emptyEventDefaults,
   getTrackDefaults,
@@ -27,6 +28,7 @@ const missingDefaultsMessage =
   "Event type defaults column is missing. Run scripts/add-event-type-defaults.sql in Supabase.";
 
 export default function EventDefaultsSettingsCard({ club }) {
+  const { t } = useTranslation();
   const [eventTypes, setEventTypes] = useState([]);
   const [tracks, setTracks] = useState([]);
   const [trackClasses, setTrackClasses] = useState([]);
@@ -278,9 +280,9 @@ export default function EventDefaultsSettingsCard({ club }) {
       {error && <div style={bannerStyle("error")}>{error}</div>}
       {status && <div style={bannerStyle("success")}>{status}</div>}
 
-      <CMSCard title="Type & Track">
+      <CMSCard titleKey="admin.events.typeAndTrack">
         <CMSSelect
-          label="Event Type"
+          labelKey="cms.eventType"
           value={selectedTypeId}
           onChange={handleTypeChange}
           options={eventTypes.map((t) => ({
@@ -292,7 +294,7 @@ export default function EventDefaultsSettingsCard({ club }) {
         />
 
         <CMSSelect
-          label="Track"
+          labelKey="cms.track"
           value={selectedTrackId}
           onChange={handleTrackChange}
           options={tracks.map((t) => ({
@@ -309,7 +311,7 @@ export default function EventDefaultsSettingsCard({ club }) {
         </div>
       </CMSCard>
 
-      <CMSCard title="Event Timing">
+      <CMSCard titleKey="admin.events.eventTiming">
         <div style={{ fontSize: "12px", color: "#6B7280", marginBottom: 4 }}>
           Default gates, practice, briefing, and race-start times. Dates are set on
           each event.
@@ -317,12 +319,12 @@ export default function EventDefaultsSettingsCard({ club }) {
         <EventTimingCard event={eventForCards} onChange={handleFieldChange} />
       </CMSCard>
 
-      <CMSCard title="Limits & Behaviour">
+      <CMSCard titleKey="admin.events.limitsBehaviour">
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
           <div style={{ width: 220 }}>
             <CMSInput
               type="number"
-              label="Max Entries Per Event"
+              labelKey="cms.maxEntriesPerEvent"
               value={form.class_limit == null ? "" : String(form.class_limit)}
               onChange={(v) =>
                 handleFieldChange("class_limit", v === "" ? null : Math.max(0, Number(v)))
@@ -332,7 +334,7 @@ export default function EventDefaultsSettingsCard({ club }) {
           <div style={{ width: 220 }}>
             <CMSInput
               type="number"
-              label="Max Classes Per Day"
+              labelKey="cms.maxClassesPerDay"
               value={
                 form.class_limit_per_day == null ? "" : String(form.class_limit_per_day)
               }
@@ -347,19 +349,19 @@ export default function EventDefaultsSettingsCard({ club }) {
         </div>
 
         <CMSToggle
-          label="Published by default"
+          labelKey="cms.publishedByDefault"
           checked={!!form.is_published}
           onChange={(v) => handleFieldChange("is_published", v)}
         />
 
         <CMSToggle
-          label="Requires RCRA club affiliation"
+          labelKey="cms.requiresRcra"
           checked={!!form.requires_rcra_club}
           onChange={(v) => handleFieldChange("requires_rcra_club", v)}
         />
 
         <CMSToggle
-          label="Preferences Allowed"
+          labelKey="cms.preferencesAllowed"
           checked={!!form.preference_enabled}
           onChange={(v) => handleFieldChange("preference_enabled", v)}
         />
@@ -368,7 +370,7 @@ export default function EventDefaultsSettingsCard({ club }) {
           <div style={{ width: 220 }}>
             <CMSInput
               type="number"
-              label="Preference Limit"
+              labelKey="cms.preferenceLimit"
               value={form.preference_limit == null ? "" : String(form.preference_limit)}
               onChange={(v) =>
                 handleFieldChange(
@@ -383,7 +385,7 @@ export default function EventDefaultsSettingsCard({ club }) {
         <div style={{ width: 220 }}>
           <CMSInput
             type="number"
-            label="Class Minimum Entries"
+            labelKey="cms.classMinimumEntries"
             value={
               form.class_minimum_entries == null ? "" : String(form.class_minimum_entries)
             }
@@ -402,20 +404,20 @@ export default function EventDefaultsSettingsCard({ club }) {
         </div>
 
         <CMSToggle
-          label="If minimum not met, entries still added to LiveTime"
+          labelKey="cms.minNotMetLivetime"
           checked={!!form.class_minimum_livetime_when_unmet}
           onChange={(v) => handleFieldChange("class_minimum_livetime_when_unmet", v)}
         />
       </CMSCard>
 
-      <CMSCard title="Nominations">
+      <CMSCard titleKey="admin.events.nominations">
         <NominationsTimingDefaultsFields
           nominations={form.nominations}
           onChange={(nominations) => handleFieldChange("nominations", nominations)}
         />
 
         <CMSToggle
-          label="Allow Late Entries"
+          labelKey="cms.allowLateEntries"
           checked={!!form.late_entries_enabled}
           onChange={(v) => handleFieldChange("late_entries_enabled", v)}
         />

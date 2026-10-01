@@ -52,7 +52,7 @@ export function buildLiveTimeRows({
         rows.push({
           FirstName: driver.first_name,
           LastName: driver.last_name,
-          NickName: driver.nickname,
+          NickName: "",
           PhoneticName: driver.phonetic_name,
           ClassName: classMap.get(entry.class_id),
           IsPaid: nomination.paid === true ? "TRUE" : "FALSE",

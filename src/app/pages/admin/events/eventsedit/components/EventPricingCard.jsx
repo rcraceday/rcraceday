@@ -3,6 +3,7 @@ import CMSCard from "@cms/CMSCard";
 import CMSInput from "@cms/CMSInput";
 import CMSToggle from "@cms/CMSToggle";
 import { cmsLayout } from "@cms/layout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const MEMBERSHIP_KEYS = [
   { key: "member", label: "Member Price" },
@@ -20,6 +21,7 @@ function parsePriceInput(raw) {
 }
 
 export default function EventPricingCard({ event, onChange }) {
+  const { t } = useTranslation();
   const pricing = event.pricing || {};
   const stashedGlobalRef = useRef(null);
 
@@ -173,23 +175,23 @@ export default function EventPricingCard({ event, onChange }) {
   );
 
   return (
-    <CMSCard title="Pricing">
+    <CMSCard titleKey="admin.events.pricing">
       <div style={{ display: "flex", flexDirection: "column", gap: cmsLayout.spacing.lg }}>
 
         {/* PRICING MODE SELECTOR */}
-        <CMSCard title="Pricing Mode">
+        <CMSCard titleKey="admin.events.pricingMode">
           <CMSToggle
-            label="Per Entry Pricing"
+            labelKey="cms.perEntryPricing"
             checked={mode === "per_entry"}
             onChange={() => setMode("per_entry")}
           />
           <CMSToggle
-            label="Tiered Pricing"
+            labelKey="cms.tieredPricing"
             checked={mode === "tiered"}
             onChange={() => setMode("tiered")}
           />
           <CMSToggle
-            label="Per‑Class Pricing"
+            labelKey="cms.perClassPricing"
             checked={mode === "per_class"}
             onChange={() => setMode("per_class")}
           />
@@ -197,9 +199,9 @@ export default function EventPricingCard({ event, onChange }) {
 
         {/* PER ENTRY PRICING */}
         {mode === "per_entry" && (
-          <CMSCard title="Per Entry Pricing">
+          <CMSCard titleKey="admin.events.perEntryPricing">
             <CMSToggle
-              label="Free Entry"
+              labelKey="cms.freeEntry"
               checked={pricing.global?.free || false}
               onChange={setFreeEntry}
             />
@@ -223,7 +225,7 @@ export default function EventPricingCard({ event, onChange }) {
             </div>
 
             <CMSToggle
-              label="Charge for Preferences"
+              labelKey="cms.chargePreferences"
               checked={pricing.charge_preferences || false}
               onChange={(v) => update("charge_preferences", v)}
             />
@@ -232,12 +234,12 @@ export default function EventPricingCard({ event, onChange }) {
 
         {/* TIERED PRICING */}
         {mode === "tiered" && (
-          <CMSCard title="Tiered Pricing">
+          <CMSCard titleKey="admin.events.tiered">
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <strong>Member</strong>
               <div style={{ display: "flex", gap: 12 }}>
                 <CMSInput
-                  label="First Class"
+                  labelKey="cms.firstClass"
                   type="number"
                   value={pricing.tiered?.member?.first_class || ""}
                   onChange={(v) =>
@@ -248,7 +250,7 @@ export default function EventPricingCard({ event, onChange }) {
                   }
                 />
                 <CMSInput
-                  label="Additional Classes"
+                  labelKey="cms.additionalClasses"
                   type="number"
                   value={pricing.tiered?.member?.additional_class || ""}
                   onChange={(v) =>
@@ -259,7 +261,7 @@ export default function EventPricingCard({ event, onChange }) {
                   }
                 />
                 <CMSInput
-                  label="Practice"
+                  labelKey="cms.practice"
                   type="number"
                   placeholder="Free if empty"
                   value={tierPracticeValue(pricing.tiered?.member)}
@@ -270,7 +272,7 @@ export default function EventPricingCard({ event, onChange }) {
               <strong>Non‑Member</strong>
               <div style={{ display: "flex", gap: 12 }}>
                 <CMSInput
-                  label="First Class"
+                  labelKey="cms.firstClass"
                   type="number"
                   value={pricing.tiered?.non_member?.first_class || ""}
                   onChange={(v) =>
@@ -281,7 +283,7 @@ export default function EventPricingCard({ event, onChange }) {
                   }
                 />
                 <CMSInput
-                  label="Additional Classes"
+                  labelKey="cms.additionalClasses"
                   type="number"
                   value={pricing.tiered?.non_member?.additional_class || ""}
                   onChange={(v) =>
@@ -292,7 +294,7 @@ export default function EventPricingCard({ event, onChange }) {
                   }
                 />
                 <CMSInput
-                  label="Practice"
+                  labelKey="cms.practice"
                   type="number"
                   placeholder="Free if empty"
                   value={tierPracticeValue(pricing.tiered?.non_member)}
@@ -303,7 +305,7 @@ export default function EventPricingCard({ event, onChange }) {
               <strong>Junior</strong>
               <div style={{ display: "flex", gap: 12 }}>
                 <CMSInput
-                  label="First Class"
+                  labelKey="cms.firstClass"
                   type="number"
                   value={pricing.tiered?.junior?.first_class || ""}
                   onChange={(v) =>
@@ -314,7 +316,7 @@ export default function EventPricingCard({ event, onChange }) {
                   }
                 />
                 <CMSInput
-                  label="Additional Classes"
+                  labelKey="cms.additionalClasses"
                   type="number"
                   value={pricing.tiered?.junior?.additional_class || ""}
                   onChange={(v) =>
@@ -325,7 +327,7 @@ export default function EventPricingCard({ event, onChange }) {
                   }
                 />
                 <CMSInput
-                  label="Practice"
+                  labelKey="cms.practice"
                   type="number"
                   placeholder="Free if empty"
                   value={tierPracticeValue(pricing.tiered?.junior)}
@@ -335,7 +337,7 @@ export default function EventPricingCard({ event, onChange }) {
             </div>
 
             <CMSToggle
-              label="Charge for Preferences"
+              labelKey="cms.chargePreferences"
               checked={pricing.charge_preferences || false}
               onChange={(v) => update("charge_preferences", v)}
             />
@@ -344,7 +346,7 @@ export default function EventPricingCard({ event, onChange }) {
 
         {/* PER CLASS PRICING */}
         {mode === "per_class" && (
-          <CMSCard title="Per‑Class Pricing Overrides">
+          <CMSCard titleKey="admin.events.perClassOverrides">
             {availableClasses.length === 0 && (
               <div>No classes available for this event.</div>
             )}
@@ -354,7 +356,7 @@ export default function EventPricingCard({ event, onChange }) {
               return (
                 <CMSCard key={cls.id} title={cls.name}>
                   <CMSToggle
-                    label="Free for this class"
+                    labelKey="cms.freeForClass"
                     checked={cp.free || false}
                     onChange={(v) => updateClassPrice(cls.id, "free", v)}
                   />
@@ -387,7 +389,7 @@ export default function EventPricingCard({ event, onChange }) {
             })}
 
             <CMSToggle
-              label="Charge for Preferences"
+              labelKey="cms.chargePreferences"
               checked={pricing.charge_preferences || false}
               onChange={(v) => update("charge_preferences", v)}
             />
@@ -396,9 +398,9 @@ export default function EventPricingCard({ event, onChange }) {
 
         {/* LATE FEE */}
         {event.late_entries_enabled && (
-          <CMSCard title="Late Fee">
+          <CMSCard titleKey="admin.events.lateFee">
             <CMSInput
-              label="Late Fee"
+              labelKey="cms.lateFee"
               type="number"
               value={pricing.late_fee || ""}
               onChange={(v) => update("late_fee", Math.max(0, Number(v)))}

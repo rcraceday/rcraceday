@@ -13,6 +13,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   arrayMove,
   SortableContext,
@@ -31,6 +32,7 @@ const formatDateDisplay = (isoDate) => {
 };
 
 export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
+  const { t } = useTranslation();
   const availableClasses = event.available_classes || [];
   const isMulti = !!event.is_multi_day;
 
@@ -195,7 +197,7 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
         <div style={{ width: 220 }}>
           <CMSInput
             type="number"
-            label="Class Minimum Entries"
+            labelKey="cms.classMinimumEntries"
             value={
               event.class_minimum_entries == null ? "" : String(event.class_minimum_entries)
             }
@@ -210,7 +212,7 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
         </div>
         <div style={{ paddingBottom: 8 }}>
           <CMSToggle
-            label="LiveTime includes classes below minimum"
+            labelKey="cms.livetimeBelowMin"
             checked={!!event.class_minimum_livetime_when_unmet}
             onChange={(checked) => onChange("class_minimum_livetime_when_unmet", checked)}
           />
@@ -240,7 +242,7 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
           <div style={{ width: 220 }}>
             <CMSInput
               type="number"
-              label="Max Classes per Day"
+              labelKey="cms.maxClassesPerDay"
               value={event.class_limit_per_day == null ? "" : String(event.class_limit_per_day)}
               onChange={(v) =>
                 onChange("class_limit_per_day", v === "" ? null : Math.max(0, Number(v)))
@@ -265,7 +267,7 @@ export default function ClassesCard({ event = {}, onChange, onClassesChange }) {
           <div style={{ marginTop: 8 }}>
             <CMSInput
               type="number"
-              label="Preference Limit"
+              labelKey="cms.preferenceLimit"
               value={
                 event.preference_limit == null
                   ? ""

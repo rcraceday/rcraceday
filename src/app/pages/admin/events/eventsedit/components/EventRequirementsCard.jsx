@@ -4,6 +4,7 @@ import CMSInput from "@cms/CMSInput";
 import CMSButton from "@cms/CMSButton";
 import { FieldRowClearButton, RemoveButton } from "@cms/CMSButtonSet";
 import { cmsLayout } from "@cms/layout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 function normalizeRequirements(requirements = []) {
   if (!Array.isArray(requirements)) return [];
@@ -134,7 +135,7 @@ export default function EventRequirementsCard({ event = {}, onChange = () => {} 
       >
         <div style={{ ...cmsLayout.column, minWidth: 200 }}>
           <CMSInput
-            label="New requirement description"
+            labelKey="cms.newRequirementDescription"
             value={newDescriptor}
             placeholder="New requirement description"
             onChange={setNewDescriptor}
@@ -167,7 +168,7 @@ function RequirementRow({
       }}
     >
       <CMSInput
-        label="Description"
+        labelKey="cms.description"
         value={requirement.descriptor}
         placeholder="Description"
         onChange={onDescriptorChange}
@@ -175,7 +176,7 @@ function RequirementRow({
       />
 
       <CMSInput
-        label="Add item"
+        labelKey="cms.addItem"
         value={itemInput}
         placeholder="Add item"
         onChange={setItemInput}

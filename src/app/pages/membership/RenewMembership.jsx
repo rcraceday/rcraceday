@@ -11,6 +11,7 @@ import useTheme from "@/app/providers/useTheme";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 import { supabase } from "@/supabaseClient";
 import { applyMembership } from "@/app/api/membership/membershipAPI";
@@ -21,6 +22,7 @@ export default function RenewMembership() {
   const { club } = useClub();
   const { membership } = useMembership();
   const { palette } = useTheme();
+  const { t } = useTranslation();
 
   const brand = palette?.primary || "#00438a";
 
@@ -133,7 +135,7 @@ export default function RenewMembership() {
 
       <PageTitle
         icon={IdentificationIcon}
-        title="Renew Membership"
+        title={t("membership.renewTitle")}
         style={{ color: brand }}
       />
 

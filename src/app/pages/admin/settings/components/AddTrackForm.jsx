@@ -12,6 +12,7 @@ import {
   CancelButton,
 } from "@cms/CMSButtonSet";
 
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   MiniAddButton,
   MiniDeleteButton,
@@ -24,6 +25,7 @@ export default function AddTrackForm({
   onCancel,
   LivetimeNotice,
 }) {
+  const { t } = useTranslation();
   const [newTrackName, setNewTrackName] = useState("");
   const [newTrackDesc, setNewTrackDesc] = useState("");
   const [newTrackClasses, setNewTrackClasses] = useState([]);
@@ -162,13 +164,13 @@ export default function AddTrackForm({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       <CMSInput
-        label="Track Name"
+        labelKey="cms.trackName"
         value={newTrackName}
         onChange={(value) => setNewTrackName(value)}
       />
 
       <CMSTextarea
-        label="Track Description"
+        labelKey="cms.trackDescription"
         value={newTrackDesc}
         onChange={(value) => setNewTrackDesc(value)}
       />
@@ -195,7 +197,7 @@ export default function AddTrackForm({
             }
           />
           <CMSTextarea
-            label="Description (optional)"
+            labelKey="cms.classDescriptionOptional"
             value={c.description}
             onChange={(value) =>
               updateTrackClassRow(index, "description", value)
@@ -233,7 +235,7 @@ export default function AddTrackForm({
       </div>
 
       <CMSTextarea
-        label="Bulk Insert Classes (one per line)"
+        labelKey="cms.bulkInsertClasses"
         value={bulkTrackClassesInput}
         onChange={(e) => setBulkTrackClassesInput(e.target.value)}
       />

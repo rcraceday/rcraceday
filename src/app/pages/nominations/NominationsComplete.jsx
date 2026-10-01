@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import useTheme from "@app/providers/useTheme";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const NominationsComplete = () => {
   const { clubSlug, eventId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const nominationId = location.state?.nominationId || null;
 
@@ -37,7 +39,7 @@ const NominationsComplete = () => {
           headers: { "Content-Type": "application/json" },
         });
 
-        if (!res.ok) throw new Error("Failed to load nomination summary.");
+        if (!res.ok) throw new Error(t("nominationsFlow.loadSummaryError"));
 
         const data = await res.json();
 
@@ -48,7 +50,7 @@ const NominationsComplete = () => {
       } catch (err) {
         console.error(err);
         setSummaryError(
-          err?.message || "Something went wrong loading your nomination."
+          err?.message || t("nominationsFlow.loadNominationError")
         );
       } finally {
         setLoading(false);
@@ -60,7 +62,7 @@ const NominationsComplete = () => {
   useEffect(() => {
     if (!nominationId) {
       setLoading(false);
-      setSummaryError("We couldn’t find your nomination.");
+      setSummaryError(t("nominationsFlow.nominationMissing"));
       return;
     }
 
@@ -76,7 +78,7 @@ const handleReturnToNominations = () => {
 
   const handlePayment = async (provider) => {
     if (!nominationId || !eventId) {
-      setPaymentError("Missing nomination or event information.");
+      setPaymentError(t("nominationsFlow.missingPaymentInfo"));
       return;
     }
 
@@ -106,17 +108,17 @@ const handleReturnToNominations = () => {
         }),
       });
 
-      if (!res.ok) throw new Error("Unable to start payment session.");
+      if (!res.ok) throw new Error(t("nominationsFlow.paymentSessionFailed"));
 
       const data = await res.json();
       if (!data.redirectUrl)
-        throw new Error("Payment session did not return a redirect URL.");
+        throw new Error(t("nominationsFlow.paymentRedirectMissing"));
 
       window.location.href = data.redirectUrl;
     } catch (err) {
       console.error(err);
       setPaymentError(
-        err?.message || "Something went wrong starting your payment."
+        err?.message || t("nominationsFlow.paymentStartError")
       );
     } finally {
       if (provider === "square") setIsSquareLoading(false);
@@ -155,17 +157,16 @@ const handleReturnToNominations = () => {
             <div className="inline-flex items-center gap-3 rounded-full bg-emerald-500/10 px-4 py-2 border border-emerald-500/30">
               <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-semibold tracking-wide text-emerald-300 uppercase">
-                Nominations submitted
+                {t("nominationsFlow.submittedBadge")}
               </span>
             </div>
 
             <h1 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight">
-              You’re on the grid.
+              {t("nominationsFlow.onTheGrid")}
             </h1>
 
             <p className="mt-2 text-sm sm:text-base text-slate-300 max-w-xl">
-              Your nominations have been submitted. To lock in your spot on race
-              day, complete your payment using one of the options below.
+              {t("nominationsFlow.completePaymentBody")}
             </p>
           </div>
 
@@ -173,10 +174,10 @@ const handleReturnToNominations = () => {
           {hasCriticalError && (
             <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-5 mb-6">
               <h2 className="text-sm font-semibold text-red-200">
-                We couldn’t find your nomination
+                {t("nominationsFlow.nominationNotFoundTitle")}
               </h2>
               <p className="mt-1 text-sm text-red-100/80">
-                This can happen if the page was refreshed or opened directly.
+                {t("nominationsFlow.nominationNotFoundBody")}
               </p>
 
               <div className="mt-4 flex flex-wrap gap-3">
@@ -184,7 +185,7 @@ const handleReturnToNominations = () => {
                   onClick={handleReturnToEvents}
                   className="rounded-full bg-slate-50 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200"
                 >
-                  Return to events
+                  {t("nominationsFlow.returnToEvents")}
                 </button>
               </div>
             </div>
@@ -197,10 +198,10 @@ const handleReturnToNominations = () => {
                 <div className="h-9 w-9 rounded-full border-2 border-slate-700 border-t-emerald-400 animate-spin" />
                 <div>
                   <p className="text-sm font-medium text-slate-100">
-                    Finalising your nomination…
+                    {t("nominationsFlow.finalising")}
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
-                    We’re loading your event and class details.
+                    {t("nominationsFlow.loadingDetails")}
                   </p>
                 </div>
               </div>
@@ -211,7 +212,7 @@ const handleReturnToNominations = () => {
           {!hasCriticalError && summaryError && !loading && (
             <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 mb-6">
               <h2 className="text-sm font-semibold text-amber-100">
-                Something went wrong loading your nomination
+                {t("nominationsFlow.loadSummaryFailed")}
               </h2>
               <p className="mt-1 text-sm text-amber-50/80">{summaryError}</p>
 
@@ -220,7 +221,7 @@ const handleReturnToNominations = () => {
                   onClick={handleReturnToEvents}
                   className="rounded-full bg-slate-50 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200"
                 >
-                  Return to events
+                  {t("nominationsFlow.returnToEvents")}
                 </button>
               </div>
             </div>
@@ -234,7 +235,7 @@ const handleReturnToNominations = () => {
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold text-slate-400 uppercase">
-                      Event
+                      {t("nominationsFlow.eventLabel")}
                     </p>
                     <h2 className="mt-1 text-xl font-semibold text-slate-50">
                       {event?.name}
@@ -244,7 +245,7 @@ const handleReturnToNominations = () => {
                       {event?.location ? ` • ${event.location}` : ""}
                     </p>
                     <p className="mt-3 text-xs text-slate-400">
-                      Nomination ID:{" "}
+                      {t("nominationsFlow.nominationId")}{" "}
                       <span className="font-mono text-slate-300">
                         {nomination.id}
                       </span>
@@ -253,7 +254,7 @@ const handleReturnToNominations = () => {
 
                   <div className="sm:text-right">
                     <p className="text-xs font-semibold text-slate-400 uppercase">
-                      Total due
+                      {t("nominationsFlow.totalDue")}
                     </p>
                     <p className="mt-1 text-2xl font-semibold text-emerald-400">
                       {formatCurrency(total)}
@@ -264,12 +265,12 @@ const handleReturnToNominations = () => {
                 {/* CLASSES */}
                 <div className="mt-5 border-t border-slate-800 pt-4">
                   <p className="text-xs font-semibold text-slate-400 uppercase mb-3">
-                    Nominated classes
+                    {t("nominationsFlow.nominatedClasses")}
                   </p>
 
                   {classes.length === 0 ? (
                     <p className="text-sm text-slate-400">
-                      No classes found for this nomination.
+                      {t("nominationsFlow.noClassesForNomination")}
                     </p>
                   ) : (
                     <ul className="space-y-2">
@@ -294,10 +295,10 @@ const handleReturnToNominations = () => {
               {/* PAYMENT OPTIONS */}
               <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6">
                 <p className="text-xs font-semibold text-slate-400 uppercase">
-                  Payment options
+                  {t("nominationsFlow.paymentOptions")}
                 </p>
                 <p className="mt-1 text-sm text-slate-300">
-                  Choose your preferred provider to complete payment securely.
+                  {t("nominationsFlow.paymentOptionsBody")}
                 </p>
 
                 {paymentError && (
@@ -320,12 +321,12 @@ const handleReturnToNominations = () => {
                     {isSquareLoading ? (
                       <span className="flex items-center gap-2">
                         <span className="h-4 w-4 rounded-full border-2 border-slate-900 border-t-slate-50 animate-spin" />
-                        Processing with Square…
+                        {t("nominationsFlow.processingSquare")}
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
                         <span className="text-base font-bold">□</span>
-                        Pay with Square
+                        {t("nominationsFlow.payWithSquare")}
                       </span>
                     )}
                   </button>
@@ -343,20 +344,19 @@ const handleReturnToNominations = () => {
                     {isPayPalLoading ? (
                       <span className="flex items-center gap-2">
                         <span className="h-4 w-4 rounded-full border-2 border-slate-900 border-t-slate-50 animate-spin" />
-                        Redirecting to PayPal…
+                        {t("nominationsFlow.redirectingPaypal")}
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
                         <span className="text-base font-black italic">P</span>
-                        Pay with PayPal
+                        {t("nominationsFlow.payWithPaypal")}
                       </span>
                     )}
                   </button>
                 </div>
 
                 <p className="mt-4 text-xs text-slate-400">
-                  You’ll be taken to a secure payment page hosted by your chosen
-                  provider.
+                  {t("nominationsFlow.paymentSecureNote")}
                 </p>
               </div>
 
@@ -366,14 +366,14 @@ const handleReturnToNominations = () => {
                   onClick={handleReturnToEvents}
                   className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 hover:bg-slate-800"
                 >
-                  Return to events
+                  {t("nominationsFlow.returnToEvents")}
                 </button>
 
                 <button
                   onClick={handleReturnToNominations}
                   className="rounded-full bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-200"
                 >
-                  Review nominations again
+                  {t("nominationsFlow.reviewNominationsAgain")}
                 </button>
               </div>
             </div>

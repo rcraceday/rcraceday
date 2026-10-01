@@ -12,7 +12,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "import:jotform": "node scripts/import-jotform-memberships.mjs",
+    "import:roster": "node scripts/import-livetime-membership-roster.mjs",
+    "import:households": "node scripts/import-household-csv.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

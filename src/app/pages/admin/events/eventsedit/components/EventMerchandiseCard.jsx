@@ -10,6 +10,7 @@ import {
 } from "@/app/lib/clubAssetStorage";
 
 import MerchEditor from "./MerchEditor";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const normalizeRequirements = (requirements) =>
   (Array.isArray(requirements) ? requirements : []).map((requirement) => ({

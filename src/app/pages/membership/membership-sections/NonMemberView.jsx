@@ -1,12 +1,14 @@
 // src/app/pages/membership/membership-sections/NonMemberView.jsx
 
 import Button from "@/components/ui/Button";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 import NonMemberIntroCard from "./NonMemberIntroCard";
 import MembershipFeesCard from "./MembershipFeesCard";
 import RaceFeesCard from "./RaceFeesCard";
 
 export default function NonMemberView({ brand, club }) {
+  const { t } = useTranslation();
   return (
     <main className="app-page-main flex flex-col gap-8">
 
@@ -26,7 +28,7 @@ export default function NonMemberView({ brand, club }) {
           window.location.href = `/${club.slug}/app/membership/join`
         }
       >
-        Join Membership
+        {t("membership.joinTitle")}
       </Button>
     </main>
   );

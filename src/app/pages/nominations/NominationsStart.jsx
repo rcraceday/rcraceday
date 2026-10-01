@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import useTheme from "@app/providers/useTheme";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function NominationsStart() {
+  const { t } = useTranslation();
   const { clubSlug, eventId } = useParams();
   const navigate = useNavigate();
   const { theme } = useTheme();
@@ -129,7 +131,7 @@ export default function NominationsStart() {
   if (loading) {
     return (
       <div className="container" style={{ paddingTop: "1rem" }}>
-        <p style={{ opacity: 0.7 }}>Loading…</p>
+        <p style={{ opacity: 0.7 }}>{t("loading.loading")}</p>
       </div>
     );
   }
@@ -146,7 +148,7 @@ export default function NominationsStart() {
           color: theme?.textColor || "#000",
         }}
       >
-        Nominations
+        {t("nominationsFlow.title")}
       </h1>
 
       {/* DRIVER LIST */}
@@ -202,7 +204,7 @@ return (
                       fontWeight: 600,
                     }}
                   >
-                    Paid
+                    {t("nominationsFlow.paid")}
                   </span>
                 ) : primary.length > 0 ? (
                   <span
@@ -215,7 +217,7 @@ return (
                       fontWeight: 600,
                     }}
                   >
-                    Nominated
+                    {t("nominationsFlow.nominated")}
                   </span>
                 ) : (
                   <span
@@ -228,7 +230,7 @@ return (
                       fontWeight: 600,
                     }}
                   >
-                    Not Started
+                    {t("nominationsFlow.notStarted")}
                   </span>
                 )}
               </div>
@@ -249,14 +251,14 @@ return (
                       fontStyle: "italic",
                     }}
                   >
-                    {getClassName(preference.class_id)} (Preference)
+                    {getClassName(preference.class_id)} ({t("nominationsFlow.preference")})
                   </div>
                 )}
               </div>
 
               {/* TOTAL */}
               <div style={{ opacity: 0.8, fontSize: "0.9rem" }}>
-                Total: ${total}
+                {t("nominationsFlow.total")}: ${total}
               </div>
             </div>
           );
@@ -277,7 +279,7 @@ return (
       color: theme?.headerTextColor || "#fff",
     }}
   >
-          Review & Submit
+          {t("nominationsFlow.reviewSubmit")}
         </button>
       )}
     </div>

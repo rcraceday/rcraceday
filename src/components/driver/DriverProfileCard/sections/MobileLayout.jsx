@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/DriverProfileCard/sections/MobileLayout.jsx
 
 import React from "react";
@@ -17,6 +18,7 @@ import ExperienceSection from "./ExperienceSection";
 import TriviaSection from "./TriviaSection";
 
 export default function MobileLayout({ driver, country, brand: brandProp, chassis }) {
+  const { t } = useTranslation();
   const { palette } = useTheme();
   const brand = brandProp || palette?.primary || "#0A66C2";
 
@@ -41,7 +43,7 @@ export default function MobileLayout({ driver, country, brand: brandProp, chassi
         className="-mx-3 px-3 py-2 rounded-lg"
         style={{ backgroundColor: brand, color: "white" }}
       >
-        <h3 className="text-sm font-semibold">Personal Details</h3>
+        <h3 className="text-sm font-semibold">{t("driverProfile.personalDetails")}</h3>
       </div>
       <PersonalDetailsSection driver={driver} />
 
@@ -50,7 +52,7 @@ export default function MobileLayout({ driver, country, brand: brandProp, chassi
         className="-mx-3 px-3 py-2 rounded-lg"
         style={{ backgroundColor: brand, color: "white" }}
       >
-        <h3 className="text-sm font-semibold">Racing Information</h3>
+        <h3 className="text-sm font-semibold">{t("driverProfile.racingInformation")}</h3>
       </div>
       <RacingInformationSection driver={driver} chassis={chassis} update={driver.update} />
 
@@ -59,7 +61,7 @@ export default function MobileLayout({ driver, country, brand: brandProp, chassi
         className="-mx-3 px-3 py-2 rounded-lg"
         style={{ backgroundColor: brand, color: "white" }}
       >
-        <h3 className="text-sm font-semibold">SIC Car Profile</h3>
+        <h3 className="text-sm font-semibold">{t("driverProfile.sicCarProfileShort")}</h3>
       </div>
       <SicCarProfileSection driver={driver} />
 
@@ -68,7 +70,7 @@ export default function MobileLayout({ driver, country, brand: brandProp, chassi
         className="-mx-3 px-3 py-2 rounded-lg"
         style={{ backgroundColor: brand, color: "white" }}
       >
-        <h3 className="text-sm font-semibold">Dirt Car Profile</h3>
+        <h3 className="text-sm font-semibold">{t("driverProfile.dirtCarProfileShort")}</h3>
       </div>
       <DirtCarProfileSection driver={driver} />
 
@@ -77,7 +79,7 @@ export default function MobileLayout({ driver, country, brand: brandProp, chassi
         className="-mx-3 px-3 py-2 rounded-lg"
         style={{ backgroundColor: brand, color: "white" }}
       >
-        <h3 className="text-sm font-semibold">Experience & Preferences</h3>
+        <h3 className="text-sm font-semibold">{t("driverProfile.experience")}</h3>
       </div>
       <ExperienceSection driver={driver} />
 
@@ -86,7 +88,7 @@ export default function MobileLayout({ driver, country, brand: brandProp, chassi
         className="-mx-3 px-3 py-2 rounded-lg"
         style={{ backgroundColor: brand, color: "white" }}
       >
-        <h3 className="text-sm font-semibold">Fun / Trivia</h3>
+        <h3 className="text-sm font-semibold">{t("driverProfile.funTrivia")}</h3>
       </div>
       <TriviaSection driver={driver} />
 

@@ -5,6 +5,7 @@ import { supabase } from "@/supabaseClient";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import useTheme from "@app/providers/useTheme";
 import { richTextToPlainText } from "@/app/lib/richText";
 import { useMembership } from "@/app/providers/MembershipProvider";
@@ -48,6 +49,7 @@ export default function NominationsReview() {
   const { clubSlug } = useParams();
   const { membership } = useMembership();
   const { palette } = useTheme();
+  const { t } = useTranslation();
   const brand = palette?.primary || "#00438a";
   const contentText = palette?.text || "#1f2937";
 
@@ -180,7 +182,7 @@ export default function NominationsReview() {
     <div style={{ minHeight: "100vh", width: "100%", background: palette?.background || "#ffffff" }}>
       <PageTitle
         icon={ClipboardDocumentCheckIcon}
-        title="My Nominations"
+        title={t("nominations.myTitle")}
         style={{ color: brand }}
         actions={
           <Link to={`/${clubSlug}/app/events`} className="no-underline">

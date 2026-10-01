@@ -15,6 +15,7 @@ import {
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 import { supabase } from "@/supabaseClient";
 import { applyMembership } from "@/app/api/membership/membershipAPI";
@@ -25,6 +26,7 @@ export default function JoinMembership() {
   const { club } = useClub();
   const { drivers, loadingDrivers } = useDrivers();
   const { palette } = useTheme();
+  const { t } = useTranslation();
 
   const brand = palette?.primary || "#00438a";
 
@@ -146,7 +148,7 @@ export default function JoinMembership() {
 
       <PageTitle
         icon={IdentificationIcon}
-        title="Join the Club"
+        title={t("membership.joinTitle")}
         style={{ color: brand }}
       />
 

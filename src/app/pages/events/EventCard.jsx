@@ -3,6 +3,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { formatDate, isNominationsOpen } from "./events-sections/helpers";
 import { sanitizeRichTextHtml } from "@/app/lib/richText";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function EventCard({
   event,
@@ -12,11 +13,12 @@ export default function EventCard({
   hasNomination = false,
   hasReceivedNominations = false,
 }) {
+  const { t, locale } = useTranslation();
   const track =
     trackNames?.[event.track] ||
     event.track_type ||
     event.track ||
-    "Track not set";
+    t("eventCard.trackNotSet");
   const logoSrc = event.logo_preview_url ||
     (event.logourl?.startsWith("http")
       ? event.logourl
@@ -39,8 +41,8 @@ export default function EventCard({
     const suffix = [11, 12, 13].includes(day % 100)
       ? "th"
       : ["th", "st", "nd", "rd"][day % 10] || "th";
-    const weekday = localDate.toLocaleDateString("en-US", { weekday: "short" });
-    const month = localDate.toLocaleDateString("en-US", { month: "short" });
+    const weekday = localDate.toLocaleDateString(locale, { weekday: "short" });
+    const month = localDate.toLocaleDateString(locale, { month: "short" });
 
     return `${weekday} ${month} ${day}${suffix}`;
   };
@@ -50,12 +52,14 @@ export default function EventCard({
       : `${formatRangeDate(eventDate)} - ${formatRangeDate(eventEndDate)}`
     : eventDate
       ? formatDate(eventDate)
-      : "Date TBD";
+      : t("eventCard.dateTbd");
   const nominationsOpen = isNominationsOpen(event);
   const nominationStatusLabel = hasNomination
-    ? "You're nominated"
+    ? t("eventCard.nominated")
     : event.nominations_open
-      ? `Nominations Open: ${formatDate(event.nominations_open)}`
+      ? t("eventCard.nominationsOpenOn", {
+          date: formatDate(event.nominations_open),
+        })
       : null;
   const nominationStatusHighlight = hasNomination || nominationsOpen;
 
@@ -75,7 +79,7 @@ export default function EventCard({
                   className="max-h-full max-w-full rounded-[10px] object-contain"
                 />
               ) : (
-                <span className="text-xs text-text-muted">Event</span>
+                <span className="text-xs text-text-muted">{t("eventCard.event")}</span>
               )}
             </div>
 
@@ -110,7 +114,7 @@ export default function EventCard({
             to={`/${clubSlug}/app/events/${event.id}`}
             className="block w-[120px] justify-self-center no-underline"
           >
-            <Button className="!py-1.5 !text-xs w-full">View Event</Button>
+            <Button className="!py-1.5 !text-xs w-full">{t("eventCard.viewEvent")}</Button>
           </Link>
           {nominationsOpen && (
             <Link
@@ -121,7 +125,7 @@ export default function EventCard({
                 variant={hasNomination ? "secondary" : "success"}
                 className="!py-1.5 !text-xs w-full"
               >
-                {hasNomination ? "Update Nominations" : "Nominate"}
+                {hasNomination ? t("eventCard.updateNominations") : t("eventCard.nominate")}
               </Button>
             </Link>
           )}
@@ -131,7 +135,7 @@ export default function EventCard({
               className="block w-[120px] justify-self-center no-underline"
             >
               <Button variant="secondary" className="!py-1.5 !text-xs w-full">
-                View Nominations
+                {t("eventCard.viewNominations")}
               </Button>
             </Link>
           )}
@@ -140,7 +144,7 @@ export default function EventCard({
               to={`/${clubSlug}/app/events/${event.id}/results`}
               className="block w-[120px] justify-self-center no-underline"
             >
-              <Button className="!py-1.5 !text-xs w-full">View Results</Button>
+              <Button className="!py-1.5 !text-xs w-full">{t("eventCard.viewResults")}</Button>
             </Link>
           )}
         </div>

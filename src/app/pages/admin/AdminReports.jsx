@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 // CSV EXPORT HELPERS
 function downloadCSV(filename, rows) {
@@ -110,6 +111,7 @@ function exportSystemHealthCSV({
 }
 
 export default function AdminReports() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
 
   const [events, setEvents] = useState([]);

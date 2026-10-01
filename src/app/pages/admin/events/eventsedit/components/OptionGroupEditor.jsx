@@ -5,6 +5,7 @@ import CMSButton from "@cms/CMSButton";
 import { ClearFieldButton } from "@cms/CMSButtonSet";
 import CMSImageUpload from "@cms/CMSImageUpload";
 import { supabase } from "@/supabaseClient";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   classAddonPhotoPath,
   uploadClubAsset,
@@ -21,6 +22,7 @@ export default function OptionGroupEditor({
   onRemoveValue,
   onRemoveGroup,
 }) {
+  const { t } = useTranslation();
   const [newValue, setNewValue] = useState("");
 
   const uploadOptionPhoto = async (file, previousUrl, slot) => {
@@ -48,7 +50,7 @@ export default function OptionGroupEditor({
   return (
     <CMSCard title={group.name || "Option Group"}>
       <CMSInput
-        label="Group Name"
+        labelKey="cms.groupName"
         placeholder="e.g. Colour or Size"
         value={group.name}
         onChange={onRename}
@@ -70,13 +72,13 @@ export default function OptionGroupEditor({
               }}
             >
               <CMSInput
-                label="Label"
+                labelKey="cms.labelField"
                 value={val.label}
                 onChange={(v) => onUpdateValue(vi, v)}
               />
 
               <CMSImageUpload
-                label="Option Photo"
+                labelKey="cms.optionPhoto"
                 value={val.photo_url}
                 filePreview={val.photo_file}
                 onChange={async (fileOrUrl) => {
@@ -114,7 +116,7 @@ export default function OptionGroupEditor({
 
         <div style={{ marginTop: 12 }}>
           <CMSInput
-            label="Add Value"
+            labelKey="cms.addValue"
             placeholder="e.g. Black, Red, Blue"
             value={newValue}
             onChange={setNewValue}

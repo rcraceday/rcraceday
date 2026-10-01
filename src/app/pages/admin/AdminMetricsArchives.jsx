@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { cmsStyles } from "@cms/styles";
 import AdminKeyMetrics from "@app/pages/admin/components/AdminKeyMetrics";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   buildStatsForYear,
   emptyDashboardStats,
@@ -11,6 +12,7 @@ import {
 } from "@app/pages/admin/adminDashboardMetrics";
 
 export default function AdminMetricsArchives() {
+  const { t } = useTranslation();
   const { clubSlug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentYear = getCalendarYear();

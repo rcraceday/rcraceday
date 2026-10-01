@@ -9,6 +9,7 @@ import { useClub } from "@/app/providers/ClubProvider";
 import CMSButton from "@cms/CMSButton";
 import CMSColorPicker from "@cms/CMSColorPicker";
 import CMSCard from "@cms/CMSCard";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const getFormFromClub = (club) => ({
   logo_url: club?.logo_url || "",
@@ -22,6 +23,7 @@ const getFormFromClub = (club) => ({
 });
 
 export default function BrandingSettingsCard({ club }) {
+  const { t } = useTranslation();
   const { refreshClub } = useClub();
   const [form, setForm] = useState(() => getFormFromClub(club));
 
@@ -275,7 +277,7 @@ export default function BrandingSettingsCard({ club }) {
       {/* PRIMARY COLOUR */}
       {/* ------------------------------------------------------- */}
       <CMSColorPicker
-        label="Primary Colour"
+        labelKey="cms.primaryColour"
         value={form.primary_color}
         onChange={(val) => updateField("primary_color", val)}
       />
@@ -284,7 +286,7 @@ export default function BrandingSettingsCard({ club }) {
       {/* HEADER TEXT COLOUR (under primary) */}
       {/* ------------------------------------------------------- */}
       <CMSColorPicker
-        label="Text Colour"
+        labelKey="cms.textColour"
         value={form.text_color}
         onChange={(val) => updateField("text_color", val)}
       />
@@ -293,7 +295,7 @@ export default function BrandingSettingsCard({ club }) {
       {/* BUTTON COLOUR */}
       {/* ------------------------------------------------------- */}
       <CMSColorPicker
-        label="Button Colour"
+        labelKey="cms.buttonColour"
         value={form.button_color || form.primary_color}
         onChange={(val) => updateField("button_color", val)}
       />
@@ -302,7 +304,7 @@ export default function BrandingSettingsCard({ club }) {
       {/* BUTTON TEXT COLOUR */}
       {/* ------------------------------------------------------- */}
       <CMSColorPicker
-        label="Button Text Colour"
+        labelKey="cms.buttonTextColour"
         value={form.button_text_color}
         onChange={(val) => updateField("button_text_color", val)}
       />

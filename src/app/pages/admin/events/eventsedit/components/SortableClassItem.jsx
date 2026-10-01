@@ -6,6 +6,7 @@ import { FieldRowClearButton } from "@cms/CMSButtonSet";
 import { cmsLayout } from "@cms/layout";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const CONTROL_HEIGHT = cmsLayout.controlHeight;
 
@@ -14,8 +15,6 @@ const alignedControlStyle = {
   minHeight: CONTROL_HEIGHT,
   boxSizing: "border-box",
 };
-
-const LABEL_ROW_TEXT = "Max Entries";
 
 function SortableLabelRow({ children, hidden = false }) {
   return (
@@ -38,6 +37,7 @@ export default function SortableClassItem({
   maxEntries = "",
   onMaxEntriesChange,
 }) {
+  const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
 
   const options =
@@ -58,7 +58,7 @@ export default function SortableClassItem({
       {...attributes}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <SortableLabelRow hidden>{LABEL_ROW_TEXT}</SortableLabelRow>
+        <SortableLabelRow hidden />
         <div className="sortable-class-row__control-slot">
           <div
             {...listeners}
@@ -75,7 +75,7 @@ export default function SortableClassItem({
               color: "#374151",
               boxSizing: "border-box",
             }}
-            aria-label="drag-handle"
+            aria-label={t("cms.dragHandleAria")}
           >
             ☰
           </div>
@@ -90,7 +90,7 @@ export default function SortableClassItem({
             value={value || ""}
             onChange={onChange}
             options={options}
-            placeholder={options.length === 0 ? "No classes available" : "Select class..."}
+            placeholder={options.length === 0 ? t("cms.noClassesAvailable") : t("cms.selectClassPlaceholder")}
             selectClassName="admin-class-select"
             style={{ ...alignedControlStyle, padding: "8px 10px" }}
             title={selectedLabel}
@@ -99,7 +99,7 @@ export default function SortableClassItem({
       </div>
 
       <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-        <SortableLabelRow>{LABEL_ROW_TEXT}</SortableLabelRow>
+        <SortableLabelRow>{t("cms.maxEntries")}</SortableLabelRow>
         <div className="sortable-class-row__control-slot sortable-class-row__control-slot--fill">
           <CMSInput
             type="number"
@@ -107,7 +107,7 @@ export default function SortableClassItem({
             label=""
             value={maxEntries === null || maxEntries === undefined ? "" : String(maxEntries)}
             onChange={(v) => onMaxEntriesChange?.(v === "" ? "" : v)}
-            placeholder="Unlimited"
+            placeholder={t("cms.unlimited")}
             disabled={!value}
             inputStyle={alignedControlStyle}
           />
@@ -115,7 +115,7 @@ export default function SortableClassItem({
       </div>
 
       <div className="sortable-class-row__clear" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <SortableLabelRow hidden>{LABEL_ROW_TEXT}</SortableLabelRow>
+        <SortableLabelRow hidden />
         <div className="sortable-class-row__control-slot">
           <FieldRowClearButton onClick={onRemove} />
         </div>

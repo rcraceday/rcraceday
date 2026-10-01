@@ -9,6 +9,7 @@ import { supabase } from "@/supabaseClient";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   Squares2X2Icon,
   PlusIcon,
@@ -17,6 +18,7 @@ import {
 } from "@heroicons/react/24/solid";
 
 export default function TracksAndClasses() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
   const { club } = useClub();

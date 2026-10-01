@@ -5,6 +5,7 @@ import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
 import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { newsDetailHeaderStyle } from "@/components/news/NewsItemImage";
@@ -27,6 +28,7 @@ export default function NewsDetails() {
   const { palette } = useTheme();
   const navigate = useNavigate();
   const brand = palette.primary;
+  const { t } = useTranslation();
 
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -72,7 +74,7 @@ export default function NewsDetails() {
     >
       <PageTitle
         icon={NewspaperIcon}
-        title="Club News"
+        title={t("news.title")}
         style={{ color: brand }}
         actions={
           <Button
@@ -82,7 +84,7 @@ export default function NewsDetails() {
             onClick={() => navigate(`/${clubSlug}/app`)}
           >
             <ArrowLeftIcon className="h-3 w-3" />
-            Home
+            {t("nav.home")}
           </Button>
         }
       />
@@ -90,7 +92,7 @@ export default function NewsDetails() {
       <main className="app-page-main flex justify-center !py-10">
         {loading && (
           <Card className="w-full">
-            <div style={{ padding: 16 }}>Loading…</div>
+            <div style={{ padding: 16 }}>{t("loading.loading")}</div>
           </Card>
         )}
 

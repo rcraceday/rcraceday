@@ -1,5 +1,6 @@
 import CMSButton from "@cms/CMSButton";
 import { cmsStyles } from "@cms/styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function AssignmentsCard({
   tracks,
@@ -7,6 +8,7 @@ export default function AssignmentsCard({
   assignments,
   toggleAssignment,
 }) {
+  const { t } = useTranslation();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {tracks.length === 0 && (

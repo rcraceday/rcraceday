@@ -1,5 +1,6 @@
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -15,6 +16,7 @@ export default function ClubMessages() {
   const { user } = useAuth();
   const { palette } = useTheme() || {};
   const brand = palette?.primary || "#0A66C2";
+  const { t } = useTranslation();
   const { refreshUnreadCount } = useClubMessageUnreadCount({
     clubId: club?.id,
     membershipId: membership?.id,
@@ -33,7 +35,7 @@ export default function ClubMessages() {
     <div style={{ minHeight: "100vh", background: palette?.background || "#fff" }}>
       <PageTitle
         icon={ChatBubbleLeftRightIcon}
-        title="Messages"
+        title={t("messages.title")}
         style={{ color: brand }}
       />
       <main className="app-page-main gap-5">

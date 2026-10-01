@@ -4,18 +4,20 @@ import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom
 import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function ForgotPassword() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!club) return <div style={{ padding: "24px", textAlign: "center" }}>Loading…</div>;
+  if (!club) return <div style={{ padding: "24px", textAlign: "center" }}>{t("loading.loading")}</div>;
 
   const logoSrc =
     club?.logoUrl ||
@@ -90,7 +92,7 @@ export default function ForgotPassword() {
           textAlign: "center",
         }}
       >
-        Reset Password
+        {t("auth.forgotPasswordTitle")}
       </h1>
 
       <form
@@ -103,7 +105,7 @@ export default function ForgotPassword() {
         }}
       >
         <Input
-          label="Email"
+          label={t("auth.email")}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -122,7 +124,7 @@ export default function ForgotPassword() {
         )}
 
         <Button type="submit" variant="primary" disabled={loading}>
-          {loading ? "Sending…" : "Send Reset Link"}
+          {loading ? t("auth.sending") : t("auth.sendResetLink")}
         </Button>
       </form>
 
@@ -132,7 +134,7 @@ export default function ForgotPassword() {
           to={`/${clubSlug}/public/login`}
           style={{ color: "#2563eb", textDecoration: "underline" }}
         >
-          Log in
+          {t("auth.logIn")}
         </Link>
       </p>
     </div>

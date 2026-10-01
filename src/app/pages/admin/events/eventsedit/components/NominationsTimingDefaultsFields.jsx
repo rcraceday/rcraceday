@@ -1,5 +1,6 @@
 import CMSInput from "@cms/CMSInput";
 import { cmsLayout } from "@cms/layout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 function daysBeforeValue(value) {
   return value == null || value === "" ? "" : String(value);
@@ -11,6 +12,7 @@ export default function NominationsTimingDefaultsFields({
   showLateEntryTiming = false,
   lateOnly = false,
 }) {
+  const { t } = useTranslation();
   const n = nominations || {};
 
   const setField = (field, value) => {
@@ -33,12 +35,12 @@ export default function NominationsTimingDefaultsFields({
     <div style={{ display: "flex", flexDirection: "column", gap: cmsLayout.spacing.lg }}>
       {showOpenClose && (
       <div>
-        <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: 8 }}>Nominations open</div>
+        <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: 8 }}>{t("admin.events.nominationsOpenDefaults")}</div>
         <div style={cmsLayout.row}>
           <div style={{ width: 200 }}>
             <CMSInput
               type="number"
-              label="Days before event date"
+              labelKey="cms.daysBeforeEvent"
               value={daysBeforeValue(n.open_days_before)}
               onChange={(v) => setDaysBefore("open_days_before", v)}
               placeholder="e.g. 14"
@@ -47,7 +49,7 @@ export default function NominationsTimingDefaultsFields({
           <div style={{ width: 160 }}>
             <CMSInput
               type="time"
-              label="Time"
+              labelKey="cms.time"
               value={n.open_time || ""}
               onChange={(v) => setField("open_time", v)}
             />
@@ -58,12 +60,12 @@ export default function NominationsTimingDefaultsFields({
 
       {showOpenClose && (
       <div>
-        <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: 8 }}>Nominations close</div>
+        <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: 8 }}>{t("admin.events.nominationsCloseDefaults")}</div>
         <div style={cmsLayout.row}>
           <div style={{ width: 200 }}>
             <CMSInput
               type="number"
-              label="Days before event date"
+              labelKey="cms.daysBeforeEvent"
               value={daysBeforeValue(n.close_days_before)}
               onChange={(v) => setDaysBefore("close_days_before", v)}
               placeholder="e.g. 1"
@@ -72,7 +74,7 @@ export default function NominationsTimingDefaultsFields({
           <div style={{ width: 160 }}>
             <CMSInput
               type="time"
-              label="Time"
+              labelKey="cms.time"
               value={n.close_time || ""}
               onChange={(v) => setField("close_time", v)}
             />
@@ -85,13 +87,13 @@ export default function NominationsTimingDefaultsFields({
         <>
           <div>
             <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: 8 }}>
-              Late fee activation
+              {t("admin.events.lateFeeActivationDefaults")}
             </div>
             <div style={cmsLayout.row}>
               <div style={{ width: 200 }}>
                 <CMSInput
                   type="number"
-                  label="Days before event date"
+                  labelKey="cms.daysBeforeEvent"
                   value={daysBeforeValue(n.late_fee_activation_days_before)}
                   onChange={(v) => setDaysBefore("late_fee_activation_days_before", v)}
                   placeholder="e.g. 0"
@@ -100,7 +102,7 @@ export default function NominationsTimingDefaultsFields({
               <div style={{ width: 160 }}>
                 <CMSInput
                   type="time"
-                  label="Time"
+                  labelKey="cms.time"
                   value={n.late_fee_activation_time || ""}
                   onChange={(v) => setField("late_fee_activation_time", v)}
                 />
@@ -110,13 +112,13 @@ export default function NominationsTimingDefaultsFields({
 
           <div>
             <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: 8 }}>
-              Late entries close
+              {t("admin.events.lateEntriesCloseDefaults")}
             </div>
             <div style={cmsLayout.row}>
               <div style={{ width: 200 }}>
                 <CMSInput
                   type="number"
-                  label="Days before event date"
+                  labelKey="cms.daysBeforeEvent"
                   value={daysBeforeValue(n.late_entries_close_days_before)}
                   onChange={(v) => setDaysBefore("late_entries_close_days_before", v)}
                   placeholder="e.g. 0"
@@ -125,7 +127,7 @@ export default function NominationsTimingDefaultsFields({
               <div style={{ width: 160 }}>
                 <CMSInput
                   type="time"
-                  label="Time"
+                  labelKey="cms.time"
                   value={n.late_entries_close_time || ""}
                   onChange={(v) => setField("late_entries_close_time", v)}
                 />
@@ -137,9 +139,7 @@ export default function NominationsTimingDefaultsFields({
 
       {!lateOnly && (
       <div style={{ fontSize: "12px", color: "#6B7280", maxWidth: 520 }}>
-        Countdown is from the event&apos;s first day (single-day date or earliest multi-day
-        date). New events copy these into nomination and late-entry fields; each event can still
-        change them later.
+        {t("admin.events.nominationsTimingCountdownHint")}
       </div>
       )}
     </div>

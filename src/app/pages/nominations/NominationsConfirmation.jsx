@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../supabaseClient";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function NominationsConfirmation() {
   const { clubSlug, eventId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,42 +28,35 @@ export default function NominationsConfirmation() {
     setLoading(false);
   }
 
-  if (loading) return <div>Loading…</div>;
+  if (loading) return <div>{t("loading.loading")}</div>;
 
   return (
     <div className="page confirmation-page">
-      <h1>Nominations Submitted</h1>
+      <h1>{t("nominationsFlow.submittedTitle")}</h1>
 
       <div className="confirmation-box">
         <p>
-          Your nominations for <strong>{event.event_name}</strong> have been
-          successfully submitted.
+          {t("nominationsFlow.submittedForEvent", { eventName: event?.event_name || "" })}
         </p>
 
-        <p>
-          You can return at any time to review or update your nominations before
-          the event closes.
-        </p>
+        <p>{t("nominationsFlow.reviewAnytime")}</p>
 
-        <p>
-          If payment is required, please complete it at the venue or through the
-          club’s normal payment process.
-        </p>
+        <p>{t("nominationsFlow.paymentAtVenue")}</p>
       </div>
 
-<button
-  className="primary-button"
-  onClick={() => navigate(`/${clubSlug}/events/${eventId}`)}
->
-  Back to Event
-</button>
+      <button
+        className="primary-button"
+        onClick={() => navigate(`/${clubSlug}/events/${eventId}`)}
+      >
+        {t("nominationsFlow.backToEvent")}
+      </button>
 
-<button
-  className="secondary-button"
-  onClick={() => navigate(`/${clubSlug}/dashboard`)}
->
-  Return to Dashboard
-</button>
-</div>
-);
+      <button
+        className="secondary-button"
+        onClick={() => navigate(`/${clubSlug}/dashboard`)}
+      >
+        {t("nominationsFlow.returnDashboard")}
+      </button>
+    </div>
+  );
 }

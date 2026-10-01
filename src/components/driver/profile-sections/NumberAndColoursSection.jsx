@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/profile-sections/NumberAndColoursSection.jsx
 
 import useTheme from "@/app/providers/useTheme";
@@ -11,6 +12,7 @@ export default function NumberAndColoursSection({
   navigate,
   previewNumber,
 }) {
+  const { t } = useTranslation();
   const { palette } = useTheme();
   const brand = brandProp || palette?.primary || "#0A66C2";
 
@@ -20,7 +22,7 @@ export default function NumberAndColoursSection({
           PERMANENT NUMBER
       ------------------------------------------------------------ */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold">Permanent Number</h3>
+        <h3 className="text-sm font-semibold">{t("driverProfile.permanentNumber")}</h3>
 
         <div className="flex items-center justify-between flex-wrap gap-3 p-3 border border-gray-300 rounded-lg">
           <span className="text-3xl font-semibold">
@@ -49,15 +51,15 @@ export default function NumberAndColoursSection({
       ------------------------------------------------------------ */}
       <div className="space-y-4">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-sm font-semibold">Car Colours</h3>
-          <h3 className="text-sm font-semibold">LiveTime Preview</h3>
+          <h3 className="text-sm font-semibold">{t("driverProfile.carColours")}</h3>
+          <h3 className="text-sm font-semibold">{t("driverProfile.livetimePreview")}</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* COLOUR PICKERS */}
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <label className="w-32 text-sm font-medium">Primary Colour</label>
+              <label className="w-32 text-sm font-medium">{t("driverProfile.primaryColour")}</label>
               <input
                 type="color"
                 value={driver.primary_color || "#000000"}

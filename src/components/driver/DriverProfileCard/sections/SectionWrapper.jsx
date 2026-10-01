@@ -1,9 +1,11 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/DriverProfileCard/sections/SectionWrapper.jsx
 
 import React from "react";
 import useTheme from "@/app/providers/useTheme";
 
 export default function SectionWrapper({ title, brand: brandProp, children }) {
+  const { t } = useTranslation();
   const { palette } = useTheme();
   const brand = brandProp || palette?.primary || "#0A66C2";
 

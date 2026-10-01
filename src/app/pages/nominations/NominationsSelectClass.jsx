@@ -3,11 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import useTheme from "@app/providers/useTheme";
 import { COUNTRIES } from "@/data/countries";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function NominationsSelectClass() {
   const { clubSlug, eventId, driverId } = useParams();
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const [driver, setDriver] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -34,7 +36,7 @@ export default function NominationsSelectClass() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setError("You must be logged in.");
+      setError(t("nominationsFlow.mustBeLoggedIn"));
       setLoading(false);
       return;
     }
@@ -46,7 +48,7 @@ export default function NominationsSelectClass() {
       .single();
 
     if (!household) {
-      setError("No household membership found.");
+      setError(t("nominationsFlow.noHousehold"));
       setLoading(false);
       return;
     }
@@ -64,7 +66,7 @@ export default function NominationsSelectClass() {
       .single();
 
     if (!driverRow) {
-      setError("Driver not found or not part of your household.");
+      setError(t("nominationsFlow.driverNotFound"));
       setLoading(false);
       return;
     }
@@ -134,7 +136,7 @@ export default function NominationsSelectClass() {
     }
 
     if (selected.length >= limit) {
-      setError(`You can select up to ${limit} classes.`);
+      setError(t("nominationsFlow.classLimit", { limit }));
       setTimeout(() => setError(""), 2000);
       return;
     }
@@ -183,7 +185,7 @@ export default function NominationsSelectClass() {
       .single();
 
     if (nomError || !newNom) {
-      setError("Failed to save nomination.");
+      setError(t("nominationsFlow.saveFailed"));
       setLoading(false);
       return;
     }
@@ -225,7 +227,7 @@ export default function NominationsSelectClass() {
   if (loading || !driver || !event) {
     return (
       <div className="container" style={{ paddingTop: "1rem" }}>
-        <p style={{ opacity: 0.7 }}>Loading…</p>
+        <p style={{ opacity: 0.7 }}>{t("loading.loading")}</p>
       </div>
     );
   }
@@ -279,8 +281,7 @@ export default function NominationsSelectClass() {
 
       {/* INSTRUCTIONS */}
       <div style={{ opacity: 0.85, fontSize: "0.9rem", marginBottom: "1rem" }}>
-        You can select up to <strong>{event.class_limit}</strong> classes.  
-        You may optionally choose <strong>one preference class</strong>, which is free.
+        {t("nominationsFlow.selectInstructions", { limit: event.class_limit })}
       </div>
 
       {/* CLASS LIST */}
@@ -317,9 +318,9 @@ export default function NominationsSelectClass() {
 
                 <div style={{ opacity: 0.8, fontSize: "0.9rem" }}>
                   {isPreference
-                    ? "FREE (Preference)"
+                    ? t("nominationsFlow.freePreference")
                     : driver.is_junior
-                    ? "FREE (Junior)"
+                    ? t("nominationsFlow.freeJunior")
                     : getPricingText()}
                 </div>
               </div>
@@ -331,7 +332,7 @@ export default function NominationsSelectClass() {
                     checked={isSelected}
                     onChange={() => toggleClass(classId)}
                   />
-                  <span style={{ fontSize: "0.9rem" }}>Select</span>
+                  <span style={{ fontSize: "0.9rem" }}>{t("nominationsFlow.select")}</span>
                 </label>
 
                 <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
@@ -342,7 +343,7 @@ export default function NominationsSelectClass() {
                     disabled={!isSelected}
                     onChange={() => setPreference(classId)}
                   />
-                  <span style={{ fontSize: "0.9rem" }}>Preference</span>
+                  <span style={{ fontSize: "0.9rem" }}>{t("nominationsFlow.preference")}</span>
                 </label>
               </div>
             </div>
@@ -371,7 +372,7 @@ export default function NominationsSelectClass() {
           cursor: selected.length === 0 ? "not-allowed" : "pointer",
         }}
       >
-        Save
+        {t("nominationsFlow.save")}
       </button>
     </div>
   );

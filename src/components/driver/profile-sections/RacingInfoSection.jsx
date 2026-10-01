@@ -1,14 +1,16 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/profile-sections/RacingInfoSection.jsx
 
 import Input from "@/components/ui/Input";
 
 export default function RacingInfoSection({ driver, update }) {
+  const { t } = useTranslation();
   return (
     <section className="space-y-4">
-      <h3 className="text-sm font-semibold">Racing / Driving Information</h3>
+      <h3 className="text-sm font-semibold">{t("driverProfile.racingInfo")}</h3>
 
       <Input
-        label="Favourite Classes (comma separated)"
+        label={t("driverProfile.favouriteClasses")}
         value={(driver.favourite_classes || []).join(", ")}
         onChange={(e) =>
           update(
@@ -22,13 +24,13 @@ export default function RacingInfoSection({ driver, update }) {
       />
 
       <Input
-        label="Preferred Surface"
+        label={t("driverProfile.preferredSurface")}
         value={driver.preferred_surface || ""}
         onChange={(e) => update("preferred_surface", e.target.value)}
       />
 
       <Input
-        label="Home Track"
+        label={t("driverProfile.homeTrack")}
         value={driver.home_track || ""}
         onChange={(e) => update("home_track", e.target.value)}
       />

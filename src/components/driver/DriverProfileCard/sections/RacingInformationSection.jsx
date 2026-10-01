@@ -1,8 +1,10 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/DriverProfileCard/sections/RacingInformationSection.jsx
 
 import React from "react";
 
 export default function RacingInformationSection({ driver, chassis }) {
+  const { t } = useTranslation();
   if (
     !driver.favourite_classes?.length &&
     !driver.preferred_surface &&
@@ -18,21 +20,21 @@ export default function RacingInformationSection({ driver, chassis }) {
 
         {driver.favourite_classes?.length > 0 && (
           <p>
-            <span className="font-semibold">Favourite Classes:</span>{" "}
+            <span className="font-semibold">{t("driverProfile.fieldFavouriteClasses")}</span>{" "}
             {driver.favourite_classes.join(", ")}
           </p>
         )}
 
         {driver.preferred_surface && (
           <p>
-            <span className="font-semibold">Preferred Surface:</span>{" "}
+            <span className="font-semibold">{t("driverProfile.fieldPreferredSurface")}</span>{" "}
             {driver.preferred_surface}
           </p>
         )}
 
         {driver.manufacturer && (
           <p className="flex items-center gap-2">
-            <span className="font-semibold">Chassis Manufacturer:</span>
+            <span className="font-semibold">{t("driverProfile.fieldChassisManufacturer")}</span>
 
             {/* If logo exists → show ONLY the logo */}
             {chassis?.logo ? (

@@ -5,6 +5,7 @@ import { supabase } from "@/supabaseClient";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import useTheme from "@app/providers/useTheme";
 import { getEffectiveDayClassIds } from "@/app/lib/eventClassLimit";
 import {
@@ -105,6 +106,7 @@ function classNominationTally(group, classMinimum, contentText) {
 export default function NominationsView() {
   const { clubSlug, eventId } = useParams();
   const { palette } = useTheme();
+  const { t } = useTranslation();
   const brand = palette?.primary || "#00438a";
   const contentText = palette?.text || "#1f2937";
   const buttonText = palette?.buttonText || "#ffffff";
@@ -258,7 +260,7 @@ export default function NominationsView() {
     <div style={{ minHeight: "100vh", width: "100%", background: palette?.background || "#ffffff" }}>
       <PageTitle
         icon={ClipboardDocumentListIcon}
-        title="Event Nominations"
+        title={t("nominations.viewTitle")}
         style={{ color: brand }}
         actions={
           <Link to={`/${clubSlug}/app/events/${eventId}`} className="no-underline">

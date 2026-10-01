@@ -5,10 +5,12 @@ import CMSButton from "@cms/CMSButton";
 import { ClearFieldButton } from "@cms/CMSButtonSet";
 import { cmsLayout } from "@cms/layout";
 import { cmsStyles } from "@cms/styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const timeFieldLabelStyle = { ...cmsStyles.label, display: "block", marginBottom: 6 };
 
 export default function EventTimingCard({ event = {}, onChange }) {
+  const { t } = useTranslation();
   const isMulti = !!event.is_multi_day;
 
   const days = useMemo(() => {
@@ -116,7 +118,7 @@ export default function EventTimingCard({ event = {}, onChange }) {
 
         <div style={{ marginTop: 12 }}>
           <CMSInput
-            label="Day name (optional)"
+            labelKey="cms.dayNameOptional"
             value={day.label || ""}
             onChange={(v) => {
               const next = [...days];

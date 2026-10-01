@@ -17,8 +17,10 @@ import {
 } from "@heroicons/react/24/solid";
 
 import { toast } from "react-hot-toast";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function TrackEditor({ mode }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug, trackId } = useParams();
   const { club } = useClub();

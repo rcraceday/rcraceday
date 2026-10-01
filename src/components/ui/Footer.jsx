@@ -1,7 +1,9 @@
 // src/components/ui/Footer.jsx
 import rcracedayLogo from "@/assets/RCRaceday_logo_300x300_Powered.png";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function Footer() {
+  const { t } = useTranslation();
   return (
     <footer className="w-full border-t border-slate-200 bg-white mt-0">
       <div className="max-w-[720px] mx-auto px-4 py-6 flex flex-col items-center gap-4">
@@ -14,20 +16,20 @@ export default function Footer() {
         >
           <img
             src={rcracedayLogo}
-            alt="RC RaceDay"
+            alt={t("clubSelect.brandAlt")}
             className="h-18 w-auto"   // ⭐ 20px logo
           />
         </a>
 
         {/* Links */}
         <nav className="flex flex-wrap justify-center gap-3 text-sm">
-          <FooterLink href="/terms">Terms of Use</FooterLink>
+          <FooterLink href="/terms">{t("footer.terms")}</FooterLink>
           <Separator />
-          <FooterLink href="/privacy">Privacy Policy</FooterLink>
+          <FooterLink href="/privacy">{t("footer.privacy")}</FooterLink>
           <Separator />
-          <FooterLink href="/support">Support</FooterLink>
+          <FooterLink href="/support">{t("footer.support")}</FooterLink>
           <Separator />
-          <FooterLink href="/contact">Contact RCRaceday</FooterLink>
+          <FooterLink href="/contact">{t("footer.contact")}</FooterLink>
           <Separator />
           <FooterLink
             href="https://rcraceday.com"
@@ -39,7 +41,7 @@ export default function Footer() {
 
         {/* Copyright */}
         <p className="text-xs text-slate-500">
-          © 2026 RCRaceday. All rights reserved.
+          {t("footer.copyright", { year: new Date().getFullYear() })}
         </p>
       </div>
     </footer>

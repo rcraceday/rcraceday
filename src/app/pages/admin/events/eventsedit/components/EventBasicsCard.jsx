@@ -11,6 +11,7 @@ import LogoPicker from "../../../components/LogoPicker";
 import { supabase } from "@/supabaseClient";
 import { eventLogoPath, removeClubAssetPath } from "@/app/lib/clubAssetStorage";
 import { clubStorageFolder } from "@/app/lib/storageLayout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 
 export default function EventBasicsCard({
@@ -19,6 +20,7 @@ export default function EventBasicsCard({
   eventTypes = [],
   tracks = [],
 }) {
+  const { t } = useTranslation();
   const isMulti = !!event.is_multi_day;
 
   const days = Array.isArray(event.days)
@@ -129,7 +131,7 @@ export default function EventBasicsCard({
     >
       <div>
         <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-          {requiredLabel("Event Name")}
+          {requiredLabel(t("cms.eventName"))}
         </label>
         <CMSRichTextEditor
           value={safeName}
@@ -138,7 +140,7 @@ export default function EventBasicsCard({
       </div>
 
       <CMSToggle
-        label="Multi-Day Event?"
+        labelKey="cms.multiDayEvent"
         checked={isMulti}
         onChange={(checked) => {
           onChange("is_multi_day", checked);
@@ -168,7 +170,7 @@ export default function EventBasicsCard({
 
       {!isMulti && (
         <CMSInput
-          label={requiredLabel("Event Date")}
+          label={requiredLabel(t("cms.eventDate"))}
           type="date"
           value={event.event_date || ""}
           onChange={(value) => onChange("event_date", value)}
@@ -202,7 +204,7 @@ export default function EventBasicsCard({
               }}
             >
               <CMSInput
-                label={requiredLabel(`Day ${i + 1} Date`)}
+                label={requiredLabel(t("cms.dayNDate", { n: i + 1 }))}
                 type="date"
                 value={day.date || ""}
                 onChange={(value) => updateDayDate(i, value)}
@@ -210,7 +212,7 @@ export default function EventBasicsCard({
               />
 
               <CMSInput
-                label={`Day ${i + 1} Name`}
+                label={t("cms.dayNName", { n: i + 1 })}
                 value={day.label || ""}
                 onChange={(value) => updateDayLabel(i, value)}
                 action={
@@ -227,7 +229,7 @@ export default function EventBasicsCard({
       )}
 
       <CMSSelect
-        label={requiredLabel("Event Type")}
+        label={requiredLabel(t("cms.eventType"))}
         value={event.event_type || ""}
         onChange={(value) => onChange("event_type", value)}
         options={eventTypes.map((t) => ({
@@ -239,7 +241,7 @@ export default function EventBasicsCard({
       />
 
             <CMSToggle
-        label="Requires RCRA club affiliation"
+        labelKey="cms.requiresRcra"
         checked={!!event.requires_rcra_club}
         onChange={(checked) => onChange("requires_rcra_club", checked)}
       />
@@ -249,7 +251,7 @@ export default function EventBasicsCard({
       {tracks.length === 1 ? (
         <div>
           <label style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
-            {requiredLabel("Track")}
+            {requiredLabel(t("cms.track"))}
           </label>
           <div
             style={{
@@ -267,7 +269,7 @@ export default function EventBasicsCard({
         </div>
       ) : (
         <CMSSelect
-          label={requiredLabel("Track")}
+          label={requiredLabel(t("cms.track"))}
           value={event.track || ""}
           options={trackOptions}
           placeholder="Select track..."

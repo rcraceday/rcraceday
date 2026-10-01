@@ -1,6 +1,7 @@
 // @cms/CMSMiniButtonSet.jsx
 import CMSButton from "@cms/CMSButton";
 
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   PlusIcon,
   PencilSquareIcon,

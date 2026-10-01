@@ -14,6 +14,7 @@ import CMSToggle from "@cms/CMSToggle";
 import { DeleteButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "@cms/styles";
 import { cmsLayout } from "@cms/layout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Active" },
@@ -48,6 +49,7 @@ const emptyPerson = {
 };
 
 export default function AdminMembershipEdit() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug, id } = useParams();
   const { club } = useClub();
@@ -384,7 +386,7 @@ export default function AdminMembershipEdit() {
           </div>
         )}
 
-        <CMSCard title="Household">
+        <CMSCard titleKey="admin.common.household">
           <div style={{ display: "flex", flexDirection: "column", gap: 20, paddingTop: 8 }}>
             <div style={cmsLayout.row}>
               <div style={cmsLayout.column}>
@@ -468,7 +470,7 @@ export default function AdminMembershipEdit() {
         </CMSCard>
 
         {!isNew && (
-          <CMSCard title="Members">
+          <CMSCard titleKey="admin.common.members">
             <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
               <p style={cmsLayout.muted}>
                 Drivers on this household are listed as members. Use Life member on a

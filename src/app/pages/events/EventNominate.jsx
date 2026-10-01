@@ -16,6 +16,7 @@ import DOMPurify from "dompurify";
 import { richTextToPlainText } from "@/app/lib/richText";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import Input from "@/components/ui/Input";
 import FilterDropdown from "@/components/ui/FilterDropdown";
 import TransponderCombobox from "@/components/ui/TransponderCombobox";
@@ -371,11 +372,11 @@ function totalLineQty(lines) {
   return (lines || []).reduce((sum, line) => sum + Number(line?.qty || 0), 0);
 }
 
-function preferenceOrdinalLabel(slotsPerDay) {
+function preferenceOrdinalLabel(slotsPerDay, t) {
   const n = Number(slotsPerDay) + 1;
   const suffix =
     n % 100 >= 11 && n % 100 <= 13 ? "th" : { 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th";
-  return `${n}${suffix} Class preference`;
+  return t("nominate.classPreferenceNth", { n: `${n}${suffix}` });
 }
 
 function optionsComplete(groups, options) {
@@ -572,6 +573,7 @@ function QtyControl({ value, min = 0, max = 99, onChange, disabled, brand }) {
 }
 
 function OptionPicker({ groups, selected, committed = [], onChange, palette, brand }) {
+  const { t } = useTranslation();
   if (!Array.isArray(groups) || groups.length === 0) return null;
   const committedMaps = Array.isArray(committed) ? committed : [];
   return (
@@ -582,7 +584,7 @@ function OptionPicker({ groups, selected, committed = [], onChange, palette, bra
           className="border rounded-md p-3"
           style={{ background: palette?.surface || "#ffffff", borderColor: palette?.surfaceBorder || "#e5e7eb" }}
         >
-          <div className="font-semibold text-base mb-2">{group.name || "Option Group"}</div>
+          <div className="font-semibold text-base mb-2">{group.name || t("nominate.optionGroup")}</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {(group.values || []).map((v, vi) => {
               const isSelected =
@@ -630,6 +632,7 @@ function PurchaseLineEditor({
   qtyEditable = true,
   removable = true,
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="rounded-md p-3 space-y-2"
@@ -652,7 +655,7 @@ function PurchaseLineEditor({
           )}
           {removable && (
             <Button type="button" variant="secondary" size="sm" onClick={onRemove}>
-              Remove
+              {t("nominate.remove")}
             </Button>
           )}
         </div>
@@ -665,6 +668,7 @@ export default function EventNominate() {
   const { eventId, clubSlug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { club } = useClub();
   const { membership } = useMembership();
   const { drivers, loadingDrivers } = useDrivers();
@@ -736,7 +740,7 @@ export default function EventNominate() {
     async function load() {
       const { data: eventRow, error: eventError } = await supabase.from("events").select("*").eq("id", eventId).single();
       if (cancelled) return;
-      if (eventError) showPageError("Unable to load this event nomination.");
+      if (eventError) showPageError(t("nominate.errLoadEvent"));
       setEvent(eventRow || null);
 
       if (eventRow?.track) {
@@ -768,7 +772,7 @@ export default function EventNominate() {
           .select("id, name")
           .in("id", Array.from(nameLookupIds));
         if (cancelled) return;
-        if (classError) showPageError("Unable to load this event nomination.");
+        if (classError) showPageError(t("nominate.errLoadEvent"));
         const rows = classRows || [];
         setClassCatalog(rows);
         setClubClasses(rows.filter((row) => eventClassIdSet.has(row.id)));
@@ -1575,16 +1579,16 @@ export default function EventNominate() {
       const lines = purchaseLinesForItem(item, entry, { locked });
       if (locked) {
         if (hasOptions && !lines.every((line) => optionsComplete(item.options, line.options))) {
-          return { message: `Choose options for ${item.name}.`, section: "merchandise" };
+          return { message: t("nominate.errChooseOptions", { name: item.name }), section: "merchandise" };
         }
         if (!hasOptions && totalLineQty(lines) < 1) {
-          return { message: `${item.name} is required.`, section: "merchandise" };
+          return { message: t("nominate.errItemRequired", { name: item.name }), section: "merchandise" };
         }
         continue;
       }
       if (totalLineQty(lines) <= 0) continue;
       if (hasOptions && !lines.every((line) => optionsComplete(item.options, line.options))) {
-        return { message: `Choose options for ${item.name}.`, section: "merchandise" };
+        return { message: t("nominate.errChooseOptions", { name: item.name }), section: "merchandise" };
       }
     }
 
@@ -1598,16 +1602,16 @@ export default function EventNominate() {
       const lines = purchaseLinesForItem(addon, entry, { locked });
       if (locked) {
         if (hasOptions && !lines.every((line) => optionsComplete(addon.options, line.options))) {
-          return { message: `Choose options for ${addon.name}.`, section: "addons" };
+          return { message: t("nominate.errChooseOptions", { name: addon.name }), section: "addons" };
         }
         if (!hasOptions && totalLineQty(lines) < 1) {
-          return { message: `${addon.name} is required.`, section: "addons" };
+          return { message: t("nominate.errItemRequired", { name: addon.name }), section: "addons" };
         }
         continue;
       }
       if (totalLineQty(lines) <= 0) continue;
       if (hasOptions && !lines.every((line) => optionsComplete(addon.options, line.options))) {
-        return { message: `Choose options for ${addon.name}.`, section: "addons" };
+        return { message: t("nominate.errChooseOptions", { name: addon.name }), section: "addons" };
       }
     }
     return null;
@@ -1618,7 +1622,10 @@ export default function EventNominate() {
       const purchaseErr = validatePurchaseSelection(selection, driver.id);
       if (purchaseErr) {
         return {
-          message: `${driver.first_name} ${driver.last_name}: ${purchaseErr.message}`,
+          message: t("nominate.errDriverPrefix", {
+            driverName: `${driver.first_name} ${driver.last_name}`,
+            message: purchaseErr.message,
+          }),
           section: purchaseErr.section,
         };
       }
@@ -1646,7 +1653,7 @@ export default function EventNominate() {
       const classPrices = pricing.class_prices || {};
       entries.forEach((entry) => {
         if (entry?.openPractice) {
-          rows.push({ kind: "class", driverId: driver.id, label: "Open practice day", amount: 0, dayIndex: entry.dayIndex });
+          rows.push({ kind: "class", driverId: driver.id, label: t("nominate.openPracticeDay"), amount: 0, dayIndex: entry.dayIndex });
           return;
         }
         const classId = entry?.classId;
@@ -1683,7 +1690,7 @@ export default function EventNominate() {
           const practicePrice = tier.practice;
           const amount =
             practicePrice != null && practicePrice !== "" ? Math.max(0, Number(practicePrice)) : 0;
-          rows.push({ kind: "class", driverId: driver.id, label: "Open practice day", amount, dayIndex: entry.dayIndex });
+          rows.push({ kind: "class", driverId: driver.id, label: t("nominate.openPracticeDay"), amount, dayIndex: entry.dayIndex });
           return;
         }
         const classId = entry?.classId;
@@ -1730,7 +1737,7 @@ export default function EventNominate() {
         if (entry?.openPractice) {
           const amount =
             practiceUnit != null && practiceUnit !== "" ? Math.max(0, Number(practiceUnit)) : 0;
-          rows.push({ kind: "class", driverId: driver.id, label: "Open practice day", amount, dayIndex: entry.dayIndex });
+          rows.push({ kind: "class", driverId: driver.id, label: t("nominate.openPracticeDay"), amount, dayIndex: entry.dayIndex });
           return;
         }
         const classId = entry?.classId;
@@ -1853,7 +1860,7 @@ export default function EventNominate() {
     });
 
     if (classResult.isLate && pricing.late_fee) {
-      rows.push({ label: "Late entry fee", amount: Math.max(0, Number(pricing.late_fee)) });
+      rows.push({ label: t("nominate.lateEntryFee"), amount: Math.max(0, Number(pricing.late_fee)) });
     }
 
     return rows;
@@ -1914,21 +1921,21 @@ export default function EventNominate() {
   }
 
   async function confirmPaymentAndNominations() {
-    if (!membership?.id) return showCheckoutError("Membership information is not available.");
+    if (!membership?.id) return showCheckoutError(t("nominate.errMembershipUnavailable"));
     if (amountToPay > 0.005 && !paymentConfirmed) {
-      return showCheckoutError(`Pay the balance due (${money(amountToPay)}) before confirming.`);
+      return showCheckoutError(t("nominate.errPayBalanceFirst", { amount: money(amountToPay) }));
     }
     const active = drivers
       .map((driver) => ({ driver, selection: selections[driver.id] || emptySelection() }))
       .filter(({ selection }) => hasNominationActivity(selection));
     if (!active.length) {
-      return showCheckoutError("Select at least one class or a practice day for a driver.", "classes");
+      return showCheckoutError(t("nominate.errSelectClassOrPractice"), "classes");
     }
     if (requiresRcraClub && !clubAffiliationConfirmed) {
-      return showCheckoutError("You must confirm your RCRA club affiliation.", "rcra");
+      return showCheckoutError(t("nominate.errConfirmRcra"), "rcra");
     }
     if (requiresRcraClub && !affiliatedClubId) {
-      return showCheckoutError("Select your RCRA club.", "rcra");
+      return showCheckoutError(t("nominate.errSelectRcraClub"), "rcra");
     }
 
     for (const { selection } of active) {
@@ -1942,7 +1949,9 @@ export default function EventNominate() {
         const usage = classUsage(classId);
         if (usage && usage.taken > usage.limit) {
           return showCheckoutError(
-            `${classMap.get(classId) || "A class"} is full. Please choose another class.`,
+            t("nominate.errClassFull", {
+              className: classMap.get(classId) || t("nominate.errClassFallback"),
+            }),
             "classes"
           );
         }
@@ -2004,7 +2013,7 @@ export default function EventNominate() {
       .select("id, driver_id");
 
     if (nominationError || !nominations) {
-      showCheckoutError(nominationError?.message || "Unable to save nominations.");
+      showCheckoutError(nominationError?.message || t("nominate.errSaveNominations"));
       setSaving(false);
       return;
     }
@@ -2100,7 +2109,7 @@ export default function EventNominate() {
     }
 
     setSaving(false);
-    if (entryError) return showCheckoutError(entryError.message || "Unable to save class entries.");
+    if (entryError) return showCheckoutError(entryError.message || t("nominate.errSaveEntries"));
     clearNominateDraft(eventId, membership.id);
     setSaved(true);
     navigate(`/${clubSlug}/app/nominations`);
@@ -2108,7 +2117,7 @@ export default function EventNominate() {
 
   function classOptions(ids, currentValue, takenIds = [], { ignoreEntryLimits } = {}) {
     return [
-      { value: "", label: "No class selected" },
+      { value: "", label: t("nominate.noClassSelected") },
       ...ids
         .filter((id) => id === currentValue || !takenIds.includes(id))
         .filter((id) => ignoreEntryLimits || !classOptionDisabled(id, currentValue))
@@ -2125,8 +2134,8 @@ export default function EventNominate() {
   if (loading || loadingDrivers || awaitingNominationHydration) {
     return (
       <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
-        <PageTitle icon={ClipboardDocumentCheckIcon} title="Nominate" style={{ color: brand }} />
-        <div style={{ padding: "40px", textAlign: "center", color: "#666", fontSize: "14px" }}>Loading nomination form…</div>
+        <PageTitle icon={ClipboardDocumentCheckIcon} title={t("nominate.title")} style={{ color: brand }} />
+        <div style={{ padding: "40px", textAlign: "center", color: "#666", fontSize: "14px" }}>{t("nominate.loadingForm")}</div>
       </div>
     );
   }
@@ -2134,8 +2143,8 @@ export default function EventNominate() {
   if (!event) {
     return (
       <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
-        <PageTitle icon={ClipboardDocumentCheckIcon} title="Nominate" style={{ color: brand }} />
-        <div style={{ padding: "40px", textAlign: "center", color: "#666", fontSize: "14px" }}>Event not found.</div>
+        <PageTitle icon={ClipboardDocumentCheckIcon} title={t("nominate.title")} style={{ color: brand }} />
+        <div style={{ padding: "40px", textAlign: "center", color: "#666", fontSize: "14px" }}>{t("nominate.eventNotFound")}</div>
       </div>
     );
   }
@@ -2215,7 +2224,7 @@ export default function EventNominate() {
     <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
       <PageTitle
         icon={ClipboardDocumentCheckIcon}
-        title="Nominate"
+        title={t("nominate.title")}
         style={{ color: brand }}
         actions={
           <Button
@@ -2225,7 +2234,7 @@ export default function EventNominate() {
             onClick={() => navigate(`/${clubSlug}/app/events/${event.id}`)}
           >
             <ArrowLeftIcon className="h-3 w-3" />
-            Back
+            {t("nominate.back")}
           </Button>
         }
       />
@@ -2281,17 +2290,17 @@ export default function EventNominate() {
             <div className="mb-4 md:mb-6">
               {eventTypeLabel && (
                 <div className="text-[14px] leading-[1.5] mb-1">
-                  <strong>Event Type:</strong> {eventTypeLabel}
+                  <strong>{t("nominate.eventType")}</strong> {eventTypeLabel}
                 </div>
               )}
               {primaryDate && (
                 <div className="text-[14px] leading-[1.5] mb-1">
-                  <strong>When:</strong> {primaryDate}
+                  <strong>{t("nominate.when")}</strong> {primaryDate}
                 </div>
               )}
               {trackName && (
                 <div className="text-[14px] leading-[1.5] mb-1">
-                  <strong>Track:</strong> {trackName}
+                  <strong>{t("nominate.track")}</strong> {trackName}
                 </div>
               )}
             </div>
@@ -2301,14 +2310,14 @@ export default function EventNominate() {
             )}
 
             {Array.isArray(event.days) && event.days.length > 0 && (
-              <Section title="Schedule" icon={ClockIcon} brand={brand}>
+              <Section title={t("nominate.schedule")} icon={ClockIcon} brand={brand}>
                 <div style={{ marginTop: "-6px" }}>
                   {event.days.map((day, idx) => {
                     const items = [];
-                    if (day.gates_open_at) items.push(`Gates Open: ${formatTimeOnly(day.date, day.gates_open_at)}`);
-                    if (day.practice_at) items.push(`Practice Starts: ${formatTimeOnly(day.date, day.practice_at)}`);
-                    if (day.drivers_brief_at) items.push(`Drivers Brief: ${formatTimeOnly(day.date, day.drivers_brief_at)}`);
-                    if (day.race_start_at) items.push(`Racing Starts: ${formatTimeOnly(day.date, day.race_start_at)}`);
+                    if (day.gates_open_at) items.push(`${t("nominate.gatesOpen")} ${formatTimeOnly(day.date, day.gates_open_at)}`);
+                    if (day.practice_at) items.push(`${t("nominate.practiceStarts")} ${formatTimeOnly(day.date, day.practice_at)}`);
+                    if (day.drivers_brief_at) items.push(`${t("nominate.driversBrief")} ${formatTimeOnly(day.date, day.drivers_brief_at)}`);
+                    if (day.race_start_at) items.push(`${t("nominate.racingStarts")} ${formatTimeOnly(day.date, day.race_start_at)}`);
                     const heading = dayHeading(day, idx);
                     if (!heading && items.length === 0) return null;
                     return (
@@ -2346,11 +2355,11 @@ export default function EventNominate() {
               <>
                 <hr className="border-surfaceBorder my-6" />
 
-                <Section title="Driver" icon={UserIcon} brand={brand}>
+                <Section title={t("nominate.driver")} icon={UserIcon} brand={brand}>
                   <div className="space-y-4">
                     {isFamily && (
                       <div>
-                        <label className="block text-sm font-medium mb-1">Select Driver</label>
+                        <label className="block text-sm font-medium mb-1">{t("nominate.selectDriver")}</label>
                         <FilterDropdown
                           variant="cms"
                           value={selectedDriver.id}
@@ -2361,19 +2370,19 @@ export default function EventNominate() {
                             value: driver.id,
                             label: `${driver.first_name} ${driver.last_name}${driver.is_junior ? " (Junior)" : ""}`,
                           }))}
-                          ariaLabel="Select driver"
+                          ariaLabel={t("nominate.selectDriverAria")}
                           triggerStyleOverrides={{ fontSize: "0.875rem" }}
                         />
                       </div>
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input label="First Name" value={selectedDriver.first_name || ""} readOnly style={{ background: "#F5F5F5" }} />
-                      <Input label="Last Name" value={selectedDriver.last_name || ""} readOnly style={{ background: "#F5F5F5" }} />
+                      <Input label={t("nominate.firstName")} value={selectedDriver.first_name || ""} readOnly style={{ background: "#F5F5F5" }} />
+                      <Input label={t("nominate.lastName")} value={selectedDriver.last_name || ""} readOnly style={{ background: "#F5F5F5" }} />
                     </div>
                     {selectedDriver.is_junior && (
                       <div className="text-sm font-medium" style={{ color: brand }}>
-                        Junior driver — junior class pricing applies.
+                        {t("nominate.juniorPricingNote")}
                       </div>
                     )}
                   </div>
@@ -2381,7 +2390,7 @@ export default function EventNominate() {
 
                 {flatRequirements.length > 0 && (
                   <div className="mt-6 space-y-3">
-                    <div className="font-semibold text-base">Club Requirements</div>
+                    <div className="font-semibold text-base">{t("nominate.clubRequirements")}</div>
                     {Object.values(
                       flatRequirements.reduce((groups, requirement) => {
                         if (!groups[requirement.requirementId]) {
@@ -2396,7 +2405,7 @@ export default function EventNominate() {
                         className="grid grid-cols-1 md:grid-cols-2 gap-2 border rounded-md p-3"
                         style={{ background: palette?.surface || "#ffffff", borderColor: palette?.surfaceBorder || "#e5e7eb" }}
                       >
-                        <div className="font-medium text-sm">{group.descriptor || "Requirement"}</div>
+                        <div className="font-medium text-sm">{group.descriptor || t("nominate.requirement")}</div>
                         <div className="flex flex-col gap-1">
                           {group.items.map((requirement) => (
                             <label key={requirement.id} className="flex items-start gap-2 text-sm">
@@ -2417,7 +2426,7 @@ export default function EventNominate() {
                 )}
 
                 <Section
-                  title="Classes"
+                  title={t("nominate.classes")}
                   icon={FlagIcon}
                   brand={brand}
                   id="nominate-focus-classes"
@@ -2426,14 +2435,14 @@ export default function EventNominate() {
                   <div style={{ marginTop: "-6px" }}>
                     {event.is_multi_day && (eventClassLimit != null || dayClassLimit != null) && (
                       <div style={{ fontSize: 14, marginBottom: 12, display: "flex", flexDirection: "column", gap: 4, color: contentText }}>
-                        {eventClassLimit != null && <div>Max classes per driver (event): {eventClassLimit}</div>}
-                        {dayClassLimit != null && <div>Max classes per day: {dayClassLimit}</div>}
+                        {eventClassLimit != null && <div>{t("nominate.maxClassesEvent", { count: eventClassLimit })}</div>}
+                        {dayClassLimit != null && <div>{t("nominate.maxClassesDay", { count: dayClassLimit })}</div>}
                       </div>
                     )}
 
                     {event.is_multi_day && (
                       <div className="space-y-3 mb-4">
-                        <div className="text-sm font-medium">Days Racing</div>
+                        <div className="text-sm font-medium">{t("nominate.daysRacing")}</div>
                         <div className="flex flex-col gap-3">
                           {days.map((day, dayIndex) => {
                             const selected = !!selection.racingDays?.[dayIndex];
@@ -2484,7 +2493,7 @@ export default function EventNominate() {
                                         {nameLabel}
                                       </div>
                                     ) : !dateLabel ? (
-                                      <div className="text-sm font-semibold">{`Day ${dayIndex + 1}`}</div>
+                                      <div className="text-sm font-semibold">{t("nominate.dayN", { n: dayIndex + 1 })}</div>
                                     ) : null}
                                   </div>
                                 </div>
@@ -2493,12 +2502,12 @@ export default function EventNominate() {
                                   <div className="text-sm" style={{ color: contentText }}>
                                     <p>
                                       {getAllEventAssignedClassIds(event).length > 0
-                                        ? "Practice day — event classes only. No class selection is required. This day is not included in the LiveTime export."
-                                        : "Practice day — all track classes. No class selection is required. This day is not included in the LiveTime export."}
+                                        ? t("nominate.practiceEventClassesOnly")
+                                        : t("nominate.practiceAllTrackClasses")}
                                     </p>
                                     {dayClassIds.length > 0 && (
                                       <p className="mt-2 text-xs opacity-80">
-                                        Classes: {dayClassIds.map((id) => classMap.get(id) || id).join(", ")}
+                                        {t("nominate.classesLabel")} {dayClassIds.map((id) => classMap.get(id) || id).join(", ")}
                                       </p>
                                     )}
                                   </div>
@@ -2518,7 +2527,7 @@ export default function EventNominate() {
                                       }))
                                     }
                                   >
-                                    Select classes
+                                    {t("nominate.selectClasses")}
                                   </Button>
                                 )}
 
@@ -2529,7 +2538,7 @@ export default function EventNominate() {
                                       return (
                                         <div key={slotIndex} className="space-y-1">
                                           <div className="text-sm font-medium">
-                                            {visibleSlotCount > 1 ? `Class ${slotIndex + 1}` : "Class"}
+                                            {visibleSlotCount > 1 ? t("nominate.classN", { n: slotIndex + 1 }) : t("nominate.class")}
                                           </div>
                                           <div className="flex w-full min-w-0 items-center gap-2">
                                             <div className="min-w-0 flex-1">
@@ -2551,7 +2560,9 @@ export default function EventNominate() {
                                                   { ignoreEntryLimits: practiceDay }
                                                 )}
                                                 ariaLabel={
-                                                  visibleSlotCount > 1 ? `Class ${slotIndex + 1}` : "Class"
+                                                  visibleSlotCount > 1
+                                                    ? t("nominate.classN", { n: slotIndex + 1 })
+                                                    : t("nominate.class")
                                                 }
                                                 triggerStyleOverrides={{ fontSize: "0.875rem" }}
                                               />
@@ -2564,7 +2575,7 @@ export default function EventNominate() {
                                                 onChange={(value) =>
                                                   updateTransponder(selectedDriver.id, currentValue, value)
                                                 }
-                                                ariaLabel="Transponder number"
+                                                ariaLabel={t("nominate.transponderAria")}
                                               />
                                             )}
                                           </div>
@@ -2588,7 +2599,7 @@ export default function EventNominate() {
                                           }))
                                         }
                                       >
-                                        Add class
+                                        {t("nominate.addClass")}
                                       </Button>
                                     )}
                                   </div>
@@ -2602,20 +2613,20 @@ export default function EventNominate() {
                                     return (
                                       <div>
                                         <div className="text-sm font-medium mb-1">
-                                          {preferenceOrdinalLabel(prefSlotCount)}
+                                          {preferenceOrdinalLabel(prefSlotCount, t)}
                                         </div>
                                         <FilterDropdown
                                           variant="cms"
                                           value={dayPref}
                                           onChange={(value) => setDayPreference(selectedDriver.id, dayIndex, value)}
                                           options={[
-                                            { value: "", label: "No preference" },
+                                            { value: "", label: t("nominate.noPreference") },
                                             ...prefOptions.map((id) => ({
                                               value: id,
                                               label: classMap.get(id) || id,
                                             })),
                                           ]}
-                                          ariaLabel={preferenceOrdinalLabel(prefSlotCount)}
+                                          ariaLabel={preferenceOrdinalLabel(prefSlotCount, t)}
                                           triggerStyleOverrides={{ fontSize: "0.875rem" }}
                                         />
                                       </div>
@@ -2647,7 +2658,7 @@ export default function EventNominate() {
                         <div className="space-y-3">
                           {eventClassLimit != null && (
                             <div style={{ fontSize: 14, color: contentText }}>
-                              Max classes per driver: {eventClassLimit}
+                              {t("nominate.maxClassesDriver", { count: eventClassLimit })}
                             </div>
                           )}
                           {Array.from({ length: visibleSlotCount }, (_, slotIndex) => {
@@ -2655,7 +2666,7 @@ export default function EventNominate() {
                             return (
                               <div key={slotIndex} className="space-y-1">
                                 <div className="text-sm font-medium">
-                                  {visibleSlotCount > 1 ? `Class ${slotIndex + 1}` : "Class"}
+                                  {visibleSlotCount > 1 ? t("nominate.classN", { n: slotIndex + 1 }) : t("nominate.class")}
                                 </div>
                                 <div className="flex w-full min-w-0 items-center gap-2">
                                   <div className="min-w-0 flex-1">
@@ -2677,8 +2688,8 @@ export default function EventNominate() {
                                       )}
                                       ariaLabel={
                                         visibleSlotCount > 1
-                                          ? `Class ${slotIndex + 1}`
-                                          : "Class"
+                                          ? t("nominate.classN", { n: slotIndex + 1 })
+                                          : t("nominate.class")
                                       }
                                       triggerStyleOverrides={{ fontSize: "0.875rem" }}
                                     />
@@ -2691,7 +2702,7 @@ export default function EventNominate() {
                                       onChange={(value) =>
                                         updateTransponder(selectedDriver.id, currentValue, value)
                                       }
-                                      ariaLabel="Transponder number"
+                                      ariaLabel={t("nominate.transponderAria")}
                                     />
                                   )}
                                 </div>
@@ -2715,7 +2726,7 @@ export default function EventNominate() {
                                 }))
                               }
                             >
-                              Add class
+                              {t("nominate.addClass")}
                             </Button>
                           )}
                         </div>
@@ -2730,16 +2741,16 @@ export default function EventNominate() {
                       const slotsPerDay = classLimit || 1;
                       return (
                       <div className="mt-4">
-                        <div className="text-sm font-medium mb-1">{preferenceOrdinalLabel(slotsPerDay)}</div>
+                        <div className="text-sm font-medium mb-1">{preferenceOrdinalLabel(slotsPerDay, t)}</div>
                         <FilterDropdown
                           variant="cms"
                           value={selection.preference}
                           onChange={(value) => updateSelection(selectedDriver.id, { preference: value })}
                           options={[
-                            { value: "", label: "No preference" },
+                            { value: "", label: t("nominate.noPreference") },
                             ...prefOptions.map((id) => ({ value: id, label: classMap.get(id) || id })),
                           ]}
-                          ariaLabel={preferenceOrdinalLabel(slotsPerDay)}
+                          ariaLabel={preferenceOrdinalLabel(slotsPerDay, t)}
                           triggerStyleOverrides={{ fontSize: "0.875rem" }}
                         />
                       </div>
@@ -2750,7 +2761,7 @@ export default function EventNominate() {
 
                 {visibleMerchandiseForDriver(selectedDriver.id).length > 0 && (
                   <Section
-                    title="Merchandise"
+                    title={t("nominate.merchandise")}
                     icon={ShoppingBagIcon}
                     brand={brand}
                     id="nominate-focus-merchandise"
@@ -2795,7 +2806,7 @@ export default function EventNominate() {
                                 <img src={item.photo_url} alt={item.name} className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: palette?.textMuted || "#6b7280" }}>
-                                  No Image
+                                  {t("nominate.noImage")}
                                 </div>
                               )}
                             </div>
@@ -2807,29 +2818,31 @@ export default function EventNominate() {
                                 </div>
                               )}
                               {item.included ? (
-                                <div className="text-green-700 font-medium">Included in Entry</div>
+                                <div className="text-green-700 font-medium">{t("nominate.includedInEntry")}</div>
                               ) : item.compulsory ? (
-                                <div className="text-red-700 font-medium">Compulsory Item</div>
+                                <div className="text-red-700 font-medium">{t("nominate.compulsoryItem")}</div>
                               ) : (
                                 <div className="text-base">
-                                  <strong>Price:</strong> {item.price ? money(item.price) : "$0.00"}
+                                  <strong>{t("nominate.price")}</strong> {item.price ? money(item.price) : "$0.00"}
                                 </div>
                               )}
                               {item.max_qty != null && item.max_qty !== "" && (
                                 <div className="text-base">
-                                  <strong>Max Qty:</strong> {item.max_qty}
+                                  <strong>{t("nominate.maxQty")}</strong> {item.max_qty}
                                 </div>
                               )}
                               {numericEntryLimit(item.max_entries) != null && (
                                 <div className="text-base" style={{ color: palette?.textMuted || "#6b7280" }}>
-                                  <strong>Limited:</strong>{" "}
-                                  {remainingMerchEntrySlots(
-                                    item,
-                                    idx,
-                                    merchLimitContext,
-                                    selectedDriver.id
-                                  )}{" "}
-                                  of {item.max_entries} entry slots left
+                                  <strong>{t("nominate.limited")}</strong>{" "}
+                                  {t("nominate.limitedSlots", {
+                                    left: remainingMerchEntrySlots(
+                                      item,
+                                      idx,
+                                      merchLimitContext,
+                                      selectedDriver.id
+                                    ),
+                                    max: item.max_entries,
+                                  })}
                                 </div>
                               )}
                               {hasOptions && (
@@ -2846,7 +2859,7 @@ export default function EventNominate() {
                                   />
                                   {((locked && completeLines.length === 0) ||
                                     (Object.values(entry?.options || {}).some(Boolean) && !currentOptionsReady)) && (
-                                    <p className="text-sm text-red-600">Choose all options before checkout.</p>
+                                    <p className="text-sm text-red-600">{t("nominate.chooseOptionsCheckout")}</p>
                                   )}
                                 </>
                               )}
@@ -2875,12 +2888,15 @@ export default function EventNominate() {
                               })}
                               {multiOption && totalLineQty(storedLines) < maxQty && (
                                 <p className="text-sm" style={{ color: palette?.textMuted || "#6b7280" }}>
-                                  Select options to add another ({totalLineQty(storedLines)}/{maxQty})
+                                  {t("nominate.selectOptionsAnother", {
+                                    current: totalLineQty(storedLines),
+                                    max: maxQty,
+                                  })}
                                 </p>
                               )}
                               {!hasOptions && !item.included && storedLines.length === 0 && (
                                 <div className="flex items-center justify-between gap-3">
-                                  <span className="text-sm font-medium">Quantity</span>
+                                  <span className="text-sm font-medium">{t("nominate.quantity")}</span>
                                   <QtyControl
                                     value={0}
                                     min={0}
@@ -2902,7 +2918,7 @@ export default function EventNominate() {
 
                 {availableAddOns.length > 0 && (
                   <Section
-                    title="Add‑Ons"
+                    title={t("nominate.addOns")}
                     icon={PlusCircleIcon}
                     brand={brand}
                     id="nominate-focus-addons"
@@ -2937,7 +2953,7 @@ export default function EventNominate() {
                                 <img src={addon.photo_url} alt={addon.name} className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: palette?.textMuted || "#6b7280" }}>
-                                  No Image
+                                  {t("nominate.noImage")}
                                 </div>
                               )}
                             </div>
@@ -2949,20 +2965,20 @@ export default function EventNominate() {
                                 </div>
                               )}
                               {addon.required ? (
-                                <div className="text-red-700 font-medium">Compulsory Add‑On</div>
+                                <div className="text-red-700 font-medium">{t("nominate.compulsoryAddOn")}</div>
                               ) : (
                                 <div className="text-base">
-                                  <strong>Price:</strong> {addon.price ? money(addon.price) : "$0.00"}
+                                  <strong>{t("nominate.price")}</strong> {addon.price ? money(addon.price) : "$0.00"}
                                 </div>
                               )}
                               {addon.max_qty != null && addon.max_qty !== "" && (
                                 <div className="text-base">
-                                  <strong>Max Qty:</strong> {addon.max_qty}
+                                  <strong>{t("nominate.maxQty")}</strong> {addon.max_qty}
                                 </div>
                               )}
                               {Array.isArray(addon.classes) && addon.classes.length > 0 && (
                                 <div className="text-sm">
-                                  <strong>Applies to:</strong>
+                                  <strong>{t("nominate.appliesTo")}</strong>
                                   <ul className="list-disc ml-5 mt-1">
                                     {addon.classes.map((cid) => (
                                       <li key={cid}>{classMap.get(cid) || cid}</li>
@@ -2984,7 +3000,7 @@ export default function EventNominate() {
                                   />
                                   {((locked && completeLines.length === 0) ||
                                     (Object.values(entry?.options || {}).some(Boolean) && !currentOptionsReady)) && (
-                                    <p className="text-sm text-red-600">Choose all options before checkout.</p>
+                                    <p className="text-sm text-red-600">{t("nominate.chooseOptionsCheckout")}</p>
                                   )}
                                 </>
                               )}
@@ -3011,12 +3027,15 @@ export default function EventNominate() {
                               })}
                               {multiOption && totalLineQty(storedLines) < maxQty && (
                                 <p className="text-sm" style={{ color: palette?.textMuted || "#6b7280" }}>
-                                  Select options to add another ({totalLineQty(storedLines)}/{maxQty})
+                                  {t("nominate.selectOptionsAnother", {
+                                    current: totalLineQty(storedLines),
+                                    max: maxQty,
+                                  })}
                                 </p>
                               )}
                               {!hasOptions && storedLines.length === 0 && (
                                 <div className="flex items-center justify-between gap-3">
-                                  <span className="text-sm font-medium">{locked ? "Qty: 1" : "Quantity"}</span>
+                                  <span className="text-sm font-medium">{locked ? t("nominate.qtyOne") : t("nominate.quantity")}</span>
                                   {!locked && (
                                     <QtyControl
                                       value={0}
@@ -3050,7 +3069,7 @@ export default function EventNominate() {
                         : { borderColor: palette?.surfaceBorder || "#e5e7eb" }
                     }
                   >
-                    <p className="text-sm font-medium">RCRA Club Affiliation</p>
+                    <p className="text-sm font-medium">{t("nominate.rcraAffiliation")}</p>
                     <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -3060,10 +3079,10 @@ export default function EventNominate() {
                           if (focusSection === "rcra") setFocusSection("");
                         }}
                       />
-                      <span>I confirm that I am affiliated with an RCRA club.</span>
+                      <span>{t("nominate.rcraConfirm")}</span>
                     </label>
                     <label className="block text-sm">
-                      Club
+                      {t("nominate.clubLabel")}
                       <SearchableClubSelect
                         clubs={rcraClubs}
                         selectedClubId={affiliatedClubId}
@@ -3076,39 +3095,36 @@ export default function EventNominate() {
                   </div>
                 )}
 
-                <Section title="Message to club" icon={ChatBubbleLeftRightIcon} brand={brand}>
-                  <p className="text-sm text-text-muted mb-3">
-                    Optional. Sent with your nomination. You can continue the conversation anytime from{" "}
-                    <span className="font-medium">Messages</span> in the menu.
-                  </p>
+                <Section title={t("nominate.messageToClub")} icon={ChatBubbleLeftRightIcon} brand={brand}>
+                  <p className="text-sm text-text-muted mb-3">{t("nominate.messageHint")}</p>
                   <Textarea
-                    label="Note for the club"
+                    label={t("nominate.noteForClub")}
                     value={clubMessageNote}
                     onChange={(e) => setClubMessageNote(e.target.value)}
                     rows={4}
-                    placeholder="Questions, special requests, or anything the club should know…"
+                    placeholder={t("nominate.notePlaceholder")}
                   />
                 </Section>
 
-                <Section title="Payment" icon={BanknotesIcon} brand={brand}>
+                <Section title={t("nominate.payment")} icon={BanknotesIcon} brand={brand}>
                   <div className="rounded-md p-4 space-y-3" style={{ background: palette?.surfaceAlt || "#f9fafb", border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}` }}>
                     {(showSettledBreakdown || showAdditionalBreakdown || showNewNominationBreakdown) && (
                       <div className="space-y-3">
                         {showSettledBreakdown && (
                           <div className="space-y-2">
-                            <p className="text-sm font-medium text-text-muted">Current nomination</p>
+                            <p className="text-sm font-medium text-text-muted">{t("nominate.currentNomination")}</p>
                             {settledBreakdownRows.map((row, rowIndex) =>
                               renderPricingBreakdownRow(row, rowIndex, { readOnly: true })
                             )}
                             <div className="flex items-center justify-between border-t border-surfaceBorder pt-2 text-sm font-semibold text-green-700">
-                              <span>Paid</span>
+                              <span>{t("nominate.paid")}</span>
                               <span>{money(priorHouseholdPaid)}</span>
                             </div>
                           </div>
                         )}
                         {showAdditionalBreakdown && (
                           <div className="space-y-2 border-t border-surfaceBorder pt-3">
-                            <p className="text-sm font-medium text-text-muted">Additional items</p>
+                            <p className="text-sm font-medium text-text-muted">{t("nominate.additionalItems")}</p>
                             {additionalBreakdownRows.map((row, rowIndex) =>
                               renderPricingBreakdownRow(row, rowIndex, { readOnly: false })
                             )}
@@ -3143,42 +3159,39 @@ export default function EventNominate() {
                         <div className="space-y-2 border-t border-surfaceBorder pt-3">
                           {creditApplied > 0.005 && (
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-text-muted">Account credit applied</span>
+                              <span className="text-text-muted">{t("nominate.accountCreditApplied")}</span>
                               <span>-{money(creditApplied)}</span>
                             </div>
                           )}
                           <div className="flex items-center justify-between">
-                            <p className="text-xl text-text-muted">Total</p>
+                            <p className="text-xl text-text-muted">{t("nominate.total")}</p>
                             <p className="text-xl font-semibold">{money(amountToPay)}</p>
                           </div>
                         </div>
                       ) : reductionCredit > 0.005 ? (
                         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 leading-snug">
-                          <p className="font-semibold">Account credited {money(reductionCredit)}</p>
-                          <p className="mt-1">
-                            This credit will be applied to future events or nominations. If you want a refund, please contact
-                            the club.
-                          </p>
+                          <p className="font-semibold">{t("nominate.accountCredited", { amount: money(reductionCredit) })}</p>
+                          <p className="mt-1">{t("nominate.creditFutureNote")}</p>
                         </div>
                       ) : (
-                        <p className="text-sm text-green-700">No additional payment required for this change.</p>
+                        <p className="text-sm text-green-700">{t("nominate.noAdditionalPayment")}</p>
                       )
                     ) : (
                       <div className="space-y-2 border-t border-surfaceBorder pt-3">
                         {accountCreditBalance > 0.005 && (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-text-muted">Account credit</span>
+                            <span className="text-text-muted">{t("nominate.accountCredit")}</span>
                             <span>{money(accountCreditBalance)}</span>
                           </div>
                         )}
                         {creditApplied > 0.005 && (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-text-muted">Credit applied</span>
+                            <span className="text-text-muted">{t("nominate.creditApplied")}</span>
                             <span>-{money(creditApplied)}</span>
                           </div>
                         )}
                         <div className="flex items-center justify-between">
-                          <p className="text-xl text-text-muted">{isFamily ? "Household total" : "Total"}</p>
+                          <p className="text-xl text-text-muted">{isFamily ? t("nominate.householdTotal") : t("nominate.total")}</p>
                           <p className="text-xl font-semibold">{money(amountToPay)}</p>
                         </div>
                       </div>
@@ -3195,24 +3208,29 @@ export default function EventNominate() {
                       <div className="flex flex-wrap gap-3 pt-1">
                         <Button className="flex-1" onClick={() => startPayment("stripe")}>
                           {amountToPay > 0.005
-                            ? `${editingPaidNomination ? "Pay balance with Stripe" : "Pay with Stripe"} (${money(amountToPay)})`
-                            : "Pay with Stripe"}
+                            ? `${editingPaidNomination ? t("nominate.payBalanceStripe") : t("nominate.payWithStripe")} (${money(amountToPay)})`
+                            : t("nominate.payWithStripe")}
                         </Button>
                         <Button variant="secondary" className="flex-1" onClick={() => startPayment("paypal")}>
                           {amountToPay > 0.005
-                            ? `${editingPaidNomination ? "Pay balance with PayPal" : "Pay with PayPal"} (${money(amountToPay)})`
-                            : "Pay with PayPal"}
+                            ? `${editingPaidNomination ? t("nominate.payBalancePaypal") : t("nominate.payWithPaypal")} (${money(amountToPay)})`
+                            : t("nominate.payWithPaypal")}
                         </Button>
                       </div>
                     ) : (
                       <>
                         {paymentConfirmed && amountToPay > 0.005 && (
                           <p className="text-sm text-green-700">
-                            Payment via {paymentMethod === "stripe" ? "Stripe" : "PayPal"} confirmed.
+                            {t("nominate.paymentConfirmed", {
+                              provider:
+                                paymentMethod === "stripe"
+                                  ? t("nominate.providerStripe")
+                                  : t("nominate.providerPaypal"),
+                            })}
                           </p>
                         )}
                         <Button className="w-full" disabled={saving || saved} onClick={confirmPaymentAndNominations}>
-                          {saving ? "Saving..." : "Confirm Payment & Nominations"}
+                          {saving ? t("nominate.saving") : t("nominate.confirmPaymentNominations")}
                         </Button>
                       </>
                     )}

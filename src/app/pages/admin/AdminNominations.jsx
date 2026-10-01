@@ -15,6 +15,7 @@ import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
 import { EditButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "@cms/styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const FILTERS = [
   { id: "upcoming", label: "Upcoming" },
@@ -40,6 +41,7 @@ function windowBadgeStyle(statusId) {
 }
 
 export default function AdminNominations() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
   const { club } = useClub();
@@ -159,7 +161,7 @@ export default function AdminNominations() {
           </p>
         </header>
 
-        <CMSCard title="Events">
+        <CMSCard titleKey="admin.events.eventsCard">
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
             <CMSInput
               label="Search"

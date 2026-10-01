@@ -1,6 +1,8 @@
 import CMSButton from "@cms/CMSButton";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function EventPreviewModal({ clubSlug, eventId, refreshKey = 0, onClose }) {
+  const { t } = useTranslation();
   const previewUrl = `/${clubSlug}/app/events/${eventId}?_preview=${refreshKey || Date.now()}`;
 
   return (

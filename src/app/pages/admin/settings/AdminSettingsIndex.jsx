@@ -1,18 +1,20 @@
 import { Link } from "react-router-dom";
 import { ChevronRightIcon } from "@heroicons/react/24/solid";
 import { cmsStyles } from "../cms/styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function AdminSettingsIndex() {
+  const { t } = useTranslation();
   const items = [
-    { path: "club-info", title: "Club Info", desc: "General club details and identity" },
-    { path: "branding", title: "Branding", desc: "Logos, colours, and visual identity" },
-    { path: "system", title: "System Settings", desc: "Platform behaviour and defaults" },
-    { path: "cms", title: "CMS Settings", desc: "Content and public site configuration" },
-    { path: "users", title: "Users", desc: "Admins, roles, and permissions" },
-    { path: "membership", title: "Membership", desc: "Plans, pricing, and renewals" },
-    { path: "event-defaults", title: "Event Defaults", desc: "Default event configuration" },
-    { path: "driver", title: "Driver Settings", desc: "Driver rules and configuration" },
-    { path: "tracks-and-classes", title: "Tracks & Classes", desc: "Track layouts and race classes" },
+    { path: "club-info", titleKey: "admin.settings.clubInfoShort", descKey: "admin.settings.clubInfoDesc" },
+    { path: "branding", titleKey: "admin.settings.brandingShort", descKey: "admin.settings.brandingDesc" },
+    { path: "system", titleKey: "admin.settings.system", descKey: "admin.settings.systemDesc" },
+    { path: "cms", titleKey: "admin.settings.cms", descKey: "admin.settings.cmsDesc" },
+    { path: "users", titleKey: "admin.settings.usersShort", descKey: "admin.settings.usersDesc" },
+    { path: "membership", titleKey: "admin.membership.title", descKey: "admin.settings.membershipDesc" },
+    { path: "event-defaults", titleKey: "admin.settings.eventDefaults", descKey: "admin.settings.eventDefaultsDesc" },
+    { path: "driver", titleKey: "admin.settings.driver", descKey: "admin.settings.driverDesc" },
+    { path: "tracks-and-classes", titleKey: "admin.settings.tracksClassesShort", descKey: "admin.settings.tracksClassesDesc" },
   ];
 
   return (
@@ -39,10 +41,8 @@ export default function AdminSettingsIndex() {
 
         {/* PAGE HEADER */}
         <div style={cmsStyles.sectionHeader}>
-          <h1 style={cmsStyles.sectionHeaderTitle}>Admin Settings</h1>
-          <p style={cmsStyles.sectionHeaderSubtitle}>
-            Configure your club and platform behaviour.
-          </p>
+          <h1 style={cmsStyles.sectionHeaderTitle}>{t("admin.settings.hubTitle")}</h1>
+          <p style={cmsStyles.sectionHeaderSubtitle}>{t("admin.settings.hubSubtitle")}</p>
         </div>
 
         {/* RESPONSIVE GRID */}
@@ -76,7 +76,7 @@ export default function AdminSettingsIndex() {
                       lineHeight: "20px",
                     }}
                   >
-                    {item.title}
+                    {t(item.titleKey)}
                   </div>
                   <div
                     style={{
@@ -86,7 +86,7 @@ export default function AdminSettingsIndex() {
                       lineHeight: "18px",
                     }}
                   >
-                    {item.desc}
+                    {t(item.descKey)}
                   </div>
                 </div>
 

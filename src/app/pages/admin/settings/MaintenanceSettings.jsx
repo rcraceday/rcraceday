@@ -3,8 +3,10 @@
 import { useState } from "react";
 import CMSPage from "@cms/CMSPage";
 import SaveActions from "./components/SaveActions";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function MaintenanceSettings() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState({
     maintenance_mode: false,
     maintenance_message: "",

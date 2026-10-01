@@ -21,6 +21,7 @@ import CMSColorPicker from "@cms/CMSColorPicker";
 import CMSImageUpload from "@cms/CMSImageUpload";
 import { cmsStyles } from "@cms/styles";
 import { cmsLayout } from "@cms/layout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const GENDER_OPTIONS = [
   { value: "Male", label: "Male" },
@@ -68,6 +69,7 @@ async function unassignDriverNumber(clubId, driverId) {
 }
 
 export default function AdminDriverEdit() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug, id } = useParams();
   const { club } = useClub();

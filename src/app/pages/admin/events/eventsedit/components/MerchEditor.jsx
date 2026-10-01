@@ -9,6 +9,7 @@ import CMSButton from "@cms/CMSButton";
 import { ClearFieldButton, RemoveButton } from "@cms/CMSButtonSet";
 
 import OptionGroupEditor from "./OptionGroupEditor";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const normalizeRequirements = (requirements) =>
   (Array.isArray(requirements) ? requirements : []).map((requirement) => ({
@@ -19,6 +20,7 @@ const normalizeRequirements = (requirements) =>
   }));
 
 export default function MerchEditor({ item, setItem }) {
+  const { t } = useTranslation();
   const update = (field, value) => {
     setItem((prev) => ({ ...prev, [field]: value }));
   };
@@ -27,37 +29,37 @@ export default function MerchEditor({ item, setItem }) {
   const requirements = normalizeRequirements(item.requirements);
 
   return (
-    <CMSCard title="Merchandise Item">
+    <CMSCard titleKey="admin.common.merchandiseItem">
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <CMSInput
-          label="Name"
+          labelKey="cms.name"
           value={item.name}
           onChange={(v) => update("name", v)}
         />
 
         <CMSTextarea
-          label="Description"
+          labelKey="cms.description"
           value={item.description}
           onChange={(v) => update("description", v)}
         />
 
         <div style={{ display: "flex", gap: 12 }}>
           <CMSInput
-            label="Price"
+            labelKey="cms.price"
             type="number"
             value={item.price}
             onChange={(v) => update("price", Number(v))}
           />
 
           <CMSInput
-            label="Max Qty"
+            labelKey="cms.maxQty"
             type="number"
             value={item.max_qty}
             onChange={(v) => update("max_qty", Number(v))}
           />
 
           <CMSInput
-            label="First # Entries"
+            labelKey="cms.firstEntries"
             type="number"
             value={item.max_entries == null || item.max_entries === "" ? "" : String(item.max_entries)}
             onChange={(v) =>
@@ -74,20 +76,20 @@ export default function MerchEditor({ item, setItem }) {
 
         <div style={{ display: "flex", gap: 12 }}>
           <CMSToggle
-            label="Included in Entry"
+            labelKey="cms.includedInEntry"
             checked={item.included}
             onChange={(v) => update("included", v)}
           />
 
           <CMSToggle
-            label="Compulsory Item"
+            labelKey="cms.compulsoryItem"
             checked={item.compulsory}
             onChange={(v) => update("compulsory", v)}
           />
         </div>
 
         <CMSImageUpload
-          label="Photo"
+          labelKey="cms.photo"
           value={item.photo_url}
           filePreview={item.photo_file}
           onChange={(fileOrNull) => {
@@ -175,7 +177,7 @@ export default function MerchEditor({ item, setItem }) {
           ))}
         </div>
 
-        <CMSCard title="Requirements">
+        <CMSCard titleKey="admin.events.requirements">
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <strong>Checklist Requirements</strong>
@@ -208,7 +210,7 @@ export default function MerchEditor({ item, setItem }) {
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
                   <div style={{ flex: 1 }}>
                     <CMSInput
-                      label="Description"
+                      labelKey="cms.description"
                       value={requirement.description}
                       onChange={(description) => {
                         const nextRequirements = requirements.map((entry, index) =>

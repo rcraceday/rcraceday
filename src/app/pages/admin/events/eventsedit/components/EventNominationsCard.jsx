@@ -3,6 +3,7 @@ import CMSInput from "@cms/CMSInput";
 import CMSToggle from "@cms/CMSToggle";
 import CMSButton from "@cms/CMSButton";
 import { cmsLayout } from "@cms/layout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function EventNominationsCard({
   event = {},
@@ -14,6 +15,7 @@ export default function EventNominationsCard({
   sendingReminderNotifications = false,
   canSendReminderNotifications = false,
 }) {
+  const { t } = useTranslation();
   const isMulti = !!event.is_multi_day;
 
   const days = Array.isArray(event.days)
@@ -32,7 +34,7 @@ export default function EventNominationsCard({
         <div style={cmsLayout.column}>
           <CMSInput
             name="nominations_open"
-            label="Nominations Open"
+            labelKey="cms.nominationsOpen"
             type="datetime-local"
             value={event.nominations_open || ""}
             onChange={(v) => update("nominations_open", v)}
@@ -42,7 +44,7 @@ export default function EventNominationsCard({
         <div style={cmsLayout.column}>
           <CMSInput
             name="nominations_close"
-            label="Nominations Close"
+            labelKey="cms.nominationsClose"
             type="datetime-local"
             value={event.nominations_close || ""}
             onChange={(v) => update("nominations_close", v)}
@@ -51,15 +53,12 @@ export default function EventNominationsCard({
       </div>
 
       <CMSToggle
-        label="Notify when nominations open"
+        labelKey="cms.notifyNominationsOpen"
         checked={!!event.notify_nominations_open}
         onChange={(v) => update("notify_nominations_open", v)}
       />
       <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
-        Sends a lock-screen push (and optional email) when nominations open. Members must tap
-        Enable push on this device in RCRaceday Settings. Phone Settings → Apps notifications
-        alone will not register the device. Use the button below to resend after nominations have
-        opened.
+        {t("admin.events.notifyOpenHelp")}
       </p>
       {canSendOpenNotifications && (
         <CMSButton
@@ -67,12 +66,12 @@ export default function EventNominationsCard({
           disabled={sendingOpenNotifications}
           onClick={() => onSendOpenNotifications?.()}
         >
-          {sendingOpenNotifications ? "Sending…" : "Send open notifications now"}
+          {sendingOpenNotifications ? t("cms.saving") : t("admin.events.sendOpenNotificationsNow")}
         </CMSButton>
       )}
 
       <CMSToggle
-        label="Nomination reminder"
+        labelKey="cms.nominationReminder"
         checked={!!event.notify_nominations_reminder}
         onChange={(v) => {
           update("notify_nominations_reminder", v);
@@ -86,22 +85,23 @@ export default function EventNominationsCard({
         <>
           <CMSInput
             name="nominations_reminder_at"
-            label="Reminder date & time"
+            labelKey="cms.reminderDateTime"
             type="datetime-local"
             value={event.nominations_reminder_at || ""}
             onChange={(v) => update("nominations_reminder_at", v)}
           />
           <CMSInput
             name="nominations_reminder_message"
-            label="Short message"
+            labelKey="cms.shortMessage"
             type="textarea"
             maxLength={160}
             value={event.nominations_reminder_message || ""}
             onChange={(v) => update("nominations_reminder_message", String(v).slice(0, 160))}
           />
           <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
-            {(event.nominations_reminder_message || "").length}/160. Sent only to members who have
-            not nominated for this event yet.
+            {t("admin.events.reminderCharCount", {
+              count: (event.nominations_reminder_message || "").length,
+            })}
           </p>
           {canSendReminderNotifications && (
             <CMSButton
@@ -109,7 +109,7 @@ export default function EventNominationsCard({
               disabled={sendingReminderNotifications}
               onClick={() => onSendReminderNotifications?.()}
             >
-              {sendingReminderNotifications ? "Sending…" : "Send reminder now"}
+              {sendingReminderNotifications ? t("cms.saving") : t("admin.events.sendReminderNow")}
             </CMSButton>
           )}
         </>
@@ -118,7 +118,7 @@ export default function EventNominationsCard({
       {/* LATE ENTRIES */}
       <div style={{ display: "flex", flexDirection: "column", gap: cmsLayout.spacing.md }}>
         <CMSToggle
-          label="Allow Late Entries"
+          labelKey="cms.allowLateEntries"
           checked={!!event.late_entries_enabled}
           onChange={(v) => update("late_entries_enabled", v)}
         />
@@ -127,7 +127,7 @@ export default function EventNominationsCard({
           <>
             <CMSInput
               name="late_fee_activation"
-              label="Late Fee Activation (optional)"
+              labelKey="cms.lateFeeActivationOptional"
               type="datetime-local"
               value={event.late_fee_activation || ""}
               onChange={(v) => update("late_fee_activation", v)}
@@ -135,7 +135,7 @@ export default function EventNominationsCard({
 
             <CMSInput
               name="late_entries_close"
-              label="Late Entries Close (optional)"
+              labelKey="cms.lateEntriesCloseOptional"
               type="datetime-local"
               value={event.late_entries_close || ""}
               onChange={(v) => update("late_entries_close", v)}

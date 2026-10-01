@@ -1,4 +1,6 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 export default function AdminSectionTitle({ children }) {
+  const { t } = useTranslation();
   return (
     <h2
       style={{

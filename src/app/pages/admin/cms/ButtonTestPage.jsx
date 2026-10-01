@@ -2,6 +2,7 @@ import CMSPage from "@cms/CMSPage";
 import CMSSectionHeader from "@cms/CMSSectionHeader";
 import CMSButton from "@cms/CMSButton";
 
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   PencilSquareIcon,
   TrashIcon,
@@ -12,6 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 export default function ButtonTestPage() {
+  const { t } = useTranslation();
   return (
     <CMSPage title="CMS Button Test">
 

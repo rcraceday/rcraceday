@@ -10,11 +10,13 @@ import AddTrackForm from "./components/AddTrackForm";
 import TrackCard from "./components/TrackCard";
 
 import { PlusCircleIcon } from "@heroicons/react/24/solid";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const actionButton = cmsStyles.table.actionButton;
 const actionIcon = cmsStyles.table.actionIcon;
 
 export default function TracksClassesSettings() {
+  const { t } = useTranslation();
   const { membership, loadingMembership } = useMembership();
 
   const [loading, setLoading] = useState(true);

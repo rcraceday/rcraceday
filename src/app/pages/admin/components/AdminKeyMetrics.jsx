@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   formatMetricsCurrency,
   getCalendarYear,
@@ -100,65 +101,71 @@ export default function AdminKeyMetrics({
   showMembership = true,
   metricsYear = getCalendarYear(),
 }) {
-  const eventsYearLabel = `${metricsYear} Events`;
+  const { t } = useTranslation();
 
   return (
     <>
       {showMembership ? (
         <>
           <MetricsGroup
-            title="Membership Metrics"
+            title={t("admin.metrics.membershipTitle")}
             gridStyle={METRICS_MEMBERSHIP_GRID_STYLE}
           >
             <StatCard
-              label="Total Members"
+              label={t("admin.metrics.totalMembers")}
               value={stats.membership.totalMembers}
             />
             <StatCard
-              label="Adult Members"
+              label={t("admin.metrics.adultMembers")}
               value={stats.membership.adult}
             />
             <StatCard
-              label="Family Members"
+              label={t("admin.metrics.familyMembers")}
               value={stats.membership.family}
             />
             <StatCard
-              label="Junior Members"
+              label={t("admin.metrics.juniorMembers")}
               value={stats.membership.junior}
             />
             <StatCard
-              label="Non Member"
+              label={t("admin.metrics.nonMember")}
               value={stats.membership.nonMember}
             />
           </MetricsGroup>
 
-          <MetricsGroup title="Driver Metrics" gridStyle={METRICS_DRIVER_GRID_STYLE}>
-            <StatCard label="Total Drivers" value={stats.drivers?.total ?? 0} />
-            <StatCard label="Adult" value={stats.drivers?.adult ?? 0} />
-            <StatCard label="Junior" value={stats.drivers?.junior ?? 0} />
-            <StatCard label="Non Drivers" value={stats.drivers?.nonDrivers ?? 0} />
+          <MetricsGroup
+            title={t("admin.metrics.driverTitle")}
+            gridStyle={METRICS_DRIVER_GRID_STYLE}
+          >
+            <StatCard label={t("admin.metrics.totalDrivers")} value={stats.drivers?.total ?? 0} />
+            <StatCard label={t("admin.common.adult")} value={stats.drivers?.adult ?? 0} />
+            <StatCard label={t("admin.common.junior")} value={stats.drivers?.junior ?? 0} />
+            <StatCard label={t("admin.metrics.nonDrivers")} value={stats.drivers?.nonDrivers ?? 0} />
           </MetricsGroup>
         </>
       ) : null}
 
-      <MetricsGroup title="Event Metrics">
-        <StatCard label={eventsYearLabel} value={stats.events.total} />
-        <StatCard label="Modern" value={stats.events.modern} />
-        <StatCard label="Dirt" value={stats.events.dirt} />
-        <StatCard label="Cancelled" value={stats.events.cancelled} />
-        <StatCard label="Remaining" value={stats.events.remaining} />
+      <MetricsGroup title={t("admin.metrics.eventTitle")}>
+        <StatCard
+          label={t("admin.metrics.eventsYear", { year: metricsYear })}
+          value={stats.events.total}
+        />
+        <StatCard label={t("admin.metrics.modern")} value={stats.events.modern} />
+        <StatCard label={t("admin.metrics.dirt")} value={stats.events.dirt} />
+        <StatCard label={t("admin.metrics.cancelled")} value={stats.events.cancelled} />
+        <StatCard label={t("admin.metrics.remaining")} value={stats.events.remaining} />
       </MetricsGroup>
 
-      <MetricsGroup title="Nomination Metrics">
-        <StatCard label="Total Nominations" value={stats.nominations.totalYtd} />
-        <StatCard label="Modern Track" value={stats.nominations.modernYtd} />
+      <MetricsGroup title={t("admin.metrics.nominationTitle")}>
+        <StatCard label={t("admin.metrics.totalNominations")} value={stats.nominations.totalYtd} />
+        <StatCard label={t("admin.metrics.modernTrack")} value={stats.nominations.modernYtd} />
         <StatCard
-          label="Modern Revenue"
+          label={t("admin.metrics.modernRevenue")}
           value={formatMetricsCurrency(stats.nominations.modernRevenue)}
         />
-        <StatCard label="Dirt Track" value={stats.nominations.dirtYtd} />
+        <StatCard label={t("admin.metrics.dirtTrack")} value={stats.nominations.dirtYtd} />
         <StatCard
-          label="Dirt Revenue"
+          label={t("admin.metrics.dirtRevenue")}
           value={formatMetricsCurrency(stats.nominations.dirtRevenue)}
         />
       </MetricsGroup>

@@ -4,6 +4,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES = {
   push_enabled: true,
   nominations_open_enabled: true,
   membership_renewal_enabled: true,
+  club_news_enabled: true,
   /** null = all club tracks; [] = none; [uuid, ...] = only those tracks */
   track_ids: null,
 };
@@ -32,6 +33,10 @@ export function normalizeNotificationPreferences(raw) {
       typeof source.membership_renewal_enabled === "boolean"
         ? source.membership_renewal_enabled
         : DEFAULT_NOTIFICATION_PREFERENCES.membership_renewal_enabled,
+    club_news_enabled:
+      typeof source.club_news_enabled === "boolean"
+        ? source.club_news_enabled
+        : DEFAULT_NOTIFICATION_PREFERENCES.club_news_enabled,
     track_ids:
       trackIds === null || trackIds === undefined
         ? null
@@ -74,5 +79,15 @@ export function shouldNotifyMembershipRenewal(preferences) {
     inApp: prefs.in_app_enabled && renewal,
     email: prefs.email_enabled && renewal,
     push: prefs.push_enabled && renewal,
+  };
+}
+
+export function shouldNotifyClubNews(preferences) {
+  const prefs = normalizeNotificationPreferences(preferences);
+  const news = prefs.club_news_enabled;
+  return {
+    inApp: prefs.in_app_enabled && news,
+    email: prefs.email_enabled && news,
+    push: prefs.push_enabled && news,
   };
 }

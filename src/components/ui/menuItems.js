@@ -4,7 +4,6 @@ import {
   CalendarDaysIcon,
   CalendarIcon,
   IdentificationIcon,
-  UserCircleIcon,
   UserPlusIcon,
   UsersIcon,
   Cog6ToothIcon,
@@ -12,67 +11,73 @@ import {
   ArrowRightOnRectangleIcon,
   ChatBubbleLeftRightIcon,
   NewspaperIcon,
+  TrophyIcon,
 } from "@heroicons/react/24/solid";
 
-export function buildMenuItems({ clubSlug, isAdmin, user }) {
+export function buildMenuItems({ clubSlug, isAdmin, user, t }) {
+  const tr = t || ((key) => key);
+
   return [
     {
-      label: "Home",
+      label: tr("nav.home"),
       icon: HomeIcon,
       to: `/${clubSlug}/app`,
     },
     {
-      label: "Events",
+      label: tr("nav.events"),
       icon: CalendarDaysIcon,
       to: `/${clubSlug}/app/events`,
     },
     {
-      label: "Calendar",
+      label: tr("nav.calendar"),
       icon: CalendarIcon,
       to: `/${clubSlug}/app/calendar`,
     },
     {
-      label: "News",
+      label: tr("nav.news"),
       icon: NewspaperIcon,
       to: `/${clubSlug}/app/news`,
     },
     {
-      label: "My Noms",
+      label: tr("nav.myNoms"),
       icon: UserPlusIcon,
       to: `/${clubSlug}/app/nominations`,
     },
     {
-      label: "Messages",
+      label: tr("nav.results"),
+      icon: TrophyIcon,
+      to: `/${clubSlug}/app/results`,
+    },
+    {
+      label: tr("nav.championships"),
+      icon: TrophyIcon,
+      to: `/${clubSlug}/app/championships`,
+    },
+    {
+      label: tr("nav.messages"),
       icon: ChatBubbleLeftRightIcon,
       to: `/${clubSlug}/app/messages`,
       messagesMenu: true,
     },
     {
-      label: "Driver Manager",
+      label: tr("nav.driverManager"),
       icon: UsersIcon,
       to: `/${clubSlug}/app/profile/drivers`,
     },
-        {
-      label: "Membership",
+    {
+      label: tr("nav.membership"),
       icon: IdentificationIcon,
       to: `/${clubSlug}/app/membership`,
     },
-
-        {
-      label: "User Account",
-      icon: UserCircleIcon,
-      to: `/${clubSlug}/app/profile`,
-    },
-
     {
-      label: "Settings",
+      label: tr("nav.settings"),
       icon: Cog6ToothIcon,
       to: `/${clubSlug}/app/settings`,
     },
     ...(isAdmin
       ? [
           {
-            label: "Admin Portal",
+            label: tr("nav.adminPortal"),
             icon: ShieldCheckIcon,
             to: `/${clubSlug}/app/admin`,
             useAdminColor: true,
@@ -82,7 +87,7 @@ export function buildMenuItems({ clubSlug, isAdmin, user }) {
     ...(user
       ? [
           {
-            label: "Logout",
+            label: tr("nav.logout"),
             icon: ArrowRightOnRectangleIcon,
             to: `/${clubSlug}/public/login`,
             logout: true,

@@ -7,8 +7,10 @@ import AvatarMenu from "@/components/ui/AvatarMenu";
 import HamburgerMenu from "@/components/ui/HamburgerMenu";
 import ClubMessagesNavLink from "@/components/ui/ClubMessagesNavLink";
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function Header({ hideMenu }) {
+  const { t } = useTranslation();
   const { clubSlug } = useParams();
   const { user } = useAuth();
   const { profile } = useProfile();
@@ -34,7 +36,7 @@ export default function Header({ hideMenu }) {
             <Link to="/" className="flex items-center">
               <img
                 src={rcracedayLogo}
-                alt="RCRaceDay"
+                alt={t("header.brandAlt")}
                 className="h-8 md:h-10 w-auto object-contain cursor-pointer transition-transform hover:scale-[1.03] hover:drop-shadow-sm"
               />
             </Link>
@@ -50,7 +52,7 @@ export default function Header({ hideMenu }) {
               <Link to={`/${clubSlug}/app`} className="flex items-center">
                 <img
                   src={logoSrc}
-                  alt="Club logo"
+                  alt={t("header.clubLogoAlt")}
                   className="h-12 md:h-20 w-auto object-contain"
                 />
               </Link>

@@ -2,18 +2,16 @@
 
 import Button from "@/components/ui/Button";
 import { richTextToPlainText } from "@/app/lib/richText";
-
-/* ===========================
-   HELPERS
-   =========================== */
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 function formatICSDate(date) {
   const d = new Date(date);
   return d.toISOString().replace(/[-:]/g, "").replace(".000Z", "Z");
 }
 
-function buildICS(event) {
+function buildICS(event, t) {
   const eventTitle = richTextToPlainText(event.name);
+  const unknownTrack = t("events.unknownTrack");
   const lines = [];
 
   lines.push("BEGIN:VCALENDAR");
@@ -28,13 +26,15 @@ function buildICS(event) {
       const startDate = start ? new Date(start) : new Date(day.date);
       const endDate = end ? new Date(end) : new Date(day.date);
 
+      const dayLabel = day.label || t("events.dayN", { n: index + 1 });
+
       lines.push("BEGIN:VEVENT");
       lines.push(`UID:event-${event.id}-day-${index}@racecontrol`);
       lines.push(`DTSTAMP:${formatICSDate(new Date())}`);
       lines.push(`DTSTART:${formatICSDate(startDate)}`);
       lines.push(`DTEND:${formatICSDate(endDate)}`);
-      lines.push(`SUMMARY:${eventTitle} — ${day.label || `Day ${index + 1}`}`);
-      lines.push(`LOCATION:${event.track || "Unknown Track"}`);
+      lines.push(`SUMMARY:${eventTitle} — ${dayLabel}`);
+      lines.push(`LOCATION:${event.track || unknownTrack}`);
       if (event.description) {
         lines.push(`DESCRIPTION:${event.description.replace(/\n/g, "\\n")}`);
       }
@@ -50,7 +50,7 @@ function buildICS(event) {
     lines.push(`DTSTART:${formatICSDate(startDate)}`);
     lines.push(`DTEND:${formatICSDate(endDate)}`);
     lines.push(`SUMMARY:${eventTitle}`);
-    lines.push(`LOCATION:${event.track || "Unknown Track"}`);
+    lines.push(`LOCATION:${event.track || unknownTrack}`);
     if (event.description) {
       lines.push(`DESCRIPTION:${event.description.replace(/\n/g, "\\n")}`);
     }
@@ -62,8 +62,8 @@ function buildICS(event) {
   return lines.join("\r\n");
 }
 
-function downloadICS(event) {
-  const ics = buildICS(event);
+function downloadICS(event, t) {
+  const ics = buildICS(event, t);
   const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
@@ -75,23 +75,19 @@ function downloadICS(event) {
   URL.revokeObjectURL(url);
 }
 
-/* ===========================
-   FLATTENED COMPONENT
-   =========================== */
-
 export default function EventDetailsICS({ event }) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-4 text-sm text-text-muted leading-tight">
 
-      <p>
-        Download an ICS file to add this event to your calendar.
-      </p>
+      <p>{t("events.icsDownloadBody")}</p>
 
       <Button
         className="w-full !py-2 !rounded-md font-semibold"
-        onClick={() => downloadICS(event)}
+        onClick={() => downloadICS(event, t)}
       >
-        Download Calendar File
+        {t("events.downloadCalendarFile")}
       </Button>
     </div>
   );

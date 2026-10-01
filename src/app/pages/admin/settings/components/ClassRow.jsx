@@ -2,6 +2,7 @@
 import CMSInput from "@cms/CMSInput";
 import CMSTextarea from "@cms/CMSTextarea";
 
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   MiniEditButton,
   MiniDeleteButton,
@@ -27,6 +28,7 @@ export default function ClassRow({
   trackId,
   LivetimeNotice,
 }) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -77,13 +79,13 @@ export default function ClassRow({
       ) : (
         <>
           <CMSInput
-            label="Class Name"
+            labelKey="cms.className"
             value={editClassName}
             onChange={(value) => setEditClassName(value)}
           />
 
           <CMSTextarea
-            label="Description (optional)"
+            labelKey="cms.classDescriptionOptional"
             value={editClassDesc}
             onChange={(value) => setEditClassDesc(value)}
           />

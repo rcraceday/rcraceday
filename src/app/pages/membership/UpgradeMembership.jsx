@@ -17,6 +17,7 @@ import {
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import { supabase } from "@/supabaseClient";
 import { upgradeToFamilyMembership } from "@/app/api/membership/membershipAPI";
 
@@ -28,6 +29,7 @@ export default function UpgradeMembership() {
   const { membership, loadingMembership, refreshMembership } = useMembership();
   const { notify } = useNotifications();
   const { palette } = useTheme();
+  const { t } = useTranslation();
 
   const brand = palette?.primary || "#00438a";
 
@@ -153,7 +155,7 @@ export default function UpgradeMembership() {
 
       <PageTitle
         icon={IdentificationIcon}
-        title="Upgrade Membership"
+        title={t("membership.upgradeTitle")}
         style={{ color: brand }}
       />
 

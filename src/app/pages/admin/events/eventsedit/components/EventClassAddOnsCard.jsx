@@ -9,6 +9,7 @@ import {
 } from "@/app/lib/clubAssetStorage";
 
 import ClassAddOnEditor from "./ClassAddOnEditor";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const normalizeRequirements = (requirements) =>
   (Array.isArray(requirements) ? requirements : []).map((requirement) => ({

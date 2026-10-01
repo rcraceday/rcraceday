@@ -1,12 +1,10 @@
 // src/app/pages/events/EventDetailsSections/EventDetailsAddOns.jsx
 
 import Card from "@/components/ui/Card";
-
-/* ===========================
-   COMPONENT
-   =========================== */
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function EventDetailsAddOns({ event }) {
+  const { t } = useTranslation();
   const addOns = Array.isArray(event.class_add_ons)
     ? event.class_add_ons
     : [];
@@ -19,16 +17,13 @@ export default function EventDetailsAddOns({ event }) {
   return (
     <section className="mb-8">
       <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Class Add‑Ons</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("events.classAddOnsTitle")}</h2>
 
         <div className="space-y-6">
 
-          {/* ===========================
-              REQUIRED ADD-ONS
-          =========================== */}
           {requiredAddOns.length > 0 && (
             <div>
-              <h3 className="font-semibold text-base mb-2">Required Add‑Ons</h3>
+              <h3 className="font-semibold text-base mb-2">{t("events.requiredAddOns")}</h3>
               <div className="space-y-3">
                 {requiredAddOns.map((item) => (
                   <AddOnItem key={item.id} item={item} />
@@ -37,12 +32,9 @@ export default function EventDetailsAddOns({ event }) {
             </div>
           )}
 
-          {/* ===========================
-              OPTIONAL ADD-ONS
-          =========================== */}
           {optionalAddOns.length > 0 && (
             <div>
-              <h3 className="font-semibold text-base mb-2">Optional Add‑Ons</h3>
+              <h3 className="font-semibold text-base mb-2">{t("events.optionalAddOns")}</h3>
               <div className="space-y-3">
                 {optionalAddOns.map((item) => (
                   <AddOnItem key={item.id} item={item} />
@@ -56,16 +48,13 @@ export default function EventDetailsAddOns({ event }) {
   );
 }
 
-/* ===========================
-   ADD-ON ITEM COMPONENT
-   =========================== */
-
 function AddOnItem({ item }) {
+  const { t } = useTranslation();
+
   return (
     <div className="border border-gray-200 rounded-lg p-4 bg-white">
       <div className="flex gap-4 items-start">
 
-        {/* PHOTO */}
         <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded-md overflow-hidden flex-shrink-0">
           {item.photo_url ? (
             <img
@@ -75,12 +64,11 @@ function AddOnItem({ item }) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-              No Image
+              {t("nominate.noImage")}
             </div>
           )}
         </div>
 
-        {/* DETAILS */}
         <div className="flex-1 space-y-1 text-sm text-text-muted leading-tight">
           <div className="font-semibold text-base text-text-base">
             {item.name}
@@ -90,23 +78,20 @@ function AddOnItem({ item }) {
             <div className="text-sm">{item.description}</div>
           )}
 
-          {/* PRICE */}
           <div>
-            <strong>Price:</strong>{" "}
+            <strong>{t("nominate.price")}</strong>{" "}
             {item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00"}
           </div>
 
-          {/* MAX QTY */}
           {item.max_qty && (
             <div>
-              <strong>Max Qty:</strong> {item.max_qty}
+              <strong>{t("nominate.maxQty")}</strong> {item.max_qty}
             </div>
           )}
 
-          {/* OPTIONS */}
           {Array.isArray(item.options) && item.options.length > 0 && (
             <div className="mt-2">
-              <strong>Options:</strong>
+              <strong>{t("events.merchOptions")}</strong>
               <ul className="ml-4 list-disc text-xs mt-1">
                 {item.options.map((group, gi) => (
                   <li key={gi}>
@@ -131,10 +116,9 @@ function AddOnItem({ item }) {
             </div>
           )}
 
-          {/* CLASS RULES */}
           {item.class_rules && Object.keys(item.class_rules).length > 0 && (
             <div className="mt-2">
-              <strong>Applies To Classes:</strong>
+              <strong>{t("events.appliesToClasses")}</strong>
               <ul className="ml-4 list-disc text-xs mt-1">
                 {Object.entries(item.class_rules).map(([className, rule]) => (
                   <li key={className}>

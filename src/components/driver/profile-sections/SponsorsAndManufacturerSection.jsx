@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/profile-sections/SponsorsAndManufacturerSection.jsx
 
 import { useState } from "react";
@@ -5,6 +6,7 @@ import Input from "@/components/ui/Input";
 import { MANUFACTURERS } from "@/data/manufacturers";
 
 export default function SponsorsAndManufacturerSection({ driver, update }) {
+  const { t } = useTranslation();
   const [showDropdown, setShowDropdown] = useState(false);
   const [search, setSearch] = useState("");
   const [sponsorsText, setSponsorsText] = useState(() =>
@@ -21,11 +23,11 @@ export default function SponsorsAndManufacturerSection({ driver, update }) {
 
   return (
     <section className="space-y-6">
-      <h3 className="text-sm font-semibold">Team & Sponsors</h3>
+      <h3 className="text-sm font-semibold">{t("driverProfile.teamSponsors")}</h3>
 
       {/* TEAM NAME */}
       <Input
-        label="Team Name"
+        label={t("driverProfile.teamName")}
         value={driver.team_name || ""}
         onChange={(e) => update("team_name", e.target.value)}
       />
@@ -47,7 +49,7 @@ export default function SponsorsAndManufacturerSection({ driver, update }) {
       {/* MANUFACTURER DROPDOWN WITH LOGOS */}
       <div className="relative">
         <Input
-          label="Manufacturer"
+          label={t("driverProfile.manufacturer")}
           value={search || driver.manufacturer || ""}
           onFocus={() => setShowDropdown(true)}
           onChange={(e) => {
@@ -93,7 +95,7 @@ export default function SponsorsAndManufacturerSection({ driver, update }) {
 
       {/* SPONSORS */}
       <Input
-        label="Sponsors (comma separated)"
+        label={t("driverProfile.sponsorsComma")}
         type="text"
         value={sponsorsText}
         onChange={(e) => setSponsorsText(e.target.value)}

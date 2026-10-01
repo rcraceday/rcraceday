@@ -1,9 +1,11 @@
 import { cmsStyles } from "./styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const ADMIN_RED = "#DC2626";
 
 export default function CMSInput({
   label,
+  labelKey,
   value,
   onChange,
   type = "text",
@@ -14,6 +16,8 @@ export default function CMSInput({
   maxLength,
   placeholder,
 }) {
+  const { t } = useTranslation();
+  const resolvedLabel = labelKey ? t(labelKey) : label;
   const baseInputStyle = {
     ...cmsStyles.input,
     borderColor: "#D1D5DD",
@@ -63,7 +67,7 @@ export default function CMSInput({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-      {label && <label style={cmsStyles.label}>{label}</label>}
+      {resolvedLabel && <label style={cmsStyles.label}>{resolvedLabel}</label>}
 
       {options ? (
         wrapControl(

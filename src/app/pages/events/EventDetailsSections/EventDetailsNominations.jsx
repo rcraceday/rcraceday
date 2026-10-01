@@ -6,10 +6,7 @@ import {
   isLateEntryWindow,
   isNominationsOpen,
 } from "../events-sections/helpers";
-
-/* ===========================
-   HELPERS
-   =========================== */
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 function formatDateTime(dt) {
   if (!dt) return "";
@@ -28,11 +25,8 @@ function now() {
   return new Date();
 }
 
-/* ===========================
-   FLATTENED COMPONENT
-   =========================== */
-
 export default function EventDetailsNominations({ event, clubSlug, brand }) {
+  const { t } = useTranslation();
   const nowTime = now();
 
   const open = event.nominations_open ? new Date(event.nominations_open) : null;
@@ -57,67 +51,63 @@ export default function EventDetailsNominations({ event, clubSlug, brand }) {
     lateFee &&
     nowTime >= lateFee;
 
-  let buttonLabel = "Nominate";
+  let buttonLabel = t("events.nominate");
   let buttonDisabled = !canNominate;
 
   if (nominationsNotOpenYet) {
-    buttonLabel = "Nominations Not Open";
+    buttonLabel = t("events.nominationsNotOpen");
   } else if (!canNominate) {
-    buttonLabel = "Nominations Closed";
+    buttonLabel = t("events.nominationsClosed");
   } else if (lateWindowActive) {
-    buttonLabel = "Late Nomination";
+    buttonLabel = t("events.lateNomination");
   }
 
   return (
     <div className="space-y-6 text-sm text-text-muted leading-tight">
 
-      {/* INFO */}
       <div className="space-y-2">
 
         {open && (
           <p>
-            <strong>Opens:</strong> {formatDateTime(open)}
+            <strong>{t("events.nominationsOpens")}</strong> {formatDateTime(open)}
           </p>
         )}
 
         {close && (
           <p>
-            <strong>Closes:</strong> {formatDateTime(close)}
+            <strong>{t("events.nominationsCloses")}</strong> {formatDateTime(close)}
           </p>
         )}
 
         {event.late_entries_enabled && lateClose && (
           <p>
-            <strong>Late Entries Close:</strong> {formatDateTime(lateClose)}
+            <strong>{t("events.lateEntriesClose")}</strong> {formatDateTime(lateClose)}
           </p>
         )}
 
         {event.late_entries_enabled && lateFee && (
           <p>
-            <strong>Late Fee Applies From:</strong> {formatDateTime(lateFee)}
+            <strong>{t("events.lateFeeAppliesFrom")}</strong> {formatDateTime(lateFee)}
           </p>
         )}
 
-        {/* STATUS */}
         <p className="mt-2">
-          <strong>Status:</strong>{" "}
-          {nominationsNotOpenYet && "Not Open"}
-          {!nominationsNotOpenYet && canNominate && !lateWindowActive && "Open"}
-          {!canNominate && !nominationsNotOpenYet && "Closed"}
-          {lateWindowActive && "Late Entry Window"}
+          <strong>{t("events.statusLabel")}</strong>{" "}
+          {nominationsNotOpenYet && t("events.statusNotOpen")}
+          {!nominationsNotOpenYet && canNominate && !lateWindowActive && t("events.statusOpen")}
+          {!canNominate && !nominationsNotOpenYet && t("events.statusClosed")}
+          {lateWindowActive && t("events.statusLateEntry")}
         </p>
 
         {lateFeeActive && (
           <p className="text-red-600 font-medium">
-            Late fee applies to new nominations.
+            {t("events.lateFeeAppliesNote")}
           </p>
         )}
       </div>
 
-      {/* BUTTONS */}
       <div className="flex flex-col gap-3">
 
-        {/* NOMINATE BUTTON */}
         {buttonDisabled ? (
           <Button
             disabled
@@ -134,10 +124,9 @@ export default function EventDetailsNominations({ event, clubSlug, brand }) {
           </Link>
         )}
 
-        {/* VIEW NOMINATIONS */}
         <Link to={`/${clubSlug}/app/events/${event.id}/nominations`} className="block w-full no-underline">
           <Button variant="secondary" className="w-full !py-2 !rounded-md font-semibold">
-            View Nominations
+            {t("events.viewNominations")}
           </Button>
         </Link>
       </div>

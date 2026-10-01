@@ -1,7 +1,9 @@
 import React from "react";
 import useTheme from "@/app/providers/useTheme";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function NumberNicknameSection({ driver, brand: brandProp }) {
+  const { t } = useTranslation();
   const { palette } = useTheme();
   const brand = brandProp || palette?.primary || "#0A66C2";
 

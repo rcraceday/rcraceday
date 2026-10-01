@@ -32,12 +32,14 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { useClub } from "@/app/providers/ClubProvider";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 // =========================
 // 2. COMPONENT
 // =========================
 
 export default function AdminClassManager() {
+  const { t } = useTranslation();
   const { clubSlug } = useParams();
   const { club, refreshClub } = useClub();
   const brand = club?.theme?.hero?.backgroundColor || "#0A66C2";

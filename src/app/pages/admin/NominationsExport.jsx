@@ -7,8 +7,10 @@ import Button from "@/components/ui/Button"
 import Input from "@/components/ui/Input"
 import Label from "@/components/ui/Label"
 import useTheme from "@app/providers/useTheme"
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function NominationsExport() {
+  const { t } = useTranslation();
   const [events, setEvents] = useState([])
   const [eventId, setEventId] = useState("")
   const [loading, setLoading] = useState(false)

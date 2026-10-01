@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 <header
   style={{
     marginBottom: "24px",

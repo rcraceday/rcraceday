@@ -1,6 +1,8 @@
 import useMembership from "../hooks/useMembership";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function MembershipStatusCard() {
+  const { t } = useTranslation();
   const {
     membership,
     loadingMembership,
@@ -14,7 +16,7 @@ export default function MembershipStatusCard() {
   if (loadingMembership) {
     return (
       <div className="p-4 rounded-lg bg-gray-100 animate-pulse">
-        Loading membership…
+        {t("membershipUi.loadingMembership")}
       </div>
     );
   }
@@ -22,7 +24,7 @@ export default function MembershipStatusCard() {
   if (!membership) {
     return (
       <div className="p-4 rounded-lg bg-red-100 text-red-700">
-        No membership found.
+        {t("membershipUi.noMembershipFound")}
       </div>
     );
   }
@@ -32,26 +34,27 @@ export default function MembershipStatusCard() {
   const handleRenew = async () => {
     await renewMembership();
     refreshMembership();
-    notify("Membership renewed successfully", "success");
+    notify(t("membershipUi.renewedSuccess"), "success");
   };
 
   return (
     <div className="p-6 rounded-xl bg-white shadow-md border border-gray-200">
-      <h2 className="text-xl font-semibold mb-2">Membership Status</h2>
+      <h2 className="text-xl font-semibold mb-2">{t("membershipUi.statusTitle")}</h2>
 
       <p className="text-gray-600 mb-4">
-        Expires on <span className="font-medium">{expiry}</span>
+        {t("membershipUi.expiresOn")}{" "}
+        <span className="font-medium">{expiry}</span>
       </p>
 
       {isExpired && (
         <div className="p-3 mb-4 rounded-lg bg-red-100 text-red-700">
-          Your membership has expired.
+          {t("membershipUi.expiredBanner")}
         </div>
       )}
 
       {!isExpired && expiresSoon && (
         <div className="p-3 mb-4 rounded-lg bg-yellow-100 text-yellow-700">
-          Your membership expires soon.
+          {t("membershipUi.expiresSoonBanner")}
         </div>
       )}
 
@@ -59,7 +62,7 @@ export default function MembershipStatusCard() {
         onClick={handleRenew}
         className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
       >
-        Renew Membership
+        {t("membershipUi.renewMembership")}
       </button>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const SNOOZE_KEY = "pwa-install-snooze-until";
 const SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
@@ -49,6 +50,7 @@ function IosShareIcon() {
 }
 
 export default function PwaInstallPrompt() {
+  const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [mode, setMode] = useState(null);
 
@@ -118,42 +120,34 @@ export default function PwaInstallPrompt() {
       <div
         style={styles.overlay}
         role="dialog"
-        aria-label="Add RC RaceDay to Home Screen"
+        aria-label={t("pwa.iosInstallAria")}
         onClick={dismiss}
       >
         <div style={styles.sheet} onClick={(event) => event.stopPropagation()}>
-          <strong style={styles.title}>Add RC RaceDay to your Home Screen</strong>
-          <p style={styles.lead}>
-            Safari does not show an Install button. Follow these steps:
-          </p>
+          <strong style={styles.title}>{t("pwa.iosTitle")}</strong>
+          <p style={styles.lead}>{t("pwa.iosLead")}</p>
           <ol style={styles.steps}>
             <li style={styles.step}>
               <span style={styles.iconWrap}>
                 <IosShareIcon />
               </span>
-              <span>
-                Tap the <strong>Share</strong> button (square with an arrow).
-              </span>
+              <span>{t("pwa.iosStepShare")}</span>
             </li>
             <li style={styles.step}>
               <span style={styles.iconWrap}>
                 <strong style={styles.plus}>+</strong>
               </span>
-              <span>
-                Scroll down and tap <strong>Add to Home Screen</strong>.
-              </span>
+              <span>{t("pwa.iosStepAddHome")}</span>
             </li>
             <li style={styles.step}>
               <span style={styles.iconWrap}>
                 <strong style={styles.plus}>✓</strong>
               </span>
-              <span>
-                Tap <strong>Add</strong> in the top-right corner.
-              </span>
+              <span>{t("pwa.iosStepConfirm")}</span>
             </li>
           </ol>
           <button type="button" onClick={dismiss} style={styles.install}>
-            Got it
+            {t("actions.close")}
           </button>
         </div>
       </div>
@@ -161,23 +155,23 @@ export default function PwaInstallPrompt() {
   }
 
   return (
-    <div style={styles.banner} role="dialog" aria-label="Install RC RaceDay">
+    <div style={styles.banner} role="dialog" aria-label={t("pwa.installAria")}>
       <div style={styles.copy}>
-        <strong style={styles.title}>Install RC RaceDay</strong>
+        <strong style={styles.title}>{t("pwa.installTitle")}</strong>
         <span style={styles.text}>
           {mode === "android-manual"
-            ? "Tap the browser menu (⋮), then Install app or Add to Home screen."
-            : "Add the app to your home screen for quicker access."}
+            ? t("pwa.androidManual")
+            : t("pwa.installBody")}
         </span>
       </div>
       <div style={styles.actions}>
         {mode === "android" && (
           <button type="button" onClick={install} style={styles.install}>
-            Install
+            {t("pwa.install")}
           </button>
         )}
         <button type="button" onClick={dismiss} style={styles.dismiss}>
-          Not now
+          {t("pwa.notNow")}
         </button>
       </div>
     </div>

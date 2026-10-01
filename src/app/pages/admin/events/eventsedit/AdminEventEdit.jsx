@@ -34,6 +34,7 @@ import {
   normalizeDayRecord,
   shiftEventNominationDates,
 } from "@app/pages/admin/events/eventDefaults";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   datetimeLocalToIso,
   isoToDatetimeLocal,
@@ -104,6 +105,7 @@ const initialEventState = {
 };
 
 export default function AdminEventEdit() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug, id } = useParams();
   const isNew = !id || id === "new";
@@ -948,11 +950,11 @@ if (data.is_multi_day) {
               />
             </CMSCard>
 
-            <CMSCard title="Event Timing">
+            <CMSCard titleKey="admin.events.eventTiming">
               <EventTimingCard event={eventData} onChange={handleFieldChange} />
             </CMSCard>
 
-            <CMSCard title="Nominations">
+            <CMSCard titleKey="admin.events.nominations">
               <EventNominationsCard
                 event={eventData}
                 onChange={handleFieldChange}
@@ -965,7 +967,7 @@ if (data.is_multi_day) {
               />
             </CMSCard>
 
-            <CMSCard title="Classes">
+            <CMSCard titleKey="admin.common.classes">
               <ClassesCard
                 event={eventData}
                 onChange={handleFieldChange}
@@ -973,25 +975,25 @@ if (data.is_multi_day) {
               />
             </CMSCard>
 
-            <CMSCard title="Pricing">
+            <CMSCard titleKey="admin.events.pricing">
               <EventPricingCard event={eventData} onChange={handleFieldChange} />
             </CMSCard>
 
-            <CMSCard title="Club Requirements">
+            <CMSCard titleKey="admin.common.clubRequirements">
               <EventRequirementsCard
                 event={eventData}
                 onChange={handleFieldChange}
               />
             </CMSCard>
 
-            <CMSCard title="Merchandise">
+            <CMSCard titleKey="admin.events.merchandise">
               <EventMerchandiseCard
                 event={eventData}
                 onChange={handleFieldChange}
               />
             </CMSCard>
 
-            <CMSCard title="Class Add‑Ons">
+            <CMSCard titleKey="admin.events.classAddOns">
               <EventClassAddOnsCard
                 event={eventData}
                 onChange={handleFieldChange}

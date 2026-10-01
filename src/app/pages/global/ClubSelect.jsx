@@ -9,10 +9,12 @@ import { userBelongsToClub } from "@/app/providers/ClubProvider";
 
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
 import vehiclesImage from "@/assets/RCRaceday_Vehicles_Image.png";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function ClubSelect() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,14 +64,14 @@ export default function ClubSelect() {
       <div style={styles.content}>
 
         {/* Logo */}
-        <img src={rcracedayLogo} alt="RC RaceDay" style={styles.brandLogo} />
+        <img src={rcracedayLogo} alt={t("clubSelect.brandAlt")} style={styles.brandLogo} />
 
         {/* Welcome Driver */}
-        <h2 style={styles.welcome}>Welcome to RCRaceday</h2>
+        <h2 style={styles.welcome}>{t("clubSelect.welcome")}</h2>
 
         {/* Club selection area */}
         <div style={styles.clubSection}>
-          <h1 style={styles.title}>Select Your Club</h1>
+          <h1 style={styles.title}>{t("clubSelect.title")}</h1>
 
           <div style={styles.grid}>
             {clubs.map((club) => (
@@ -93,7 +95,7 @@ export default function ClubSelect() {
 
         <img
           src={vehiclesImage}
-          alt="RC RaceDay Vehicles"
+          alt={t("clubSelect.vehiclesAlt")}
           style={styles.vehicles}
         />
 

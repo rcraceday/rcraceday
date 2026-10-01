@@ -3,6 +3,7 @@ import { useOutletContext, Link, useLocation, useNavigate, useParams } from "rea
 import { useState } from "react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function Signup() {
   const { club } = useOutletContext();
@@ -15,6 +16,7 @@ export default function Signup() {
     "https://mvcttnmclrvaatdgzhpb.supabase.co/functions/v1/create-user";
   const lookupMembershipUrl =
     "https://mvcttnmclrvaatdgzhpb.supabase.co/functions/v1/lookup-membership";
+  const { t } = useTranslation();
 
   async function lookupMembership(cleanEmail) {
     const response = await fetch(lookupMembershipUrl, {
@@ -30,7 +32,7 @@ export default function Signup() {
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.error || "Membership lookup failed");
+      throw new Error(result.error || t("signup.lookupFailed"));
     }
 
     return result.membership;
@@ -50,7 +52,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
 
   if (!club || !clubId) {
-    return <div style={{ padding: 24, textAlign: "center" }}>Loading…</div>;
+    return <div style={{ padding: 24, textAlign: "center" }}>{t("loading.loading")}</div>;
   }
 
   const logoSrc =
@@ -103,11 +105,11 @@ export default function Signup() {
             textAlign: "center",
           }}
         >
-          Create Account
+          {t("auth.createAccount")}
         </h1>
 
         <p style={{ textAlign: "center", marginBottom: "24px" }}>
-          Are you currently a financial member of {club?.name}?
+          {t("signup.memberQuestion", { clubName: club?.name })}
         </p>
 
         {errorMsg && (
@@ -122,7 +124,7 @@ export default function Signup() {
           onClick={() => setStep("memberLookup")}
           style={{ width: "100%", marginBottom: "12px" }}
         >
-          Yes, I am a current member
+          {t("signup.yesMember")}
         </Button>
 
         <Button
@@ -131,11 +133,11 @@ export default function Signup() {
           onClick={() => setStep("nonMemberSignup")}
           style={{ width: "100%" }}
         >
-          No, I am not a member
+          {t("signup.noMember")}
         </Button>
 
         <div style={{ marginTop: "24px", textAlign: "center" }}>
-          <Button size="lg" onClick={() => navigate("/")}>← Back to Clubs</Button>
+          <Button size="lg" onClick={() => navigate("/")}>{t("auth.backToClubs")}</Button>
         </div>
       </div>
     );
@@ -149,7 +151,7 @@ export default function Signup() {
     setErrorMsg("");
 
     if (!isValidEmail(membershipEmail.trim())) {
-      return setErrorMsg("Please enter the email you gave the club.");
+      return setErrorMsg(t("signup.enterClubEmail"));
     }
 
     setLoading(true);
@@ -162,15 +164,13 @@ export default function Signup() {
     } catch (err) {
       console.error("Lookup error:", err);
       setLoading(false);
-      return setErrorMsg("Something went wrong. Please try again.");
+      return setErrorMsg(t("errors.generic"));
     }
 
     setLoading(false);
 
     if (!data) {
-      return setErrorMsg(
-        "We could not find a membership with that email for this club."
-      );
+      return setErrorMsg(t("signup.notFoundForClub"));
     }
 
     setMembership(data);
@@ -220,7 +220,7 @@ export default function Signup() {
             textAlign: "center",
           }}
         >
-          Find Your Membership
+          {t("signup.findMembershipTitle")}
         </h1>
 
         <form
@@ -233,7 +233,7 @@ export default function Signup() {
           }}
         >
           <Input
-            label="Membership Email"
+            label={t("signup.membershipEmail")}
             type="email"
             value={membershipEmail}
             onChange={(e) => setMembershipEmail(e.target.value)}
@@ -246,7 +246,7 @@ export default function Signup() {
           )}
 
           <Button type="submit" variant="primary" size="lg" disabled={loading}>
-            {loading ? "Searching…" : "Find Membership"}
+            {loading ? t("signup.searching") : t("signup.findMembership")}
           </Button>
 
           <Button
@@ -254,7 +254,7 @@ export default function Signup() {
             size="lg"
             onClick={() => setStep("memberQuestion")}
           >
-            Back
+            {t("signup.back")}
           </Button>
         </form>
       </div>
@@ -268,9 +268,9 @@ export default function Signup() {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!name.trim()) return setErrorMsg("Please enter your full name.");
-    if (password.length < 6) return setErrorMsg("Password must be at least 6 characters.");
-    if (password !== confirmPassword) return setErrorMsg("Passwords do not match.");
+    if (!name.trim()) return setErrorMsg(t("signup.nameRequired"));
+    if (password.length < 6) return setErrorMsg(t("signup.passwordMinLength"));
+    if (password !== confirmPassword) return setErrorMsg(t("signup.passwordsMismatch"));
 
     setLoading(true);
 
@@ -312,7 +312,7 @@ export default function Signup() {
 
     if (!response.ok) {
       setLoading(false);
-      return setErrorMsg(result.error || "Signup failed");
+      return setErrorMsg(result.error || t("signup.signupFailed"));
     }
 
     navigate(
@@ -357,7 +357,7 @@ export default function Signup() {
             textAlign: "center",
           }}
         >
-          Confirm Your Details
+          {t("signup.confirmDetailsTitle")}
         </h1>
 
         <form
@@ -369,19 +369,19 @@ export default function Signup() {
             gap: "16px",
           }}
         >
-          <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input label={t("signup.fullName")} value={name} onChange={(e) => setName(e.target.value)} />
 
-          <Input label="Email" value={email} disabled />
+          <Input label={t("auth.email")} value={email} disabled />
 
           <Input
-            label="Create Password"
+            label={t("signup.createPassword")}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
 
           <Input
-            label="Confirm Password"
+            label={t("signup.confirmPasswordLabel")}
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -394,11 +394,11 @@ export default function Signup() {
           )}
 
           <Button type="submit" variant="primary" size="lg" disabled={loading}>
-            {loading ? "Creating account…" : "Create Account"}
+            {loading ? t("auth.creatingAccount") : t("auth.createAccount")}
           </Button>
 
           <Button variant="secondary" size="lg" onClick={() => setStep("memberLookup")}>
-            Back
+            {t("signup.back")}
           </Button>
         </form>
       </div>
@@ -413,19 +413,19 @@ async function handleNonMemberSignup(e) {
   setErrorMsg("");
 
   if (!name.trim()) {
-    return setErrorMsg("Please enter your full name.");
+    return setErrorMsg(t("signup.nameRequired"));
   }
   if (!isValidEmail(email.trim())) {
-    return setErrorMsg("Please enter a valid email address.");
+    return setErrorMsg(t("signup.validEmailRequired"));
   }
   if (!password || password.length < 6) {
-    return setErrorMsg("Password must be at least 6 characters.");
+    return setErrorMsg(t("signup.passwordMinLength"));
   }
   if (password !== confirmPassword) {
-    return setErrorMsg("Passwords do not match.");
+    return setErrorMsg(t("signup.passwordsMismatch"));
   }
   if (!clubId) {
-    return setErrorMsg("Club not loaded. Please refresh and try again.");
+    return setErrorMsg(t("signup.clubNotLoaded"));
   }
 
   setLoading(true);
@@ -442,14 +442,12 @@ async function handleNonMemberSignup(e) {
   } catch (err) {
     console.error("Lookup error:", err);
     setLoading(false);
-    return setErrorMsg("Something went wrong. Please try again.");
+    return setErrorMsg(t("errors.generic"));
   }
 
   if (existingMembership) {
     setLoading(false);
-    return setErrorMsg(
-      "This email is already associated with a membership at this club. Please use the 'I am a member' option and the email you gave the club."
-    );
+    return setErrorMsg(t("signup.emailHasMembership"));
   }
 
   try {
@@ -482,7 +480,7 @@ async function handleNonMemberSignup(e) {
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.error || "Signup failed");
+      throw new Error(result.error || t("signup.signupFailed"));
     }
 
     navigate(
@@ -490,7 +488,7 @@ async function handleNonMemberSignup(e) {
     );
   } catch (err) {
     console.error("Non-member signup error", err);
-    setErrorMsg(err.message || "Failed to create account.");
+    setErrorMsg(err.message || t("signup.failedCreateAccount"));
   } finally {
     setLoading(false);
   }
@@ -532,7 +530,7 @@ async function handleNonMemberSignup(e) {
             textAlign: "center",
           }}
         >
-          Create Account
+          {t("auth.createAccount")}
         </h1>
 
         <form
@@ -544,19 +542,19 @@ async function handleNonMemberSignup(e) {
             gap: "16px",
           }}
         >
-          <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input label={t("signup.fullName")} value={name} onChange={(e) => setName(e.target.value)} />
 
-          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input label={t("auth.email")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
           <Input
-            label="Password"
+            label={t("signup.password")}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
 
           <Input
-            label="Confirm Password"
+            label={t("signup.confirmPasswordLabel")}
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -569,21 +567,21 @@ async function handleNonMemberSignup(e) {
           )}
 
           <Button type="submit" variant="primary" size="lg" disabled={loading}>
-            {loading ? "Creating account…" : "Sign Up"}
+            {loading ? t("auth.creatingAccount") : t("auth.signUp")}
           </Button>
 
           <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
-            Already have an account?{" "}
+            {t("auth.alreadyHaveAccount")}{" "}
             <Link
               to={`/${clubSlug}/public/login`}
               style={{ color: "#2563eb", textDecoration: "underline" }}
             >
-              Log in
+              {t("auth.logIn")}
             </Link>
           </p>
 
           <div style={{ marginTop: "16px", textAlign: "center" }}>
-            <Button size="lg" onClick={() => navigate("/")}>← Back to Clubs</Button>
+            <Button size="lg" onClick={() => navigate("/")}>{t("auth.backToClubs")}</Button>
           </div>
         </form>
       </div>
@@ -629,12 +627,11 @@ async function handleNonMemberSignup(e) {
             textAlign: "center",
           }}
         >
-          Account Created
+          {t("signup.accountCreatedTitle")}
         </h1>
 
         <p style={{ textAlign: "center", marginBottom: "24px", color: "#444" }}>
-          Your account has been created successfully.  
-          Please log in to continue.
+          {t("signup.accountCreatedBody")}
         </p>
 
         <Button
@@ -645,7 +642,7 @@ async function handleNonMemberSignup(e) {
             navigate(`/${clubSlug}/public/login`, { replace: true })
           }
         >
-          Proceed to Login
+          {t("signup.proceedToLogin")}
         </Button>
       </div>
     );

@@ -12,6 +12,7 @@ import { IdentificationIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function DriverProfile() {
   const { id, clubSlug } = useParams();
@@ -19,6 +20,7 @@ export default function DriverProfile() {
 
   const { club } = useOutletContext();
   const { palette } = useTheme();
+  const { t } = useTranslation();
   const brand = palette.primary;
 
   const { membership } = useMembership();
@@ -73,7 +75,7 @@ export default function DriverProfile() {
 
       <PageTitle
         icon={IdentificationIcon}
-        title="Driver Profile"
+        title={t("drivers.profileTitle")}
         style={{ color: brand }}
         actions={
           <Button

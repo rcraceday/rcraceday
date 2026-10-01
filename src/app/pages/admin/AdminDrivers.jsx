@@ -7,20 +7,17 @@ import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
 import { EditButton } from "@cms/CMSButtonSet";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import { cmsStyles } from "@cms/styles";
 
-const FILTERS = [
-  { id: "all", label: "All" },
-  { id: "adults", label: "Adults" },
-  { id: "juniors", label: "Juniors" },
-  { id: "unlinked", label: "No household" },
-];
+const FILTER_IDS = ["all", "adults", "juniors", "unlinked"];
 
-function driverName(row) {
-  return [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || "Unnamed driver";
+function driverName(row, unnamedLabel) {
+  return [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || unnamedLabel;
 }
 
 export default function AdminDrivers() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
   const { club } = useClub();
@@ -45,7 +42,7 @@ export default function AdminDrivers() {
       .order("first_name", { ascending: true });
 
     if (driverError) {
-      setError(driverError.message || "Could not load drivers.");
+      setError(driverError.message || t("admin.common.couldNotLoadDrivers"));
       setDrivers([]);
       setLoading(false);
       return;
@@ -93,7 +90,7 @@ export default function AdminDrivers() {
       const household = row.membership_id ? householdsById[row.membership_id] : null;
       const householdName = household ? displayNameFromMembershipRow(household).toLowerCase() : "";
       const haystack = [
-        driverName(row),
+        driverName(row, t("admin.common.unnamedDriver")),
         row.nickname,
         row.permanent_number,
         householdName,
@@ -111,58 +108,64 @@ export default function AdminDrivers() {
       <div style={cmsStyles.pageContent}>
         <div style={cmsStyles.sectionHeaderWithActions}>
           <header style={cmsStyles.sectionHeader}>
-            <h1 style={cmsStyles.sectionHeaderTitle}>Drivers</h1>
-            <p style={cmsStyles.sectionHeaderSubtitle}>
-              Club drivers, numbers, and household links.
-            </p>
+            <h1 style={cmsStyles.sectionHeaderTitle}>{t("admin.drivers.title")}</h1>
+            <p style={cmsStyles.sectionHeaderSubtitle}>{t("admin.drivers.subtitle")}</p>
           </header>
           <CMSButton
             onClick={() => navigate(`/${clubSlug}/app/admin/drivers/new`)}
             style={{ whiteSpace: "nowrap" }}
           >
-            Add driver
+            {t("admin.drivers.addDriver")}
           </CMSButton>
         </div>
 
-        <CMSCard title="Drivers">
+        <CMSCard titleKey="admin.drivers.cardTitle">
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
             <CMSInput
-              label="Search"
-              placeholder="Name, nickname, number, or household"
+              label={t("admin.drivers.search")}
+              placeholder={t("admin.drivers.searchPlaceholder")}
               value={search}
               onChange={setSearch}
             />
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {FILTERS.map((item) => (
+              {FILTER_IDS.map((id) => {
+                const filterLabelKey = {
+                  all: "admin.drivers.filterAll",
+                  adults: "admin.drivers.filterAdults",
+                  juniors: "admin.drivers.filterJuniors",
+                  unlinked: "admin.drivers.filterUnlinked",
+                }[id];
+                return (
                 <CMSButton
-                  key={item.id}
+                  key={id}
                   type="button"
-                  onClick={() => setFilter(item.id)}
+                  onClick={() => setFilter(id)}
                   style={
-                    filter === item.id
+                    filter === id
                       ? { borderColor: "#991B1B", backgroundColor: "#f8f3f3" }
                       : undefined
                   }
                 >
-                  {item.label}
+                  {t(filterLabelKey)}
                 </CMSButton>
-              ))}
+                );
+              })}
             </div>
 
             {loading ? (
-              <p style={{ color: "#6B7280", fontSize: 14 }}>Loading drivers…</p>
+              <p style={{ color: "#6B7280", fontSize: 14 }}>{t("admin.drivers.loading")}</p>
             ) : error ? (
               <p style={{ color: "#991B1B", fontSize: 14 }}>{error}</p>
             ) : filtered.length === 0 ? (
-              <p style={{ color: "#6B7280", fontSize: 14 }}>No drivers match.</p>
+              <p style={{ color: "#6B7280", fontSize: 14 }}>{t("admin.drivers.noMatch")}</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {filtered.map((row) => {
                   const household = row.membership_id ? householdsById[row.membership_id] : null;
                   const householdName = household
                     ? displayNameFromMembershipRow(household)
-                    : "No household";
+                    : t("admin.common.noHousehold");
 
                   return (
                     <div
@@ -195,7 +198,7 @@ export default function AdminDrivers() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, color: "#111827" }}>
-                          {driverName(row)}
+                          {driverName(row, t("admin.common.unnamedDriver"))}
                           {row.nickname ? (
                             <span style={{ fontWeight: 400, color: "#6B7280" }}>
                               {" "}
@@ -217,7 +220,7 @@ export default function AdminDrivers() {
                               row.is_junior ? cmsStyles.badgeDraft : cmsStyles.badgePublished
                             }
                           >
-                            {row.is_junior ? "Junior" : "Adult"}
+                            {row.is_junior ? t("admin.common.junior") : t("admin.common.adult")}
                           </span>
                           <span style={{ fontSize: 12, color: "#6B7280" }}>
                             {householdName}

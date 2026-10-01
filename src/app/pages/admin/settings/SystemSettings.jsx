@@ -1,8 +1,10 @@
 import { useOutletContext } from "react-router-dom";
 import Card from "@/components/ui/Card";
 import { cmsStyles } from "../cms/styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function SystemSettings() {
+  const { t } = useTranslation();
   const { club } = useOutletContext();
 
   return (

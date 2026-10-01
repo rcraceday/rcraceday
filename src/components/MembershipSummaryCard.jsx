@@ -1,5 +1,6 @@
 import { IdentificationIcon } from "@heroicons/react/24/solid";
 import Card from "@/components/ui/Card";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function MembershipSummaryCard({
   membership,
@@ -8,6 +9,7 @@ export default function MembershipSummaryCard({
   brand,
   club,
 }) {
+  const { t } = useTranslation();
   if (!membership) return null;
 
   const clubLogo = club?.member_badge_url || null;
@@ -40,12 +42,12 @@ export default function MembershipSummaryCard({
      ------------------------------------------------------------ */
   const typeLabel =
     membership.membership_type === "junior"
-      ? "Junior Membership"
+      ? t("membershipUi.typeJunior")
       : membership.membership_type === "single"
-      ? "Single Membership"
+      ? t("membershipUi.typeSingle")
       : membership.membership_type === "family"
-      ? "Family Membership"
-      : "Membership";
+      ? t("membershipUi.typeFamily")
+      : t("membershipUi.typeGeneric");
 
   /* ------------------------------------------------------------
      DATE FORMATTER
@@ -76,15 +78,15 @@ export default function MembershipSummaryCard({
   /* ------------------------------------------------------------
      STATUS BADGE
      ------------------------------------------------------------ */
-  let statusLabel = "Active";
+  let statusLabel = t("membershipUi.statusActive");
   let statusColor = "#16a34a"; // green
   const now = new Date();
 
   if (membership.status === "renewing member") {
-    statusLabel = "Renewing";
+    statusLabel = t("membershipUi.statusRenewing");
     statusColor = "#2563eb"; // blue
   } else if (membership.endDateObj && membership.endDateObj < now) {
-    statusLabel = "Expired";
+    statusLabel = t("membershipUi.statusExpired");
     statusColor = "#dc2626"; // red
   }
 
@@ -107,7 +109,7 @@ export default function MembershipSummaryCard({
       {clubLogo && (
         <img
           src={clubLogo}
-          alt={`${club?.name || "Club"} Logo`}
+          alt={t("membershipUi.clubLogoAlt", { name: club?.name || "Club" })}
           className="member-badge"
           style={{
             position: "absolute",
@@ -136,7 +138,7 @@ export default function MembershipSummaryCard({
         <IdentificationIcon
           style={{ height: "20px", width: "20px", color: brand }}
         />
-        Membership Summary
+        {t("membershipUi.summaryTitle")}
       </h2>
 
       <div style={{ marginBottom: "12px" }}>
@@ -164,13 +166,13 @@ export default function MembershipSummaryCard({
 
           {isHalfYear && (
             <span style={{ fontSize: "12px", opacity: 0.7 }}>
-              (6‑month membership)
+              {t("membershipUi.halfYearNote")}
             </span>
           )}
         </div>
 
-        <p style={{ fontSize: "14px", opacity: 0.7 }}>Start: {start}</p>
-        <p style={{ fontSize: "14px", opacity: 0.7 }}>End: {end}</p>
+        <p style={{ fontSize: "14px", opacity: 0.7 }}>{t("membershipUi.startLabel")} {start}</p>
+        <p style={{ fontSize: "14px", opacity: 0.7 }}>{t("membershipUi.endLabel")} {end}</p>
       </div>
 
       <div>
@@ -181,7 +183,7 @@ export default function MembershipSummaryCard({
             marginBottom: "4px",
           }}
         >
-          Members
+          {t("membershipUi.membersHeading")}
         </h3>
 
         {unifiedMembers.length > 0 ? (
@@ -194,13 +196,13 @@ export default function MembershipSummaryCard({
             {juniorMembers.map((m) => (
               <li key={m.id}>
                 {m.first_name} {m.last_name}
-                <span style={{ opacity: 0.7 }}> (Junior)</span>
+                <span style={{ opacity: 0.7 }}> {t("driverUi.juniorSuffix")}</span>
               </li>
             ))}
           </ul>
         ) : (
           <p style={{ fontSize: "14px", opacity: 0.7 }}>
-            No members recorded yet.
+            {t("membershipUi.noMembersRecorded")}
           </p>
         )}
       </div>

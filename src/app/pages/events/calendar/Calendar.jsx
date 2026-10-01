@@ -10,6 +10,7 @@ import useTheme from "@/app/providers/useTheme";
 
 import { CalendarIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 import CalendarYear from "@app/pages/events/calendar/CalendarYear";
 
@@ -22,6 +23,7 @@ export default function Calendar() {
   const { club } = useClub();
   const { palette } = useTheme() || {};
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const brand = palette?.primary ?? "#0A66C2";
 
@@ -71,7 +73,7 @@ export default function Calendar() {
 
       <PageTitle
         icon={CalendarIcon}
-        title="Calendar"
+        title={t("calendar.title")}
         style={{ color: brand }}
         actions={
           <select

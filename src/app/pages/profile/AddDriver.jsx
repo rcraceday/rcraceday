@@ -16,6 +16,7 @@ import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import Input from "@/components/ui/Input";
 
 function SimpleSpinner() {
@@ -36,6 +37,7 @@ export default function AddDriver() {
   const { drivers, refreshDrivers } = useDrivers();
   const { palette } = useTheme();
 
+  const { t } = useTranslation();
   const brand = palette.primary;
 
   const [firstName, setFirstName] = useState("");
@@ -244,7 +246,7 @@ export default function AddDriver() {
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
 
-      <PageTitle title="Add Driver" style={{ color: brand }} />
+      <PageTitle title={t("drivers.addTitle")} style={{ color: brand }} />
 
       {/* MAIN */}
       <main className="app-page-main space-y-10">

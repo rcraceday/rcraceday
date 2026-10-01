@@ -4,11 +4,13 @@ import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom
 import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function ResetPassword() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -17,7 +19,7 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [token, setToken] = useState(null);
 
-  if (!club) return <div style={{ padding: "24px", textAlign: "center" }}>Loading…</div>;
+  if (!club) return <div style={{ padding: "24px", textAlign: "center" }}>{t("loading.loading")}</div>;
 
   const logoSrc =
     club?.logoUrl ||
@@ -132,7 +134,7 @@ export default function ResetPassword() {
             textAlign: "center",
           }}
         >
-          Set New Password
+          {t("auth.resetPasswordTitle")}
         </h1>
 
         {!token && (
@@ -201,7 +203,7 @@ export default function ResetPassword() {
 
             <div style={{ width: "100%", maxWidth: "360px", margin: "0 auto" }}>
               <Button type="submit" variant="primary" disabled={loading}>
-                {loading ? "Updating…" : "Update Password"}
+                {loading ? t("common.updating") : t("auth.updatePassword")}
               </Button>
             </div>
           </form>
@@ -213,7 +215,7 @@ export default function ResetPassword() {
             to={`/${clubSlug}/public/login`}
             style={{ color: "#2563eb", textDecoration: "underline" }}
           >
-            Log in
+            {t("auth.logIn")}
           </Link>
         </p>
       </div>

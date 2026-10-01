@@ -4,8 +4,10 @@ import { cmsStyles } from "../cms/styles";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import ClubInfoSettingsCard from "./components/ClubInfoSettingsCard";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function ClubInfoSettings() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { club } = useClub();
 

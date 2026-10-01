@@ -15,6 +15,7 @@ import CMSToggle from "@cms/CMSToggle";
 import CMSImageUpload from "@cms/CMSImageUpload";
 import CMSCard from "@cms/CMSCard";
 import { cmsLayout } from "@cms/layout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const DURATION_PRESETS = [
   { duration: "full", period: "", label: "Full year" },
@@ -164,6 +165,7 @@ function emptyProduct(clubId, typeKey, duration, period) {
 }
 
 export default function MembershipSettingsCard({ club }) {
+  const { t } = useTranslation();
   const { refreshClub } = useClub();
 
   const [clubForm, setClubForm] = useState({
@@ -435,7 +437,7 @@ export default function MembershipSettingsCard({ club }) {
       {error && <div style={bannerStyle("error")}>{error}</div>}
       {status && <div style={bannerStyle("success")}>{status}</div>}
 
-      <CMSCard title="Club">
+      <CMSCard titleKey="admin.membership.club">
         <div style={styles.cardInner}>
           <div style={styles.twoCol}>
             <div style={{ ...styles.group, ...styles.badgeCol }}>
@@ -470,7 +472,7 @@ export default function MembershipSettingsCard({ club }) {
               </div>
               <div style={styles.grid}>
                 <CMSInput
-                  label="Default max adults"
+                  labelKey="admin.membership.defaultMaxAdults"
                   type="number"
                   value={String(clubForm.max_adults ?? "")}
                   onChange={(value) =>
@@ -478,7 +480,7 @@ export default function MembershipSettingsCard({ club }) {
                   }
                 />
                 <CMSInput
-                  label="Default max juniors"
+                  labelKey="admin.membership.defaultMaxJuniors"
                   type="number"
                   value={String(clubForm.max_juniors ?? "")}
                   onChange={(value) =>
@@ -487,7 +489,7 @@ export default function MembershipSettingsCard({ club }) {
                 />
               </div>
               <CMSToggle
-                label="Allow join and renew"
+                labelKey="admin.membership.allowJoinRenew"
                 checked={clubForm.membership_join_enabled}
                 onChange={(checked) =>
                   setClubForm((prev) => ({
@@ -514,7 +516,7 @@ export default function MembershipSettingsCard({ club }) {
             title={row.display_name || row.type_key}
             actions={
               <CMSToggle
-                label="Enabled"
+                labelKey="cms.enabled"
                 checked={row.enabled !== false}
                 onChange={(checked) => updateTypeRow(index, "enabled", checked)}
               />
@@ -530,12 +532,12 @@ export default function MembershipSettingsCard({ club }) {
                 </div>
                 <div style={styles.grid}>
                   <CMSInput
-                    label="Display name"
+                    labelKey="admin.membership.displayName"
                     value={row.display_name}
                     onChange={(value) => updateTypeRow(index, "display_name", value)}
                   />
                   <CMSInput
-                    label="Max adults"
+                    labelKey="admin.membership.maxAdults"
                     type="number"
                     value={String(row.max_household_adults ?? "")}
                     onChange={(value) =>
@@ -543,7 +545,7 @@ export default function MembershipSettingsCard({ club }) {
                     }
                   />
                   <CMSInput
-                    label="Max juniors"
+                    labelKey="admin.membership.maxJuniors"
                     type="number"
                     value={String(row.max_household_juniors ?? "")}
                     onChange={(value) =>
@@ -551,7 +553,7 @@ export default function MembershipSettingsCard({ club }) {
                     }
                   />
                   <CMSInput
-                    label="Max drivers"
+                    labelKey="admin.membership.maxDrivers"
                     type="number"
                     placeholder="No cap"
                     value={row.max_drivers == null ? "" : String(row.max_drivers)}
@@ -566,21 +568,21 @@ export default function MembershipSettingsCard({ club }) {
                 </div>
                 <div style={styles.toggleRow}>
                   <CMSToggle
-                    label="Driver profiles"
+                    labelKey="admin.membership.driverProfiles"
                     checked={row.access_driver_profiles !== false}
                     onChange={(checked) =>
                       updateTypeRow(index, "access_driver_profiles", checked)
                     }
                   />
                   <CMSToggle
-                    label="Championship points"
+                    labelKey="admin.membership.championshipPoints"
                     checked={row.access_championship_points !== false}
                     onChange={(checked) =>
                       updateTypeRow(index, "access_championship_points", checked)
                     }
                   />
                   <CMSToggle
-                    label="Discounted racing"
+                    labelKey="admin.membership.discountedRacing"
                     checked={row.discounted_racing === true}
                     onChange={(checked) =>
                       updateTypeRow(index, "discounted_racing", checked)
@@ -589,12 +591,12 @@ export default function MembershipSettingsCard({ club }) {
                 </div>
                 <div style={styles.grid}>
                   <CMSTextarea
-                    label="Benefits"
+                    labelKey="admin.membership.benefits"
                     value={row.benefits_notes || ""}
                     onChange={(value) => updateTypeRow(index, "benefits_notes", value)}
                   />
                   <CMSTextarea
-                    label="Merch benefits"
+                    labelKey="admin.membership.merchBenefits"
                     value={row.merch_benefits_notes || ""}
                     onChange={(value) =>
                       updateTypeRow(index, "merch_benefits_notes", value)

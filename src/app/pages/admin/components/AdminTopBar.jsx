@@ -6,9 +6,11 @@ import { supabase } from "@/supabaseClient";
 import HamburgerMenu from "@/components/ui/HamburgerMenu";
 import ClubMessagesNavLink from "@/components/ui/ClubMessagesNavLink";
 import { buildAdminMenuItems } from "./adminMenuItems";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function AdminTopBar() {
   const { clubSlug } = useParams();
+  const { t } = useTranslation();
 
   const [adminLogo, setAdminLogo] = useState(null);
 
@@ -34,7 +36,7 @@ export default function AdminTopBar() {
     loadClub();
   }, [clubSlug]);
 
-  const adminItems = buildAdminMenuItems({ clubSlug });
+  const adminItems = buildAdminMenuItems({ clubSlug, t });
 
   return (
     <header

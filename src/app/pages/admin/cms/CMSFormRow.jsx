@@ -1,6 +1,8 @@
 import { cmsStyles } from "./styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function CMSFormRow({ children }) {
+  const { t } = useTranslation();
   return (
     <div
       style={cmsStyles.formRow}

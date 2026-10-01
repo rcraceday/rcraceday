@@ -6,6 +6,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export function HouseholdMembersCard({
   membership,
@@ -15,6 +16,7 @@ export function HouseholdMembersCard({
   brand,
   onMembersChanged,
 }) {
+  const { t } = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add"); // "add" | "edit"
   const [modalIsJunior, setModalIsJunior] = useState(false);
@@ -166,14 +168,14 @@ export function HouseholdMembersCard({
               onClick={() => openEditModal(member)}
               style={{ fontSize: "12px", padding: "4px 8px" }}
             >
-              Edit
+              {t("actions.edit")}
             </Button>
             <Button
               variant="secondary"
               onClick={() => handleRemove(member)}
               style={{ fontSize: "12px", padding: "4px 8px" }}
             >
-              Remove
+              {t("cms.remove")}
             </Button>
           </div>
         )}
@@ -191,18 +193,18 @@ export function HouseholdMembersCard({
         style={{ border: `2px solid ${brand}`, padding: "10px", width: "100%" }}
       >
         <h2 style={{ fontSize: "20px", fontWeight: 600, marginBottom: "16px" }}>
-          Household Members
+          {t("householdUi.title")}
         </h2>
 
         {/* Adults */}
         <div style={{ marginTop: "16px" }}>
           <h3 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>
-            Adults
+            {t("householdUi.adults")}
           </h3>
 
           {adultDrivers.length === 0 && adultNonDrivers.length === 0 && (
             <p style={{ fontSize: "14px", opacity: 0.7, marginBottom: "8px" }}>
-              No adult members yet.
+              {t("householdUi.noAdults")}
             </p>
           )}
 
@@ -215,7 +217,7 @@ export function HouseholdMembersCard({
               onClick={() => openAddModal(false)}
               style={{ fontSize: "14px", padding: "6px 12px", marginTop: "4px" }}
             >
-              Add Adult Member
+              {t("householdUi.addAdult")}
             </Button>
           )}
         </div>
@@ -223,12 +225,12 @@ export function HouseholdMembersCard({
         {/* Juniors */}
         <div style={{ marginTop: "24px" }}>
           <h3 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>
-            Juniors
+            {t("householdUi.juniors")}
           </h3>
 
           {juniorDrivers.length === 0 && juniorNonDrivers.length === 0 && (
             <p style={{ fontSize: "14px", opacity: 0.7, marginBottom: "8px" }}>
-              No junior members yet.
+              {t("householdUi.noJuniors")}
             </p>
           )}
 
@@ -241,7 +243,7 @@ export function HouseholdMembersCard({
               onClick={() => openAddModal(true)}
               style={{ fontSize: "14px", padding: "6px 12px", marginTop: "4px" }}
             >
-              Add Junior Member
+              {t("householdUi.addJunior")}
             </Button>
           )}
         </div>
@@ -260,14 +262,14 @@ export function HouseholdMembersCard({
           title={
             modalMode === "add"
               ? modalIsJunior
-                ? "Add Junior Member"
-                : "Add Adult Member"
-              : "Edit Member"
+                ? t("householdUi.addJunior")
+                : t("householdUi.addAdult")
+              : t("householdUi.editMember")
           }
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <label style={{ fontSize: "14px" }}>
-              First Name
+              {t("householdUi.firstName")}
               <input
                 type="text"
                 value={firstName}
@@ -283,7 +285,7 @@ export function HouseholdMembersCard({
             </label>
 
             <label style={{ fontSize: "14px" }}>
-              Last Name
+              {t("householdUi.lastName")}
               <input
                 type="text"
                 value={lastName}
@@ -316,14 +318,14 @@ export function HouseholdMembersCard({
                 }}
                 style={{ padding: "6px 12px", fontSize: "14px" }}
               >
-                Cancel
+                {t("cms.cancel")}
               </Button>
               <Button
                 variant="primary"
                 onClick={handleSave}
                 style={{ padding: "6px 12px", fontSize: "14px" }}
               >
-                Save
+                {t("cms.save")}
               </Button>
             </div>
           </div>

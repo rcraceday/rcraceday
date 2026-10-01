@@ -11,9 +11,10 @@ import DriverListCard from "@/components/driver/DriverListCard";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 import { supabase } from "@/supabaseClient";
-import { ArrowLeftIcon, UserPlusIcon, TrashIcon } from "@heroicons/react/24/solid";
+import { UserPlusIcon, TrashIcon } from "@heroicons/react/24/solid";
 import {
   canShowAddDriverButton,
   countHouseholdSlots,
@@ -24,6 +25,7 @@ export default function DriverManager() {
   const navigate = useNavigate();
   const { club } = useOutletContext();
   const { palette } = useTheme();
+  const { t } = useTranslation();
   const brand = palette.primary;
   const clubSlug = club?.slug;
 
@@ -136,18 +138,8 @@ export default function DriverManager() {
 
       <PageTitle
         icon={UserPlusIcon}
-        title="Driver Manager"
+        title={t("drivers.managerTitle")}
         style={{ color: brand }}
-        actions={
-          <Button
-            variant="primary"
-            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
-            onClick={() => navigate(`/${clubSlug}/app/profile`)}
-          >
-            <ArrowLeftIcon className="h-3 w-3" />
-            Back
-          </Button>
-        }
       />
 
       {/* CENTERED CONTENT */}

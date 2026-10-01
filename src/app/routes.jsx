@@ -25,19 +25,25 @@ import ClubNews from "@app/pages/home/ClubNews";
 import NewsDetails from "@app/pages/home/NewsDetails";
 import Events from "@app/pages/events/Events";
 import EventDetails from "@app/pages/events/EventDetails";
+import EventResults from "@app/pages/events/EventResults";
+import ResultsIndex from "@app/pages/events/ResultsIndex";
+import ChampionshipsIndex from "@app/pages/events/ChampionshipsIndex";
+import ChampionshipStandings from "@app/pages/events/ChampionshipStandings";
 import EventNominate from "@app/pages/events/EventNominate";
 import NominationsView from "@app/pages/nominations/NominationsView";
 import NominationsReview from "@app/pages/nominations/NominationsReview";
 import ClubMessages from "@app/pages/messages/ClubMessages";
+import UserSettingsIndex from "@app/pages/settings/UserSettingsIndex";
+import AccountSettings from "@app/pages/settings/AccountSettings";
 import UserNotificationSettings from "@app/pages/settings/UserNotificationSettings";
+import LanguageSettings from "@app/pages/settings/LanguageSettings";
+import TimezoneSettings from "@app/pages/settings/TimezoneSettings";
 
 // CALENDAR
 import Calendar from "@app/pages/events/calendar/Calendar";
 import CalendarItemDetails from "@app/pages/events/calendar/CalendarItemDetails";
 
 // PROFILE
-import UserProfile from "@app/pages/profile/UserProfile";
-import EditUser from "@app/pages/profile/EditUser";
 import EditProfile from "@app/pages/profile/EditProfile";
 import DriverManager from "@app/pages/profile/DriverManager";
 import DriverProfile from "@app/pages/profile/DriverProfile";
@@ -62,6 +68,8 @@ import NominationsExport from "@app/pages/admin/NominationsExport";
 // CHAMPIONSHIPS
 import ChampionshipsList from "@app/pages/admin/championships/ChampionshipsList";
 import CreateChampionship from "@app/pages/admin/championships/CreateChampionship";
+import AdminChampionshipManage from "@app/pages/admin/championships/AdminChampionshipManage";
+import AdminEventResults from "@app/pages/admin/events/AdminEventResults";
 
 // MEMBERSHIP
 import Membership from "@app/pages/membership/Membership";
@@ -97,6 +105,11 @@ import AdminDriverEdit from "@app/pages/admin/AdminDriverEdit";
 function ClubRootRedirect() {
   const { clubSlug } = useParams();
   return clubSlug ? <Navigate to={`/${clubSlug}/public/login`} replace /> : null;
+}
+
+function AppPathRedirect({ to }) {
+  const { clubSlug } = useParams();
+  return clubSlug ? <Navigate to={`/${clubSlug}/app/${to}`} replace /> : null;
 }
 
 export default function AppRoutes() {
@@ -151,13 +164,21 @@ export default function AppRoutes() {
         <Route path="calendar/:id" element={<CalendarItemDetails />} />
         <Route path="events" element={<Events />} />
         <Route path="events/:id" element={<EventDetails />} />
+        <Route path="events/:id/results" element={<EventResults />} />
         <Route path="events/:eventId/nominate" element={<EventNominate />} />
+        <Route path="results" element={<ResultsIndex />} />
+        <Route path="championships" element={<ChampionshipsIndex />} />
+        <Route path="championships/:id" element={<ChampionshipStandings />} />
         <Route path="events/:eventId/nominations" element={<NominationsView />} />
         <Route path="nominations" element={<NominationsReview />} />
         <Route path="messages" element={<ClubMessages />} />
-        <Route path="settings" element={<UserNotificationSettings />} />
-        <Route path="profile" element={<UserProfile />} />
-        <Route path="profile/edit" element={<EditUser />} />
+        <Route path="settings" element={<UserSettingsIndex />} />
+        <Route path="settings/account" element={<AccountSettings />} />
+        <Route path="settings/notifications" element={<UserNotificationSettings />} />
+        <Route path="settings/language" element={<LanguageSettings />} />
+        <Route path="settings/timezone" element={<TimezoneSettings />} />
+        <Route path="profile" element={<AppPathRedirect to="settings" />} />
+        <Route path="profile/edit" element={<AppPathRedirect to="settings/account" />} />
 
         <Route
           path="profile/drivers/*"
@@ -256,10 +277,16 @@ export default function AppRoutes() {
         <Route path="events" element={<AdminEvents />} />
         <Route path="events/new" element={<AdminEventEdit />} />
         <Route path="events/:id" element={<AdminEventEdit />} />
+        <Route
+          path="events/:id/results/preview"
+          element={<EventResults previewUnpublished adminBack />}
+        />
+        <Route path="events/:id/results" element={<AdminEventResults />} />
         <Route path="events/:id/nominations" element={<AdminNominationsEvent />} />
         <Route path="events/:id/nominations/export" element={<NominationsExport />} />
         <Route path="championships" element={<ChampionshipsList />} />
         <Route path="championships/create" element={<CreateChampionship />} />
+        <Route path="championships/:id" element={<AdminChampionshipManage />} />
       </Route>
 
       {/* FALLBACKS */}

@@ -1,11 +1,13 @@
 // src/app/pages/public/Welcome.jsx
 import { useOutletContext, useParams, useNavigate } from "react-router-dom";
 import Button from "@/components/ui/Button";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function Welcome() {
   const { club, loadingClub } = useOutletContext();
   const { clubSlug } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const logoSrc =
     club?.logoUrl ||
@@ -17,7 +19,7 @@ export default function Welcome() {
     null;
 
   if (loadingClub || !club) {
-    return <div className="p-6 text-center">Loading…</div>;
+    return <div className="p-6 text-center">{t("loading.loading")}</div>;
   }
 
   return (
@@ -36,7 +38,7 @@ export default function Welcome() {
           className="w-full py-3"
           onClick={() => navigate(`/${clubSlug}/public/login`)}
         >
-          Log In
+          {t("auth.logIn")}
         </Button>
 
         <Button
@@ -44,7 +46,7 @@ export default function Welcome() {
           className="w-full py-3"
           onClick={() => navigate(`/${clubSlug}/public/signup`)}
         >
-          Create Account
+          {t("auth.createAccount")}
         </Button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import CMSButton from "@cms/CMSButton";
 import { DeleteEventButton } from "@cms/CMSButtonSet";
 import { cmsLayout } from "@cms/layout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function SaveActions({
   isNew,
@@ -8,9 +9,12 @@ export default function SaveActions({
   onSave,
   onCancel,
   onDelete,
-  saveLabel = "Save Event",
-  deleteLabel = "Delete Event",
+  saveLabel,
+  deleteLabel,
 }) {
+  const { t } = useTranslation();
+  const resolvedSaveLabel = saveLabel ?? t("cms.saveEvent");
+  const resolvedDeleteLabel = deleteLabel ?? t("cms.deleteEvent");
   return (
     <div
       style={{
@@ -23,17 +27,17 @@ export default function SaveActions({
       <div style={{ display: "flex", gap: cmsLayout.spacing.sm }}>
         {!isNew && (
           <DeleteEventButton onClick={onDelete} disabled={saving}>
-            {deleteLabel}
+            {resolvedDeleteLabel}
           </DeleteEventButton>
         )}
       </div>
 
       <div style={{ display: "flex", gap: cmsLayout.spacing.sm }}>
         <CMSButton variant="secondary" onClick={onCancel} disabled={saving}>
-          Cancel
+          {t("cms.cancel")}
         </CMSButton>
         <CMSButton variant="primary" onClick={onSave} disabled={saving}>
-          {saving ? "Saving…" : saveLabel}
+          {saving ? t("cms.saving") : resolvedSaveLabel}
         </CMSButton>
       </div>
     </div>

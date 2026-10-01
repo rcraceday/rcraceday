@@ -5,12 +5,14 @@ import CMSTextarea from "@cms/CMSTextarea";
 import CMSToggle from "@cms/CMSToggle";
 import CMSImageUpload from "@cms/CMSImageUpload";
 import { supabase } from "@/supabaseClient";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   classAddonPhotoPath,
   uploadClubAsset,
 } from "@/app/lib/clubAssetStorage";
 
 export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event }) {
+  const { t } = useTranslation();
   const rule = item.class_rules?.[cid] || {
     price: "",
     required: false,
@@ -54,7 +56,7 @@ export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event })
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Price */}
         <CMSInput
-          label="Price Override"
+          labelKey="cms.priceOverride"
           type="number"
           value={rule.price}
           onChange={(v) => updateRule("price", Number(v))}
@@ -62,14 +64,14 @@ export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event })
 
         {/* Required */}
         <CMSToggle
-          label="Required for this Class"
+          labelKey="cms.requiredForClass"
           checked={rule.required}
           onChange={(v) => updateRule("required", v)}
         />
 
         {/* Max Qty */}
         <CMSInput
-          label="Max Qty Override"
+          labelKey="cms.maxQtyOverride"
           type="number"
           value={rule.max_qty}
           onChange={(v) => updateRule("max_qty", Number(v))}
@@ -77,14 +79,14 @@ export default function ClassAddOnRuleEditor({ cid, cls, item, setItem, event })
 
         {/* Description */}
         <CMSTextarea
-          label="Class‑Specific Description"
+          labelKey="cms.classDescriptionOverride"
           value={rule.description}
           onChange={(v) => updateRule("description", v)}
         />
 
 {/* Photo Override */}
 <CMSImageUpload
-  label="Photo Override"
+  labelKey="cms.photoOverride"
   value={rule.photo_url}
   filePreview={rule.photo_file}
   onChange={async (fileOrNull) => {

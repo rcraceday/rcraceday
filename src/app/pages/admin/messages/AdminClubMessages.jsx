@@ -18,8 +18,10 @@ import {
   fetchMembershipDisplayNameMap,
 } from "@/app/lib/membershipDisplayName";
 import { useClubMessageUnreadCount } from "@/app/hooks/useClubMessageUnreadCount";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function AdminClubMessages() {
+  const { t } = useTranslation();
   const { club } = useClub();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();

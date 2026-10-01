@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/supabaseClient";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { getAppLocale, setAppLocale } from "@/app/i18n/localeStore";
 
 const ProfileContext = createContext({
   user: null,
@@ -75,6 +76,15 @@ export default function ProfileProvider({ children }) {
       loadProfile();
     }
   }, [loadingUser, user?.id, loadProfile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.preferred_language) {
+      setAppLocale(profile.preferred_language);
+      return;
+    }
+    setAppLocale(getAppLocale());
+  }, [profile?.preferred_language, profile]);
 
   return (
     <ProfileContext.Provider

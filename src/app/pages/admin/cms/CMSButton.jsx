@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function CMSButton({
   children,
@@ -6,6 +7,7 @@ export default function CMSButton({
   style = {},
   ...props
 }) {
+  const { t } = useTranslation();
   const [state, setState] = useState("base");
 
   const baseStyle = {

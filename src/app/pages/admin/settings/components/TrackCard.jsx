@@ -18,6 +18,7 @@ import {
 } from "@cms/CMSMiniButtonSet";
 
 import ClassRow from "./ClassRow";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function TrackCard({
   track,
@@ -54,6 +55,7 @@ export default function TrackCard({
 
   LivetimeNotice,
 }) {
+  const { t } = useTranslation();
   return (
     <div style={{ marginBottom: "12px" }}>
       <CMSCard
@@ -138,12 +140,12 @@ actions={
             }}
           >
             <CMSInput
-              label="Class Name"
+              labelKey="cms.className"
               value={newClassName}
               onChange={(value) => setNewClassName(value)}
             />
             <CMSTextarea
-              label="Description (optional)"
+              labelKey="cms.classDescriptionOptional"
               value={newClassDesc}
               onChange={(value) => setNewClassDesc(value)}
             />
@@ -177,7 +179,7 @@ actions={
             }}
           >
             <CMSTextarea
-              label="Bulk Insert Classes (one per line)"
+              labelKey="cms.bulkInsertClasses"
               value={bulkClassesInput}
               onChange={(value) => setBulkClassesInput(value)}
             />

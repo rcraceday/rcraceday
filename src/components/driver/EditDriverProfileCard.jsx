@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/EditDriverProfileCard.jsx
 
 import { useState } from "react";
@@ -33,6 +34,7 @@ export default function EditDriverProfileCard({
   deleteDriver,
   showLivetimeNameNotice,
 }) {
+  const { t } = useTranslation();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { palette } = useTheme();
@@ -64,7 +66,7 @@ export default function EditDriverProfileCard({
           className="px-5 py-3"
           style={{ background: brand, color: palette?.buttonText || "white" }}
         >
-          <h2 className="text-base font-semibold">Driver Profile</h2>
+          <h2 className="text-base font-semibold">{t("driverProfile.title")}</h2>
         </div>
 
         <div className="p-6 space-y-10">
@@ -111,8 +113,7 @@ export default function EditDriverProfileCard({
 
               <div className="space-y-4 text-center">
                 <p className="text-sm text-gray-700 font-medium">
-                  Become a club member to unlock your full driver identity —
-                  permanent number, colours, sponsors, and complete profile tools.
+                  {t("driverProfile.nonMemberUnlock")}
                 </p>
 
                 <button
@@ -120,7 +121,7 @@ export default function EditDriverProfileCard({
                   className="px-6 py-3 rounded text-white text-sm font-semibold"
                   style={{ background: brand }}
                 >
-                  Join Membership
+                  {t("driverProfile.joinMembership")}
                 </button>
               </div>
             </>
@@ -180,7 +181,7 @@ export default function EditDriverProfileCard({
               onClick={() => save()}
               disabled={saving}
             >
-              {saving ? "Saving…" : "Save Changes"}
+              {saving ? t("common.saving") : t("driverProfile.saveChanges")}
             </Button>
 
             <Button
@@ -190,7 +191,7 @@ export default function EditDriverProfileCard({
                 navigate(`/${club.slug}/app/profile/drivers/${driver.id}`)
               }
             >
-              Preview Profile
+              {t("driverProfile.previewProfile")}
             </Button>
           </div>
         </div>
@@ -204,7 +205,7 @@ export default function EditDriverProfileCard({
           onClick={() => setShowDeleteModal(true)}
           disabled={deleting}
         >
-          {deleting ? "Deleting…" : "Delete Driver"}
+          {deleting ? t("driverProfile.deleting") : t("driverUi.deleteDriverTitle")}
         </Button>
       </div>
 
@@ -215,14 +216,14 @@ export default function EditDriverProfileCard({
       className="p-6 space-y-4 bg-white max-w-sm w-full"
     >
       <h3 className="text-lg font-semibold text-black">
-        Delete Driver
+        {t("driverUi.deleteDriverTitle")}
       </h3>
 
       <p className="text-sm text-black">
-        Are you sure you want to delete this driver?
+        {t("driverUi.deleteConfirm")}
         <br />
         <span className="text-red-600 font-semibold">
-          This action cannot be undone.
+          {t("driverProfile.deleteCannotUndo")}
         </span>
       </p>
 
@@ -233,7 +234,7 @@ export default function EditDriverProfileCard({
           onClick={() => setShowDeleteModal(false)}
           disabled={deleting}
         >
-          Cancel
+          {t("cms.cancel")}
         </Button>
 
         <Button
@@ -242,7 +243,7 @@ export default function EditDriverProfileCard({
           onClick={confirmDelete}
           disabled={deleting}
         >
-          {deleting ? "Deleting…" : "Delete"}
+          {deleting ? t("driverProfile.deleting") : t("driverUi.confirmDelete")}
         </Button>
       </div>
     </Card>

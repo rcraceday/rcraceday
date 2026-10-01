@@ -23,6 +23,7 @@ import CMSToggle from "@cms/CMSToggle";
 import { DeleteButton, EditButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "@cms/styles";
 import { cmsLayout } from "@cms/layout";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 function windowBadgeStyle(statusId) {
   if (statusId === "open") return cmsStyles.badgePublished;
@@ -56,6 +57,7 @@ const emptyDraft = {
 };
 
 export default function AdminNominationsEvent() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const params = useParams();
   const { clubSlug } = params;
@@ -574,7 +576,7 @@ export default function AdminNominationsEvent() {
           </div>
         )}
 
-        <CMSCard title="Overall">
+        <CMSCard titleKey="admin.common.overall">
           <div
             style={{
               display: "flex",
@@ -602,7 +604,7 @@ export default function AdminNominationsEvent() {
           </div>
         </CMSCard>
 
-        <CMSCard title="By class">
+        <CMSCard titleKey="admin.common.byClass">
           {classOptions.length === 0 ? (
             <p style={{ color: "#6B7280", fontSize: 14, paddingTop: 8 }}>No classes on this event.</p>
           ) : (
@@ -653,7 +655,7 @@ export default function AdminNominationsEvent() {
         </CMSCard>
 
         {showAdd && (
-          <CMSCard title="Add nomination">
+          <CMSCard titleKey="admin.common.addNomination">
             <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
               <CMSSelect
                 label="Driver"
@@ -699,7 +701,7 @@ export default function AdminNominationsEvent() {
           </CMSCard>
         )}
 
-        <CMSCard title="Nominations">
+        <CMSCard titleKey="admin.events.nominations">
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
             <CMSInput
               label="Search"

@@ -10,6 +10,7 @@ import { useClubMessageUnreadCount } from "@/app/hooks/useClubMessageUnreadCount
 import DesktopDropdown from "@/components/ui/DesktopDropdown";
 import MobileDrawer from "@/components/ui/MobileDrawer";
 import { buildMenuItems } from "@/components/ui/menuItems.js";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function HamburgerMenu({
   clubSlug,
@@ -22,6 +23,7 @@ export default function HamburgerMenu({
 
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { t } = useTranslation();
   const { palette } = useTheme();
   const primaryColor = palette?.primary || "#00438a";
 
@@ -36,11 +38,11 @@ export default function HamburgerMenu({
   });
 
   const items = useMemo(() => {
-    const base = adminItems ?? buildMenuItems({ clubSlug, isAdmin: isAdminUser, user });
+    const base = adminItems ?? buildMenuItems({ clubSlug, isAdmin: isAdminUser, user, t });
     return base.map((item) =>
       item.messagesMenu ? { ...item, unreadCount: messageUnreadCount } : item
     );
-  }, [adminItems, clubSlug, isAdminUser, user, messageUnreadCount]);
+  }, [adminItems, clubSlug, isAdminUser, user, messageUnreadCount, t]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -68,7 +70,7 @@ export default function HamburgerMenu({
               : { color: primaryColor }
           }
         />
-        <span>Menu</span>
+        <span>{t("common.menu")}</span>
       </button>
 
       {!isMobile && (

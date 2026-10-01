@@ -10,12 +10,14 @@ import useTheme from "@/app/providers/useTheme";
 
 import { HashtagIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function ChooseNumber() {
   const navigate = useNavigate();
   const { id: driverId, clubSlug } = useParams();
   const { club } = useOutletContext();
   const { palette } = useTheme();
+  const { t } = useTranslation();
   const brand = palette?.primary || "#0A66C2";
   const slug = clubSlug || club?.slug;
 
@@ -127,7 +129,7 @@ export default function ChooseNumber() {
 
       <PageTitle
         icon={HashtagIcon}
-        title="Choose Race Number"
+        title={t("drivers.chooseNumberTitle")}
         style={{ color: brand }}
         actions={
           <Button

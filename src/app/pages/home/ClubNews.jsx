@@ -5,6 +5,7 @@ import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
 import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import Card from "@/components/ui/Card";
 import NewsItemImage from "@/components/news/NewsItemImage";
 import { richTextToPlainText } from "@/app/lib/richText";
@@ -25,6 +26,7 @@ export default function ClubNews() {
   const { club } = useClub();
   const { palette } = useTheme();
   const brand = palette.primary;
+  const { t } = useTranslation();
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,19 +68,19 @@ export default function ClubNews() {
         backgroundColor: palette.background,
       }}
     >
-      <PageTitle icon={NewspaperIcon} title="Club News" style={{ color: brand }} />
+      <PageTitle icon={NewspaperIcon} title={t("news.title")} style={{ color: brand }} />
 
       <main className="app-page-main">
         {loading && (
           <Card>
-            <div style={{ padding: 16 }}>Loading…</div>
+            <div style={{ padding: 16 }}>{t("loading.loading")}</div>
           </Card>
         )}
 
         {!loading && items.length === 0 && (
           <Card>
             <p className="text-text-muted" style={{ padding: 16 }}>
-              No news published yet.
+              {t("news.noNews")}
             </p>
           </Card>
         )}

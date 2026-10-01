@@ -5,6 +5,7 @@ import { IdentificationIcon } from "@heroicons/react/24/solid";
 import useTheme from "@/app/providers/useTheme";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 import { moveToFamily } from "@/app/api/membership/membershipAPI";
 
@@ -12,6 +13,7 @@ export default function ChangeMembership() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
   const { palette } = useTheme();
+  const { t } = useTranslation();
 
   const brand = palette?.primary || "#00438a";
 
@@ -45,7 +47,7 @@ export default function ChangeMembership() {
 
       <PageTitle
         icon={IdentificationIcon}
-        title="Move to Family Membership"
+        title={t("membership.changeFamilyTitle")}
         style={{ color: brand }}
         actions={
           <Button

@@ -15,10 +15,7 @@ export function displayNameFromMembershipRow(row, profileByUserId = {}) {
   const profile = row.user_id ? profileByUserId[row.user_id] : null;
   const fromProfile = displayNameFromProfile(profile, row.email);
   if (fromProfile) return fromProfile;
-  const legacy = formatPersonName(
-    row.primary_first_name ?? row.first_name,
-    row.primary_last_name ?? row.last_name
-  );
+  const legacy = formatPersonName(row.primary_first_name, row.primary_last_name);
   if (legacy) return legacy;
   if (row.email) return row.email;
   return `Member ${String(row.id).slice(0, 8)}`;

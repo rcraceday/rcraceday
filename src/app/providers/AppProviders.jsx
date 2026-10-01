@@ -3,6 +3,7 @@
 import { Outlet } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 import ClubProvider from "@/app/providers/ClubProvider";
 import ThemeProvider from "@/app/providers/ThemeProvider";
@@ -35,6 +36,7 @@ function AuthenticatedProviders({ children }) {
 export default function AppProviders() {
   const { user, loadingUser } = useAuth();
   const { pathname } = useLocation();
+  const { t } = useTranslation();
 
   const isPublicRoute =
     pathname === "/" || pathname.includes("/public/");
@@ -43,7 +45,7 @@ export default function AppProviders() {
   if (loadingUser) {
     return (
       <div style={{ padding: 40, fontSize: 24 }}>
-        Checking session…
+        {t("loading.checkingSession")}
       </div>
     );
   }

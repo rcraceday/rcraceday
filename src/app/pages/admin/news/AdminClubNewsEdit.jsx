@@ -28,6 +28,7 @@ import {
 } from "@/app/lib/clubNews";
 import { triggerNominationsOpenProcessing } from "@/app/lib/userNotifications";
 import { formatEdgeFunctionInvokeError } from "@/app/lib/edgeFunctionErrors";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const emptyNews = {
   title: "",
@@ -42,6 +43,7 @@ const emptyNews = {
 };
 
 export default function AdminClubNewsEdit() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { clubSlug, id } = useParams();
@@ -378,7 +380,7 @@ export default function AdminClubNewsEdit() {
               </div>
             </CMSCard>
 
-            <CMSCard title="Display on site">
+            <CMSCard titleKey="admin.news.displayOnSite">
               <p style={{ fontSize: 12, color: "#6b7280", marginTop: 0 }}>
                 Optional. Leave blank to show whenever the item is published, with no end
                 date.
@@ -399,7 +401,7 @@ export default function AdminClubNewsEdit() {
               />
             </CMSCard>
 
-            <CMSCard title="Notification">
+            <CMSCard titleKey="admin.news.notification">
               <CMSToggle
                 label="Send notification to members"
                 checked={!!news.notify_members}

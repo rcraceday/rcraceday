@@ -8,6 +8,7 @@ import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
 import { EditButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "@cms/styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -47,6 +48,7 @@ function statusStyle(status, isLife) {
 }
 
 export default function AdminMemberships() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
   const { club } = useClub();
@@ -169,7 +171,7 @@ export default function AdminMemberships() {
           </CMSButton>
         </div>
 
-        <CMSCard title="Households">
+        <CMSCard titleKey="admin.membership.householdsCard">
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
             <CMSInput
               label="Search"

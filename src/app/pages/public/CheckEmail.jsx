@@ -3,10 +3,12 @@ import { useOutletContext, useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/supabaseClient";
 import Button from "@/components/ui/Button";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function CheckEmail() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
+  const { t } = useTranslation();
 
   // Read email from URL
   const params = new URLSearchParams(window.location.search);
@@ -15,7 +17,7 @@ export default function CheckEmail() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  if (!club) return <div className="p-6 text-center">Loading…</div>;
+  if (!club) return <div className="p-6 text-center">{t("loading.loading")}</div>;
 
   // Clean, safe logo resolution
   const logoSrc = club?.logo_url || club?.logo || null;
@@ -34,7 +36,7 @@ export default function CheckEmail() {
       }
     });
 
-    setMessage(error ? error.message : "A new confirmation email has been sent.");
+    setMessage(error ? error.message : t("signup.resendSent"));
     setLoading(false);
   }
 
@@ -49,16 +51,16 @@ export default function CheckEmail() {
         />
       )}
 
-      <h1 className="text-2xl font-bold mb-4 text-center">Check your email</h1>
+      <h1 className="text-2xl font-bold mb-4 text-center">{t("auth.checkEmailTitle")}</h1>
 
       <p className="text-center text-gray-700 mb-6">
-        We sent a confirmation link to:
+        {t("signup.checkEmailSentTo")}
         <br />
         <span className="font-semibold">{email}</span>
       </p>
 
       <Button onClick={resendEmail} disabled={loading} variant="primary">
-        {loading ? "Resending…" : "Resend Email"}
+        {loading ? t("signup.resending") : t("signup.resendEmail")}
       </Button>
 
       {message && (
@@ -66,12 +68,12 @@ export default function CheckEmail() {
       )}
 
       <p className="text-center mt-8 text-gray-600">
-        Already confirmed?{" "}
+        {t("signup.alreadyConfirmed")}{" "}
         <Link
           to={`/${clubSlug}/public/login`}
           className="text-blue-600 underline"
         >
-          Log in
+          {t("auth.logIn")}
         </Link>
       </p>
     </div>

@@ -8,8 +8,11 @@ import { PlusIcon } from "@heroicons/react/24/solid";
 import { cmsStyles } from "../cms/styles";
 import { normalizeDayRecord } from "@app/pages/admin/events/eventDefaults";
 import { richTextToPlainText } from "@/app/lib/richText";
+import { useTranslation } from "@/app/i18n/I18nContext";
+import { loadEventResultSummariesForEvents } from "@/app/lib/results/summarizeEventResultStats";
 
 export default function AdminEvents() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
 
@@ -20,6 +23,7 @@ export default function AdminEvents() {
   const [clubTracks, setClubTracks] = useState([]);
 
   const [nominations, setNominations] = useState([]);
+  const [resultStatsByEvent, setResultStatsByEvent] = useState({});
 
   const [expanded, setExpanded] = useState({});
 
@@ -35,6 +39,28 @@ export default function AdminEvents() {
     loadRelated();
     loadNominations();
   }, []);
+
+  useEffect(() => {
+    if (!events.length) {
+      setResultStatsByEvent({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const summaries = await loadEventResultSummariesForEvents(
+          supabase,
+          events.map((event) => event.id)
+        );
+        if (!cancelled) setResultStatsByEvent(summaries);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [events]);
 
 async function loadEvents() {
   const { data, error } = await supabase
@@ -98,7 +124,7 @@ async function loadEvents() {
 
     const newEvent = {
       ...eventFields,
-      name: `${richTextToPlainText(ev.name) || "Event"} (Copy)`,
+      name: `${richTextToPlainText(ev.name) || t("admin.nominations.eventFallback")}${t("admin.nominations.eventCopySuffix")}`,
       created_at: new Date().toISOString(),
       days: Array.isArray(ev.days)
         ? ev.days.map((day) => normalizeDayRecord(day))
@@ -255,10 +281,8 @@ const formatDateTime = (iso) => {
     <div style={cmsStyles.pageContainer}>
       <div style={cmsStyles.pageContent}>
         <div style={cmsStyles.sectionHeader}>
-          <h1 style={cmsStyles.sectionHeaderTitle}>Manage Events</h1>
-          <p style={cmsStyles.sectionHeaderSubtitle}>
-            Create, edit, and manage all club events.
-          </p>
+          <h1 style={cmsStyles.sectionHeaderTitle}>{t("admin.events.title")}</h1>
+          <p style={cmsStyles.sectionHeaderSubtitle}>{t("admin.events.subtitle")}</p>
         </div>
 
         {/* Filters */}
@@ -272,7 +296,7 @@ const formatDateTime = (iso) => {
           }}
         >
           <input
-            placeholder="Search events…"
+            placeholder={t("admin.events.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             style={{
@@ -295,9 +319,9 @@ const formatDateTime = (iso) => {
               fontSize: "12px",
             }}
           >
-            <option value="all">All Events</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="past">Past</option>
+            <option value="all">{t("admin.events.filterAllEvents")}</option>
+            <option value="upcoming">{t("admin.events.filterUpcoming")}</option>
+            <option value="past">{t("admin.events.filterPast")}</option>
           </select>
 
           <select
@@ -310,7 +334,7 @@ const formatDateTime = (iso) => {
               fontSize: "12px",
             }}
           >
-            <option value="all">All Tracks</option>
+            <option value="all">{t("admin.events.filterAllTracks")}</option>
             {clubTracks.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -328,10 +352,10 @@ const formatDateTime = (iso) => {
               fontSize: "12px",
             }}
           >
-            <option value="all">All Types</option>
-            <option value="racing">Racing</option>
-            <option value="practice">Practice</option>
-            <option value="club_meet">Club Meet</option>
+            <option value="all">{t("admin.events.filterAllTypes")}</option>
+            <option value="racing">{t("admin.events.typeRacing")}</option>
+            <option value="practice">{t("admin.events.typePractice")}</option>
+            <option value="club_meet">{t("admin.events.typeClubMeet")}</option>
           </select>
 
           <select
@@ -344,14 +368,14 @@ const formatDateTime = (iso) => {
               fontSize: "12px",
             }}
           >
-            <option value="asc">Date ↑</option>
-            <option value="desc">Date ↓</option>
+            <option value="asc">{t("admin.events.sortDateAsc")}</option>
+            <option value="desc">{t("admin.events.sortDateDesc")}</option>
           </select>
         </div>
 
         {/* Events */}
         <CMSCard
-          title="Events"
+          titleKey="admin.events.eventsCard"
           actions={
             <CMSButton
               onClick={handleCreate}
@@ -362,17 +386,18 @@ const formatDateTime = (iso) => {
                 whiteSpace: "nowrap",
               }}
             >
-              Create Event
+              {t("admin.events.createEvent")}
             </CMSButton>
           }
         >
           {loading ? (
-            <div style={{ padding: "16px" }}>Loading events…</div>
+            <div style={{ padding: "16px" }}>{t("admin.common.loadingEvents")}</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {filteredEvents.map((ev) => {
                 const isExpanded = expanded[ev.id];
                 const { nominated, classesEntered } = getNominationSummary(ev.id);
+                const resultStats = resultStatsByEvent[ev.id];
 
                 return (
                   <div
@@ -434,25 +459,44 @@ const formatDateTime = (iso) => {
                             style={{
                               marginTop: 4,
                               display: "flex",
+                              flexWrap: "wrap",
                               gap: 16,
                               fontSize: 12,
                               color: "#6B7280",
                             }}
                           >
-                            <span>Nominated: {nominated}</span>
-                            <span>Classes Entered: {classesEntered}</span>
+                            <span>{t("admin.events.nominated")}: {nominated}</span>
+                            {resultStats ? (
+                              <>
+                                <span>
+                                  {t("admin.events.resultEntries")}: {resultStats.entries}
+                                </span>
+                                <span>
+                                  {t("admin.events.resultDrivers")}: {resultStats.drivers}
+                                </span>
+                              </>
+                            ) : (
+                              <span>
+                                {t("admin.events.classesEntered")}: {classesEntered}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
 
                       <div className="admin-event-card__actions" style={{ display: "flex", gap: 8 }}>
-                        <CMSButton onClick={() => handleEdit(ev)}>Edit</CMSButton>
-
+                        <CMSButton onClick={() => handleEdit(ev)}>{t("admin.common.edit")}</CMSButton>
+                        <CMSButton
+                          onClick={() => navigate(`/${clubSlug}/app/admin/events/${ev.id}/results`)}
+                          style={{ background: "#E5E7EB", color: "#111827" }}
+                        >
+                          {t("admin.events.results")}
+                        </CMSButton>
                         <CMSButton
                           onClick={() => handleDuplicate(ev)}
                           style={{ background: "#E5E7EB", color: "#111827" }}
                         >
-                          Duplicate
+                          {t("admin.events.duplicate")}
                         </CMSButton>
                       </div>
                     </div>
@@ -471,22 +515,22 @@ const formatDateTime = (iso) => {
                         {/* Event Info */}
                         <div>
                           <div style={{ fontSize: 13, color: "#6B7280" }}>
-                            Event Info
+                            {t("admin.common.eventInfo")}
                           </div>
 
                           <div style={{ fontSize: 14 }}>
-                            Type: {formatType(ev.event_type)}
+                            {t("admin.common.type")}: {formatType(ev.event_type)}
                           </div>
 
                           <div style={{ fontSize: 14 }}>
-                            Description: {ev.description || "—"}
+                            {t("admin.common.description")}: {ev.description || "—"}
                           </div>
                         </div>
 
                         {/* Track */}
                         <div>
                           <div style={{ fontSize: 13, color: "#6B7280" }}>
-                            Track
+                            {t("admin.common.track")}
                           </div>
                           <div style={{ fontSize: 14 }}>
                             {trackMap[ev.track] || ev.track || "—"}
@@ -496,7 +540,7 @@ const formatDateTime = (iso) => {
 {/* Event Timing */}
 <div style={{ marginTop: 12 }}>
   <div style={{ fontSize: 13, color: "#6B7280" }}>
-    Event Timing
+    {t("admin.events.eventTiming")}
   </div>
 
   {Array.isArray(ev.days) && ev.days.length > 0 ? (
@@ -509,46 +553,46 @@ const formatDateTime = (iso) => {
         )}
 
         <div style={{ fontSize: 14 }}>
-          Gates Open: {formatTimeOnly(d.gates_open_at)}
+          {t("admin.common.gatesOpen")}: {formatTimeOnly(d.gates_open_at)}
         </div>
 
         <div style={{ fontSize: 14 }}>
-          Practice: {formatTimeOnly(d.practice_at)}
+          {t("admin.common.practice")}: {formatTimeOnly(d.practice_at)}
         </div>
 
         <div style={{ fontSize: 14 }}>
-          Drivers Brief: {formatTimeOnly(d.drivers_brief_at)}
+          {t("admin.common.driversBrief")}: {formatTimeOnly(d.drivers_brief_at)}
         </div>
 
         <div style={{ fontSize: 14 }}>
-          Race Start: {formatTimeOnly(d.race_start_at)}
+          {t("admin.common.raceStart")}: {formatTimeOnly(d.race_start_at)}
         </div>
       </div>
     ))
   ) : (
-    <div style={{ fontSize: 14 }}>No timing set</div>
+    <div style={{ fontSize: 14 }}>{t("admin.common.noTimingSet")}</div>
   )}
 </div>
 
 {/* Nominations Timing */}
 <div>
   <div style={{ fontSize: 13, color: "#6B7280" }}>
-    Nominations Timing
+    {t("admin.common.nominationsTiming")}
   </div>
 
   <div style={{ fontSize: 14 }}>
-    Opens: {formatDateTime(ev.nominations_open)}
+    {t("admin.common.opens")}: {formatDateTime(ev.nominations_open)}
   </div>
 
   <div style={{ fontSize: 14 }}>
-    Closes: {formatDateTime(ev.nominations_close)}
+    {t("admin.common.closes")}: {formatDateTime(ev.nominations_close)}
   </div>
 </div>
 
 {/* Classes */}
 <div>
   <div style={{ fontSize: 13, color: "#6B7280" }}>
-    Classes
+    {t("admin.common.classes")}
   </div>
 
   {Array.isArray(ev.classes_by_day) && ev.classes_by_day.length > 0 ? (
@@ -578,38 +622,38 @@ const formatDateTime = (iso) => {
 
 {/* Pricing */}
 <div style={{ marginTop: 12 }}>
-  <div style={{ fontSize: 13, color: "#6B7280" }}>Pricing</div>
+  <div style={{ fontSize: 13, color: "#6B7280" }}>{t("admin.events.pricing")}</div>
 
   {!ev.pricing ? (
-    <div style={{ fontSize: 14 }}>No pricing set</div>
+    <div style={{ fontSize: 14 }}>{t("admin.common.noPricingSet")}</div>
   ) : (
     <div style={{ fontSize: 14, marginTop: 6 }}>
 
       {/* ⭐ MODE LABEL FIX */}
       {(() => {
         const modeLabel = {
-          per_entry: "Per Entry",
-          tiered: "Tiered",
-          per_class: "Per Class",
+          per_entry: t("admin.common.perEntry"),
+          tiered: t("admin.common.tieredLabel"),
+          per_class: t("admin.common.perClass"),
         }[ev.pricing.mode] || ev.pricing.mode;
 
-        return <div>Mode: {modeLabel}</div>;
+        return <div>{t("admin.common.mode")}: {modeLabel}</div>;
       })()}
 
       {/* Per Entry */}
       {ev.pricing.mode === "per_entry" && (
         <div style={{ marginTop: 6 }}>
           {ev.pricing.global?.free ? (
-            <div>Free Entry</div>
+            <div>{t("admin.common.freeEntry")}</div>
           ) : (
             <>
-              <div>Member: ${ev.pricing.global?.member ?? 0}</div>
-              <div>Non‑Member: ${ev.pricing.global?.non_member ?? 0}</div>
-              <div>Junior: ${ev.pricing.global?.junior ?? 0}</div>
+              <div>{t("admin.common.member")}: ${ev.pricing.global?.member ?? 0}</div>
+              <div>{t("admin.common.nonMember")}: ${ev.pricing.global?.non_member ?? 0}</div>
+              <div>{t("admin.common.junior")}: ${ev.pricing.global?.junior ?? 0}</div>
             </>
           )}
           <div>
-            Charge Preferences: {ev.pricing.charge_preferences ? "Yes" : "No"}
+            {t("admin.common.chargePreferences")}: {ev.pricing.charge_preferences ? t("admin.common.yes") : t("admin.common.no")}
           </div>
         </div>
       )}
@@ -617,20 +661,20 @@ const formatDateTime = (iso) => {
       {/* Tiered */}
       {ev.pricing.mode === "tiered" && (
         <div style={{ marginTop: 6 }}>
-          <strong>Member</strong>
-          <div>First: ${ev.pricing.tiered?.member?.first_class ?? 0}</div>
-          <div>Additional: ${ev.pricing.tiered?.member?.additional_class ?? 0}</div>
+          <strong>{t("admin.common.member")}</strong>
+          <div>{t("admin.common.first")}: ${ev.pricing.tiered?.member?.first_class ?? 0}</div>
+          <div>{t("admin.common.additional")}: ${ev.pricing.tiered?.member?.additional_class ?? 0}</div>
 
-          <strong>Non‑Member</strong>
-          <div>First: ${ev.pricing.tiered?.non_member?.first_class ?? 0}</div>
-          <div>Additional: ${ev.pricing.tiered?.non_member?.additional_class ?? 0}</div>
+          <strong>{t("admin.common.nonMember")}</strong>
+          <div>{t("admin.common.first")}: ${ev.pricing.tiered?.non_member?.first_class ?? 0}</div>
+          <div>{t("admin.common.additional")}: ${ev.pricing.tiered?.non_member?.additional_class ?? 0}</div>
 
-          <strong>Junior</strong>
-          <div>First: ${ev.pricing.tiered?.junior?.first_class ?? 0}</div>
-          <div>Additional: ${ev.pricing.tiered?.junior?.additional_class ?? 0}</div>
+          <strong>{t("admin.common.junior")}</strong>
+          <div>{t("admin.common.first")}: ${ev.pricing.tiered?.junior?.first_class ?? 0}</div>
+          <div>{t("admin.common.additional")}: ${ev.pricing.tiered?.junior?.additional_class ?? 0}</div>
 
           <div>
-            Charge Preferences: {ev.pricing.charge_preferences ? "Yes" : "No"}
+            {t("admin.common.chargePreferences")}: {ev.pricing.charge_preferences ? t("admin.common.yes") : t("admin.common.no")}
           </div>
         </div>
       )}
@@ -645,19 +689,19 @@ const formatDateTime = (iso) => {
               <strong>{classMap[classId] || `Class ${classId}`}</strong>
 
               {cp.free ? (
-                <div>Free</div>
+                <div>{t("admin.common.free")}</div>
               ) : (
                 <>
-                  <div>Member: ${cp.member ?? 0}</div>
-                  <div>Non‑Member: ${cp.non_member ?? 0}</div>
-                  <div>Junior: ${cp.junior ?? 0}</div>
+                  <div>{t("admin.common.member")}: ${cp.member ?? 0}</div>
+                  <div>{t("admin.common.nonMember")}: ${cp.non_member ?? 0}</div>
+                  <div>{t("admin.common.junior")}: ${cp.junior ?? 0}</div>
                 </>
               )}
             </div>
           ))}
 
           <div>
-            Charge Preferences: {ev.pricing.charge_preferences ? "Yes" : "No"}
+            {t("admin.common.chargePreferences")}: {ev.pricing.charge_preferences ? t("admin.common.yes") : t("admin.common.no")}
           </div>
         </div>
       )}
@@ -665,7 +709,7 @@ const formatDateTime = (iso) => {
       {/* Late Fee */}
       {ev.pricing.late_fee && (
         <div style={{ marginTop: 6 }}>
-          Late Fee: ${ev.pricing.late_fee}
+          {t("admin.events.lateFeeLabel")}: ${ev.pricing.late_fee}
         </div>
       )}
     </div>
@@ -675,7 +719,7 @@ const formatDateTime = (iso) => {
                         {/* Merchandise + Add-ons */}
                         <div>
                           <div style={{ fontSize: 13, color: "#6B7280" }}>
-                            Merchandise
+                            {t("admin.events.merchandise")}
                           </div>
 
                           {Array.isArray(ev.merchandise) &&
@@ -696,7 +740,7 @@ const formatDateTime = (iso) => {
                               color: "#6B7280",
                             }}
                           >
-                            Add-ons
+                            {t("admin.common.addOns")}
                           </div>
 
                           {Array.isArray(ev.class_add_ons) &&
@@ -714,20 +758,20 @@ const formatDateTime = (iso) => {
                         {/* Other */}
                         <div>
                           <div style={{ fontSize: 13, color: "#6B7280" }}>
-                            Other
+                            {t("admin.common.other")}
                           </div>
 
                           <div style={{ fontSize: 14 }}>
-                            Class Limit: {ev.class_limit || "—"}
+                            {t("admin.common.classLimit")}: {ev.class_limit || "—"}
                           </div>
 
                           <div style={{ fontSize: 14 }}>
-                            Preference Enabled:{" "}
-                            {ev.preference_enabled ? "Yes" : "No"}
+                            {t("admin.common.preferenceEnabled")}:{" "}
+                            {ev.preference_enabled ? t("admin.common.yes") : t("admin.common.no")}
                           </div>
 
                           <div style={{ fontSize: 14 }}>
-                            Published: {ev.is_published ? "Yes" : "No"}
+                            {t("admin.common.published")}: {ev.is_published ? t("admin.common.yes") : t("admin.common.no")}
                           </div>
                         </div>
                       </div>

@@ -9,15 +9,18 @@ import useTheme from "@/app/providers/useTheme";
 import EventCard from "./EventCard";
 
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import FilterDropdown from "@/components/ui/FilterDropdown";
 
 import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 import {
   extractYearsFromEvents,
 } from "./events-sections/helpers";
+import { loadPublishedResultEventIds } from "@/app/lib/results/loadEventResults";
 
 export default function Events() {
   const { palette } = useTheme();
+  const { t } = useTranslation();
   const brand = palette.primary;
   const { clubSlug } = useParams();
   const { club } = useClub();
@@ -34,6 +37,7 @@ export default function Events() {
   const [loading, setLoading] = useState(true);
   const [nominatedEventIds, setNominatedEventIds] = useState(() => new Set());
   const [eventsWithNominations, setEventsWithNominations] = useState(() => new Set());
+  const [eventsWithResults, setEventsWithResults] = useState(() => new Set());
 
   // -----------------------------
   // Multi‑day aware date helpers
@@ -109,8 +113,10 @@ export default function Events() {
         setEventsWithNominations(
           new Set(nominationRows.map((row) => row.event_id).filter(Boolean))
         );
+        setEventsWithResults(await loadPublishedResultEventIds(eventIds));
       } else {
         setEventsWithNominations(new Set());
+        setEventsWithResults(new Set());
       }
 
       setEvents(data);
@@ -160,7 +166,7 @@ export default function Events() {
     <div style={{ minHeight: "100vh", width: "100%" }}>
       <PageTitle
         icon={CalendarDaysIcon}
-        title="Events"
+        title={t("events.title")}
         style={{ color: brand }}
       />
 
@@ -215,7 +221,7 @@ export default function Events() {
               event={event}
               clubSlug={clubSlug}
               trackNames={trackNames}
-              showResults={getEventEndDate(event) < now}
+              showResults={eventsWithResults.has(event.id)}
               hasNomination={nominatedEventIds.has(event.id)}
               hasReceivedNominations={eventsWithNominations.has(event.id)}
             />

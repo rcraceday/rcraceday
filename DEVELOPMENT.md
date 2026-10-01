@@ -26,11 +26,13 @@ VITE_SUPABASE_ANON_KEY=your-key
 VITE_VAPID_PUBLIC_KEY=your-vapid-public-key
 These values come from your Supabase project settings. Generate VAPID keys with `npx web-push generate-vapid-keys` (public key in `.env` **and** the production host env as `VITE_VAPID_PUBLIC_KEY`; private key only in Supabase Edge secrets as `VAPID_PRIVATE_KEY`, plus `VAPID_PUBLIC_KEY` and `VAPID_SUBJECT` e.g. `mailto:info@rcraceday.com`). Optional Edge secret `SITE_URL=https://rcraceday.com` is used as the tap target on push banners.
 
-**Edge Functions** (`process-nominations-open`, `send-web-push`): each folder includes its own `web_push.ts` (Supabase bundles one function at a time and does not ship `../_shared`). Deploy with CLI from the repo root:
+**Edge Functions** (`process-nominations-open`, `send-web-push`, `import-liverc-results`): each folder includes its own `web_push.ts` where needed (Supabase bundles one function at a time and does not ship `../_shared`). Deploy with CLI from the repo root:
 
-`supabase functions deploy process-nominations-open --no-verify-jwt` and `supabase functions deploy send-web-push`
+- `supabase functions deploy process-nominations-open --no-verify-jwt`
+- `supabase functions deploy send-web-push`
+- `supabase functions deploy import-liverc-results` (requires a logged-in user; JWT is sent by the app). After changing the function, redeploy — v1 returned full HTML and can trigger **Failed to fetch** in the browser; current versions return parsed JSON only.
 
-If the admin UI shows **Failed to send a request to the Edge Function**, redeploy with `--no-verify-jwt` (auth is enforced inside the function), confirm `VITE_SUPABASE_URL` matches the project where functions were deployed, and check the browser Network tab for `/functions/v1/process-nominations-open`.
+If the admin UI shows **Failed to send a request to the Edge Function**, confirm `VITE_SUPABASE_URL` matches the project where functions were deployed, check the browser Network tab for `/functions/v1/<function-name>`, and redeploy. For `process-nominations-open`, use `--no-verify-jwt` (auth is enforced inside the function). For **LiveRC import**, deploy `import-liverc-results` — the UI cannot fetch LiveRC directly from the browser.
 
 ▶️ Running the App Locally
 Start the Vite dev server:

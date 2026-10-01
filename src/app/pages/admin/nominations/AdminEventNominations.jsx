@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
 import useTheme from "@app/providers/useTheme";
 import { buildLiveTimeCsv, buildLiveTimeRows } from "@app/pages/nominations/LiveTimeExport";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 function affiliatedRcraClubName(nomination) {
   const name = nomination?.merchandise?.affiliated_club_name;
@@ -12,6 +13,7 @@ function affiliatedRcraClubName(nomination) {
 }
 
 export default function AdminEventNominations() {
+  const { t } = useTranslation();
   const { palette } = useTheme();
   const [events, setEvents] = useState([]);
   const [eventId, setEventId] = useState("");
@@ -25,6 +27,14 @@ export default function AdminEventNominations() {
   const [tab, setTab] = useState("drivers");
   const [sort, setSort] = useState("name");
   const [loading, setLoading] = useState(false);
+
+  const tabLabels = {
+    drivers: t("admin.nominations.tabDrivers"),
+    classes: t("admin.nominations.tabByClass"),
+    requirements: t("admin.nominations.tabRequirements"),
+    full: t("admin.nominations.tabFullSheet"),
+    export: t("admin.nominations.tabExport"),
+  };
 
   useEffect(() => {
     supabase.from("events").select("id, name, event_date, club_id").order("event_date", { ascending: false }).then(({ data }) => {
@@ -66,7 +76,7 @@ export default function AdminEventNominations() {
   const driverRows = nominations.map((nomination) => ({ nomination, driver: driverMap.get(nomination.driver_id), entries: entriesFor(nomination.id) })).filter((row) => row.driver);
   const sortedDrivers = driverRows.slice().sort((a, b) => sort === "class" ? (classMap.get(a.entries.find((entry) => !entry.is_preference)?.class_id) || "").localeCompare(classMap.get(b.entries.find((entry) => !entry.is_preference)?.class_id) || "") : `${a.driver.last_name}${a.driver.first_name}`.localeCompare(`${b.driver.last_name}${b.driver.first_name}`));
   const classRows = entries.filter((entry) => !entry.is_preference).reduce((groups, entry) => {
-    const name = classMap.get(entry.class_id) || "Unknown class";
+    const name = classMap.get(entry.class_id) || t("admin.nominations.unknownClass");
     const nomination = nominations.find((item) => item.id === entry.nomination_id);
     const driver = nomination && driverMap.get(nomination.driver_id);
     if (driver) groups[name] = [...(groups[name] || []), driver];
@@ -157,50 +167,175 @@ export default function AdminEventNominations() {
     setNominations((current) => current.map((item) => item.id === nomination.id ? { ...item, paid } : item));
   }
 
-  if (loading && !event) return <div className="min-h-screen flex items-center justify-center text-text-muted">Loading nominations...</div>;
+  if (loading && !event) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-text-muted">
+        {t("admin.nominations.loading")}
+      </div>
+    );
+  }
 
-  return <div className="min-h-screen bg-background text-text-base"><PageTitle title="Admin nominations" style={{ color: palette?.primary }} /><main className="app-page-main space-y-5 !py-4"><select className="w-full rounded-md border border-surfaceBorder bg-white px-3 py-2" value={eventId} onChange={(e) => setEventId(e.target.value)}>{events.map((item) => <option key={item.id} value={item.id}>{item.name} - {item.event_date}</option>)}</select><div className="flex flex-wrap gap-2">{["drivers", "classes", "requirements", "full", "export"].map((item) => <Button key={item} variant={tab === item ? "primary" : "secondary"} onClick={() => setTab(item)}>{item === "drivers" ? "Drivers" : item === "classes" ? "By class" : item === "requirements" ? "Requirements" : item === "full" ? "Full sheet" : "Export"}</Button>)}</div>
-    {tab === "drivers" && <section className="space-y-3"><div className="flex justify-end"><select className="rounded-md border border-surfaceBorder bg-white px-3 py-2 text-sm" value={sort} onChange={(e) => setSort(e.target.value)}><option value="name">Sort by driver</option><option value="class">Sort by class</option></select></div>{sortedDrivers.map(({ nomination, driver, entries: driverEntries }) => <Card key={nomination.id} className="space-y-2"><div className="flex flex-wrap justify-between gap-2"><strong>{driver.first_name} {driver.last_name}</strong><span>{driver.permanent_number ? `#${driver.permanent_number}` : ""}</span></div><p className="text-sm text-text-muted">{Array.isArray(driver.sponsors) ? driver.sponsors.join(", ") : driver.sponsors || "No sponsor listed"}</p>{affiliatedRcraClubName(nomination) && <p className="text-sm"><span className="font-medium">RCRA club:</span> {affiliatedRcraClubName(nomination)}</p>}<p className="text-sm">{driverEntries.map((entry) => `${classMap.get(entry.class_id) || "Unknown class"}${entry.is_preference ? " (preference)" : ""}`).join(" · ")}</p></Card>)}</section>}
-    {tab === "classes" && <section className="space-y-3">{Object.entries(classRows).sort(([a], [b]) => a.localeCompare(b)).map(([name, classDrivers]) => <Card key={name}><h2 className="font-semibold">{name}</h2><p className="mt-2 text-sm text-text-muted">{classDrivers.sort((a, b) => `${a.last_name}${a.first_name}`.localeCompare(`${b.last_name}${b.first_name}`)).map((driver) => `${driver.first_name} ${driver.last_name}`).join(" · ")}</p></Card>)}</section>}
-    {tab === "requirements" && (
-      <section className="space-y-3">
-        {flatRequirements.length === 0 && (
-          <Card>
-            <p className="text-sm text-text-muted">No club requirements configured for this event.</p>
-          </Card>
+  return (
+    <div className="min-h-screen bg-background text-text-base">
+      <PageTitle title={t("admin.nominations.adminTitle")} style={{ color: palette?.primary }} />
+      <main className="app-page-main space-y-5 !py-4">
+        <select
+          className="w-full rounded-md border border-surfaceBorder bg-white px-3 py-2"
+          value={eventId}
+          onChange={(e) => setEventId(e.target.value)}
+        >
+          {events.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name} - {item.event_date}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex flex-wrap gap-2">
+          {["drivers", "classes", "requirements", "full", "export"].map((item) => (
+            <Button
+              key={item}
+              variant={tab === item ? "primary" : "secondary"}
+              onClick={() => setTab(item)}
+            >
+              {tabLabels[item]}
+            </Button>
+          ))}
+        </div>
+
+        {tab === "drivers" && (
+          <section className="space-y-3">
+            <div className="flex justify-end">
+              <select
+                className="rounded-md border border-surfaceBorder bg-white px-3 py-2 text-sm"
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+              >
+                <option value="name">{t("admin.nominations.sortByDriver")}</option>
+                <option value="class">{t("admin.nominations.sortByClass")}</option>
+              </select>
+            </div>
+            {sortedDrivers.map(({ nomination, driver, entries: driverEntries }) => (
+              <Card key={nomination.id} className="space-y-2">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <strong>{driver.first_name} {driver.last_name}</strong>
+                  <span>{driver.permanent_number ? `#${driver.permanent_number}` : ""}</span>
+                </div>
+                <p className="text-sm text-text-muted">
+                  {Array.isArray(driver.sponsors) ? driver.sponsors.join(", ") : driver.sponsors || t("admin.nominations.noSponsor")}
+                </p>
+                {affiliatedRcraClubName(nomination) && (
+                  <p className="text-sm">
+                    <span className="font-medium">{t("admin.nominations.rcraClub")}</span> {affiliatedRcraClubName(nomination)}
+                  </p>
+                )}
+                <p className="text-sm">
+                  {driverEntries.map((entry) => `${classMap.get(entry.class_id) || t("admin.nominations.unknownClass")}${entry.is_preference ? t("admin.nominations.preferenceSuffix") : ""}`).join(" · ")}
+                </p>
+              </Card>
+            ))}
+          </section>
         )}
 
-        {Object.values(
-          flatRequirements.reduce((groups, requirement) => {
-            if (!groups[requirement.requirementId]) {
-              groups[requirement.requirementId] = {
-                descriptor: requirement.descriptor,
-                items: [],
-              };
-            }
-            groups[requirement.requirementId].items.push(requirement);
-            return groups;
-          }, {})
-        ).map((group) => (
-          <Card key={group.items[0].requirementId} className="space-y-2">
-            <div className="font-medium">{group.descriptor}</div>
-            <div className="flex flex-col gap-2">
-              {group.items.map((requirement) => (
-                <label key={requirement.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={!!requirementTally[requirement.requirementId]}
-                    readOnly
-                  />
-                  <span>{requirement.item}</span>
-                </label>
-              ))}
+        {tab === "classes" && (
+          <section className="space-y-3">
+            {Object.entries(classRows).sort(([a], [b]) => a.localeCompare(b)).map(([name, classDrivers]) => (
+              <Card key={name}>
+                <h2 className="font-semibold">{name}</h2>
+                <p className="mt-2 text-sm text-text-muted">
+                  {classDrivers.sort((a, b) => `${a.last_name}${a.first_name}`.localeCompare(`${b.last_name}${b.first_name}`)).map((driver) => `${driver.first_name} ${driver.last_name}`).join(" · ")}
+                </p>
+              </Card>
+            ))}
+          </section>
+        )}
+
+        {tab === "requirements" && (
+          <section className="space-y-3">
+            {flatRequirements.length === 0 && (
+              <Card>
+                <p className="text-sm text-text-muted">{t("admin.nominations.noRequirements")}</p>
+              </Card>
+            )}
+
+            {Object.values(
+              flatRequirements.reduce((groups, requirement) => {
+                if (!groups[requirement.requirementId]) {
+                  groups[requirement.requirementId] = {
+                    descriptor: requirement.descriptor,
+                    items: [],
+                  };
+                }
+                groups[requirement.requirementId].items.push(requirement);
+                return groups;
+              }, {})
+            ).map((group) => (
+              <Card key={group.items[0].requirementId} className="space-y-2">
+                <div className="font-medium">{group.descriptor}</div>
+                <div className="flex flex-col gap-2">
+                  {group.items.map((requirement) => (
+                    <label key={requirement.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={!!requirementTally[requirement.requirementId]}
+                        readOnly
+                      />
+                      <span>{requirement.item}</span>
+                    </label>
+                  ))}
+                </div>
+              </Card>
+            ))}
+          </section>
+        )}
+
+        {tab === "full" && (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-surfaceBorder text-left">
+                  <th className="p-2">{t("admin.nominations.colDriver")}</th>
+                  <th className="p-2">{t("admin.nominations.colNumber")}</th>
+                  <th className="p-2">{t("admin.nominations.colRcraClub")}</th>
+                  <th className="p-2">{t("admin.nominations.colPaid")}</th>
+                  <th className="p-2">{t("admin.nominations.colClasses")}</th>
+                  <th className="p-2">{t("admin.nominations.colFee")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {driverRows.map(({ nomination, driver, entries: driverEntries }) => (
+                  <tr key={nomination.id} className="border-b border-surfaceBorder">
+                    <td className="p-2">{driver.first_name} {driver.last_name}</td>
+                    <td className="p-2">{driver.permanent_number || ""}</td>
+                    <td className="p-2">{affiliatedRcraClubName(nomination) || "—"}</td>
+                    <td className="p-2">
+                      <button
+                        type="button"
+                        className="rounded-md border border-surfaceBorder px-2 py-1 text-xs"
+                        onClick={() => togglePaid(nomination)}
+                      >
+                        {nomination.paid ? t("admin.nominations.paidTrue") : t("admin.nominations.paidFalse")}
+                      </button>
+                    </td>
+                    <td className="p-2">{driverEntries.map((entry) => classMap.get(entry.class_id)).join(", ")}</td>
+                    <td className="p-2">{nomination.total_fee ?? ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {tab === "export" && (
+          <Card className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-text-muted">{t("admin.nominations.exportHint")}</p>
+              <Button onClick={downloadCsv}>{t("admin.nominations.downloadLivetime")}</Button>
             </div>
+            <pre className="max-h-[480px] overflow-auto rounded-md bg-surfaceAlt p-3 text-xs whitespace-pre-wrap">{csv}</pre>
           </Card>
-        ))}
-      </section>
-    )}
-    {tab === "full" && <div className="overflow-x-auto"><table className="w-full border-collapse text-sm"><thead><tr className="border-b border-surfaceBorder text-left"><th className="p-2">Driver</th><th className="p-2">Number</th><th className="p-2">RCRA club</th><th className="p-2">Paid</th><th className="p-2">Classes</th><th className="p-2">Fee</th></tr></thead><tbody>{driverRows.map(({ nomination, driver, entries: driverEntries }) => <tr key={nomination.id} className="border-b border-surfaceBorder"><td className="p-2">{driver.first_name} {driver.last_name}</td><td className="p-2">{driver.permanent_number || ""}</td><td className="p-2">{affiliatedRcraClubName(nomination) || "—"}</td><td className="p-2"><button type="button" className="rounded-md border border-surfaceBorder px-2 py-1 text-xs" onClick={() => togglePaid(nomination)}>{nomination.paid ? "TRUE" : "FALSE"}</button></td><td className="p-2">{driverEntries.map((entry) => classMap.get(entry.class_id)).join(", ")}</td><td className="p-2">{nomination.total_fee ?? ""}</td></tr>)}</tbody></table></div>}
-    {tab === "export" && <Card className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-text-muted">Preferences and practice-day class entries are excluded from this LiveTime export.</p><Button onClick={downloadCsv}>Download LiveTime CSV</Button></div><pre className="max-h-[480px] overflow-auto rounded-md bg-surfaceAlt p-3 text-xs whitespace-pre-wrap">{csv}</pre></Card>}
-  </main></div>;
+        )}
+      </main>
+    </div>
+  );
 }

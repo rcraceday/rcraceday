@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/DriverProfileCard.jsx
 
 import React from "react";
@@ -25,6 +26,7 @@ import MobileLayout from "./DriverProfileCard/sections/MobileLayout";
 import SectionWrapper from "./DriverProfileCard/sections/SectionWrapper";
 
 export default function DriverProfileCard({ driver, club, isMember, navigate }) {
+  const { t } = useTranslation();
   const { palette } = useTheme();
 
   if (!driver || !club) return null;
@@ -50,7 +52,7 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
             className="px-5 py-3"
             style={{ background: brand, color: palette?.buttonText || "#ffffff" }}
           >
-            <h2 className="text-base font-semibold">Driver Profile</h2>
+            <h2 className="text-base font-semibold">{t("driverProfile.title")}</h2>
           </div>
 
           {/* BODY */}
@@ -90,37 +92,37 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
             {/* DESKTOP TWO-ROW LAYOUT */}
             <div className="hidden md:grid md:grid-cols-12 md:gap-6">
               <div className="col-span-6">
-                <SectionWrapper title="Personal Details" brand={brand}>
+                <SectionWrapper title={t("driverProfile.personalDetails")} brand={brand}>
                   <PersonalDetailsSection driver={driver} />
                 </SectionWrapper>
               </div>
 
               <div className="col-span-6">
-                <SectionWrapper title="Racing Information" brand={brand}>
+                <SectionWrapper title={t("driverProfile.racingInformation")} brand={brand}>
                   <RacingInformationSection driver={driver} chassis={chassis} />
                 </SectionWrapper>
               </div>
 
               <div className="col-span-6">
-                <SectionWrapper title="SIC Car Profile" brand={brand}>
+                <SectionWrapper title={t("driverProfile.sicCarProfileShort")} brand={brand}>
                   <SicCarProfileSection driver={driver} />
                 </SectionWrapper>
               </div>
 
               <div className="col-span-6">
-                <SectionWrapper title="Dirt Car Profile" brand={brand}>
+                <SectionWrapper title={t("driverProfile.dirtCarProfileShort")} brand={brand}>
                   <DirtCarProfileSection driver={driver} />
                 </SectionWrapper>
               </div>
 
               <div className="col-span-6">
-                <SectionWrapper title="Experience & Preferences" brand={brand}>
+                <SectionWrapper title={t("driverProfile.experience")} brand={brand}>
                   <ExperienceSection driver={driver} />
                 </SectionWrapper>
               </div>
 
               <div className="col-span-6">
-                <SectionWrapper title="Fun / Trivia" brand={brand}>
+                <SectionWrapper title={t("driverProfile.funTrivia")} brand={brand}>
                   <TriviaSection driver={driver} />
                 </SectionWrapper>
               </div>
@@ -137,27 +139,27 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
             className="p-8 max-w-md text-center space-y-6"
           >
             <h3 className="text-lg font-semibold" style={{ color: brand }}>
-              Members Only Feature
+              {t("driverProfile.membersOnlyFeature")}
             </h3>
 
             <p className="text-sm" style={{ color: palette?.textMuted || "#6b7280" }}>
-              Become a club member to unlock full driver profiles and enjoy these benefits:
+              {t("driverProfile.membersOnlyOverlayBody")}
             </p>
 
             <ul className="text-sm space-y-1 text-left mx-auto w-fit" style={{ color: palette?.text || "#1f2937" }}>
-              <li>50% off race fees</li>
-              <li>Insurance coverage</li>
-              <li>Junior members race free</li>
-              <li>Access to RCRA sanctioned events</li>
-              <li>Helps increase the club’s profile for council and government investment</li>
-              <li>Voting rights at AGM</li>
+              <li>{t("driverProfile.benefitRaceFees")}</li>
+              <li>{t("driverProfile.benefitInsurance")}</li>
+              <li>{t("driverProfile.benefitJuniorFree")}</li>
+              <li>{t("driverProfile.benefitRcra")}</li>
+              <li>{t("driverProfile.benefitCouncil")}</li>
+              <li>{t("driverProfile.benefitAgm")}</li>
             </ul>
 
             <Button
               className="w-full"
               onClick={() => navigate(`/${club.slug}/app/membership`)}
             >
-              Join Membership
+              {t("driverProfile.joinMembership")}
             </Button>
 
             <Button
@@ -165,7 +167,7 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
               className="w-full"
               onClick={() => navigate(`/${club.slug}/app/profile/drivers`)}
             >
-              Return to Drivers
+              {t("driverProfile.backToDrivers")}
             </Button>
           </Card>
         </div>

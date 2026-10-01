@@ -12,8 +12,10 @@ import {
 
 import { cmsStyles as styles } from "../../cms/styles";
 import { richTextToPlainText } from "@/app/lib/richText";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function EventsTable({ loading, events, clubSlug }) {
+  const { t } = useTranslation();
   const text = styles.eventCardText;
 
   const smallButton = {

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/DriverProfileCard/sections/SponsorsSection.jsx
 
 
@@ -15,6 +16,7 @@ import { MANUFACTURERS } from "@/data/manufacturers";
 
 
 function SponsorsEditSection({ driver, update }) {
+  const { t } = useTranslation();
 
   const [sponsorsText, setSponsorsText] = useState(() =>
 
@@ -48,13 +50,13 @@ function SponsorsEditSection({ driver, update }) {
 
     <section className="space-y-6">
 
-      <h3 className="text-sm font-semibold">Team & Sponsors</h3>
+      <h3 className="text-sm font-semibold">{t("driverProfile.teamSponsors")}</h3>
 
 
 
       <Input
 
-        label="Team Name"
+        label={t("driverProfile.teamName")}
 
         value={driver.team_name || ""}
 
@@ -92,7 +94,7 @@ function SponsorsEditSection({ driver, update }) {
 
       <div>
 
-        <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t("driverProfile.manufacturer")}</label>
 
         <FilterDropdown
           variant="cms"
@@ -109,7 +111,7 @@ function SponsorsEditSection({ driver, update }) {
 
       <Input
 
-        label="Sponsors (comma separated)"
+        label={t("driverProfile.sponsorsComma")}
 
         type="text"
 
@@ -146,6 +148,7 @@ function SponsorsEditSection({ driver, update }) {
 
 
 export default function SponsorsSection({ driver, brand: brandProp, update }) {
+  const { t } = useTranslation();
 
   const { palette } = useTheme();
 
@@ -169,7 +172,7 @@ export default function SponsorsSection({ driver, brand: brandProp, update }) {
 
     <div className="space-y-2">
 
-      <label className="text-base font-medium text-gray-700">Sponsors:</label>
+      <label className="text-base font-medium text-gray-700">{t("driverProfile.sponsorsLabel")}</label>
 
 
 

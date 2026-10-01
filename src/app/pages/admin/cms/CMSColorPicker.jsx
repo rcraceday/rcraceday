@@ -1,4 +1,6 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 export default function CMSColorPicker({ label, value, onChange }) {
+  const { t } = useTranslation();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
       <label style={{ fontSize: "14px", fontWeight: 500 }}>{label}</label>

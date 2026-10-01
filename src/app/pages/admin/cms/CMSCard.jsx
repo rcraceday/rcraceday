@@ -1,6 +1,9 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 import { cmsStyles } from "./styles";
 
-export default function CMSCard({ title, actions, children, style = {} }) {
+export default function CMSCard({ title, titleKey, actions, children, style = {} }) {
+  const { t } = useTranslation();
+  const resolvedTitle = titleKey ? t(titleKey) : title;
   return (
     <div
       style={{
@@ -16,7 +19,7 @@ export default function CMSCard({ title, actions, children, style = {} }) {
         ...style,
       }}
     >
-      {(title || actions) && (
+      {(resolvedTitle || actions) && (
         <div
           style={{
             display: "flex",
@@ -26,7 +29,7 @@ export default function CMSCard({ title, actions, children, style = {} }) {
           }}
         >
           <div style={{ fontSize: "18px", fontWeight: 600, color: "#111827" }}>
-            {title}
+            {resolvedTitle}
           </div>
 
           {actions && (

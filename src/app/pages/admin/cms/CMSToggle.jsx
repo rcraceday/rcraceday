@@ -1,6 +1,9 @@
 import React from "react";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
-export default function CMSToggle({ label, checked, onChange }) {
+export default function CMSToggle({ label, labelKey, checked, onChange }) {
+  const { t } = useTranslation();
+  const resolvedLabel = labelKey ? t(labelKey) : label;
   return (
     <label
       style={{
@@ -15,7 +18,7 @@ export default function CMSToggle({ label, checked, onChange }) {
         color: "#374151",
       }}
     >
-      <span>{label}</span>
+      <span>{resolvedLabel}</span>
 
       {/* IMPORTANT FIX:
          Use a button instead of a div so React does NOT swallow the click.

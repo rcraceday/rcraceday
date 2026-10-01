@@ -10,6 +10,7 @@ import { richTextToPlainText } from "@/app/lib/richText";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
 import { getClubNewsDisplayStatus } from "@/app/lib/clubNews";
 import { removeClubAssetPath } from "@/app/lib/clubAssetStorage";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 function formatWhen(iso) {
   const d = parseStoredTimestamp(iso);
@@ -24,6 +25,7 @@ function formatWhen(iso) {
 }
 
 export default function AdminClubNews() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
   const { club } = useClub();

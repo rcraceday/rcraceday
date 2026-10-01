@@ -6,8 +6,10 @@ import {
 
 import { cmsStyles as styles } from "../../cms/styles";
 import { richTextToPlainText } from "@/app/lib/richText";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function EventRow({ event, clubSlug }) {
+  const { t } = useTranslation();
   return (
     <tr style={{ borderBottom: "1px solid #E5E7EB" }}>
       {/* EVENT NAME */}

@@ -17,6 +17,7 @@ import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
@@ -38,6 +39,7 @@ export default function WelcomeAddDrivers() {
   const { refreshDrivers, drivers } = useDrivers();
   const { palette } = useTheme();
 
+  const { t } = useTranslation();
   const brand = palette.primary;
 
   const [firstName, setFirstName] = useState("");
@@ -316,7 +318,7 @@ export default function WelcomeAddDrivers() {
     <div className="min-h-screen w-full bg-background text-text-base">
 
       <PageTitle
-        title="Welcome to Chargers RC Drivers Portal"
+        title={t("drivers.welcomeTitle")}
         style={{ color: brand }}
         centered
       />

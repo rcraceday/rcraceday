@@ -3,8 +3,10 @@ import { useClub } from "@/app/providers/ClubProvider";
 import { cmsStyles } from "../cms/styles";
 import CMSButton from "@cms/CMSButton";
 import MembershipSettingsCard from "./components/MembershipSettingsCard";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function MembershipSettings() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
   const { club } = useClub();

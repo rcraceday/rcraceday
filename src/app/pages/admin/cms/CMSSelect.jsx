@@ -1,5 +1,6 @@
 import React from "react";
 import { cmsStyles } from "./styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function CMSSelect({
   label,
@@ -12,6 +13,7 @@ export default function CMSSelect({
   title,
   sortOptions = true,
 }) {
+  const { t } = useTranslation();
   const sortedOptions = sortOptions
     ? [...options].sort((a, b) =>
         String(a.label ?? "").localeCompare(String(b.label ?? ""), undefined, {

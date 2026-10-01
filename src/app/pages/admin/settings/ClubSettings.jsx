@@ -3,8 +3,10 @@
 import { useState } from "react";
 import CMSPage from "@cms/CMSPage";
 import SaveActions from "./components/SaveActions";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function ClubSettings() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState({
     club_name: "",
     club_short_name: "",

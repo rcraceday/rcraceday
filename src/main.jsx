@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 
 import AuthProvider from "@/app/providers/AuthProvider";
+import I18nProvider from "@/app/providers/I18nProvider";
 import AppProviders from "@/app/providers/AppProviders";
 import RoutesFile from "@/app/routes";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
@@ -14,6 +15,7 @@ import "uno.css";
 function Root() {
   return (
     <BrowserRouter>
+      <I18nProvider>
       <PwaInstallPrompt />
       <AuthProvider>
         <Routes>
@@ -22,6 +24,7 @@ function Root() {
           </Route>
         </Routes>
       </AuthProvider>
+      </I18nProvider>
     </BrowserRouter>
   );
 }

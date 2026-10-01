@@ -1,5 +1,6 @@
 // src/app/pages/events/EventDetailsSections/EventDetailsBasics.jsx
 import { richTextToPlainText } from "@/app/lib/richText";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 /* ===========================
    DATE HELPERS
@@ -49,13 +50,13 @@ const typeColors = {
   national_titles: "#B71C1C",
 };
 
-const typeLabels = {
-  racing: "Racing",
-  practice: "Practice",
-  club_meet: "Club Meet",
-  championship_round: "Championship Round",
-  state_titles: "State Titles",
-  national_titles: "National Titles",
+const typeLabelKeys = {
+  racing: "events.typeRacing",
+  practice: "events.typePractice",
+  club_meet: "events.typeClubMeet",
+  championship_round: "events.typeChampionshipRound",
+  state_titles: "events.typeStateTitles",
+  national_titles: "events.typeNationalTitles",
 };
 
 /* ===========================
@@ -63,10 +64,13 @@ const typeLabels = {
    =========================== */
 
 export default function EventDetailsBasics({ event, brand }) {
+  const { t } = useTranslation();
   const logo = event.logourl || null;
   const type = (event.event_type || "").toLowerCase();
   const typeColor = typeColors[type] || brand;
-  const typeLabel = typeLabels[type] || event.event_type || "Event";
+  const typeLabel = typeLabelKeys[type]
+    ? t(typeLabelKeys[type])
+    : event.event_type || t("eventCard.event");
 
   const track = event.track || "Unknown";
   const dateDisplay = getDateRange(event);
@@ -79,7 +83,7 @@ export default function EventDetailsBasics({ event, brand }) {
         {logo && (
           <img
             src={logo}
-            alt="Event Logo"
+            alt={t("events.detailsTitle")}
             className="w-full h-full object-contain"
           />
         )}
@@ -112,10 +116,10 @@ export default function EventDetailsBasics({ event, brand }) {
         {/* DETAILS */}
         <div className="text-sm text-text-muted leading-tight space-y-1">
           <div>
-            <strong>Event Dates:</strong> {dateDisplay}
+            <strong>{t("events.eventDates")}:</strong> {dateDisplay}
           </div>
           <div>
-            <strong>Track:</strong> {track}
+            <strong>{t("events.trackLabel")}:</strong> {track}
           </div>
         </div>
 

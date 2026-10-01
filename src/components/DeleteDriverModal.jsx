@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function DeleteDriverModal({
   visible,
@@ -6,6 +7,7 @@ export default function DeleteDriverModal({
   onConfirm,
   onCancel,
 }) {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   return (
@@ -19,18 +21,12 @@ export default function DeleteDriverModal({
 
       {/* Modal box */}
       <div className="relative bg-white rounded-lg shadow-lg p-6 w-full max-w-sm z-10">
-        <h2 className="text-xl font-semibold mb-2">Delete Driver</h2>
+        <h2 className="text-xl font-semibold mb-2">{t("driverUi.deleteDriverTitle")}</h2>
 
         {hasFutureNominations ? (
-          <p className="text-gray-700 mb-6">
-            This driver is nominated for one or more upcoming events. Deleting
-            this driver will also remove their future nominations. This action
-            cannot be undone.
-          </p>
+          <p className="text-gray-700 mb-6">{t("driverUi.deleteWithNoms")}</p>
         ) : (
-          <p className="text-gray-700 mb-6">
-            Are you sure you want to delete this driver?
-          </p>
+          <p className="text-gray-700 mb-6">{t("driverUi.deleteConfirm")}</p>
         )}
 
         <div className="flex justify-end gap-3">
@@ -38,14 +34,14 @@ export default function DeleteDriverModal({
             onClick={onCancel}
             className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
           >
-            No, keep driver
+            {t("driverUi.keepDriver")}
           </button>
 
           <button
             onClick={onConfirm}
             className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
           >
-            Yes, delete
+            {t("driverUi.confirmDelete")}
           </button>
         </div>
       </div>

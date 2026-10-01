@@ -6,8 +6,10 @@ import {
   getDropdownOptionStyle,
   getDropdownTriggerStyle,
 } from "@/components/ui/dropdownFieldStyles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function SearchableClubSelect({ clubs, selectedClubId, onSelectClub }) {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -71,7 +73,7 @@ export default function SearchableClubSelect({ clubs, selectedClubId, onSelectCl
               setIsOpen(true);
             }}
             onClick={(e) => e.stopPropagation()}
-            placeholder="Search for a club"
+            placeholder={t("clubSelect.searchPlaceholder")}
           />
         </span>
         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -92,7 +94,7 @@ export default function SearchableClubSelect({ clubs, selectedClubId, onSelectCl
               className="relative cursor-default select-none py-2 pl-3 pr-9"
               style={getDropdownOptionStyle(palette)}
             >
-              No clubs found.
+              {t("clubSelect.noClubsFound")}
             </li>
           )}
           {filteredClubs.map((club) => (

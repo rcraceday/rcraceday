@@ -1,0 +1,45 @@
+export default {
+  common: {
+    back: "戻る",
+    menu: "メニュー",
+    saving: "保存中…",
+    updating: "更新中…",
+    select: "選択",
+  },
+  nav: {
+    home: "ホーム",
+    events: "イベント",
+    calendar: "カレンダー",
+    news: "ニュース",
+    myNoms: "申込",
+    messages: "メッセージ",
+    driverManager: "ドライバー",
+    membership: "会員",
+    settings: "設定",
+    adminPortal: "管理",
+    logout: "ログアウト",
+  },
+  settings: {
+    hubTitle: "設定",
+    hubSubtitle: "アカウント、通知、環境設定を管理します。",
+    language: {
+      title: "言語",
+      menuDesc: "アプリの表示言語",
+      subtitle: "メニューと設定の言語を選びます。",
+      saved: "言語を保存しました。",
+    },
+    timezone: {
+      title: "タイムゾーン",
+      menuDesc: "日付と時刻の表示",
+      saved: "タイムゾーンを保存しました。",
+    },
+    notifications: {
+      title: "通知",
+      menuDesc: "アプリ、メール、プッシュ、イベント",
+      clubNews: "クラブニュース",
+      clubNewsDesc: "クラブがニュースを公開したときに通知します。",
+      allTracks: "すべてのコース",
+      save: "通知を保存",
+    },
+  },
+};

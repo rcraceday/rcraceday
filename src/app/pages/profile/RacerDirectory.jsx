@@ -4,6 +4,7 @@ import { supabase } from "@/supabaseClient";
 
 import Card from "@/components/ui/Card";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 
@@ -16,6 +17,7 @@ export default function RacerDirectory() {
   const navigate = useNavigate();
   const { membership } = useProfile();
   const { palette } = useTheme();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [drivers, setDrivers] = useState([]);
@@ -109,7 +111,7 @@ export default function RacerDirectory() {
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
-      <PageTitle title="Racer Directory" style={{ color: palette.primary }} />
+      <PageTitle title={t("drivers.directoryTitle")} style={{ color: palette.primary }} />
 
       <main className="app-page-main space-y-6">
 

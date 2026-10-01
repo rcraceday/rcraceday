@@ -1,7 +1,9 @@
 import React from "react";
 import { UserCircleIcon } from "@heroicons/react/24/solid";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function AvatarSection({ driver, country }) {
+  const { t } = useTranslation();
   return (
     <div className="col-span-3 flex flex-col items-center text-center space-y-3">
 
@@ -31,7 +33,7 @@ export default function AvatarSection({ driver, country }) {
       )}
 
       <div className="text-lrg font-medium text-gray-800">
-        {driver.is_junior ? "Junior Driver" : "Adult Driver"}
+        {driver.is_junior ? t("driverUi.juniorDriver") : t("driverUi.adultDriver")}
       </div>
     </div>
   );

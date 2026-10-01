@@ -54,4 +54,4 @@ comment on table public.push_subscriptions is
 
 -- Optional: document push_enabled on membership notification_preferences JSON
 comment on column public.household_memberships.notification_preferences is
-  'JSON: in_app_enabled, email_enabled, push_enabled, nominations_open_enabled, membership_renewal_enabled, track_ids';
+  'JSON: in_app_enabled, email_enabled, push_enabled, nominations_open_enabled, membership_renewal_enabled, club_news_enabled, track_ids';

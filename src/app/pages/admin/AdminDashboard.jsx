@@ -9,8 +9,11 @@ import {
   UserGroupIcon,
   Cog6ToothIcon,
   ArchiveBoxIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/solid";
 
+import { useTranslation } from "@/app/i18n/I18nContext";
 import { cmsStyles } from "@cms/styles";
 import { richTextToPlainText } from "@/app/lib/richText";
 import AdminKeyMetrics from "@app/pages/admin/components/AdminKeyMetrics";
@@ -66,7 +69,7 @@ function QuickAction({ to, icon: Icon, label }) {
   return content;
 }
 
-function CurrentNominationsPanel({ events, totalCount }) {
+function CurrentNominationsPanel({ events, totalCount, t }) {
   return (
     <div
       style={{
@@ -91,15 +94,15 @@ function CurrentNominationsPanel({ events, totalCount }) {
             fontWeight: 600,
           }}
         >
-          Current Nominations
+          {t("admin.dashboard.currentNominations")}
         </span>
         <span style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>
-          {totalCount} total
+          {t("admin.dashboard.totalCount", { count: totalCount })}
         </span>
       </div>
       {events.length === 0 ? (
         <p style={{ fontSize: "13px", color: "#6B7280", margin: 0 }}>
-          No nominations yet for upcoming events.
+          {t("admin.dashboard.noNominationsUpcoming")}
         </p>
       ) : (
         <ul
@@ -142,11 +145,13 @@ function CurrentNominationsPanel({ events, totalCount }) {
 }
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const { clubSlug } = useParams();
   const metricsYear = getCalendarYear();
 
   const [stats, setStats] = useState(() => emptyDashboardStats());
   const [nominationsByEvent, setNominationsByEvent] = useState([]);
+  const [keyMetricsExpanded, setKeyMetricsExpanded] = useState(true);
 
   useEffect(() => {
     async function loadMetrics() {
@@ -176,7 +181,7 @@ export default function AdminDashboard() {
         .filter((event) => nominationCounts[event.id] > 0)
         .map((event) => ({
           id: event.id,
-          name: richTextToPlainText(event.name) || "Untitled event",
+          name: richTextToPlainText(event.name) || t("admin.dashboard.untitledEvent"),
           nominationCount: nominationCounts[event.id],
         }));
 
@@ -192,44 +197,72 @@ export default function AdminDashboard() {
 
         {/* CANONICAL HEADER */}
         <div style={cmsStyles.sectionHeader}>
-          <h1 style={cmsStyles.sectionHeaderTitle}>Admin Dashboard</h1>
-          <p style={cmsStyles.sectionHeaderSubtitle}>
-            Overview of events, nominations, membership, and drivers across your club.
-          </p>
+          <h1 style={cmsStyles.sectionHeaderTitle}>{t("admin.dashboard.title")}</h1>
+          <p style={cmsStyles.sectionHeaderSubtitle}>{t("admin.dashboard.subtitle")}</p>
         </div>
 
         {/* KEY METRICS */}
         <section>
-          <h2
+          <button
+            type="button"
+            onClick={() => setKeyMetricsExpanded((open) => !open)}
+            aria-expanded={keyMetricsExpanded}
+            aria-label={
+              keyMetricsExpanded
+                ? t("admin.dashboard.keyMetricsHide")
+                : t("admin.dashboard.keyMetricsShow")
+            }
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              margin: "0 0 10px",
+              padding: 0,
+              border: "none",
+              background: "none",
+              cursor: "pointer",
               fontSize: "13px",
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.16em",
               color: "#6B7280",
-              marginBottom: "10px",
+              textAlign: "left",
             }}
           >
-            Key Metrics — {metricsYear}
-          </h2>
+            {keyMetricsExpanded ? (
+              <ChevronDownIcon
+                style={{ width: "16px", height: "16px", flexShrink: 0, color: "#DC2626" }}
+              />
+            ) : (
+              <ChevronRightIcon
+                style={{ width: "16px", height: "16px", flexShrink: 0, color: "#DC2626" }}
+              />
+            )}
+            {t("admin.dashboard.keyMetrics", { year: metricsYear })}
+          </button>
 
-          <p
-            style={{
-              fontSize: "13px",
-              color: "#6B7280",
-              margin: "0 0 12px",
-              lineHeight: 1.5,
-            }}
-          >
-            Event and nomination figures are for the {metricsYear} calendar year and reset on January 1.
-          </p>
+          {keyMetricsExpanded ? (
+            <>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#6B7280",
+                  margin: "0 0 12px",
+                  lineHeight: 1.5,
+                }}
+              >
+                {t("admin.dashboard.keyMetricsNote", { year: metricsYear })}
+              </p>
 
-          <AdminKeyMetrics stats={stats} metricsYear={metricsYear} />
+              <AdminKeyMetrics stats={stats} metricsYear={metricsYear} />
+            </>
+          ) : null}
 
-          <div style={{ width: "100%", marginTop: "12px" }}>
+          <div style={{ width: "100%", marginTop: keyMetricsExpanded ? "12px" : 0 }}>
             <CurrentNominationsPanel
               events={nominationsByEvent}
               totalCount={nominationsByEvent.reduce((sum, event) => sum + event.nominationCount, 0)}
+              t={t}
             />
           </div>
         </section>
@@ -246,7 +279,7 @@ export default function AdminDashboard() {
               marginBottom: "10px",
             }}
           >
-            Quick Actions
+            {t("admin.dashboard.quickActions")}
           </h2>
 
           <div
@@ -256,12 +289,12 @@ export default function AdminDashboard() {
               gap: "12px",
             }}
           >
-            <QuickAction to="events" icon={CalendarDaysIcon} label="Manage Events" />
-            <QuickAction to="nominations" icon={UserPlusIcon} label="Manage Nominations" />
-            <QuickAction to="membership" icon={IdentificationIcon} label="Manage Membership" />
-            <QuickAction to="drivers" icon={UserGroupIcon} label="Manage Drivers" />
-            <QuickAction to="settings" icon={Cog6ToothIcon} label="Admin Settings" />
-            <QuickAction to="archives" icon={ArchiveBoxIcon} label="Archives" />
+            <QuickAction to="events" icon={CalendarDaysIcon} label={t("admin.dashboard.manageEvents")} />
+            <QuickAction to="nominations" icon={UserPlusIcon} label={t("admin.dashboard.manageNominations")} />
+            <QuickAction to="membership" icon={IdentificationIcon} label={t("admin.dashboard.manageMembership")} />
+            <QuickAction to="drivers" icon={UserGroupIcon} label={t("admin.dashboard.manageDrivers")} />
+            <QuickAction to="settings" icon={Cog6ToothIcon} label={t("admin.dashboard.adminSettings")} />
+            <QuickAction to="archives" icon={ArchiveBoxIcon} label={t("admin.dashboard.archives")} />
           </div>
         </section>
 
@@ -290,7 +323,7 @@ export default function AdminDashboard() {
                 color: "#111827",
               }}
             >
-              Recent Activity
+              {t("admin.dashboard.recentActivity")}
             </h3>
             <p
               style={{
@@ -298,7 +331,7 @@ export default function AdminDashboard() {
                 color: "#6B7280",
               }}
             >
-              Activity feed will appear here once wired to events, nominations, and membership changes.
+              {t("admin.dashboard.recentActivityBody")}
             </p>
           </div>
 
@@ -318,7 +351,7 @@ export default function AdminDashboard() {
                 color: "#111827",
               }}
             >
-              System Notices
+              {t("admin.dashboard.systemNotices")}
             </h3>
             <p
               style={{
@@ -326,7 +359,7 @@ export default function AdminDashboard() {
                 color: "#6B7280",
               }}
             >
-              Warnings about unpublished events, missing configuration, or expiring memberships will appear here.
+              {t("admin.dashboard.systemNoticesBody")}
             </p>
           </div>
         </section>

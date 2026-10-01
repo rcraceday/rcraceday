@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Cog6ToothIcon } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
-import PageTitle from "@/components/ui/PageTitle";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
-import useTheme from "@/app/providers/useTheme";
+import { useAuth } from "@/app/providers/AuthProvider";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   normalizeNotificationPreferences,
 } from "@/app/lib/notificationPreferences";
-import { useAuth } from "@/app/providers/AuthProvider";
 import {
   getPushDeviceStatus,
   isWebPushConfigured,
@@ -19,13 +15,17 @@ import {
   subscribeWebPush,
   unsubscribeWebPush,
 } from "@/app/lib/webPushClient";
+import { useTranslation } from "@/app/i18n/I18nContext";
+import SettingsPage from "./SettingsPage";
+import SettingsCard from "./SettingsCard";
+import SettingsToggleRow from "./SettingsToggleRow";
+import { settingsStyles as s } from "./settingsStyles";
 
 export default function UserNotificationSettings() {
+  const { t } = useTranslation();
   const { club } = useClub();
   const { user } = useAuth();
   const { membership, refreshMembership } = useMembership();
-  const { palette } = useTheme() || {};
-  const brand = palette?.primary || "#0A66C2";
 
   const [prefs, setPrefs] = useState(DEFAULT_NOTIFICATION_PREFERENCES);
   const [tracks, setTracks] = useState([]);
@@ -66,18 +66,25 @@ export default function UserNotificationSettings() {
   }, [club?.id]);
 
   const allTracksSelected = prefs.track_ids === null;
-
   const selectedTrackSet = useMemo(() => new Set(prefs.track_ids || []), [prefs.track_ids]);
 
   function toggleTrack(trackId) {
+    const allIds = tracks.map((track) => track.id);
     if (allTracksSelected) {
-      setPrefs((p) => ({ ...p, track_ids: [trackId] }));
+      setPrefs((p) => ({
+        ...p,
+        track_ids: allIds.filter((id) => id !== trackId),
+      }));
       return;
     }
     const next = new Set(selectedTrackSet);
     if (next.has(trackId)) next.delete(trackId);
     else next.add(trackId);
-    setPrefs((p) => ({ ...p, track_ids: Array.from(next) }));
+    const selectedAll = allIds.length > 0 && allIds.every((id) => next.has(id));
+    setPrefs((p) => ({
+      ...p,
+      track_ids: selectedAll ? null : Array.from(next),
+    }));
   }
 
   async function handleSave() {
@@ -119,9 +126,7 @@ export default function UserNotificationSettings() {
 
     setSaving(false);
     setMessage(
-      normalized.push_enabled
-        ? "Settings saved. This device is registered for lock-screen alerts."
-        : "Settings saved."
+      normalized.push_enabled ? t("settings.notifications.savedPush") : t("settings.notifications.saved")
     );
     refreshMembership?.();
     await refreshDeviceStatus();
@@ -160,69 +165,55 @@ export default function UserNotificationSettings() {
       setError(pushError.message || "Could not register this device for push.");
       return;
     }
-    setMessage("This device is registered. Lock-screen alerts can be sent here.");
+    setMessage(t("settings.notifications.deviceRegisteredMsg"));
   }
 
-  return (
-    <div style={{ minHeight: "100vh", background: palette?.background || "#fff" }}>
-      <PageTitle icon={Cog6ToothIcon} title="Settings" style={{ color: brand }} />
-      <main className="app-page-main gap-5 max-w-[720px] mx-auto w-full px-4 pb-12">
-        <Card className="p-4 space-y-4">
-          <h2 className="text-lg font-semibold">Notifications</h2>
-          <p className="text-sm text-text-muted">
-            Lock-screen alerts need a one-time Allow inside this app. Turning notifications on in the
-            phone&apos;s Settings → Apps list is not enough on its own. The installed app may still
-            appear as RaceDay until you remove it from the home screen and add RCRaceday again.
-            iPhone needs iOS 16.4+ and Home Screen.
-          </p>
+  const deviceHint = !deviceStatus
+    ? ""
+    : deviceStatus.subscribed
+      ? t("settings.notifications.deviceRegistered")
+      : deviceStatus.permission === "denied"
+        ? t("settings.notifications.deviceBlocked")
+        : deviceStatus.iosNeedsHomeScreen
+          ? t("settings.notifications.deviceIosHome")
+          : t("settings.notifications.deviceNotRegistered");
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={prefs.in_app_enabled}
-              onChange={(e) => setPrefs((p) => ({ ...p, in_app_enabled: e.target.checked }))}
-            />
-            In-app notifications
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={prefs.email_enabled}
-              onChange={(e) => setPrefs((p) => ({ ...p, email_enabled: e.target.checked }))}
-            />
-            Email notifications
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={prefs.push_enabled}
-              disabled={!isWebPushConfigured() || !isWebPushSupported()}
-              onChange={(e) => setPrefs((p) => ({ ...p, push_enabled: e.target.checked }))}
-            />
-            Push notifications (PWA)
-          </label>
-          {!isWebPushConfigured() && (
-            <p className="text-xs text-text-muted pl-6">
-              Push is not configured for this environment (missing VITE_VAPID_PUBLIC_KEY).
-            </p>
-          )}
-          {isWebPushConfigured() && !isWebPushSupported() && (
-            <p className="text-xs text-text-muted pl-6">
-              Use Chrome or Safari on the installed app to enable push.
-            </p>
-          )}
-          {deviceStatus && (
-            <div className="text-xs pl-6 space-y-1">
-              <p>
-                This device:{" "}
-                {deviceStatus.subscribed
-                  ? "registered for lock-screen alerts."
-                  : deviceStatus.permission === "denied"
-                    ? "blocked by the phone. Allow notifications for RCRaceday, then tap Enable below."
-                    : deviceStatus.iosNeedsHomeScreen
-                      ? "open RCRaceday from the Home Screen, then tap Enable."
-                      : "not registered yet."}
-              </p>
+  return (
+    <SettingsPage
+      title={t("settings.notifications.title")}
+      subtitle={t("settings.notifications.subtitle")}
+    >
+      <SettingsCard title={t("settings.notifications.delivery")}>
+        <SettingsToggleRow
+          label={t("settings.notifications.inApp")}
+          description={t("settings.notifications.inAppDesc")}
+          checked={prefs.in_app_enabled}
+          onChange={(checked) => setPrefs((p) => ({ ...p, in_app_enabled: checked }))}
+        />
+        <SettingsToggleRow
+          label={t("settings.notifications.email")}
+          description={t("settings.notifications.emailDesc")}
+          checked={prefs.email_enabled}
+          onChange={(checked) => setPrefs((p) => ({ ...p, email_enabled: checked }))}
+        />
+        <SettingsToggleRow
+          label={t("settings.notifications.push")}
+          description={t("settings.notifications.pushDesc")}
+          checked={prefs.push_enabled}
+          disabled={!isWebPushConfigured() || !isWebPushSupported()}
+          onChange={(checked) => setPrefs((p) => ({ ...p, push_enabled: checked }))}
+          last
+        />
+        {!isWebPushConfigured() ? (
+          <p style={s.cardHint}>{t("settings.notifications.pushNotConfigured")}</p>
+        ) : null}
+        {isWebPushConfigured() && !isWebPushSupported() ? (
+          <p style={s.cardHint}>{t("settings.notifications.pushUnsupported")}</p>
+        ) : null}
+        {deviceStatus ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <p style={s.cardHint}>{deviceHint}</p>
+            <div style={s.actions}>
               <Button
                 type="button"
                 size="sm"
@@ -235,90 +226,72 @@ export default function UserNotificationSettings() {
                 onClick={handleEnableThisDevice}
               >
                 {enablingDevice
-                  ? "Enabling…"
+                  ? t("settings.notifications.enabling")
                   : deviceStatus.subscribed
-                    ? "This device is enabled"
-                    : "Enable push on this device"}
+                    ? t("settings.notifications.deviceEnabled")
+                    : t("settings.notifications.enableDevice")}
               </Button>
             </div>
-          )}
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={prefs.nominations_open_enabled}
-              onChange={(e) =>
-                setPrefs((p) => ({ ...p, nominations_open_enabled: e.target.checked }))
-              }
+          </div>
+        ) : null}
+      </SettingsCard>
+
+      <SettingsCard title={t("settings.notifications.whatToNotify")}>
+        <SettingsToggleRow
+          label={t("settings.notifications.nominationsOpen")}
+          description={t("settings.notifications.nominationsOpenDesc")}
+          checked={prefs.nominations_open_enabled}
+          onChange={(checked) => setPrefs((p) => ({ ...p, nominations_open_enabled: checked }))}
+        />
+        <SettingsToggleRow
+          label={t("settings.notifications.membershipRenewal")}
+          description={t("settings.notifications.membershipRenewalDesc")}
+          checked={prefs.membership_renewal_enabled}
+          onChange={(checked) => setPrefs((p) => ({ ...p, membership_renewal_enabled: checked }))}
+        />
+        <SettingsToggleRow
+          label={t("settings.notifications.clubNews")}
+          description={t("settings.notifications.clubNewsDesc")}
+          checked={prefs.club_news_enabled}
+          onChange={(checked) => setPrefs((p) => ({ ...p, club_news_enabled: checked }))}
+          last
+        />
+      </SettingsCard>
+
+      {tracks.length > 0 ? (
+        <SettingsCard
+          title={t("settings.notifications.tracks")}
+          hint={t("settings.notifications.tracksHint")}
+        >
+          <SettingsToggleRow
+            label={t("settings.notifications.allTracks")}
+            checked={allTracksSelected}
+            onChange={(checked) =>
+              setPrefs((p) => ({
+                ...p,
+                track_ids: checked ? null : [],
+              }))
+            }
+          />
+          {tracks.map((track, index) => (
+            <SettingsToggleRow
+              key={track.id}
+              label={track.name}
+              checked={allTracksSelected || selectedTrackSet.has(track.id)}
+              onChange={() => toggleTrack(track.id)}
+              last={index === tracks.length - 1}
             />
-            Nominations open (default for new events)
-          </label>
-          <p className="text-xs text-text-muted pl-6">
-            Clubs can still send a one-off “notify when nominations open” for a specific event; that
-            overrides these settings.
-          </p>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={prefs.membership_renewal_enabled}
-              onChange={(e) =>
-                setPrefs((p) => ({ ...p, membership_renewal_enabled: e.target.checked }))
-              }
-            />
-            Membership renewal reminders
-          </label>
+          ))}
+        </SettingsCard>
+      ) : null}
 
-          {tracks.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-surfaceBorder">
-              <p className="text-sm font-medium">Event tracks</p>
-              <p className="text-xs text-text-muted">
-                Choose which tracks you want event notifications for. Select all, one, or none.
-              </p>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={allTracksSelected}
-                  onChange={(e) =>
-                    setPrefs((p) => ({
-                      ...p,
-                      track_ids: e.target.checked ? null : [],
-                    }))
-                  }
-                />
-                All tracks
-              </label>
-              {!allTracksSelected &&
-                tracks.map((track) => (
-                  <label key={track.id} className="flex items-center gap-2 text-sm pl-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedTrackSet.has(track.id)}
-                      onChange={() => toggleTrack(track.id)}
-                    />
-                    {track.name}
-                  </label>
-                ))}
-            </div>
-          )}
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {message && <p className="text-sm text-green-700">{message}</p>}
-          <Button type="button" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : "Save settings"}
-          </Button>
-        </Card>
-
-        <Card className="p-4 space-y-2 text-sm text-text-muted">
-          <h3 className="font-semibold text-text-base">More settings you may add later</h3>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Preferred contact language and time zone</li>
-            <li>SMS notifications</li>
-            <li>Marketing and newsletter opt-in</li>
-            <li>Default nomination or payment preferences</li>
-            <li>Privacy: show name on public results / leaderboards</li>
-            <li>Linked accounts and sign-in security (passkeys, 2FA)</li>
-          </ul>
-        </Card>
-      </main>
-    </div>
+      {error ? <p style={s.statusError}>{error}</p> : null}
+      {message ? <p style={s.statusOk}>{message}</p> : null}
+      <div style={s.actions}>
+        <Button type="button" disabled={saving} onClick={handleSave}>
+          {saving ? t("common.saving") : t("settings.notifications.save")}
+        </Button>
+      </div>
+    </SettingsPage>
   );
 }

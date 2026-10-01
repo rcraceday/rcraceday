@@ -30,6 +30,7 @@ import {
   resolveEventPricing,
 } from "@/app/pages/events/events-sections/helpers";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const EVENT_DETAIL_FIELDS =
   "*, pricing, late_entries_enabled, late_fee_activation, late_entries_close";
@@ -61,13 +62,13 @@ function formatLateFeeAmount(pricing) {
 // ---------------------------------------------
 // PAGE HEADER
 // ---------------------------------------------
-function PageHeader({ brand, clubSlug }) {
+function PageHeader({ brand, clubSlug, t }) {
   const navigate = useNavigate();
 
   return (
     <PageTitle
       icon={CalendarDaysIcon}
-      title="Event Details"
+      title={t("events.detailsTitle")}
       style={{ color: brand }}
       actions={
         <Button
@@ -77,7 +78,7 @@ function PageHeader({ brand, clubSlug }) {
           onClick={() => navigate(`/${clubSlug}/app/events`)}
         >
           <ArrowLeftIcon className="h-3 w-3" />
-          Back
+          {t("common.back")}
         </Button>
       }
     />
@@ -267,6 +268,7 @@ function RequirementsDisplay({ requirements, palette }) {
 // ---------------------------------------------
 export default function EventDetails() {
   const { palette } = useTheme();
+  const { t } = useTranslation();
   const { id } = useParams();
   const outlet = useOutletContext() || {};
   const club = outlet.club;
@@ -282,6 +284,7 @@ export default function EventDetails() {
   const [trackClassIds, setTrackClassIds] = useState([]);
   const [classEntryCounts, setClassEntryCounts] = useState({});
   const [hasExistingNomination, setHasExistingNomination] = useState(false);
+  const [hasResults, setHasResults] = useState(false);
 
   const { membership } = useMembership();
 
@@ -303,6 +306,17 @@ export default function EventDetails() {
         .single();
 
       setEvent(data || null);
+      if (data?.id) {
+        const { data: resultRow } = await supabase
+          .from("event_results")
+          .select("id")
+          .eq("event_id", data.id)
+          .eq("published", true)
+          .maybeSingle();
+        setHasResults(!!resultRow);
+      } else {
+        setHasResults(false);
+      }
       setLoading(false);
     }
 
@@ -413,7 +427,7 @@ useEffect(() => {
 if (loading) {
   return (
     <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
-      <PageHeader brand={brand} clubSlug={clubSlug} />
+      <PageHeader brand={brand} clubSlug={clubSlug} t={t} />
       <div
         style={{
           padding: "40px",
@@ -431,7 +445,7 @@ if (loading) {
 if (!event) {
   return (
     <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
-      <PageHeader brand={brand} clubSlug={clubSlug} />
+      <PageHeader brand={brand} clubSlug={clubSlug} t={t} />
       <div
         style={{
           padding: "40px",
@@ -469,7 +483,7 @@ const showEntryFees =
 return (
   
   <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
-    <PageHeader brand={brand} clubSlug={clubSlug} />
+    <PageHeader brand={brand} clubSlug={clubSlug} t={t} />
 
 <main className="app-page-main flex justify-center !py-10">
   <div
@@ -608,13 +622,24 @@ return (
             {nominateButtonLabel}
           </Button>
         </Link>
+        {hasResults && (
+          <Link to={`/${clubSlug}/app/events/${id}/results`} className="no-underline">
+            <Button className={nominateButtonClassName}>{t("eventCard.viewResults")}</Button>
+          </Link>
+        )}
       </div>
     ) : (
       <div className="event-details-right-buttons event-details-right-closed flex flex-row gap-2 w-full md:w-auto justify-start md:justify-end">
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input type="checkbox" />
-          Notify When Nominations Open
-        </label>
+        {hasResults ? (
+          <Link to={`/${clubSlug}/app/events/${id}/results`} className="no-underline">
+            <Button className={nominateButtonClassName}>{t("eventCard.viewResults")}</Button>
+          </Link>
+        ) : (
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" />
+            Notify When Nominations Open
+          </label>
+        )}
       </div>
     )}
 
@@ -648,7 +673,7 @@ return (
 
 {/* Schedule */}
 <Section
-  title="Schedule"
+  title={t("events.schedule")}
   icon={ClockIcon}
   brand={brand}
   style={{ marginTop: "-18px" }}   // MOVE SCHEDULE UP
@@ -744,7 +769,7 @@ return (
 
 {/* Classes */}
 <Section
-  title="Classes"
+  title={t("events.classes")}
   icon={FlagIcon}
   brand={brand}
   style={{ marginTop: "-18px" }}   // MATCH SCHEDULE POSITIONING
@@ -852,7 +877,7 @@ return (
 {/* Entry Fees */}
 
 {showEntryFees && (
-  <Section title="Entry Fees" icon={BanknotesIcon} brand={brand}>
+  <Section title={t("events.entryFees")} icon={BanknotesIcon} brand={brand}>
     {entryPricing.mode === "per_entry" && (
       <EntryFeeList items={perEntryFeeDisplayRows(entryPricing)} />
     )}
@@ -910,7 +935,7 @@ return (
 {/* Merchandise */}
 {has(event.merchandise) && (
   <Section
-    title="Merchandise"
+    title={t("events.merchandise")}
     icon={ShoppingBagIcon}
     brand={brand}
   >
@@ -1044,7 +1069,7 @@ return (
 
 {/* Class Add‑Ons */}
 {has(event.class_add_ons) && (
-  <Section title="Add‑Ons" icon={PlusCircleIcon} brand={brand}>
+  <Section title={t("events.addOns")} icon={PlusCircleIcon} brand={brand}>
     <div className="flex flex-col gap-4 w-full mx-auto">
 
       {event.class_add_ons.map((a, idx) => (

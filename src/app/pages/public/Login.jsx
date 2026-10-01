@@ -4,6 +4,7 @@ import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom
 import { supabase } from "@/supabaseClient";
 import TextInput from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 function hasAuthCallbackInUrl() {
   const { hash, search } = window.location;
@@ -41,7 +42,14 @@ async function resolveFreshUser() {
   return data?.user ?? null;
 }
 
-async function reconcileClubAccess({ user, club, clubSlug, navigate, onError }) {
+async function reconcileClubAccess({
+  user,
+  club,
+  clubSlug,
+  navigate,
+  onError,
+  userNotFoundMessage,
+}) {
   if (!user?.email_confirmed_at) {
     navigate(
       `/${clubSlug}/public/check-email?email=${encodeURIComponent(user?.email || "")}`
@@ -110,8 +118,7 @@ async function reconcileClubAccess({ user, club, clubSlug, navigate, onError }) 
       await supabase.auth.signOut();
       navigate(`/${clubSlug}/public/signup`, {
         state: {
-          message:
-            "This user or email was not found in the system. Please sign up.",
+          message: userNotFoundMessage,
         },
       });
       return false;
@@ -178,6 +185,7 @@ export default function Login() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -200,6 +208,7 @@ export default function Login() {
         club,
         clubSlug,
         navigate,
+        userNotFoundMessage: t("auth.userNotFoundSignup"),
         onError: (message) => {
           if (!cancelled) setErrorMsg(message);
         },
@@ -265,15 +274,19 @@ export default function Login() {
       cancelled = true;
       authListener?.subscription?.unsubscribe();
     };
-  }, [club, clubSlug, navigate]);
+  }, [club, clubSlug, navigate, t]);
 
   // ⭐ SAFE CONDITIONAL RETURNS (AFTER HOOKS)
   if (!club) {
-    return <div style={{ padding: "24px", textAlign: "center" }}>Loading…</div>;
+    return <div style={{ padding: "24px", textAlign: "center" }}>{t("loading.loading")}</div>;
   }
 
   if (checkingExistingSession) {
-    return <div style={{ padding: "24px", textAlign: "center" }}>Checking session…</div>;
+    return (
+      <div style={{ padding: "24px", textAlign: "center" }}>
+        {t("loading.checkingSession")}
+      </div>
+    );
   }
 
   const logoSrc =
@@ -309,7 +322,7 @@ export default function Login() {
       } else if (error.message.includes("Invalid login credentials")) {
         navigate(`/${clubSlug}/public/signup`, {
           state: {
-            message: "This user or email was not found in the system. Please sign up.",
+            message: t("auth.userNotFoundSignup"),
           },
         });
       } else {
@@ -332,6 +345,7 @@ export default function Login() {
       club,
       clubSlug,
       navigate,
+      userNotFoundMessage: t("auth.userNotFoundSignup"),
       onError: (message) => setErrorMsg(message),
     });
     setLoading(false);
@@ -374,7 +388,7 @@ export default function Login() {
           textAlign: "center",
         }}
       >
-        Log In
+        {t("auth.logIn")}
       </h1>
 
       {errorMsg && (
@@ -393,31 +407,31 @@ export default function Login() {
         }}
       >
         <TextInput
-          label="Email"
+          label={t("auth.email")}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <TextInput
-          label="Password"
+          label={t("auth.password")}
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
         <Button type="submit" variant="primary" disabled={loading}>
-          {loading ? "Logging in…" : "Log In"}
+          {loading ? t("auth.loggingIn") : t("auth.logIn")}
         </Button>
       </form>
 
       <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
-        Don’t have an account?{" "}
+        {t("auth.noAccount")}{" "}
         <Link
           to={`/${clubSlug}/public/signup`}
           style={{ color: "#2563eb", textDecoration: "underline" }}
         >
-          Sign up
+          {t("auth.signUp")}
         </Link>
       </p>
 
@@ -437,14 +451,14 @@ export default function Login() {
           to={`/${clubSlug}/public/forgot-email`}
           style={{ color: "#2563eb", whiteSpace: "nowrap" }}
         >
-          Forgot email?
+          {t("auth.forgotEmail")}
         </Link>
 
         <Link
           to={`/${clubSlug}/public/forgot-password`}
           style={{ color: "#2563eb", whiteSpace: "nowrap" }}
         >
-          Forgot password?
+          {t("auth.forgotPassword")}
         </Link>
       </div>
 
@@ -456,7 +470,7 @@ export default function Login() {
           justifyContent: "center",
         }}
       >
-        <Button onClick={() => navigate("/")}>← Back to Clubs</Button>
+        <Button onClick={() => navigate("/")}>{t("auth.backToClubs")}</Button>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/components/driver/DriverListCard.jsx
 
 import useTheme from "@/app/providers/useTheme";
@@ -16,6 +17,7 @@ export default function DriverListCard({
   onEditProfile,
   onViewProfile,
 }) {
+  const { t } = useTranslation();
   const { club } = useClub();
   const { palette } = useTheme();
   const brand = brandProp || palette?.primary || "#0A66C2";
@@ -116,7 +118,7 @@ export default function DriverListCard({
 
     if (error) {
       console.error("Error adding class:", error);
-      setClassActionError(error.message || "Unable to add class. Check that driver_classes exists in the database.");
+      setClassActionError(error.message || t("driverUi.errAddClass"));
       return;
     }
     setAssignedClasses((prev) => [...prev, data]);
@@ -138,7 +140,7 @@ export default function DriverListCard({
 
     if (error) {
       console.error("Error changing class:", error);
-      setClassActionError(error.message || "Unable to change class.");
+      setClassActionError(error.message || t("driverUi.errChangeClass"));
       return;
     }
     setAssignedClasses((prev) => prev.map((dc) => (dc.id === driverClassId ? data : dc)));
@@ -256,7 +258,7 @@ export default function DriverListCard({
             {driver.avatar_url ? (
               <img
                 src={driver.avatar_url}
-                alt="Avatar"
+                alt={t("driverUi.avatarAlt")}
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -271,12 +273,12 @@ export default function DriverListCard({
             </div>
 
             <div className="text-xs text-text-muted">
-              {isJunior ? "Junior Driver" : "Adult Driver"}
+              {isJunior ? t("driverUi.juniorDriver") : t("driverUi.adultDriver")}
             </div>
 
             {number && (
               <div className="text-xs font-medium">
-                Number: <span className="font-semibold">{number}</span>
+                {t("driverUi.numberLabel")} <span className="font-semibold">{number}</span>
               </div>
             )}
           </div>
@@ -285,7 +287,7 @@ export default function DriverListCard({
         {/* RIGHT SIDE — Buttons */}
         <div className="flex flex-wrap gap-2 justify-end">
           <Button onClick={onEditProfile} className="!py-1.5 !text-xs">
-            Edit Profile
+            {t("driverUi.editProfile")}
           </Button>
 
           <Button
@@ -293,7 +295,7 @@ export default function DriverListCard({
             onClick={onViewProfile}
             className="!py-1.5 !text-xs"
           >
-            View Profile
+            {t("driverUi.viewProfile")}
           </Button>
         </div>
 </div>
@@ -304,7 +306,7 @@ export default function DriverListCard({
           onClick={() => setIsManageClassesExpanded(!isManageClassesExpanded)}
           className="w-full justify-between !pl-3 !pr-2 !py-2 text-sm font-semibold"
         >
-          Manage Classes & Transponders {isManageClassesExpanded ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
+          {t("driverUi.manageClasses")} {isManageClassesExpanded ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
         </Button>
 
         {isManageClassesExpanded && (
@@ -315,10 +317,10 @@ export default function DriverListCard({
               </p>
             )}
             <p className="text-xs text-text-muted leading-snug pr-1">
-              Manage your classes and transponders. These details are used to automatically populate nominations and can be updated at any time.
+              {t("driverUi.manageClassesHint")}
             </p>
             {Object.keys(groupedClasses).length === 0 ? (
-              <p className="text-sm text-text-muted">No classes or track types configured for this club.</p>
+              <p className="text-sm text-text-muted">{t("driverUi.noClubClasses")}</p>
             ) : (
               Object.entries(groupedClasses).map(([trackTypeName, data]) => (
                 <div key={trackTypeName} className="space-y-2">
@@ -339,7 +341,7 @@ export default function DriverListCard({
                               menuScroll={false}
                               onMenuToggle={handleMenuToggle}
                               className="w-full"
-                              ariaLabel={`Class for ${trackTypeName}`}
+                              ariaLabel={t("driverUi.classForTrackAria", { track: trackTypeName })}
                               value={dc.class_id}
                               onChange={(classId) => handleChangeClass(dc.id, classId, data.trackId)}
                               options={data.trackClasses.map((clubClass) => ({
@@ -355,13 +357,13 @@ export default function DriverListCard({
                             value={dc.transponder_number || ""}
                             suggestions={savedTransponders}
                             onChange={(value) => handleTransponderChange(dc.id, value)}
-                            ariaLabel={`Transponder for ${dc.club_classes?.name || "class"}`}
+                            ariaLabel={t("driverUi.transponderForClassAria", { name: dc.club_classes?.name || t("nominate.class") })}
                           />
                           <Button
                             variant="danger"
                             size="sm"
                             className="!p-0 !w-7 !h-7 !min-w-7 shrink-0"
-                            aria-label="Remove class"
+                            aria-label={t("driverUi.removeClassAria")}
                             onClick={() => handleRemoveClass(dc.id)}
                           >
                             <XMarkIcon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -369,7 +371,7 @@ export default function DriverListCard({
                         </div>
                       ))
                     ) : (
-                      <p className="text-xs text-text-muted">No classes assigned yet.</p>
+                      <p className="text-xs text-text-muted">{t("driverUi.noClassesAssigned")}</p>
                     )}
 
                     {pendingAddByTrack[data.trackId] && data.available.length > 0 && (
@@ -383,13 +385,13 @@ export default function DriverListCard({
                             menuScroll={false}
                             onMenuToggle={handleMenuToggle}
                             className="w-full"
-                            ariaLabel={`Select class for ${trackTypeName}`}
+                            ariaLabel={t("driverUi.selectClassForTrackAria", { track: trackTypeName })}
                             value=""
                             onChange={(classId) => {
                               if (classId) handleAddClass(classId, data.trackId);
                             }}
                             options={[
-                              { value: "", label: "Select class..." },
+                              { value: "", label: t("driverUi.selectClass") },
                               ...data.available.map((cc) => ({ value: cc.id, label: cc.name })),
                             ]}
                           />
@@ -398,7 +400,7 @@ export default function DriverListCard({
                           variant="secondary"
                           size="sm"
                           className="!p-0 !w-7 !h-7 !min-w-7 shrink-0"
-                          aria-label="Cancel add class"
+                          aria-label={t("driverUi.cancelAddClassAria")}
                           onClick={() =>
                             setPendingAddByTrack((prev) => ({ ...prev, [data.trackId]: false }))
                           }
@@ -418,7 +420,7 @@ export default function DriverListCard({
                             setPendingAddByTrack((prev) => ({ ...prev, [data.trackId]: true }))
                           }
                         >
-                          Add Class
+                          {t("driverUi.addClass")}
                         </Button>
                       </div>
                     )}

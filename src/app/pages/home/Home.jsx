@@ -15,7 +15,9 @@ import Carousel from "@/components/Carousel";
 import PageTitle from "@/components/ui/PageTitle";
 import { isNominationsOpen } from "@/app/pages/events/events-sections/helpers";
 import EventCard from "@/app/pages/events/EventCard";
+import { loadPublishedResultEventIds } from "@/app/lib/results/loadEventResults";
 
+import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   CalendarDaysIcon,
   CalendarIcon,
@@ -45,6 +47,7 @@ export default function Home() {
   const { membership, loadingMembership } = useMembership();
   const { drivers, loadingDrivers } = useDrivers();
   const { palette } = useTheme();
+  const { t } = useTranslation();
 
   const navigate = useNavigate();
 
@@ -56,6 +59,7 @@ export default function Home() {
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [nominatedEventIds, setNominatedEventIds] = useState(() => new Set());
   const [eventsWithNominations, setEventsWithNominations] = useState(() => new Set());
+  const [eventsWithResults, setEventsWithResults] = useState(() => new Set());
   const [newsItems, setNewsItems] = useState([]);
 
   useEffect(() => {
@@ -107,8 +111,10 @@ export default function Home() {
         setEventsWithNominations(
           new Set(nominationRows.map((row) => row.event_id).filter(Boolean))
         );
+        setEventsWithResults(await loadPublishedResultEventIds(eventIds));
       } else {
         setEventsWithNominations(new Set());
+        setEventsWithResults(new Set());
       }
 
       setEvents(data);
@@ -193,7 +199,7 @@ export default function Home() {
         event={event}
         clubSlug={clubSlug}
         trackNames={trackNames}
-        showResults={getEventEndDate(event) < now}
+        showResults={eventsWithResults.has(event.id)}
         hasNomination={nominatedEventIds.has(event.id)}
         hasReceivedNominations={eventsWithNominations.has(event.id)}
       />
@@ -208,7 +214,7 @@ export default function Home() {
         backgroundColor: palette.background,
       }}
     >
-      <PageTitle icon={HomeIcon} title="Home" style={{ color: brand }} />
+      <PageTitle icon={HomeIcon} title={t("home.title")} style={{ color: brand }} />
 
       <main className="app-page-main">
         {newsItems.length > 0 && (
@@ -225,18 +231,18 @@ export default function Home() {
         {showNextEventSection && (
           <section className="space-y-3">
             <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
-              Next Event
+              {t("home.nextEvent")}
             </h2>
 
             {loadingEvent && (
               <Card>
-                <div style={{ padding: "16px" }}>Loading event…</div>
+                <div style={{ padding: "16px" }}>{t("loading.loadingEvent")}</div>
               </Card>
             )}
 
             {!loadingEvent && !nextEvent && (
               <Card>
-                <p className="text-text-muted">No upcoming events scheduled.</p>
+                <p className="text-text-muted">{t("home.noUpcomingEvents")}</p>
               </Card>
             )}
 
@@ -249,7 +255,7 @@ export default function Home() {
         {!loadingEvent && openNominationEvents.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
-              Open for Nominations
+              {t("home.openForNominations")}
             </h2>
             <div className="space-y-2">
               {openNominationEvents.map(renderEventCard)}
@@ -259,7 +265,7 @@ export default function Home() {
 
         <section className="space-y-3">
           <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-text-muted">
-            Quick Actions
+            {t("home.quickActions")}
           </h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -272,7 +278,7 @@ export default function Home() {
                 }}
               >
                 <CalendarDaysIcon className="h-7 w-7" />
-                <span className="text-sm font-medium">Events</span>
+                <span className="text-sm font-medium">{t("nav.events")}</span>
               </Button>
             </Link>
 
@@ -285,7 +291,7 @@ export default function Home() {
                 }}
               >
                 <CalendarIcon className="h-7 w-7" />
-                <span className="text-sm font-medium">Calendar</span>
+                <span className="text-sm font-medium">{t("nav.calendar")}</span>
               </Button>
             </Link>
 
@@ -298,20 +304,22 @@ export default function Home() {
                 }}
               >
                 <UserPlusIcon className="h-7 w-7" />
-                <span className="text-sm font-medium">My Nominations</span>
+                <span className="text-sm font-medium">{t("home.myNominations")}</span>
               </Button>
             </Link>
 
-            <Button
-              className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2 opacity-60"
-              style={{
-                backgroundColor: palette.button,
-                color: palette.buttonText,
-              }}
-            >
-              <TrophyIcon className="h-7 w-7" />
-              <span className="text-sm font-medium">Results</span>
-            </Button>
+            <Link to={`/${clubSlug}/app/results`} className="no-underline">
+              <Button
+                className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
+                style={{
+                  backgroundColor: palette.button,
+                  color: palette.buttonText,
+                }}
+              >
+                <TrophyIcon className="h-7 w-7" />
+                <span className="text-sm font-medium">{t("home.results")}</span>
+              </Button>
+            </Link>
 
             <Link to={`/${clubSlug}/app/membership`} className="no-underline">
               <Button
@@ -322,7 +330,7 @@ export default function Home() {
                 }}
               >
                 <IdentificationIcon className="h-7 w-7" />
-                <span className="text-sm font-medium">Membership</span>
+                <span className="text-sm font-medium">{t("nav.membership")}</span>
               </Button>
             </Link>
 
@@ -340,7 +348,7 @@ export default function Home() {
                 }}
               >
                 <BoltIcon className="h-7 w-7" />
-                <span className="text-sm font-medium">LiveRC</span>
+                <span className="text-sm font-medium">{t("home.liveRc")}</span>
               </Button>
             </a>
           </div>

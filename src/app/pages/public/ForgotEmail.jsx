@@ -5,10 +5,12 @@ import { useParams, useOutletContext, Link } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function ForgotEmail() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
+  const { t } = useTranslation();
 
   const [fullName, setFullName] = useState("");
   const [messageText, setMessageText] = useState("");
@@ -19,7 +21,7 @@ export default function ForgotEmail() {
   if (!club) {
     return (
       <div style={{ padding: 24, textAlign: "center" }}>
-        Loading…
+        {t("loading.loading")}
       </div>
     );
   }
@@ -44,14 +46,12 @@ export default function ForgotEmail() {
     setMessage("");
 
     if (!fullName.trim()) {
-      setErrorMsg("Please enter your full name.");
+      setErrorMsg(t("signup.nameRequired"));
       return;
     }
 
     if (!supportEmail) {
-      setErrorMsg(
-        "This club has not configured a support email. Please contact the club directly."
-      );
+      setErrorMsg(t("signup.noSupportEmail"));
       return;
     }
 
@@ -79,12 +79,12 @@ export default function ForgotEmail() {
     });
 
     if (error) {
-      setErrorMsg("Unable to send request. Please try again.");
+      setErrorMsg(t("signup.sendFailed"));
       setLoading(false);
       return;
     }
 
-    setMessage("Your request has been sent to the club administrator.");
+    setMessage(t("signup.requestSent"));
     setLoading(false);
   }
 
@@ -133,7 +133,7 @@ export default function ForgotEmail() {
             textAlign: "center",
           }}
         >
-          Recover Email
+          {t("auth.forgotEmailTitle")}
         </h1>
 
         <form
@@ -147,13 +147,13 @@ export default function ForgotEmail() {
           }}
         >
           <Input
-            label="Full Name"
+            label={t("signup.fullName")}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
           />
 
           <Input
-            label="Message (optional)"
+            label={t("signup.messageOptional")}
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
           />
@@ -186,19 +186,19 @@ export default function ForgotEmail() {
 
           <div style={{ width: "100%", maxWidth: "360px", margin: "0 auto" }}>
             <Button type="submit" variant="primary" disabled={loading}>
-              {loading ? "Sending…" : "Send Request"}
+              {loading ? t("auth.sending") : t("auth.sendResetLink")}
             </Button>
           </div>
         </form>
 
         <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
-          Back to{" "}
+          {t("signup.backTo")}{" "}
           <Link
             to={`/${clubSlug}/public/login/`}
             replace={true}
             style={{ color: "#2563eb", textDecoration: "underline" }}
           >
-            Log in
+            {t("auth.logIn")}
           </Link>
         </p>
       </div>

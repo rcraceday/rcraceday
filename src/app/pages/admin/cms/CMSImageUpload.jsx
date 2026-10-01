@@ -1,8 +1,10 @@
 import React, { useRef, useEffect, useState } from "react";
 import { UploadButton, DeleteButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "./styles";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function CMSImageUpload({ label, value, filePreview, onChange }) {
+  const { t } = useTranslation();
   const fileInputRef = useRef(null);
   const [objectUrl, setObjectUrl] = useState(null);
 

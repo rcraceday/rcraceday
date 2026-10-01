@@ -4,8 +4,10 @@ import { cmsStyles } from "../cms/styles";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import BrandingSettingsCard from "./components/BrandingSettingsCard";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function BrandingSettings() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { club } = useClub();
 
@@ -38,7 +40,7 @@ export default function BrandingSettings() {
 
         {/* CARD */}
         <CMSCard
-          title="Branding"
+          titleKey="admin.settings.brandingCard"
           style={cmsStyles.card}
         >
           <div style={cmsStyles.cardBody}>

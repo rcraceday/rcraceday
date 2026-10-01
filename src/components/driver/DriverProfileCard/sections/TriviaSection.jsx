@@ -1,8 +1,10 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 // src/app/components/driver/DriverProfileCard/sections/TriviaSection.jsx
 
 import React from "react";
 
 export default function TriviaSection({ driver }) {
+  const { t } = useTranslation();
   if (
     !driver.favourite_vintage_rc &&
     !driver.favourite_hobby_shop &&
@@ -21,49 +23,49 @@ export default function TriviaSection({ driver }) {
 
         {driver.favourite_vintage_rc && (
           <p>
-            <span className="font-semibold">Favourite Vintage RC:</span>{" "}
+            <span className="font-semibold">{t("driverProfile.fieldFavouriteVintage")}</span>{" "}
             {driver.favourite_vintage_rc}
           </p>
         )}
 
         {driver.favourite_hobby_shop && (
           <p>
-            <span className="font-semibold">Favourite Hobby Shop:</span>{" "}
+            <span className="font-semibold">{t("driverProfile.fieldFavouriteHobbyShop")}</span>{" "}
             {driver.favourite_hobby_shop}
           </p>
         )}
 
         {driver.what_do_you_do_when_not_racing && (
           <p>
-            <span className="font-semibold">When Not Racing:</span>{" "}
+            <span className="font-semibold">{t("driverProfile.fieldWhenNotRacing")}</span>{" "}
             {driver.what_do_you_do_when_not_racing}
           </p>
         )}
 
         {driver.favourite_meal && (
           <p>
-            <span className="font-semibold">Favourite Meal:</span>{" "}
+            <span className="font-semibold">{t("driverProfile.fieldFavouriteMeal")}</span>{" "}
             {driver.favourite_meal}
           </p>
         )}
 
         {driver.favourite_movie && (
           <p>
-            <span className="font-semibold">Favourite Movie:</span>{" "}
+            <span className="font-semibold">{t("driverProfile.fieldFavouriteMovie")}</span>{" "}
             {driver.favourite_movie}
           </p>
         )}
 
         {driver.favourite_sports_team && (
           <p>
-            <span className="font-semibold">Favourite Sports Team:</span>{" "}
+            <span className="font-semibold">{t("driverProfile.fieldFavouriteSportsTeam")}</span>{" "}
             {driver.favourite_sports_team}
           </p>
         )}
 
         {driver.favourite_pro_driver && (
           <p>
-            <span className="font-semibold">Favourite Pro RC Driver:</span>{" "}
+            <span className="font-semibold">{t("driverProfile.fieldFavouriteProDriver")}</span>{" "}
             {driver.favourite_pro_driver}
           </p>
         )}

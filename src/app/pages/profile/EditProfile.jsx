@@ -10,6 +10,7 @@ import useTheme from "@/app/providers/useTheme";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 import EditDriverProfileCard from "@/components/driver/EditDriverProfileCard";
 
@@ -57,6 +58,7 @@ export default function EditProfile() {
   const navigate = useNavigate();
   const { club } = useOutletContext();
   const { palette } = useTheme();
+  const { t } = useTranslation();
   const brand = palette.primary;
 
   const { id, clubSlug } = useParams();
@@ -331,7 +333,7 @@ export default function EditProfile() {
     <div className="min-h-screen w-full bg-background text-text-base">
       <PageTitle
         icon={PencilSquareIcon}
-        title="Edit Driver Profile"
+        title={t("drivers.editTitle")}
         style={{ color: brand }}
         actions={
           <Button

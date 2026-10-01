@@ -2,8 +2,10 @@ import { useState } from "react";
 import { supabase } from "@/supabaseClient";
 import CMSInput from "@cms/CMSInput";
 import CMSButton from "@cms/CMSButton";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function ClubInfoSettingsCard({ club }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     name: club?.name || "",
     short_name: club?.short_name || "",
@@ -45,21 +47,21 @@ export default function ClubInfoSettingsCard({ club }) {
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
 
       <CMSInput
-        label="Club Name"
+        labelKey="cms.clubName"
         name="name"
         value={form.name}
         onChange={(value) => updateField("name", value)}
       />
 
       <CMSInput
-        label="Short Name"
+        labelKey="cms.shortName"
         name="short_name"
         value={form.short_name}
         onChange={(value) => updateField("short_name", value)}
       />
 
       <CMSInput
-        label="Description"
+        labelKey="cms.description"
         name="description"
         type="textarea"
         value={form.description}
@@ -67,35 +69,35 @@ export default function ClubInfoSettingsCard({ club }) {
       />
 
       <CMSInput
-        label="Contact Email"
+        labelKey="cms.contactEmail"
         name="contact_email"
         value={form.contact_email}
         onChange={(value) => updateField("contact_email", value)}
       />
 
       <CMSInput
-        label="Website"
+        labelKey="cms.website"
         name="website"
         value={form.website}
         onChange={(value) => updateField("website", value)}
       />
 
       <CMSInput
-        label="Phone"
+        labelKey="cms.phone"
         name="phone"
         value={form.phone}
         onChange={(value) => updateField("phone", value)}
       />
 
       <CMSInput
-        label="Facebook"
+        labelKey="cms.facebook"
         name="facebook"
         value={form.facebook}
         onChange={(value) => updateField("facebook", value)}
       />
 
       <CMSInput
-        label="Instagram"
+        labelKey="cms.instagram"
         name="instagram"
         value={form.instagram}
         onChange={(value) => updateField("instagram", value)}

@@ -1,4 +1,6 @@
+import { useTranslation } from "@/app/i18n/I18nContext";
 export default function CMSPage({ title, children }) {
+  const { t } = useTranslation();
   return (
     <div>
       {title && (

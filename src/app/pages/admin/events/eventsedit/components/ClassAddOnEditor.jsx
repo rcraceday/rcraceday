@@ -14,6 +14,7 @@ import {
 
 import OptionGroupEditor from "./OptionGroupEditor";
 import ClassAddOnRuleEditor from "./ClassAddOnRuleEditor";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const normalizeRequirements = (requirements) =>
   (Array.isArray(requirements) ? requirements : []).map((requirement) => ({
@@ -24,6 +25,7 @@ const normalizeRequirements = (requirements) =>
   }));
 
 export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
+  const { t } = useTranslation();
   const update = (field, value) => {
     setItem((prev) => ({ ...prev, [field]: value }));
   };
@@ -144,26 +146,26 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
   };
 
   return (
-    <CMSCard title="Add‑on Options">
+    <CMSCard titleKey="admin.common.addOnOptions">
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ fontSize: 12, color: "#666", marginTop: -8 }}>
           Use descriptive group names (e.g. Tire Compund, Wheel Colour). Add option values and optional photos here.
         </div>
 
         <CMSInput
-          label="Name"
+          labelKey="cms.name"
           value={item.name}
           onChange={(v) => update("name", v)}
         />
 
         <CMSTextarea
-          label="Description"
+          labelKey="cms.description"
           value={item.description}
           onChange={(v) => update("description", v)}
         />
 
         <CMSInput
-          label="Price"
+          labelKey="cms.price"
           type="number"
           value={item.price}
           onChange={(v) => update("price", Number(v))}
@@ -171,13 +173,13 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
 
         <div style={{ display: "flex", gap: 12 }}>
           <CMSToggle
-            label="Required Add‑On"
+            labelKey="cms.requiredAddOn"
             checked={item.required}
             onChange={(v) => update("required", v)}
           />
 
           <CMSInput
-            label="Max Qty"
+            labelKey="cms.maxQty"
             type="number"
             value={item.max_qty}
             onChange={(v) => update("max_qty", Number(v))}
@@ -185,7 +187,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
         </div>
 
         <CMSImageUpload
-          label="Photo"
+          labelKey="cms.photo"
           value={item.photo_url}
           filePreview={item.photo_file}
           onChange={(fileOrNull) => {
@@ -200,7 +202,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
           }}
         />
 
-        <CMSCard title="Add‑on Options">
+        <CMSCard titleKey="admin.common.addOnOptions">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <strong>Groups</strong>
             <CMSButton
@@ -260,7 +262,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
           ))}
         </CMSCard>
 
-        <CMSCard title="Requirements">
+        <CMSCard titleKey="admin.events.requirements">
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <strong>Checklist Requirements</strong>
@@ -293,7 +295,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
                   <div style={{ flex: 1 }}>
                     <CMSInput
-                      label="Description"
+                      labelKey="cms.description"
                       value={requirement.description}
                       onChange={(description) => {
                         const nextRequirements = requirements.map((entry, index) =>
@@ -374,7 +376,7 @@ export default function ClassAddOnEditor({ item, event, setItem, onSave }) {
           </div>
         </CMSCard>
 
-        <CMSCard title="Apply to Classes">
+        <CMSCard titleKey="admin.common.applyToClasses">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ color: "#444", fontSize: 13 }}>
               Select classes this add‑on applies to

@@ -114,7 +114,7 @@ export default function EditProfile() {
           <Button
             variant="primary"
             className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
-            onClick={() => navigate(`/${clubSlug}/app/profile`)}
+            onClick={() => navigate(`/${clubSlug}/app/settings/account`)}
           >
             <ArrowLeftIcon className="h-3 w-3" />
             Back
@@ -246,9 +246,9 @@ export default function EditProfile() {
               <Button
                 variant="secondary"
                 className="!py-2 !px-4 !text-sm"
-                onClick={() => navigate(`/${clubSlug}/app/profile`)}
+                onClick={() => navigate(`/${clubSlug}/app/settings/account`)}
               >
-                Back to Profile
+                Back to account
               </Button>
             </div>
 

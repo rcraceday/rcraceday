@@ -1,5 +1,7 @@
 // src/app/pages/events/EventDetailsSections/EventDetailsSchedule.jsx
 
+import { useTranslation } from "@/app/i18n/I18nContext";
+
 /* ===========================
    HELPERS
    =========================== */
@@ -30,6 +32,7 @@ function formatTime(dateString) {
    =========================== */
 
 export default function EventDetailsSchedule({ event }) {
+  const { t } = useTranslation();
   const days = Array.isArray(event.days) ? event.days : [];
 
   if (days.length === 0) return null;
@@ -38,40 +41,38 @@ export default function EventDetailsSchedule({ event }) {
     <div className="space-y-6">
 
       {days.map((day, index) => {
-        const label = day.label?.trim() || `Day ${index + 1}`;
+        const label = day.label?.trim() || t("events.dayN", { n: index + 1 });
         const dateFormatted = formatDate(day.date);
 
         return (
           <div key={index} className="space-y-2">
 
-            {/* DAY HEADER */}
             <div className="font-semibold text-base">
               {label} — {dateFormatted}
             </div>
 
-            {/* TIMES */}
             <ul className="text-sm text-text-muted leading-tight space-y-1">
               {day.gates_open_at && (
                 <li>
-                  <strong>Gates Open:</strong> {formatTime(day.gates_open_at)}
+                  <strong>{t("events.scheduleGatesOpen")}</strong> {formatTime(day.gates_open_at)}
                 </li>
               )}
 
               {day.practice_at && (
                 <li>
-                  <strong>Practice:</strong> {formatTime(day.practice_at)}
+                  <strong>{t("events.schedulePractice")}</strong> {formatTime(day.practice_at)}
                 </li>
               )}
 
               {day.drivers_brief_at && (
                 <li>
-                  <strong>Drivers Brief:</strong> {formatTime(day.drivers_brief_at)}
+                  <strong>{t("events.scheduleDriversBrief")}</strong> {formatTime(day.drivers_brief_at)}
                 </li>
               )}
 
               {day.race_start_at && (
                 <li>
-                  <strong>Racing Starts:</strong> {formatTime(day.race_start_at)}
+                  <strong>{t("events.scheduleRacingStarts")}</strong> {formatTime(day.race_start_at)}
                 </li>
               )}
             </ul>

@@ -4,6 +4,7 @@ import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
 import { supabase } from "@/supabaseClient";
 import { uploadClubAsset } from "@/app/lib/clubAssetStorage";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 /**
  * LogoPicker
