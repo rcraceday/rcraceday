@@ -1,6 +1,6 @@
 import { supabase } from "@/supabaseClient";
 import { formatEdgeFunctionInvokeError } from "@/app/lib/edgeFunctionErrors";
-import { parseLiveRcPages } from "./parseLiveRcHtml.js";
+import { buildParsedFromLiveRcResponse } from "./liveRcImport.js";
 
 export async function importLiveRcResults(url, options = {}) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -31,6 +31,7 @@ export async function importLiveRcResults(url, options = {}) {
       body: JSON.stringify({
         url,
         qualifyingOrder: options.qualifyingOrder || undefined,
+        raceFormat: options.raceFormat || undefined,
       }),
     });
   } catch (err) {
@@ -47,12 +48,14 @@ export async function importLiveRcResults(url, options = {}) {
     throw new Error(data?.error || `Edge Function returned ${response.status}`);
   }
   if (data?.error) throw new Error(data.error);
-  if (data?.parsed) return data.parsed;
-  return parseLiveRcPages(data?.pages || [], {
+
+  const payload = {
+    ...data,
     sourceUrl: data?.sourceUrl || url,
-    livercEventId: data?.livercEventId,
-    title: data?.title,
-    sourceLabel: data?.title || "LiveRC",
-    qualifyingOrder: options.qualifyingOrder,
-  });
+  };
+  const parsed = buildParsedFromLiveRcResponse(payload, options);
+  return {
+    parsed,
+    payload,
+  };
 }

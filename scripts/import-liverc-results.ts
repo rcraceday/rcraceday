@@ -49,11 +49,18 @@ const LIVE_RC_QUAL_ORDERS = [
   "top_3_consecutive",
 ];
 
+const LIVE_RC_QUAL_PARAM: Record<string, string> = {
+  top_5_average: "avg_top_5",
+  laps_time: "laps_time",
+  fastest_lap: "fastest_lap",
+  top_3_consecutive: "top_3_consecutive",
+};
+
 function withQualifyingOrder(url: string, order: string) {
   try {
     const parsed = new URL(url);
     if (parsed.searchParams.get("p") !== "view_round_ranking") return url;
-    parsed.searchParams.set("o", order);
+    parsed.searchParams.set("o", LIVE_RC_QUAL_PARAM[order] || order);
     return parsed.toString();
   } catch {
     return url;

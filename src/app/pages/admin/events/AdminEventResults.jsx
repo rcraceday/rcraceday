@@ -12,6 +12,12 @@ import CMSToggle from "@cms/CMSToggle";
 import { cmsStyles } from "@cms/styles";
 import { parseLiveTimeRoundResultFile } from "@/app/lib/results/parseLiveTimeRoundResult";
 import { importLiveRcResults } from "@/app/lib/results/importLiveRcResults";
+import {
+  DEFAULT_LIVE_RC_RACE_FORMAT,
+  LIVE_RC_RACE_FORMATS,
+  reprocessLiveRcImport,
+} from "@/app/lib/results/liveRcImport";
+import { raceFormatLabel } from "@/app/lib/results/raceFormatLabel";
 import { saveEventResults, unmatchedNames } from "@/app/lib/results/saveEventResults";
 import { loadResultMatchContext } from "@/app/lib/results/resultMemberMatch";
 import { uniqueClassNames } from "@/app/lib/results/overallOrder";
@@ -43,6 +49,8 @@ export default function AdminEventResults() {
   const [parsed, setParsed] = useState(null);
   const [livercUrl, setLivercUrl] = useState("");
   const [qualifyingOrder, setQualifyingOrder] = useState(DEFAULT_LIVE_RC_QUAL_ORDER);
+  const [raceFormat, setRaceFormat] = useState(DEFAULT_LIVE_RC_RACE_FORMAT);
+  const [liveRcPayload, setLiveRcPayload] = useState(null);
   const [championshipId, setChampionshipId] = useState("");
   const [published, setPublished] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -55,6 +63,20 @@ export default function AdminEventResults() {
     if (!club?.id || !id) return;
     load();
   }, [club?.id, id]);
+
+  useEffect(() => {
+    if (!liveRcPayload) return;
+    try {
+      const next = reprocessLiveRcImport(liveRcPayload, {
+        qualifyingOrder,
+        raceFormat,
+      });
+      setParsed(next);
+      setUnmatched(unmatchedNames(next, matchContext?.rosterIndex));
+    } catch (err) {
+      setError(err.message || t("results.importFailed"));
+    }
+  }, [qualifyingOrder, raceFormat, liveRcPayload, matchContext?.rosterIndex, t]);
 
   async function load() {
     setLoading(true);
@@ -89,6 +111,7 @@ export default function AdminEventResults() {
     setError("");
     try {
       const next = await parseLiveTimeRoundResultFile(file);
+      setLiveRcPayload(null);
       setParsed(next);
       setUnmatched(unmatchedNames(next, matchContext?.rosterIndex));
     } catch (err) {
@@ -104,9 +127,11 @@ export default function AdminEventResults() {
     setBusyAction("liverc");
     setError("");
     try {
-      const next = await importLiveRcResults(livercUrl.trim(), { qualifyingOrder });
-      setParsed(next);
-      setUnmatched(unmatchedNames(next, matchContext?.rosterIndex));
+      const { payload } = await importLiveRcResults(livercUrl.trim(), {
+        qualifyingOrder,
+        raceFormat,
+      });
+      setLiveRcPayload(payload);
     } catch (err) {
       setError(err.message || t("results.importFailed"));
     } finally {
@@ -136,6 +161,7 @@ export default function AdminEventResults() {
       }
       await load();
       setParsed(null);
+      setLiveRcPayload(null);
     } catch (err) {
       setError(err.message || t("results.saveFailed"));
     } finally {
@@ -220,6 +246,17 @@ export default function AdminEventResults() {
           sortOptions={false}
         />
         <p className="text-sm text-slate-500">{t("results.qualifyingRankingHelp")}</p>
+        <CMSSelect
+          label={t("results.raceFormat")}
+          value={raceFormat}
+          onChange={setRaceFormat}
+          options={LIVE_RC_RACE_FORMATS.map((value) => ({
+            value,
+            label: raceFormatLabel(value, t),
+          }))}
+          sortOptions={false}
+        />
+        <p className="text-sm text-slate-500">{t("results.raceFormatHelp")}</p>
         <CMSButton onClick={handleLiveRc} disabled={busy || !livercUrl.trim()}>
           {busyAction === "liverc" ? t("loading.loading") : t("results.importUrl")}
         </CMSButton>
@@ -255,6 +292,12 @@ export default function AdminEventResults() {
               classes: classes.length,
             })}
           </div>
+          {parsed.qualifyingOrder && (
+            <div className="text-sm text-slate-600">
+              {t("results.qualifyingRanking")}: {qualifyingOrderLabel(parsed.qualifyingOrder, t)}
+              {parsed.raceFormat ? ` · ${raceFormatLabel(parsed.raceFormat, t)}` : ""}
+            </div>
+          )}
           <div className="text-sm text-slate-600">{classes.join(", ")}</div>
           {matchContext?.rosterIndex?.memberNameKeys && (
             <p className="text-sm text-slate-500">

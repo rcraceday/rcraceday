@@ -1,4 +1,4 @@
-import { parseDriverName } from "./driverName.js";
+import { normalizeDriverName, parseDriverName } from "./driverName.js";
 import {
   parseConsistencyPct,
   parseLapsTime,
@@ -408,8 +408,133 @@ function parseQualifyingTables(url, html, options = {}) {
   return races;
 }
 
+function isRoundQualifyingRace(race) {
+  return race?.raceKind === "qualifying" && Boolean(race.qualifyingRankMethod);
+}
+
+function isQualifyingHeatRace(race) {
+  return race?.raceKind === "qualifying" && !race.qualifyingRankMethod;
+}
+
+/** One qualifier round + A1–A3 heads-up mains; drop per-class qual heats when round rankings exist. */
+function applyHeadsUpGridSeeds(classRaces) {
+  const qual = classRaces.find(isRoundQualifyingRace);
+  const qualPosByDriver = new Map();
+  if (qual) {
+    (qual.entries || []).forEach((entry) => {
+      qualPosByDriver.set(normalizeDriverName(entry.driverNameRaw), entry.position);
+    });
+  }
+
+  const mains = classRaces
+    .filter((race) => race.raceKind !== "qualifying" && race.mainNumber != null)
+    .sort((a, b) => (a.mainNumber || 0) - (b.mainNumber || 0));
+
+  const finishByDriverAndMain = new Map();
+  mains.forEach((race) => {
+    (race.entries || []).forEach((entry) => {
+      finishByDriverAndMain.set(
+        `${race.mainNumber}::${normalizeDriverName(entry.driverNameRaw)}`,
+        entry.position
+      );
+    });
+  });
+
+  return classRaces.map((race) => {
+    if (race.raceKind === "qualifying" || race.mainNumber == null) return race;
+    const entries = (race.entries || []).map((entry) => {
+      if (entry.seed != null && entry.seed !== "" && Number.isFinite(Number(entry.seed))) {
+        return entry;
+      }
+      const driverKey = normalizeDriverName(entry.driverNameRaw);
+      const seed =
+        race.mainNumber === 1
+          ? qualPosByDriver.get(driverKey)
+          : finishByDriverAndMain.get(`${race.mainNumber - 1}::${driverKey}`);
+      if (seed == null) return entry;
+      return { ...entry, seed };
+    });
+    return { ...race, entries };
+  });
+}
+
+function sortRacesForDisplay(races) {
+  return [...races].sort((a, b) => {
+    const classCmp = String(a.className).localeCompare(String(b.className));
+    if (classCmp !== 0) return classCmp;
+    const aQual = a.raceKind === "qualifying" ? 0 : 1;
+    const bQual = b.raceKind === "qualifying" ? 0 : 1;
+    if (aQual !== bQual) return aQual - bQual;
+    return (a.mainNumber || 0) - (b.mainNumber || 0);
+  });
+}
+
+export function detectLiveRcRaceFormat(races, pages = []) {
+  const hasRoundQual = races.some(isRoundQualifyingRace);
+  const hasQualHeats = races.some(isQualifyingHeatRace);
+  const mainNumbers = races
+    .filter((race) => race.raceKind !== "qualifying" && race.mainNumber != null)
+    .map((race) => race.mainNumber);
+  const maxMain = mainNumbers.length ? Math.max(...mainNumbers) : 0;
+  const hasTriple = [1, 2, 3].every((n) => mainNumbers.includes(n));
+  const hasMulti = (pages || []).some((page) => classifyLiveRcUrl(page.url).kind === "multi");
+
+  if (hasRoundQual && hasTriple) return "triple_heads_up";
+  if (hasRoundQual && maxMain <= 1) return "single_main";
+  if (!hasRoundQual && hasQualHeats) return "qual_heats";
+  if (hasMulti && hasTriple) return "triple_heads_up";
+  return "club_mains";
+}
+
+function normalizeLiveRcRaceList(races, raceFormat = "auto", pages = []) {
+  const resolved = raceFormat === "auto" ? detectLiveRcRaceFormat(races, pages) : raceFormat;
+  const hasRoundQual = races.some(isRoundQualifyingRace);
+  let list = [...races];
+
+  if (resolved !== "qual_heats" && hasRoundQual) {
+    list = list.filter((race) => !isQualifyingHeatRace(race));
+  }
+
+  if (resolved === "triple_heads_up") {
+    list = list.filter(
+      (race) =>
+        race.raceKind === "qualifying" ||
+        (race.mainNumber != null && race.mainNumber >= 1 && race.mainNumber <= 3)
+    );
+  } else if (resolved === "single_main") {
+    list = list.filter(
+      (race) => race.raceKind === "qualifying" || race.mainNumber === 1
+    );
+  }
+
+  const byClass = new Map();
+  list.forEach((race) => {
+    const key = race.className || "Unknown";
+    if (!byClass.has(key)) byClass.set(key, []);
+    byClass.get(key).push(race);
+  });
+
+  list = [];
+  byClass.forEach((classRaces) => {
+    list.push(...applyHeadsUpGridSeeds(classRaces));
+  });
+  return sortRacesForDisplay(list);
+}
+
+export function finalizeLiveRcRaces(races, options = {}) {
+  const list = normalizeLiveRcRaceList(
+    races,
+    options.raceFormat || "auto",
+    options.pages || []
+  );
+  list.forEach((race, index) => {
+    race.sortIndex = index;
+  });
+  return list;
+}
+
 export function parseLiveRcPages(pages, meta = {}) {
-  const races = [];
+  let races = [];
   let overall = [];
   const rankingOverall = [];
   (pages || []).forEach((page, index) => {
@@ -427,8 +552,10 @@ export function parseLiveRcPages(pages, meta = {}) {
     } else if (classified.kind === "overall") {
       rankingOverall.push(...parseOverallRanking(page.html));
     } else if (classified.kind === "qualifying") {
+      const qualifyingRankMethod =
+        meta.qualifyingOrder ?? qualifyingOrderFromUrl(page.url) ?? DEFAULT_LIVE_RC_QUAL_ORDER;
       parseQualifyingTables(page.url, page.html, {
-        qualifyingRankMethod: meta.qualifyingOrder || qualifyingOrderFromUrl(page.url),
+        qualifyingRankMethod,
       }).forEach((race) => {
         race.sortIndex = races.length;
         races.push(race);
@@ -491,12 +618,24 @@ export function parseLiveRcPages(pages, meta = {}) {
     row.className = normalizeResultClassName(row.className) || row.className;
   });
 
+  races = finalizeLiveRcRaces(races, {
+    raceFormat: meta.raceFormat || "auto",
+    pages,
+  });
+
+  const raceFormat =
+    meta.raceFormat && meta.raceFormat !== "auto"
+      ? meta.raceFormat
+      : detectLiveRcRaceFormat(races, pages);
+
   return {
     source: "liverc_url",
     sourceLabel: meta.sourceLabel || "LiveRC",
     sourceUrl: meta.sourceUrl || pages?.[0]?.url || null,
     livercEventId: meta.livercEventId || null,
     title: meta.title || "LiveRC Results",
+    qualifyingOrder: meta.qualifyingOrder ?? null,
+    raceFormat,
     races: races.filter((race) => isDisplayableClassName(race.className)),
     overall: overall.filter((row) => isDisplayableClassName(row.className)),
   };

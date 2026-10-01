@@ -18,7 +18,11 @@ import {
   formatOverallMainsColumn,
   latestMainEntry,
 } from "@/app/lib/results/aggregateDriverStats";
-import { primaryQualifyingMetric, qualifyingOrderLabel } from "@/app/lib/results/qualifyingRank";
+import {
+  DEFAULT_LIVE_RC_QUAL_ORDER,
+  primaryQualifyingMetric,
+  qualifyingOrderLabel,
+} from "@/app/lib/results/qualifyingRank";
 
 function Stat({ label, value }) {
   return (
@@ -258,7 +262,7 @@ function MainResultsTable({ race, driverIds, t }) {
 }
 
 function QualifyingResultsTable({ race, driverIds, t }) {
-  const order = race.qualifyingRankMethod || "laps_time";
+  const order = race.qualifyingRankMethod || DEFAULT_LIVE_RC_QUAL_ORDER;
   const rankLabel =
     race.qualifyingRankLabel || qualifyingOrderLabel(order, t);
   const showHeat = race.entries.some((entry) => entry.qualHeatLabel);

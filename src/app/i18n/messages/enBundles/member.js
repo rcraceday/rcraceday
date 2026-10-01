@@ -23,7 +23,17 @@ export default {
     importUrl: "Import from LiveRC",
     qualifyingRanking: "Qualifying ranking (LiveRC)",
     qualifyingRankingHelp:
-      "Must match how LiveRC ranks qualifier results (e.g. Top 5 average for club championships).",
+      "Must match how LiveRC ranks qualifier results (e.g. Top 5 average for club championships). Change this before or after import — preview updates automatically.",
+    raceFormat: "Race format",
+    raceFormatHelp:
+      "How mains and qualifying are combined (e.g. triple heads-up A1–A3 after one qualifier round).",
+    raceFormatOptions: {
+      auto: "Auto-detect from LiveRC",
+      triple_heads_up: "Triple A-main (heads-up grid)",
+      club_mains: "All mains from LiveRC",
+      single_main: "Single A-main only",
+      qual_heats: "Qualifying heats only",
+    },
     qualOrder: {
       top_5_average: "Top 5 average",
       laps_time: "Laps / time",

@@ -10,6 +10,28 @@ export const LIVE_RC_QUAL_ORDERS = [
 
 export const DEFAULT_LIVE_RC_QUAL_ORDER = "top_5_average";
 
+/** LiveRC `view_round_ranking` `o=` query values (internal keys differ for top 5). */
+const LIVE_RC_QUAL_PARAM = {
+  top_5_average: "avg_top_5",
+  laps_time: "laps_time",
+  fastest_lap: "fastest_lap",
+  top_3_consecutive: "top_3_consecutive",
+};
+
+const LIVE_RC_PARAM_TO_ORDER = {
+  avg_top_5: "top_5_average",
+};
+
+export function toLiveRcQualifyingParam(order = DEFAULT_LIVE_RC_QUAL_ORDER) {
+  return LIVE_RC_QUAL_PARAM[order] || order;
+}
+
+export function fromLiveRcQualifyingParam(param) {
+  if (!param) return null;
+  if (LIVE_RC_QUAL_ORDERS.includes(param)) return param;
+  return LIVE_RC_PARAM_TO_ORDER[param] || null;
+}
+
 export function qualifyingOrderLabel(order, t) {
   const key = `results.qualOrder.${order}`;
   const label = t?.(key);
@@ -27,7 +49,8 @@ export function qualifyingOrderLabel(order, t) {
 export function qualifyingOrderFromUrl(url) {
   try {
     const value = new URL(url).searchParams.get("o");
-    if (value && LIVE_RC_QUAL_ORDERS.includes(value)) return value;
+    const mapped = fromLiveRcQualifyingParam(value);
+    if (mapped) return mapped;
   } catch {
     // ignore
   }
@@ -38,11 +61,25 @@ export function withQualifyingOrder(url, order = DEFAULT_LIVE_RC_QUAL_ORDER) {
   try {
     const parsed = new URL(url);
     if (parsed.searchParams.get("p") !== "view_round_ranking") return url;
-    parsed.searchParams.set("o", order);
+    parsed.searchParams.set("o", toLiveRcQualifyingParam(order));
     return parsed.toString();
   } catch {
     return url;
   }
+}
+
+/** Re-rank stored qualifying races (e.g. after changing the admin dropdown). */
+export function reapplyQualifyingOrderToRaces(races, order = DEFAULT_LIVE_RC_QUAL_ORDER) {
+  if (!Array.isArray(races)) return races;
+  return races.map((race) => {
+    if (race.raceKind !== "qualifying" || !race.qualifyingRankMethod) return race;
+    return {
+      ...race,
+      qualifyingRankMethod: order,
+      qualifyingRankLabel: qualifyingOrderLabel(order),
+      entries: sortQualifyingEntries(race.entries, order),
+    };
+  });
 }
 
 /** LiveRC cells often prefix values, e.g. "0022.702 22.702" or combined lap rows. */
