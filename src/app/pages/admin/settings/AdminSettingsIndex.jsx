@@ -9,7 +9,6 @@ export default function AdminSettingsIndex() {
     { path: "club-info", titleKey: "admin.settings.clubInfoShort", descKey: "admin.settings.clubInfoDesc" },
     { path: "branding", titleKey: "admin.settings.brandingShort", descKey: "admin.settings.brandingDesc" },
     { path: "system", titleKey: "admin.settings.system", descKey: "admin.settings.systemDesc" },
-    { path: "cms", titleKey: "admin.settings.cms", descKey: "admin.settings.cmsDesc" },
     { path: "users", titleKey: "admin.settings.usersShort", descKey: "admin.settings.usersDesc" },
     { path: "membership", titleKey: "admin.membership.title", descKey: "admin.settings.membershipDesc" },
     { path: "event-defaults", titleKey: "admin.settings.eventDefaults", descKey: "admin.settings.eventDefaultsDesc" },

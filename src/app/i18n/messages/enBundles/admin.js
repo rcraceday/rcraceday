@@ -292,6 +292,8 @@ export default {
       brandingCard: "Branding",
       maintenance: "Maintenance",
       languages: "Languages",
+      comingSoon: "Coming soon",
+      comingSoonBody: "This section is not available yet. Please check back later.",
     },
     archives: {
       title: "Metrics Archives",

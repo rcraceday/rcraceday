@@ -287,6 +287,8 @@ export default {
       brandingCard: "Marque",
       maintenance: "Maintenance",
       languages: "Langues",
+      comingSoon: "Bientôt disponible",
+      comingSoonBody: "Cette section n’est pas encore disponible. Revenez plus tard.",
     },
     archives: {
       title: "Archives des indicateurs",

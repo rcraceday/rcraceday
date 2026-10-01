@@ -287,6 +287,8 @@ export default {
       brandingCard: "Branding",
       maintenance: "Wartung",
       languages: "Sprachen",
+      comingSoon: "Demnächst",
+      comingSoonBody: "Dieser Bereich ist noch nicht verfügbar. Bitte schauen Sie später wieder vorbei.",
     },
     archives: {
       title: "Kennzahlen-Archive",

@@ -285,6 +285,8 @@ export default {
       brandingCard: "品牌",
       maintenance: "维护",
       languages: "语言",
+      comingSoon: "即将推出",
+      comingSoonBody: "此部分尚未开放，请稍后再来查看。",
     },
     archives: {
       title: "指标归档",

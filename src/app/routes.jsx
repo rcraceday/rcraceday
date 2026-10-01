@@ -91,7 +91,6 @@ import AdminSettingsIndex from "@app/pages/admin/settings/AdminSettingsIndex";
 import ClubInfoSettings from "@app/pages/admin/settings/ClubInfoSettings";
 import BrandingSettings from "@app/pages/admin/settings/BrandingSettings";
 import SystemSettings from "@app/pages/admin/settings/SystemSettings";
-import CMSSettings from "@app/pages/admin/settings/CMSSettings";
 import UserSettings from "@app/pages/admin/settings/UserSettings";
 import MembershipSettings from "@app/pages/admin/settings/MembershipSettings";
 import EventDefaultsSettings from "@app/pages/admin/settings/EventDefaultsSettings";
@@ -268,7 +267,6 @@ export default function AppRoutes() {
         <Route path="settings/club-info" element={<ClubInfoSettings />} />
         <Route path="settings/branding" element={<BrandingSettings />} />
         <Route path="settings/system" element={<SystemSettings />} />
-        <Route path="settings/cms" element={<CMSSettings />} />
         <Route path="settings/users" element={<UserSettings />} />
         <Route path="settings/membership" element={<MembershipSettings />} />
         <Route path="settings/event-defaults" element={<EventDefaultsSettings />} />
