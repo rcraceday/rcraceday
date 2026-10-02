@@ -49,11 +49,6 @@ export function buildMenuItems({ clubSlug, isAdmin, user, t }) {
       to: `/${clubSlug}/app/results`,
     },
     {
-      label: tr("nav.championships"),
-      icon: TrophyIcon,
-      to: `/${clubSlug}/app/championships`,
-    },
-    {
       label: tr("nav.messages"),
       icon: ChatBubbleLeftRightIcon,
       to: `/${clubSlug}/app/messages`,

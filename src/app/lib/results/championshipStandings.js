@@ -4,6 +4,12 @@ import {
   isRoundEligibleForChampionship,
 } from "./championshipEligibility.js";
 import { isRosterMemberName, resolveResultMatch } from "./resultMemberMatch.js";
+import {
+  canonicalDriverKey,
+  getDriverDelta,
+  getRoundPointsOverride,
+  normalizePointAdjustments,
+} from "./championshipAdjustments.js";
 export const DEFAULT_CHAMPIONSHIP_POINTS = {
   1: 36,
   2: 29,
@@ -27,13 +33,20 @@ export const DEFAULT_CHAMPIONSHIP_POINTS = {
   20: 1,
 };
 
+function scoringTable(pointsTable) {
+  if (!pointsTable || typeof pointsTable !== "object") return DEFAULT_CHAMPIONSHIP_POINTS;
+  if (pointsTable.positions) {
+    const inner = pointsTable.positions;
+    return Object.keys(inner).length ? inner : DEFAULT_CHAMPIONSHIP_POINTS;
+  }
+  const numeric = Object.keys(pointsTable).filter((k) => Number.isFinite(Number(k)));
+  return numeric.length ? pointsTable : DEFAULT_CHAMPIONSHIP_POINTS;
+}
+
 export function pointsForPosition(pointsTable, position) {
   const pos = Number(position);
   if (!Number.isFinite(pos) || pos < 1) return 0;
-  const table =
-    pointsTable && Object.keys(pointsTable).length
-      ? pointsTable
-      : DEFAULT_CHAMPIONSHIP_POINTS;
+  const table = scoringTable(pointsTable);
   const direct = table[pos] ?? table[String(pos)];
   if (direct != null && direct !== "") return Number(direct) || 0;
   const keys = Object.keys(table).map(Number).filter(Number.isFinite);
@@ -63,6 +76,7 @@ export function computeChampionshipStandings({
   const dropRounds = Number(championship?.drop_rounds) || 0;
   const membersOnly = championship?.members_only !== false;
   const pointsTable = championship?.points_table || {};
+  const adjustments = normalizePointAdjustments(championship?.point_adjustments);
   const lateJoinExcludedKeys = buildLateJoinExcludedKeys({
     rounds,
     drivers,
@@ -104,23 +118,83 @@ export function computeChampionshipStandings({
           return;
         }
 
-        const key = row.driverId || `name:${normalizeDriverName(row.driverNameRaw)}`;
+        const resultKey = row.driverId || `name:${normalizeDriverName(row.driverNameRaw)}`;
+        const key = canonicalDriverKey(adjustments, className, resultKey);
+        const canonicalDriver = key.startsWith("name:") ? null : driverById.get(key);
         if (!byDriver.has(key)) {
           byDriver.set(key, {
             key,
-            driverId: row.driverId || null,
-            driverName: driver ? driverFullName(driver) : row.driverNameRaw,
+            driverId: canonicalDriver?.id || (row.driverId && key === row.driverId ? row.driverId : null),
+            driverName: canonicalDriver
+              ? driverFullName(canonicalDriver)
+              : key === resultKey
+                ? driver
+                  ? driverFullName(driver)
+                  : row.driverNameRaw
+                : row.driverNameRaw,
             isMember: member,
             rounds: [],
           });
+        } else if (canonicalDriver && key === canonicalDriver.id) {
+          const bucket = byDriver.get(key);
+          bucket.driverName = driverFullName(canonicalDriver);
+          bucket.driverId = canonicalDriver.id;
         }
-        byDriver.get(key).rounds.push({
-          eventId: round.eventId,
-          eventName: round.eventName,
-          position: row.overallPosition || row.position,
-          points: pointsForPosition(pointsTable, row.overallPosition || row.position),
-        });
+        const position = row.overallPosition || row.position;
+        let points = pointsForPosition(pointsTable, position);
+        const override = getRoundPointsOverride(
+          adjustments,
+          round.eventId,
+          className,
+          key
+        );
+        if (override != null) points = override;
+        const existing = byDriver.get(key).rounds.find((r) => r.eventId === round.eventId);
+        if (!existing) {
+          byDriver.get(key).rounds.push({
+            eventId: round.eventId,
+            eventName: round.eventName,
+            position,
+            points,
+            source: resultKey !== key ? "merged" : "result",
+          });
+        }
       });
+    });
+
+    (adjustments.manualRounds || []).forEach((manual) => {
+      if (manual.className !== className) return;
+      const key = canonicalDriverKey(adjustments, className, manual.driverKey);
+      if (!byDriver.has(key)) {
+        const driver = key.startsWith("name:") ? null : driverById.get(key);
+        byDriver.set(key, {
+          key,
+          driverId: driver?.id || null,
+          driverName: manual.driverName || (driver ? driverFullName(driver) : key),
+          isMember: true,
+          rounds: [],
+        });
+      }
+      const bucket = byDriver.get(key);
+      const dup = bucket.rounds.find((r) => r.eventId === manual.eventId);
+      if (dup && dup.manualId === manual.id) return;
+      if (dup) {
+        dup.points = Number(manual.points) || 0;
+        dup.position = manual.position;
+        dup.source = "manual";
+        dup.manualId = manual.id;
+        return;
+      }
+      if (!dup) {
+        bucket.rounds.push({
+          eventId: manual.eventId,
+          eventName: manual.eventName,
+          position: manual.position,
+          points: Number(manual.points) || 0,
+          source: "manual",
+          manualId: manual.id,
+        });
+      }
     });
 
     const standings = [...byDriver.values()].map((row) => {
@@ -129,8 +203,10 @@ export function computeChampionshipStandings({
         ? sorted.slice(0, sorted.length - dropRounds)
         : sorted;
       const dropped = sorted.slice(counted.length);
-      const total = counted.reduce((sum, item) => sum + item.points, 0);
-      return { ...row, counted, dropped, total };
+      const baseTotal = counted.reduce((sum, item) => sum + item.points, 0);
+      const adjustment = getDriverDelta(adjustments, className, row.key);
+      const total = baseTotal + adjustment;
+      return { ...row, counted, dropped, baseTotal, adjustment, total };
     }).sort((a, b) => {
       if (b.total !== a.total) return b.total - a.total;
       return a.driverName.localeCompare(b.driverName);

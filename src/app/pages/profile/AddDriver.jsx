@@ -12,6 +12,13 @@ import {
   canAddHouseholdDriver,
 } from "@/app/pages/profile/householdDriverLimits";
 import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
+import { findDuplicateDriverNameInClub } from "@/app/lib/driverNameUniqueness";
+import {
+  applyNewDriverProfileDefaults,
+  resolveDriverHouseholdRules,
+  resolveDriverNumberRules,
+  showNonDriverMemberOption,
+} from "@/app/lib/driverClubSettings";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -101,6 +108,24 @@ export default function AddDriver() {
       return;
     }
 
+    const householdRules = resolveDriverHouseholdRules(club);
+
+    if (
+      householdRules.require_active_membership_to_add &&
+      membership?.status &&
+      membership.status !== "active"
+    ) {
+      setError("Your membership is not active. Cannot add drivers.");
+      setSaving(false);
+      return;
+    }
+
+    if (isNonMember && !householdRules.allow_non_member_drivers) {
+      setError("This club does not allow non-member driver profiles.");
+      setSaving(false);
+      return;
+    }
+
     if (
       !canAddHouseholdDriver({
         membershipType,
@@ -128,7 +153,26 @@ export default function AddDriver() {
     // NON‑MEMBER FLOW (driver only, no club_members)
     // ------------------------------------------------------
     if (isNonMember) {
-      const { error: insertError } = await supabase
+      const { duplicate: dupNm, error: dupErr } = await findDuplicateDriverNameInClub({
+        clubId: club.id,
+        firstName: trimmedFirst,
+        lastName: trimmedLast,
+        club,
+      });
+      if (dupErr) {
+        setError("Error checking existing drivers.");
+        setSaving(false);
+        return;
+      }
+      if (dupNm) {
+        setError(
+          "This driver name already exists at your club. Use the exact spelling from previous events."
+        );
+        setSaving(false);
+        return;
+      }
+
+      const { data: guestDriver, error: insertError } = await supabase
         .from("drivers")
         .insert({
           membership_id: null,
@@ -137,12 +181,25 @@ export default function AddDriver() {
           last_name: trimmedLast,
           is_junior: isJunior,
           created_by: user.id,
-        });
+        })
+        .select("id")
+        .single();
 
       if (insertError) {
         setError(insertError.message);
         setSaving(false);
         return;
+      }
+
+      await applyNewDriverProfileDefaults(supabase, guestDriver?.id, club);
+      const numberRules = resolveDriverNumberRules(club);
+      if (numberRules.auto_reconcile_on_create && guestDriver?.id) {
+        await supabase.rpc("reconcile_driver_number", {
+          p_club_id: club.id,
+          p_driver_id: guestDriver.id,
+          p_first_name: trimmedFirst,
+          p_last_name: trimmedLast,
+        });
       }
 
       await refreshDrivers();
@@ -178,12 +235,12 @@ export default function AddDriver() {
     // MEMBER FLOW — DRIVER CREATION
     // ------------------------------------------------------
 
-    // 1. Check for existing driver with same name
-    const { data: existing, error: lookupError } = await supabase
-      .from("drivers")
-      .select("id")
-      .eq("first_name", trimmedFirst)
-      .eq("last_name", trimmedLast);
+    const { duplicate, error: lookupError } = await findDuplicateDriverNameInClub({
+      clubId: club.id,
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
+      club,
+    });
 
     if (lookupError) {
       setError("Error checking existing drivers.");
@@ -191,9 +248,9 @@ export default function AddDriver() {
       return;
     }
 
-    if (existing && existing.length > 0) {
+    if (duplicate) {
       setError(
-        "This driver name already exists in the ChargersRC system. " +
+        "This driver name already exists at your club. " +
           "LiveTime requires unique First + Last names. " +
           "If this driver has raced before, please check the exact spelling used previously. " +
           "If the spelling differs in any way, LiveTime will create a new racer and previous results or seeding will not carry over."
@@ -230,13 +287,17 @@ export default function AddDriver() {
       is_junior: isJunior,
     });
 
-    // 4. Reconcile number
-    await supabase.rpc("reconcile_driver_number", {
-      p_club_id: club.id,
-      p_driver_id: driver.id,
-      p_first_name: trimmedFirst,
-      p_last_name: trimmedLast,
-    });
+    await applyNewDriverProfileDefaults(supabase, driver.id, club);
+
+    const numberRules = resolveDriverNumberRules(club);
+    if (numberRules.auto_reconcile_on_create) {
+      await supabase.rpc("reconcile_driver_number", {
+        p_club_id: club.id,
+        p_driver_id: driver.id,
+        p_first_name: trimmedFirst,
+        p_last_name: trimmedLast,
+      });
+    }
 
     await refreshDrivers();
 
@@ -283,8 +344,7 @@ export default function AddDriver() {
             Junior
           </label>
 
-          {/* Only show for MEMBERS */}
-          {!isNonMember && (
+          {showNonDriverMemberOption(club, membershipType, isNonMember) && (
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

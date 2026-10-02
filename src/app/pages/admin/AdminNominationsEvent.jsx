@@ -15,6 +15,7 @@ import {
 } from "@/app/lib/adminNominations";
 import { eventClassMinimumEntries } from "@app/pages/nominations/classMinimumEntries";
 import { buildLiveTimeCsv, buildLiveTimeRows } from "@app/pages/nominations/LiveTimeExport";
+import { liveTimeClubName } from "@/app/lib/driverClubSettings";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
@@ -426,7 +427,7 @@ export default function AdminNominationsEvent() {
         drivers: clubDrivers,
         classes: availableClassIds.map((id) => ({ id, name: classMap[id] })),
         memberships,
-        clubName: club?.name || "",
+        clubName: liveTimeClubName(club) || club?.name || "",
         event,
       })
     );

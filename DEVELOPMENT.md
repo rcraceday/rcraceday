@@ -23,8 +23,14 @@ Create a .env file in the project root:
 Code
 VITE_SUPABASE_URL=your-url
 VITE_SUPABASE_ANON_KEY=your-key
+VITE_SITE_URL=https://rcraceday.com
 VITE_VAPID_PUBLIC_KEY=your-vapid-public-key
-These values come from your Supabase project settings. Generate VAPID keys with `npx web-push generate-vapid-keys` (public key in `.env` **and** the production host env as `VITE_VAPID_PUBLIC_KEY`; private key only in Supabase Edge secrets as `VAPID_PRIVATE_KEY`, plus `VAPID_PUBLIC_KEY` and `VAPID_SUBJECT` e.g. `mailto:info@rcraceday.com`). Optional Edge secret `SITE_URL=https://rcraceday.com` is used as the tap target on push banners.
+These values come from your Supabase project settings. Set `VITE_SITE_URL` to your canonical production origin (no trailing slash) so password-reset and signup emails always use the same host as Supabase **Redirect URLs** (avoids `www` vs apex mismatches that drop recovery tokens).
+
+In Supabase **Authentication → URL configuration**:
+
+- **Site URL**: `https://rcraceday.com` (app root only — not a `/public/reset-password` path).
+- **Redirect URLs** (add each club slug you use): `https://rcraceday.com/*/public/reset-password`, `https://rcraceday.com/*/public/login`, and the same paths on `http://localhost:5173` for local testing. Do not rely on a trailing slash on `reset-password`; the app normalizes it, but Supabase must allow the exact `redirectTo` sent from the app. Generate VAPID keys with `npx web-push generate-vapid-keys` (public key in `.env` **and** the production host env as `VITE_VAPID_PUBLIC_KEY`; private key only in Supabase Edge secrets as `VAPID_PRIVATE_KEY`, plus `VAPID_PUBLIC_KEY` and `VAPID_SUBJECT` e.g. `mailto:info@rcraceday.com`). Optional Edge secret `SITE_URL=https://rcraceday.com` is used as the tap target on push banners.
 
 **Edge Functions** (`process-nominations-open`, `send-web-push`, `import-liverc-results`): each folder includes its own `web_push.ts` where needed (Supabase bundles one function at a time and does not ship `../_shared`). Deploy with CLI from the repo root:
 

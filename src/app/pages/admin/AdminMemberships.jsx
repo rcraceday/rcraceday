@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
-import { displayNameFromMembershipRow } from "@/app/lib/membershipDisplayName";
+import {
+  displayNameFromMembershipRow,
+  fetchMembershipDisplayNameMap,
+  formatPersonName,
+} from "@/app/lib/membershipDisplayName";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
 import { EditButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "@cms/styles";
-import { useTranslation } from "@/app/i18n/I18nContext";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -24,6 +27,13 @@ function typeLabel(type) {
   if (key === "family") return "Family";
   if (key === "non_member") return "Non-member";
   return type || "—";
+}
+
+function householdIsLife(row, people = []) {
+  return (
+    row.is_life_member === true ||
+    people.some((person) => !person.driver_id && person.is_life_member)
+  );
 }
 
 function statusStyle(status, isLife) {
@@ -48,13 +58,13 @@ function statusStyle(status, isLife) {
 }
 
 export default function AdminMemberships() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
   const { club } = useClub();
 
   const [households, setHouseholds] = useState([]);
   const [membersByHousehold, setMembersByHousehold] = useState({});
+  const [displayNameById, setDisplayNameById] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -85,21 +95,22 @@ export default function AdminMemberships() {
     const ids = list.map((row) => row.id);
     if (ids.length === 0) {
       setMembersByHousehold({});
+      setDisplayNameById({});
       setLoading(false);
       return;
     }
 
+    const nameMap = await fetchMembershipDisplayNameMap(supabase, ids);
+    setDisplayNameById(nameMap);
+
     const { data: people, error: peopleError } = await supabase
       .from("club_members")
-      .select("id, membership_id, first_name, last_name, is_junior, driver_id, is_life_member")
+      .select(
+        "id, membership_id, first_name, last_name, is_junior, driver_id, is_life_member"
+      )
       .in("membership_id", ids);
 
-    const { data: driverRows } = await supabase
-      .from("drivers")
-      .select("id, membership_id, first_name, last_name, is_junior")
-      .in("membership_id", ids);
-
-    if (peopleError && !peopleError.message?.includes("is_life_member")) {
+    if (peopleError) {
       setError(peopleError.message);
     }
 
@@ -107,21 +118,6 @@ export default function AdminMemberships() {
     (people || []).forEach((person) => {
       if (!grouped[person.membership_id]) grouped[person.membership_id] = [];
       grouped[person.membership_id].push(person);
-    });
-    (driverRows || []).forEach((driver) => {
-      const list = grouped[driver.membership_id] || [];
-      const already = list.some((person) => person.driver_id === driver.id);
-      if (already) return;
-      list.push({
-        id: `driver-${driver.id}`,
-        membership_id: driver.membership_id,
-        first_name: driver.first_name,
-        last_name: driver.last_name,
-        is_junior: driver.is_junior,
-        driver_id: driver.id,
-        is_life_member: false,
-      });
-      grouped[driver.membership_id] = list;
     });
     setMembersByHousehold(grouped);
     setLoading(false);
@@ -136,22 +132,32 @@ export default function AdminMemberships() {
     return households.filter((row) => {
       const type = (row.membership_type || "").toLowerCase();
       const people = membersByHousehold[row.id] || [];
-      const isLife =
-        row.is_life_member === true || people.some((person) => person.is_life_member);
+      const isLife = householdIsLife(row, people);
 
       if (filter === "members" && type === "non_member") return false;
       if (filter === "non_member" && type !== "non_member") return false;
       if (filter === "life" && !isLife) return false;
 
       if (!q) return true;
-      const name = displayNameFromMembershipRow(row).toLowerCase();
+      const accountName = (
+        displayNameById[row.id] || displayNameFromMembershipRow(row)
+      ).toLowerCase();
+      const primaryName = formatPersonName(
+        row.primary_first_name,
+        row.primary_last_name
+      ).toLowerCase();
       const email = (row.email || "").toLowerCase();
-      const peopleNames = people
-        .map((person) => `${person.first_name || ""} ${person.last_name || ""}`.toLowerCase())
+      const memberNames = people
+        .map((person) =>
+          formatPersonName(person.first_name, person.last_name).toLowerCase()
+        )
         .join(" ");
-      return name.includes(q) || email.includes(q) || peopleNames.includes(q);
+      const haystack = [accountName, primaryName, email, memberNames]
+        .filter(Boolean)
+        .join(" ");
+      return haystack.includes(q);
     });
-  }, [households, membersByHousehold, search, filter]);
+  }, [households, membersByHousehold, displayNameById, search, filter]);
 
   return (
     <div style={cmsStyles.pageContainer}>
@@ -175,7 +181,7 @@ export default function AdminMemberships() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
             <CMSInput
               label="Search"
-              placeholder="Name, email, or household member"
+              placeholder="Account holder, email, or member name"
               value={search}
               onChange={setSearch}
             />
@@ -213,11 +219,10 @@ export default function AdminMemberships() {
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {filtered.map((row) => {
                   const people = membersByHousehold[row.id] || [];
-                  const isLife =
-                    row.is_life_member === true ||
-                    people.some((person) => person.is_life_member);
+                  const isLife = householdIsLife(row, people);
                   const driverCount = people.filter((person) => person.driver_id).length;
-                  const name = displayNameFromMembershipRow(row);
+                  const name =
+                    displayNameById[row.id] || displayNameFromMembershipRow(row);
 
                   return (
                     <div
@@ -252,7 +257,9 @@ export default function AdminMemberships() {
                           </span>
                           <span style={{ fontSize: 12, color: "#6B7280" }}>
                             {people.length} member{people.length === 1 ? "" : "s"}
-                            {driverCount ? ` · ${driverCount} driver${driverCount === 1 ? "" : "s"}` : ""}
+                            {driverCount
+                              ? ` · ${driverCount} driver${driverCount === 1 ? "" : "s"}`
+                              : ""}
                           </span>
                         </div>
                         {people.length > 0 && (
@@ -265,7 +272,6 @@ export default function AdminMemberships() {
                                 const tags = [
                                   person.is_junior ? "Junior" : null,
                                   person.driver_id ? "Driver" : null,
-                                  person.is_life_member ? "Life" : null,
                                 ].filter(Boolean);
                                 return tags.length
                                   ? `${personName} (${tags.join(", ")})`

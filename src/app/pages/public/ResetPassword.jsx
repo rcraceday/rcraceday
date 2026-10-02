@@ -5,6 +5,29 @@ import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { normalizeResetPasswordLocation } from "@/app/lib/publicAuthRedirect";
+
+function hasRecoveryCallbackInUrl() {
+  const { hash, search } = window.location;
+  return (
+    hash.includes("access_token") ||
+    search.includes("code=") ||
+    search.includes("token_hash=")
+  );
+}
+
+function clearAuthCallbackFromUrl() {
+  const url = new URL(window.location.href);
+  url.hash = "";
+  if (url.searchParams.has("code")) url.searchParams.delete("code");
+  if (url.searchParams.has("token_hash")) url.searchParams.delete("token_hash");
+  const search = url.searchParams.toString();
+  window.history.replaceState(
+    {},
+    document.title,
+    `${url.pathname}${search ? `?${search}` : ""}`
+  );
+}
 
 export default function ResetPassword() {
   const { club } = useOutletContext();
@@ -17,30 +40,137 @@ export default function ResetPassword() {
   const [errorMsg, setErrorMsg] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState(null);
-
-  if (!club) return <div style={{ padding: "24px", textAlign: "center" }}>{t("loading.loading")}</div>;
-
-  const logoSrc =
-    club?.logoUrl ||
-    club?.logo ||
-    club?.logo_url ||
-    club?.theme?.hero?.logo ||
-    club?.branding?.logo ||
-    club?.assets?.logo ||
-    null;
+  const [linkStatus, setLinkStatus] = useState("pending");
+  const [legacyAccessToken, setLegacyAccessToken] = useState(null);
 
   useEffect(() => {
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#", "?"));
-    const accessToken = params.get("access_token");
+    let cancelled = false;
+    let authListener = null;
 
-    if (!accessToken) {
-      setErrorMsg("Invalid or expired reset link.");
-      return;
+    function markReady(accessToken = null) {
+      if (cancelled) return;
+      if (accessToken) setLegacyAccessToken(accessToken);
+      setLinkStatus("ready");
     }
 
-    setToken(accessToken);
+    function markInvalid() {
+      if (cancelled) return;
+      setLinkStatus("invalid");
+      setErrorMsg("Invalid or expired reset link.");
+    }
+
+    async function resolveRecoveryLink() {
+      normalizeResetPasswordLocation();
+
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+      const tokenHash = searchParams.get("token_hash");
+      const otpType = searchParams.get("type");
+
+      if (code) {
+        const { error: exchangeError } =
+          await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) {
+          console.warn(
+            "ResetPassword exchangeCodeForSession:",
+            exchangeError.message
+          );
+        } else {
+          clearAuthCallbackFromUrl();
+          markReady();
+          return;
+        }
+      }
+
+      if (tokenHash && otpType) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: otpType,
+        });
+        if (!verifyError) {
+          clearAuthCallbackFromUrl();
+          markReady();
+          return;
+        }
+        console.warn("ResetPassword verifyOtp:", verifyError.message);
+      }
+
+      const hash = window.location.hash;
+      const hashParams = new URLSearchParams(hash.replace(/^#/, "?"));
+      const accessToken = hashParams.get("access_token");
+
+      if (accessToken) {
+        clearAuthCallbackFromUrl();
+        markReady(accessToken);
+        return;
+      }
+
+      const hasCallback = hasRecoveryCallbackInUrl();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        if (hasCallback) clearAuthCallbackFromUrl();
+        markReady();
+        return;
+      }
+
+      if (!hasCallback) {
+        markInvalid();
+        return;
+      }
+
+      const { data: listener } = supabase.auth.onAuthStateChange(
+        async (event, newSession) => {
+          if (cancelled) return;
+          if (
+            event !== "SIGNED_IN" &&
+            event !== "INITIAL_SESSION" &&
+            event !== "PASSWORD_RECOVERY" &&
+            event !== "TOKEN_REFRESHED"
+          ) {
+            return;
+          }
+          if (!newSession?.user) return;
+
+          listener.subscription.unsubscribe();
+          clearAuthCallbackFromUrl();
+          markReady();
+        }
+      );
+      authListener = listener;
+
+      window.setTimeout(async () => {
+        if (cancelled) return;
+
+        const {
+          data: { session: lateSession },
+        } = await supabase.auth.getSession();
+
+        if (lateSession?.user) {
+          clearAuthCallbackFromUrl();
+          markReady();
+          return;
+        }
+
+        setLinkStatus((current) => {
+          if (current === "pending") {
+            setErrorMsg("Invalid or expired reset link.");
+            return "invalid";
+          }
+          return current;
+        });
+      }, 10000);
+    }
+
+    resolveRecoveryLink();
+
+    return () => {
+      cancelled = true;
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   async function handleReset(e) {
@@ -63,23 +193,27 @@ export default function ResetPassword() {
       return;
     }
 
-    if (!token) {
+    if (linkStatus !== "ready") {
       setErrorMsg("Missing or invalid reset token.");
       return;
     }
 
     setLoading(true);
 
-    const { error } = await supabase.auth.updateUser(
-      { password },
-      { accessToken: token }
-    );
+    const { error } = legacyAccessToken
+      ? await supabase.auth.updateUser(
+          { password },
+          { accessToken: legacyAccessToken }
+        )
+      : await supabase.auth.updateUser({ password });
 
     if (error) {
       setErrorMsg(error.message);
       setLoading(false);
       return;
     }
+
+    await supabase.auth.signOut();
 
     setMessage("Your password has been updated.");
     setLoading(false);
@@ -88,6 +222,26 @@ export default function ResetPassword() {
       navigate(`/${clubSlug}/public/login`);
     }, 1500);
   }
+
+  if (!club) {
+    return (
+      <div style={{ padding: "24px", textAlign: "center" }}>
+        {t("loading.loading")}
+      </div>
+    );
+  }
+
+  const logoSrc =
+    club?.logoUrl ||
+    club?.logo ||
+    club?.logo_url ||
+    club?.theme?.hero?.logo ||
+    club?.branding?.logo ||
+    club?.assets?.logo ||
+    null;
+
+  const canShowForm = linkStatus === "ready";
+  const checkingLink = linkStatus === "pending";
 
   return (
     <div
@@ -137,7 +291,13 @@ export default function ResetPassword() {
           {t("auth.resetPasswordTitle")}
         </h1>
 
-        {!token && (
+        {checkingLink && (
+          <p style={{ textAlign: "center", marginBottom: "24px", color: "#666" }}>
+            {t("loading.checkingSession")}
+          </p>
+        )}
+
+        {linkStatus === "invalid" && (
           <p
             style={{
               color: "#dc2626",
@@ -146,11 +306,11 @@ export default function ResetPassword() {
               wordBreak: "break-word",
             }}
           >
-            Invalid or expired reset link.
+            {errorMsg || "Invalid or expired reset link."}
           </p>
         )}
 
-        {token && (
+        {canShowForm && (
           <form
             onSubmit={handleReset}
             style={{

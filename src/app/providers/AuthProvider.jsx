@@ -43,7 +43,11 @@ export default function AuthProvider({ children }) {
       async (event, newSession) => {
         if (!mounted) return;
 
-        if (event === "PASSWORD_RECOVERY") return;
+        if (event === "PASSWORD_RECOVERY") {
+          await handleSession(newSession);
+          setLoadingUser(false);
+          return;
+        }
 
         if (event === "SIGNED_OUT") {
           setSession(null);

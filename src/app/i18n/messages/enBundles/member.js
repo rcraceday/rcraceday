@@ -88,10 +88,17 @@ export default {
     tieBreaker: "Tie break",
     mainLetter: "Main",
     championships: "Championships",
+    championshipPoints: "Championship Points",
     allChampionships: "All championships",
     noChampionships: "No championships yet.",
     seasonN: "Season {{season}}",
     points: "Points",
+    backToResults: "Back to results",
+    filterYear: "Year",
+    filterTrack: "Track",
+    filterEventType: "Event type",
+    filterAllTracks: "All tracks",
+    filterAllTypes: "All types",
   },
   signup: {
     memberQuestion: "Are you currently a financial member of {{clubName}}?",
@@ -217,6 +224,7 @@ export default {
     joinNow: "Join now",
     householdMembers: "Household members",
     lifeMember: "Life member",
+    lifeMemberTitle: "Life Member",
     membership: "Membership",
     householdMembersTitle: "Household Members",
     renewMembership: "Renew Membership",
@@ -308,6 +316,23 @@ export default {
     errChangeClass: "Unable to change class.",
     avatarAlt: "Avatar",
   },
+  driverRules: {
+    thisDriver: "This driver",
+    needNumber: "{{name}} needs a permanent race number before nominating.",
+    missingProfileFields:
+      "{{name}} is missing required profile fields before nominating: {{fields}}.",
+    profilesDisabled:
+      "Your membership does not include driver profiles. Upgrade or contact the club.",
+    directoryDisabled: "The racer directory is not available for this club.",
+    directoryMembersOnly: "Sign in as a member to view the racer directory.",
+    profileIncompleteBanner:
+      "Complete required driver profile fields before your next event nomination.",
+    nameLocked:
+      "Legal name cannot be changed after this driver has event nominations. Contact the club admin.",
+    cannotDeleteDriver: "Driver deletion is disabled by your club.",
+    numberChoiceDisabled: "Your club assigns race numbers. Contact an admin if you need a change.",
+    numberChangeDisabled: "Your club does not allow changing your race number after it is assigned.",
+  },
   driverProfile: {
     title: "Driver Profile",
     basicInfo: "Basic Info",
@@ -316,6 +341,8 @@ export default {
     livetimeNameMatch: "Livetime name match",
     livetimeNoticeBody:
       "If this driver has raced with this club before, the name must match exactly how it appears in Livetime — including spelling, spacing, and capitalisation. Any difference will be treated as a new racer and previous results or seeding will not link.",
+    livetimeFieldsHint:
+      "LiveTime export uses legal name, colours, number, manufacturer, transponder, sponsors, gender, and country from this profile.",
     nickname: "Nickname",
     gender: "Gender",
     country: "Country",
@@ -422,7 +449,16 @@ export default {
   },
   calendarUi: {
     noEventsMonth: "No events this month.",
+    noEventsYear: "No published events in {{year}}.",
     today: "Today",
+    loading: "Loading calendar…",
+    filterYear: "Year",
+    filterTrack: "Track",
+    allTracks: "All tracks",
+    eventCountOne: "1 event",
+    eventCount: "{{count}} events",
+    overviewHint: "Year at a glance — tap a day or event for details. Full list on",
+    eventsListLink: "Events",
   },
   errors: {
     generic: "Something went wrong. Please try again.",

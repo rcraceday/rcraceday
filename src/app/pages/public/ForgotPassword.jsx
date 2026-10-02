@@ -1,15 +1,15 @@
 // src/app/pages/public/ForgotPassword.jsx
 import { useState } from "react";
-import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom";
+import { useParams, useOutletContext, Link } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { publicAuthRedirectUrl } from "@/app/lib/publicAuthRedirect";
 
 export default function ForgotPassword() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
-  const navigate = useNavigate();
   const { t } = useTranslation();
 
   const [email, setEmail] = useState("");
@@ -40,7 +40,7 @@ export default function ForgotPassword() {
 
     setLoading(true);
 
-    const redirectUrl = `${window.location.origin}/${clubSlug}/public/reset-password/`;
+    const redirectUrl = publicAuthRedirectUrl(clubSlug, "reset-password");
 
     const { error } = await supabase.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),

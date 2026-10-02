@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
-import { displayNameFromMembershipRow } from "@/app/lib/membershipDisplayName";
+import {
+  displayNameFromMembershipRow,
+  fetchMembershipDisplayNameMap,
+} from "@/app/lib/membershipDisplayName";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
@@ -24,6 +27,7 @@ export default function AdminDrivers() {
 
   const [drivers, setDrivers] = useState([]);
   const [householdsById, setHouseholdsById] = useState({});
+  const [householdLabelById, setHouseholdLabelById] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -54,13 +58,16 @@ export default function AdminDrivers() {
     const membershipIds = [...new Set(list.map((row) => row.membership_id).filter(Boolean))];
     if (membershipIds.length === 0) {
       setHouseholdsById({});
+      setHouseholdLabelById({});
       setLoading(false);
       return;
     }
 
     const { data: households, error: householdError } = await supabase
       .from("household_memberships")
-      .select("id, email, primary_first_name, primary_last_name, membership_type, status")
+      .select(
+        "id, user_id, email, primary_first_name, primary_last_name, membership_type, status"
+      )
       .in("id", membershipIds);
 
     if (householdError) {
@@ -72,6 +79,8 @@ export default function AdminDrivers() {
       map[row.id] = row;
     });
     setHouseholdsById(map);
+    const labelMap = await fetchMembershipDisplayNameMap(supabase, membershipIds);
+    setHouseholdLabelById(labelMap);
     setLoading(false);
   }
 
@@ -88,7 +97,12 @@ export default function AdminDrivers() {
 
       if (!q) return true;
       const household = row.membership_id ? householdsById[row.membership_id] : null;
-      const householdName = household ? displayNameFromMembershipRow(household).toLowerCase() : "";
+      const householdName = household
+        ? (
+            householdLabelById[household.id] ||
+            displayNameFromMembershipRow(household)
+          ).toLowerCase()
+        : "";
       const haystack = [
         driverName(row, t("admin.common.unnamedDriver")),
         row.nickname,
@@ -101,7 +115,7 @@ export default function AdminDrivers() {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [drivers, householdsById, search, filter]);
+  }, [drivers, householdsById, householdLabelById, search, filter, t]);
 
   return (
     <div style={cmsStyles.pageContainer}>
@@ -164,7 +178,8 @@ export default function AdminDrivers() {
                 {filtered.map((row) => {
                   const household = row.membership_id ? householdsById[row.membership_id] : null;
                   const householdName = household
-                    ? displayNameFromMembershipRow(household)
+                    ? householdLabelById[household.id] ||
+                      displayNameFromMembershipRow(household)
                     : t("admin.common.noHousehold");
 
                   return (

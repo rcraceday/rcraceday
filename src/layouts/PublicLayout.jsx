@@ -1,9 +1,17 @@
 // src/layouts/PublicLayout.jsx
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { useClub } from "@/app/providers/ClubProvider";
+import { normalizeResetPasswordLocation } from "@/app/lib/publicAuthRedirect";
 
 export default function PublicLayout() {
   const { club } = useClub();
+
+  useEffect(() => {
+    if (/\/public\/reset-password\/+$/i.test(window.location.pathname)) {
+      normalizeResetPasswordLocation();
+    }
+  }, []);
 
   return (
     <main

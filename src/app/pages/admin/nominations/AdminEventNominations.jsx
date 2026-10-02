@@ -6,6 +6,7 @@ import PageTitle from "@/components/ui/PageTitle";
 import useTheme from "@app/providers/useTheme";
 import { buildLiveTimeCsv, buildLiveTimeRows } from "@app/pages/nominations/LiveTimeExport";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { liveTimeClubName } from "@/app/lib/driverClubSettings";
 
 function affiliatedRcraClubName(nomination) {
   const name = nomination?.merchandise?.affiliated_club_name;
@@ -57,14 +58,16 @@ export default function AdminEventNominations() {
       const { data: classRows } = classIds.length ? await supabase.from("club_classes").select("id, name").in("id", classIds) : { data: [] };
       const membershipIds = (driverRows || []).map((item) => item.membership_id).filter(Boolean);
       const { data: membershipRows } = membershipIds.length ? await supabase.from("household_memberships").select("*").in("id", membershipIds) : { data: [] };
-      const { data: clubRow } = eventRow?.club_id ? await supabase.from("clubs").select("name").eq("id", eventRow.club_id).single() : { data: null };
+      const { data: clubRow } = eventRow?.club_id
+        ? await supabase.from("clubs").select("name, driver_settings").eq("id", eventRow.club_id).single()
+        : { data: null };
       setEvent(eventRow || null);
       setNominations(nominationRows || []);
       setEntries(entryRows || []);
       setDrivers(driverRows || []);
       setClasses(classRows || []);
       setMemberships(membershipRows || []);
-      setClubName(clubRow?.name || "");
+      setClubName(liveTimeClubName(clubRow) || clubRow?.name || "");
       setLoading(false);
     }
     load();

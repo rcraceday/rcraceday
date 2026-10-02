@@ -15,6 +15,8 @@ export default function AvatarAndBasicInfoSection({
   handleAvatarSelect,
   handleRemoveAvatar,
   showLivetimeNameNotice,
+  livetimeNoticeBody,
+  lockNameFields = false,
 }) {
   const { t } = useTranslation();
   const { palette } = useTheme();
@@ -100,18 +102,22 @@ export default function AvatarAndBasicInfoSection({
             label={t("driverProfile.firstName")}
             value={driver.first_name || ""}
             onChange={(e) => update("first_name", e.target.value)}
+            disabled={lockNameFields}
           />
 
           <Input
             label={t("driverProfile.lastName")}
             value={driver.last_name || ""}
             onChange={(e) => update("last_name", e.target.value)}
+            disabled={lockNameFields}
           />
 
           {showLivetimeNameNotice && (
             <div className="md:col-span-2 rounded-md bg-yellow-300 p-3 space-y-1 text-black">
               <p className="text-sm font-semibold">{t("driverProfile.livetimeNameMatch")}</p>
-              <p className="text-sm">{t("driverProfile.livetimeNoticeBody")}</p>
+              <p className="text-sm">
+                {livetimeNoticeBody || t("driverProfile.livetimeNoticeBody")}
+              </p>
             </div>
           )}
 

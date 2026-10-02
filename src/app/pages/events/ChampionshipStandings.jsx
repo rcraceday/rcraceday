@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { TrophyIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
+import BackNavButton from "@/components/ui/BackNavButton";
 import Card from "@/components/ui/Card";
 import useTheme from "@/app/providers/useTheme";
 import { useClub } from "@/app/providers/ClubProvider";
@@ -11,18 +12,26 @@ import { supabase } from "@/supabaseClient";
 import { loadChampionshipRounds } from "@/app/lib/results/loadEventResults";
 import { computeChampionshipStandings } from "@/app/lib/results/championshipStandings";
 import { loadResultMatchContext } from "@/app/lib/results/resultMemberMatch";
+import { isChampionshipSeasonComplete } from "@/app/lib/results/championshipSeason";
+import ChampionshipPlaceTrophy from "./ChampionshipPlaceTrophy";
 
 export default function ChampionshipStandings() {
-  const { clubSlug, id } = useParams();
+  const { id } = useParams();
   const { club } = useClub();
   const { drivers } = useDrivers();
   const { palette } = useTheme();
   const { t } = useTranslation();
   const [championship, setChampionship] = useState(null);
+  const [roundCount, setRoundCount] = useState(0);
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const driverIds = new Set((drivers || []).map((driver) => driver.id));
+
+  const seasonComplete = useMemo(
+    () => isChampionshipSeasonComplete(championship, roundCount),
+    [championship, roundCount]
+  );
 
   useEffect(() => {
     async function load() {
@@ -34,6 +43,7 @@ export default function ChampionshipStandings() {
         return;
       }
       const rounds = await loadChampionshipRounds(champ.id);
+      setRoundCount(rounds.length);
       const clubId = club?.id || champ.club_id;
       const roster = await loadResultMatchContext(supabase, clubId);
       const { data: memberships = [] } = await supabase
@@ -60,15 +70,28 @@ export default function ChampionshipStandings() {
     <div className="space-y-4 pb-8">
       <PageTitle
         icon={TrophyIcon}
-        title={championship?.name || t("results.championships")}
+        title={t("results.championshipPoints")}
         style={{ color: palette.primary }}
-      >
-        {championship ? t("results.seasonN", { season: championship.season }) : ""}
-      </PageTitle>
+      />
 
-      <Link to={`/${clubSlug}/app/championships`} className="text-sm" style={{ color: palette.primary }}>
-        {t("results.allChampionships")}
-      </Link>
+      {championship && (
+        <div className="flex flex-wrap items-center gap-4">
+          <BackNavButton variant="secondary" className="shrink-0" />
+          {championship.logo_url ? (
+            <img
+              src={championship.logo_url}
+              alt=""
+              className="h-16 w-16 object-contain shrink-0"
+            />
+          ) : null}
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-slate-900 m-0">{championship.name}</h2>
+            <p className="text-sm text-slate-500 m-0">
+              {t("results.seasonN", { season: championship.season })}
+            </p>
+          </div>
+        </div>
+      )}
 
       {loading && <p className="text-text-muted">{t("loading.loading")}</p>}
 
@@ -90,7 +113,14 @@ export default function ChampionshipStandings() {
                   className={row.driverId && driverIds.has(row.driverId) ? "bg-slate-50 font-medium" : ""}
                 >
                   <td className="py-1 pr-2">{row.rank}</td>
-                  <td className="py-1 pr-2">{row.driverName}</td>
+                  <td className="py-1 pr-2">
+                    <span className="inline-flex items-center gap-1.5">
+                      {row.driverName}
+                      {seasonComplete ? (
+                        <ChampionshipPlaceTrophy rank={row.rank} />
+                      ) : null}
+                    </span>
+                  </td>
                   <td className="py-1">{row.total}</td>
                 </tr>
               ))}

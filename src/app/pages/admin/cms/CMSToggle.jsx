@@ -1,24 +1,26 @@
 import React from "react";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
-export default function CMSToggle({ label, labelKey, checked, onChange }) {
+export default function CMSToggle({ label, labelKey, checked, onChange, compact = false }) {
   const { t } = useTranslation();
   const resolvedLabel = labelKey ? t(labelKey) : label;
+  const showLabel = !compact && resolvedLabel;
   return (
     <label
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: showLabel ? "space-between" : "center",
         gap: "12px",
         cursor: "pointer",
         userSelect: "none",
         fontSize: "14px",
         fontWeight: 500,
         color: "#374151",
+        width: compact ? "auto" : undefined,
       }}
     >
-      <span>{resolvedLabel}</span>
+      {showLabel ? <span>{resolvedLabel}</span> : null}
 
       {/* IMPORTANT FIX:
          Use a button instead of a div so React does NOT swallow the click.

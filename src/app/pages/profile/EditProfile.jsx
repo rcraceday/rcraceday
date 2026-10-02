@@ -13,6 +13,15 @@ import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
 import EditDriverProfileCard from "@/components/driver/EditDriverProfileCard";
+import { findDuplicateDriverNameInClub } from "@/app/lib/driverNameUniqueness";
+import {
+  resolveDriverNamingRules,
+  resolveDriverJuniorRules,
+  resolveDriverHouseholdRules,
+  resolveDriverNumberRules,
+  resolveLiveTimeDriverRules,
+  suggestJuniorFromBirthYear,
+} from "@/app/lib/driverClubSettings";
 
 import { ArrowLeftIcon, PencilSquareIcon } from "@heroicons/react/24/solid";
 
@@ -75,6 +84,7 @@ export default function EditProfile() {
   const [previewNumber, setPreviewNumber] = useState(null);
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [hasEventNominations, setHasEventNominations] = useState(false);
 
   // LOAD DRIVER
   useEffect(() => {
@@ -97,6 +107,16 @@ export default function EditProfile() {
       }
     }
   }, [loadingDrivers, drivers, id, dirty]);
+
+  useEffect(() => {
+    if (!id) return;
+    supabase
+      .from("nominations")
+      .select("id")
+      .eq("driver_id", id)
+      .limit(1)
+      .then(({ data }) => setHasEventNominations((data || []).length > 0));
+  }, [id]);
 
   // UPDATE FIELD
   const update = (field, value) => {
@@ -155,15 +175,44 @@ export default function EditProfile() {
     ((driver?.first_name || "") !== originalName.first_name ||
       (driver?.last_name || "") !== originalName.last_name);
 
-  const showLivetimeNameNotice = Boolean(nameChanged);
+  const namingRules = resolveDriverNamingRules(club);
+  const showLivetimeNameNotice =
+    Boolean(nameChanged) && namingRules.warn_on_name_change !== false;
+  const lockNameFields =
+    namingRules.lock_name_after_first_nomination === true && hasEventNominations;
 
   // SAVE DRIVER
   const save = async ({ skipNameWarning = false } = {}) => {
     if (!driver || saving) return false;
 
-    if (nameChanged && !skipNameWarning) {
+    if (lockNameFields && nameChanged) {
+      setSaveError(t("driverRules.nameLocked"));
+      return false;
+    }
+
+    if (showLivetimeNameNotice && nameChanged && !skipNameWarning) {
       setShowNameWarning(true);
       return false;
+    }
+
+    if (nameChanged) {
+      const { duplicate, error: dupError } = await findDuplicateDriverNameInClub({
+        clubId: club?.id,
+        firstName: driver.first_name,
+        lastName: driver.last_name,
+        excludeDriverId: driver.id,
+        club,
+      });
+      if (dupError) {
+        setSaveError("Error checking existing drivers.");
+        return false;
+      }
+      if (duplicate) {
+        setSaveError(
+          "This driver name already exists at your club. Match the spelling used in LiveTime."
+        );
+        return false;
+      }
     }
 
     setSaving(true);
@@ -201,6 +250,17 @@ export default function EditProfile() {
       }
 
       const updatePayload = buildDriverUpdatePayload(driver);
+
+      const juniorRules = resolveDriverJuniorRules(club);
+      if (juniorRules.mode === "auto_by_birth_year" && updatePayload.year_of_birth != null) {
+        const suggested = suggestJuniorFromBirthYear(
+          updatePayload.year_of_birth,
+          juniorRules.cutoff_birth_year
+        );
+        if (suggested != null) {
+          updatePayload.is_junior = suggested;
+        }
+      }
 
       if (savedAvatarUrl !== undefined) {
         updatePayload.avatar_url = savedAvatarUrl;
@@ -328,6 +388,15 @@ export default function EditProfile() {
   }
 
   const isMember = membership && membership.membership_type !== "non_member";
+  const householdRules = resolveDriverHouseholdRules(club);
+  const numberRules = resolveDriverNumberRules(club);
+  const livetimeRules = resolveLiveTimeDriverRules(club);
+  const canDeleteDriver = householdRules.allow_member_delete_drivers !== false;
+  const canChooseNumber = numberRules.members_can_choose !== false;
+  const canChangeNumber = numberRules.members_can_change_after_assign !== false;
+  const livetimeNoticeBody =
+    (namingRules.name_change_notice_body || "").trim() ||
+    t("driverProfile.livetimeNoticeBody");
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
@@ -367,6 +436,12 @@ export default function EditProfile() {
           saveError={saveError}
           deleteDriver={deleteDriver}
           showLivetimeNameNotice={showLivetimeNameNotice}
+          livetimeNoticeBody={livetimeNoticeBody}
+          showLivetimeHints={livetimeRules.show_profile_field_hints !== false}
+          lockNameFields={lockNameFields}
+          canDeleteDriver={canDeleteDriver}
+          canChooseNumber={canChooseNumber}
+          canChangeNumber={canChangeNumber}
         />
       </main>
 
@@ -374,13 +449,7 @@ export default function EditProfile() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <Card className="p-6 space-y-4 bg-white max-w-sm w-full">
             <h3 className="text-lg font-semibold">Livetime name match</h3>
-            <p className="text-sm text-gray-700">
-              If this driver has raced with this club before, the name must
-              match <strong>exactly</strong> how it appears in Livetime —
-              including spelling, spacing, and capitalisation. Any difference
-              will be treated as a new racer and previous results or seeding
-              will not link.
-            </p>
+            <p className="text-sm text-gray-700">{livetimeNoticeBody}</p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="secondary"

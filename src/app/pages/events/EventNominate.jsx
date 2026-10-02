@@ -26,6 +26,8 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { sendMemberClubMessage } from "@/app/lib/clubMessages";
 import { useDrivers } from "@/app/providers/DriverProvider";
+import { driverNominationBlockReason } from "@/app/lib/driverNominationValidation";
+import { resolveDriverProfilePolicy } from "@/app/lib/driverClubSettings";
 import useTheme from "@app/providers/useTheme";
 import { calculateUserPricing } from "@app/pages/events/events-sections/calculatePricing";
 import { resolveEventPricing } from "@app/pages/events/events-sections/helpers";
@@ -1912,6 +1914,13 @@ export default function EventNominate() {
       showCheckoutError(purchaseErr.message, purchaseErr.section);
       return;
     }
+    for (const { driver } of active) {
+      const block = driverNominationBlockReason(club, driver, [], t);
+      if (block) {
+        showCheckoutError(block);
+        return;
+      }
+    }
     setError("");
     setErrorPlacement("page");
     setFocusSection("");
@@ -1944,6 +1953,24 @@ export default function EventNominate() {
     }
     const purchaseErr = validateActiveDriversPurchases(active);
     if (purchaseErr) return showCheckoutError(purchaseErr.message, purchaseErr.section);
+
+    for (const { driver } of active) {
+      let driverClasses = [];
+      const policy = resolveDriverProfilePolicy(club);
+      const needsClasses =
+        policy.require_transponder_per_class ||
+        (policy.required_before_nominate || []).includes("transponder");
+      if (needsClasses) {
+        const { data: classRows } = await supabase
+          .from("driver_classes")
+          .select("transponder_number")
+          .eq("driver_id", driver.id);
+        driverClasses = classRows || [];
+      }
+      const block = driverNominationBlockReason(club, driver, driverClasses, t);
+      if (block) return showCheckoutError(block);
+    }
+
     for (const { selection } of active) {
       for (const classId of selectedClassIds(selection)) {
         const usage = classUsage(classId);

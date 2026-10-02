@@ -2,16 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
-import {
-  householdHasLifeMember,
-  syncDriversIntoClubMembers,
-} from "@/app/lib/syncClubMembers";
+import { syncDriversIntoClubMembers } from "@/app/lib/syncClubMembers";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
 import CMSSelect from "@cms/CMSSelect";
 import CMSToggle from "@cms/CMSToggle";
-import { DeleteButton } from "@cms/CMSButtonSet";
+import { ClearFieldButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "@cms/styles";
 import { cmsLayout } from "@cms/layout";
 import { useTranslation } from "@/app/i18n/I18nContext";
@@ -45,7 +42,6 @@ const emptyPerson = {
   last_name: "",
   is_junior: false,
   is_driver: false,
-  is_life_member: false,
 };
 
 export default function AdminMembershipEdit() {
@@ -90,13 +86,6 @@ export default function AdminMembershipEdit() {
       return;
     }
 
-    setHousehold({
-      ...emptyHousehold,
-      ...data,
-      start_date: data.start_date || "",
-      end_date: data.end_date || "",
-    });
-
     const { members, error: syncError } = await syncDriversIntoClubMembers(
       supabase,
       id
@@ -108,7 +97,18 @@ export default function AdminMembershipEdit() {
     } else if (syncError) {
       setError(syncError.message);
     }
-    setPeople(members || []);
+    const memberList = members || [];
+    const legacyLifeOnAccount = memberList.some(
+      (row) => !row.driver_id && row.is_life_member
+    );
+    setHousehold({
+      ...emptyHousehold,
+      ...data,
+      start_date: data.start_date || "",
+      end_date: data.end_date || "",
+      is_life_member: !!data.is_life_member || legacyLifeOnAccount,
+    });
+    setPeople(memberList);
     setLoading(false);
   }
 
@@ -119,15 +119,6 @@ export default function AdminMembershipEdit() {
   const updateHousehold = (field, value) => {
     setHousehold((prev) => ({ ...prev, [field]: value }));
   };
-
-  async function persistHouseholdLifeFlag(membershipId, nextPeople) {
-    const isLife = householdHasLifeMember(nextPeople);
-    await supabase
-      .from("household_memberships")
-      .update({ is_life_member: isLife })
-      .eq("id", membershipId);
-    setHousehold((prev) => ({ ...prev, is_life_member: isLife }));
-  }
 
   async function handleSaveHousehold() {
     if (!club?.id) return;
@@ -149,7 +140,7 @@ export default function AdminMembershipEdit() {
       status: household.status || "active",
       start_date: household.start_date || null,
       end_date: household.end_date || null,
-      is_life_member: householdHasLifeMember(people),
+      is_life_member: !!household.is_life_member,
     };
 
     if (isNew) {
@@ -224,7 +215,6 @@ export default function AdminMembershipEdit() {
         first_name: draft.first_name.trim(),
         last_name: draft.last_name.trim(),
         is_junior: draft.is_junior,
-        is_life_member: draft.is_life_member,
       })
       .select("*")
       .single();
@@ -235,10 +225,8 @@ export default function AdminMembershipEdit() {
       return;
     }
 
-    const nextPeople = [...people, created];
-    setPeople(nextPeople);
+    setPeople([...people, created]);
     setDraft(emptyPerson);
-    await persistHouseholdLifeFlag(id, nextPeople);
   }
 
   async function updatePerson(person, field, value) {
@@ -255,10 +243,6 @@ export default function AdminMembershipEdit() {
     if (updateError) {
       setError(updateError.message);
       return;
-    }
-
-    if (field === "is_life_member") {
-      await persistHouseholdLifeFlag(id, next);
     }
 
     if ((field === "first_name" || field === "last_name" || field === "is_junior") && person.driver_id) {
@@ -303,9 +287,7 @@ export default function AdminMembershipEdit() {
       return;
     }
 
-    const nextPeople = people.filter((row) => row.id !== person.id);
-    setPeople(nextPeople);
-    await persistHouseholdLifeFlag(id, nextPeople);
+    setPeople(people.filter((row) => row.id !== person.id));
   }
 
   async function handleDeleteHousehold() {
@@ -448,9 +430,15 @@ export default function AdminMembershipEdit() {
                 />
               </div>
             </div>
+            <CMSToggle
+              label="Life member (account holder)"
+              checked={!!household.is_life_member}
+              onChange={(checked) => updateHousehold("is_life_member", checked)}
+            />
             <p style={cmsLayout.muted}>
-              Life member is set on people below. It makes this household membership
-              free; they can still renew and choose whether to pay.
+              Life member applies to the household account, not drivers. Membership is
+              free; they can still renew and choose whether to pay. Save household to
+              apply.
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <CMSButton
@@ -473,22 +461,29 @@ export default function AdminMembershipEdit() {
           <CMSCard titleKey="admin.common.members">
             <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
               <p style={cmsLayout.muted}>
-                Drivers on this household are listed as members. Use Life member on a
-                row to grant free membership for life.
+                Household members are listed here. Driver names may differ from the
+                account holder; search membership by account or member name, not only
+                driver names.
+              </p>
+              <p style={{ ...cmsLayout.muted, marginTop: -8 }}>
+                Member rows save automatically when you change a name or toggle. Use{" "}
+                <strong>Save household</strong> above for type, dates, email, and status.
               </p>
 
               <div
                 style={{
                   border: "1px solid #E5E7EB",
                   borderRadius: 8,
-                  overflowX: "auto",
+                  overflow: "hidden",
                 }}
               >
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 90px 90px 120px 80px",
-                    gap: 8,
+                    gridTemplateColumns:
+                      "minmax(0, 1.2fr) minmax(0, 1.2fr) 52px 48px 36px",
+                    columnGap: 12,
+                    rowGap: 8,
                     padding: "10px 12px",
                     background: "#F9FAFB",
                     fontSize: 12,
@@ -498,9 +493,8 @@ export default function AdminMembershipEdit() {
                 >
                   <span>First name</span>
                   <span>Last name</span>
-                  <span>Junior</span>
-                  <span>Driver</span>
-                  <span>Life member</span>
+                  <span style={{ textAlign: "center" }}>Junior</span>
+                  <span style={{ textAlign: "center" }}>Driver</span>
                   <span />
                 </div>
 
@@ -516,8 +510,10 @@ export default function AdminMembershipEdit() {
                     key={person.id}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1fr 1fr 90px 90px 120px 80px",
-                      gap: 8,
+                      gridTemplateColumns:
+                        "minmax(0, 1.2fr) minmax(0, 1.2fr) 52px 48px 36px",
+                      columnGap: 12,
+                      rowGap: 8,
                       padding: "10px 12px",
                       alignItems: "center",
                       borderTop: "1px solid #F3F4F6",
@@ -531,24 +527,28 @@ export default function AdminMembershipEdit() {
                       value={person.last_name || ""}
                       onChange={(value) => updatePerson(person, "last_name", value)}
                     />
-                    <CMSToggle
-                      label=""
-                      checked={!!person.is_junior}
-                      onChange={(checked) => updatePerson(person, "is_junior", checked)}
-                    />
-                    <span style={{ fontSize: 13, color: "#6B7280" }}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <CMSToggle
+                        compact
+                        checked={!!person.is_junior}
+                        onChange={(checked) => updatePerson(person, "is_junior", checked)}
+                      />
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color: "#6B7280",
+                        textAlign: "center",
+                      }}
+                    >
                       {person.driver_id ? "Yes" : "No"}
                     </span>
-                    <CMSToggle
-                      label=""
-                      checked={!!person.is_life_member}
-                      onChange={(checked) =>
-                        updatePerson(person, "is_life_member", checked)
-                      }
-                    />
-                    <DeleteButton onClick={() => removePerson(person)}>
-                      Remove
-                    </DeleteButton>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <ClearFieldButton
+                        onClick={() => removePerson(person)}
+                        title={`Remove ${person.first_name || ""} ${person.last_name || ""}`.trim()}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -591,13 +591,6 @@ export default function AdminMembershipEdit() {
                     label="Also a driver"
                     checked={draft.is_driver}
                     onChange={(checked) => setDraft((prev) => ({ ...prev, is_driver: checked }))}
-                  />
-                  <CMSToggle
-                    label="Life member"
-                    checked={draft.is_life_member}
-                    onChange={(checked) =>
-                      setDraft((prev) => ({ ...prev, is_life_member: checked }))
-                    }
                   />
                 </div>
                 <div>

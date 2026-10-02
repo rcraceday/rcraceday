@@ -4,6 +4,7 @@ import { FlagIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import BackNavButton from "@/components/ui/BackNavButton";
 import useTheme from "@/app/providers/useTheme";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import { useTranslation } from "@/app/i18n/I18nContext";
@@ -103,18 +104,16 @@ export default function EventResults({ previewUnpublished = false, adminBack = f
         {richTextToPlainText(eventRow?.name) || t("results.title")}
       </PageTitle>
 
-      <Link
-        to={
-          adminBack
-            ? `/${clubSlug}/app/admin/events/${id}/results`
-            : `/${clubSlug}/app/events/${id}`
-        }
-        className="no-underline"
-      >
-        <Button variant="secondary" size="sm">
-          {adminBack ? t("results.backToImport") : t("results.backToEvent")}
-        </Button>
-      </Link>
+      {adminBack ? (
+        <Link
+          to={`/${clubSlug}/app/admin/events/${id}/results`}
+          className="no-underline"
+        >
+          <Button variant="secondary" size="sm">{t("results.backToImport")}</Button>
+        </Link>
+      ) : (
+        <BackNavButton variant="secondary" />
+      )}
 
       {previewUnpublished && bundle?.result?.published === false && (
         <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">

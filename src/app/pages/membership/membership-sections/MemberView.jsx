@@ -1,6 +1,6 @@
 // src/app/pages/membership/membership-sections/MemberView.jsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { canUpgradeMembershipToFamily } from "@/app/pages/profile/householdDriverLimits";
@@ -8,23 +8,48 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
+function membershipTypeLabel(membership, t) {
+  const key = (membership?.membership_type || "").toLowerCase();
+  if (key === "junior") return t("membershipUi.typeJunior");
+  if (key === "family") return t("membershipUi.typeFamily");
+  if (key === "adult" || key === "single") return t("membershipUi.typeSingle");
+  return t("membershipUi.typeGeneric");
+}
+
+function statusLabel(membership, t) {
+  const key = (membership?.status || "").toLowerCase();
+  if (key === "expired") return t("membershipUi.statusExpired");
+  if (key === "active" || key === "current") return t("membershipUi.statusActive");
+  return membership?.status || t("membershipUi.statusActive");
+}
+
+function formatExpiry(endDate) {
+  if (!endDate) return null;
+  const d = new Date(endDate);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function MemberView({ brand, club, membership }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
 
+  const clubSlug = club?.slug;
+
   async function loadMembers() {
     if (!membership?.id) return;
-
     setLoadingMembers(true);
-
     const { data, error } = await supabase
       .from("club_members")
       .select("*")
       .eq("membership_id", membership.id)
       .order("first_name", { ascending: true });
-
     if (!error) setMembers(data || []);
     setLoadingMembers(false);
   }
@@ -33,119 +58,116 @@ export default function MemberView({ brand, club, membership }) {
     loadMembers();
   }, [membership?.id]);
 
-  // First household member for thank‑you message
   const primaryMember = members?.[0];
   const firstName = primaryMember?.first_name;
+  const isLifeMember = membership?.is_life_member === true;
+  const showUpgradeToFamily = canUpgradeMembershipToFamily(membership?.membership_type);
+  const expiryText = formatExpiry(membership?.end_date);
 
-  const showUpgradeToFamily = canUpgradeMembershipToFamily(
-    membership?.membership_type
-  );
+  const statusKey = (membership?.status || "").toLowerCase();
+  const statusPillClass =
+    statusKey === "expired"
+      ? "bg-slate-100 text-slate-600"
+      : "bg-emerald-50 text-emerald-800";
+
+  const sortedMembers = useMemo(() => {
+    return [...members].sort((a, b) =>
+      String(a.first_name || "").localeCompare(String(b.first_name || ""))
+    );
+  }, [members]);
 
   return (
-    <main className="app-page-main flex flex-col gap-8 !py-6">
+    <main className="app-page-main flex flex-col gap-6 !py-6 max-w-lg mx-auto w-full">
+      <Card className="p-6 sm:p-8 flex flex-col items-center text-center gap-5">
+        {club?.member_badge_url ? (
+          <img
+            src={club.member_badge_url}
+            alt={t("membershipUi.clubLogoAlt", { name: club?.name })}
+            className="h-40 w-40 sm:h-48 sm:w-48 object-contain"
+          />
+        ) : (
+          <p className="text-sm text-text-muted m-0">{t("membershipUi.badgeNotConfigured")}</p>
+        )}
 
-      {/* STATUS CARD */}
-      <Card
-        noPadding
-        className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
-        style={{
-          border: `2px solid ${brand}`,
-          background: "white",
-          padding: 0,
-        }}
-      >
-        {/* BLUE HEADER BAR */}
-        <div
-          className="px-5 py-3"
-          style={{ background: brand, color: "white" }}
-        >
-          <h2 className="text-base font-semibold">{t("membershipUi.membership")}</h2>
+        {isLifeMember && (
+          <p
+            className="m-0 text-sm font-bold tracking-wide uppercase px-4 py-1.5 rounded-full"
+            style={{
+              color: "#92400E",
+              backgroundColor: "#FFFBEB",
+              border: "1px solid #FCD34D",
+            }}
+          >
+            {t("membershipUi.lifeMemberTitle")}
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span
+            className="text-xs font-semibold px-3 py-1 rounded-full"
+            style={{ backgroundColor: `${brand}14`, color: brand }}
+          >
+            {membershipTypeLabel(membership, t)}
+          </span>
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusPillClass}`}>
+            {statusLabel(membership, t)}
+          </span>
         </div>
 
-        {/* CENTERED CONTENT */}
-        <div className="p-6 flex flex-col items-center text-center space-y-6">
+        {expiryText && !isLifeMember && (
+          <p className="text-sm text-text-muted m-0">
+            {t("membershipUi.expiresOn")} {expiryText}
+          </p>
+        )}
 
-          {/* CLUB MEMBER BADGE — upload in Admin → Settings → Membership */}
-          {club?.member_badge_url ? (
-            <img
-              src={club.member_badge_url}
-              alt={`${club?.name} Member Badge`}
-              style={{
-                height: "200px",
-                width: "200px",
-                objectFit: "contain",
-              }}
-            />
-          ) : (
-            <p className="text-sm text-text-muted">{t("membershipUi.badgeNotConfigured")}</p>
-          )}
-
-          {/* THANK YOU MESSAGE */}
-          {firstName && (
-            <div className="space-y-1">
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: brand }}
-              >
-                {t("membershipUi.thankYou", { name: firstName })}
-              </h2>
-
-              <p className="text-sm text-text-muted">
-                {t("membershipUi.supportMessage", { clubName: club?.name })}
-              </p>
-            </div>
-          )}
-        </div>
+        {firstName && (
+          <div className="space-y-1 pt-1">
+            <p className="text-lg font-semibold m-0" style={{ color: brand }}>
+              {t("membershipUi.thankYou", { name: firstName })}
+            </p>
+            <p className="text-sm text-text-muted m-0">
+              {t("membershipUi.supportMessage", { clubName: club?.name })}
+            </p>
+          </div>
+        )}
       </Card>
 
-      {/* HOUSEHOLD MEMBERS */}
-      <Card
-        noPadding
-        className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
-        style={{
-          border: `2px solid ${brand}`,
-          background: "white",
-        }}
-      >
-        <div
-          className="px-5 py-3"
-          style={{ background: brand, color: "white" }}
-        >
-          <h2 className="text-base font-semibold">{t("membershipUi.householdMembersTitle")}</h2>
-        </div>
+      <Card className="p-5 sm:p-6 flex flex-col gap-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted m-0">
+          {t("membershipUi.householdMembersTitle")}
+        </h2>
 
-        <div className="p-6 space-y-4">
-          {loadingMembers && (
-            <p className="text-sm text-text-muted">{t("loading.loading")}</p>
-          )}
+        {loadingMembers && (
+          <p className="text-sm text-text-muted m-0">{t("loading.loading")}</p>
+        )}
 
-          {!loadingMembers && members.length === 0 && (
-            <p className="text-sm text-text-muted">{t("membershipUi.noHouseholdMembers")}</p>
-          )}
+        {!loadingMembers && sortedMembers.length === 0 && (
+          <p className="text-sm text-text-muted m-0">{t("membershipUi.noHouseholdMembers")}</p>
+        )}
 
-          {!loadingMembers &&
-            members.map((member) => (
-              <div
+        {!loadingMembers && sortedMembers.length > 0 && (
+          <ul className="list-none m-0 p-0 flex flex-col gap-2">
+            {sortedMembers.map((member) => (
+              <li
                 key={member.id}
-                className="flex items-center justify-between border border-surfaceBorder rounded-lg p-3 bg-white"
+                className="flex items-center justify-between gap-3 rounded-lg border border-surfaceBorder bg-slate-50/80 px-3 py-2.5"
               >
-                <span className="font-medium">
+                <span className="font-medium text-sm">
                   {member.first_name} {member.last_name}
                 </span>
-
-                <div className="flex items-center gap-3 text-xs text-text-muted">
-                  <span>{member.is_junior ? t("membershipUi.junior") : t("membershipUi.adult")}</span>
-                  {member.driver_id && <span>• {t("driverUi.driverBadge")}</span>}
-                </div>
-              </div>
+                <span className="text-xs text-text-muted shrink-0">
+                  {member.is_junior ? t("membershipUi.junior") : t("membershipUi.adult")}
+                  {member.driver_id ? ` · ${t("driverUi.driverBadge")}` : ""}
+                </span>
+              </li>
             ))}
+          </ul>
+        )}
 
-          {/* PRIMARY BUTTON — Edit Members & Drivers */}
+        <div className="flex flex-col gap-2 pt-1">
           <Button
             className="w-full !py-2.5 !text-sm"
-            onClick={() => {
-              window.location.href = `/${club.slug}/app/profile/drivers`;
-            }}
+            onClick={() => navigate(`/${clubSlug}/app/profile/drivers`)}
           >
             {t("membershipUi.editMembersDrivers")}
           </Button>
@@ -154,21 +176,20 @@ export default function MemberView({ brand, club, membership }) {
             <Button
               variant="secondary"
               className="w-full !py-2.5 !text-sm"
-              onClick={() => navigate(`/${club.slug}/app/membership/upgrade`)}
+              onClick={() => navigate(`/${clubSlug}/app/membership/upgrade`)}
             >
               {t("membershipUi.upgradeFamily")}
             </Button>
           )}
 
-          {/* RENEW MEMBERSHIP BUTTON */}
           <Button
             variant="secondary"
             className="w-full !py-2.5 !text-sm"
-            onClick={() => {
-              window.location.href = `/${club.slug}/app/membership/renew`;
-            }}
+            onClick={() => navigate(`/${clubSlug}/app/membership/renew`)}
           >
-            {membership?.is_life_member ? t("membershipUi.renewOptional") : t("membershipUi.renewMembership")}
+            {isLifeMember
+              ? t("membershipUi.renewOptional")
+              : t("membershipUi.renewMembership")}
           </Button>
         </div>
       </Card>

@@ -11,6 +11,8 @@ export default function NumberAndColoursSection({
   club,
   navigate,
   previewNumber,
+  canChooseNumber = true,
+  canChangeNumber = true,
 }) {
   const { t } = useTranslation();
   const { palette } = useTheme();
@@ -29,18 +31,21 @@ export default function NumberAndColoursSection({
             {previewNumber || "None"}
           </span>
 
-          <button
-            type="button"
-            onClick={() =>
-              navigate(
-                `/${club.slug}/app/profile/drivers/${driver.id}/choose-number`
-              )
-            }
-            className="px-4 py-2 rounded text-white text-sm font-medium"
-            style={{ background: brand }}
-          >
-            Change Number
-          </button>
+          {canChooseNumber &&
+            (canChangeNumber || !previewNumber) && (
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/${club.slug}/app/profile/drivers/${driver.id}/choose-number`
+                  )
+                }
+                className="px-4 py-2 rounded text-white text-sm font-medium"
+                style={{ background: brand }}
+              >
+                {previewNumber ? "Change Number" : "Choose Number"}
+              </button>
+            )}
         </div>
       </div>
 

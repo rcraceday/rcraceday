@@ -22,6 +22,8 @@ import CMSImageUpload from "@cms/CMSImageUpload";
 import { cmsStyles } from "@cms/styles";
 import { cmsLayout } from "@cms/layout";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { findDuplicateDriverNameInClub } from "@/app/lib/driverNameUniqueness";
+import { unassignDriverNumber } from "@/app/lib/driverNumberAdmin";
 
 const GENDER_OPTIONS = [
   { value: "Male", label: "Male" },
@@ -51,21 +53,6 @@ function toIntOrNull(value) {
   if (value === "" || value === null || value === undefined) return null;
   const parsed = Number(value);
   return Number.isNaN(parsed) ? null : parsed;
-}
-
-async function unassignDriverNumber(clubId, driverId) {
-  await supabase
-    .from("numbers")
-    .update({
-      status: "available",
-      assigned_to_driver: null,
-      assigned_driver_name: null,
-      assigned_driver_email: null,
-    })
-    .eq("club_id", clubId)
-    .eq("assigned_to_driver", driverId);
-
-  return supabase.from("drivers").update({ permanent_number: null }).eq("id", driverId);
 }
 
 export default function AdminDriverEdit() {
@@ -180,17 +167,15 @@ export default function AdminDriverEdit() {
   };
 
   async function nameIsTaken(firstName, lastName, excludeId) {
-    let query = supabase
-      .from("drivers")
-      .select("id")
-      .eq("club_id", club.id)
-      .eq("first_name", firstName)
-      .eq("last_name", lastName)
-      .limit(1);
-    if (excludeId) query = query.neq("id", excludeId);
-    const { data, error: lookupError } = await query;
+    const { duplicate, error: lookupError } = await findDuplicateDriverNameInClub({
+      clubId: club.id,
+      firstName,
+      lastName,
+      excludeDriverId: excludeId,
+      club,
+    });
     if (lookupError) throw lookupError;
-    return (data || []).length > 0;
+    return duplicate;
   }
 
   async function applyNumber(driverId, nextNumber, firstName, lastName) {

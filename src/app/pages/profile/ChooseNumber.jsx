@@ -11,6 +11,7 @@ import useTheme from "@/app/providers/useTheme";
 import { HashtagIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { resolveDriverNumberRules } from "@/app/lib/driverClubSettings";
 
 export default function ChooseNumber() {
   const navigate = useNavigate();
@@ -30,6 +31,8 @@ export default function ChooseNumber() {
   const [assigning, setAssigning] = useState(false);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState("");
+
+  const numberRules = resolveDriverNumberRules(club);
 
   // LOAD DRIVER
   useEffect(() => {
@@ -123,6 +126,19 @@ export default function ChooseNumber() {
   if (loading || !driver) {
     return <div className="p-6 text-center text-gray-600">Loading…</div>;
   }
+
+  if (numberRules.members_can_choose === false) {
+    return (
+      <div className="p-6 text-center text-gray-600">
+        {t("driverRules.numberChoiceDisabled")}
+      </div>
+    );
+  }
+
+  const readOnly =
+    driver.permanent_number != null &&
+    driver.permanent_number !== "" &&
+    numberRules.members_can_change_after_assign === false;
 
   return (
     <div className="min-h-screen w-full bg-background text-text-base">
@@ -270,13 +286,19 @@ export default function ChooseNumber() {
         </Card>
 
         {/* SAVE */}
-        <Button
-          onClick={saveNumber}
-          disabled={!selected || assigning}
-          className="w-full py-3 disabled:opacity-50"
-        >
-          {assigning ? "Saving…" : "Save Number"}
-        </Button>
+        {readOnly ? (
+          <p className="text-sm text-gray-600 text-center">
+            {t("driverRules.numberChangeDisabled")}
+          </p>
+        ) : (
+          <Button
+            onClick={saveNumber}
+            disabled={!selected || assigning}
+            className="w-full py-3 disabled:opacity-50"
+          >
+            {assigning ? "Saving…" : "Save Number"}
+          </Button>
+        )}
 
         {/* CANCEL */}
         <Button

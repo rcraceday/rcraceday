@@ -1,6 +1,6 @@
 // src/app/pages/profile/DriverManager.jsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
 import { useDrivers } from "@/app/providers/DriverProvider";
@@ -20,6 +20,7 @@ import {
   countHouseholdSlots,
 } from "@/app/pages/profile/householdDriverLimits";
 import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
+import { evaluateDriverProfileReadiness } from "@/app/lib/driverClubSettings";
 
 export default function DriverManager() {
   const navigate = useNavigate();
@@ -104,6 +105,12 @@ export default function DriverManager() {
 
   const showClubMembers = membershipType === "family";
 
+  const driversNeedingProfile = useMemo(
+    () =>
+      driverList.filter((driver) => !evaluateDriverProfileReadiness(club, driver).ready),
+    [driverList, club]
+  );
+
   // ------------------------------------------------------------
   // DELETE MEMBER
   // ------------------------------------------------------------
@@ -145,6 +152,12 @@ export default function DriverManager() {
       {/* CENTERED CONTENT */}
       <div className="w-full flex justify-center">
         <main className="app-page-main flex flex-col gap-10">
+
+          {driversNeedingProfile.length > 0 && (
+            <Card className="p-4 text-sm bg-amber-50 border border-amber-200 text-amber-900">
+              {t("driverRules.profileIncompleteBanner")}
+            </Card>
+          )}
 
           {/* DRIVERS */}
           <section className="space-y-4">

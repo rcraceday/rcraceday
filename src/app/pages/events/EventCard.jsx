@@ -12,6 +12,7 @@ export default function EventCard({
   showResults,
   hasNomination = false,
   hasReceivedNominations = false,
+  isPast = false,
 }) {
   const { t, locale } = useTranslation();
   const track =
@@ -64,7 +65,9 @@ export default function EventCard({
   const nominationStatusHighlight = hasNomination || nominationsOpen;
 
   return (
-    <Card className="!p-0 overflow-hidden">
+    <Card
+      className={`!p-0 overflow-hidden ${isPast ? "opacity-55 saturate-[0.65]" : ""}`}
+    >
       <div className="flex flex-col md:flex-row md:items-stretch">
         <Link
           to={`/${clubSlug}/app/events/${event.id}`}

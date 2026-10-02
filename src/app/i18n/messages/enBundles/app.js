@@ -65,6 +65,12 @@ export default {
   },
   events: {
     title: "Events",
+    viewModeLabel: "Event list",
+    viewUpcoming: "Upcoming",
+    viewByYear: "By year",
+    yearOverviewLink: "Year overview calendar",
+    loading: "Loading events…",
+    noUpcoming: "No upcoming events scheduled.",
     noEvents: "No events found.",
     detailsTitle: "Event Details",
     nominate: "Nominate",

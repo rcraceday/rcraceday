@@ -10,6 +10,12 @@ import Badge from "@/components/ui/Badge";
 
 import useProfile from "@app/hooks/useProfile";
 import useTheme from "@/app/providers/useTheme";
+import { useClub } from "@/app/providers/ClubProvider";
+import { useAuth } from "@/app/providers/AuthProvider";
+import {
+  resolveDriverDirectoryRules,
+  resolveDriverNamingRules,
+} from "@/app/lib/driverClubSettings";
 import { COUNTRIES } from "@/data/countries";
 
 export default function RacerDirectory() {
@@ -18,6 +24,10 @@ export default function RacerDirectory() {
   const { membership } = useProfile();
   const { palette } = useTheme();
   const { t } = useTranslation();
+  const { club } = useClub();
+  const { user } = useAuth();
+  const directoryRules = resolveDriverDirectoryRules(club);
+  const namingRules = resolveDriverNamingRules(club);
 
   const [loading, setLoading] = useState(true);
   const [drivers, setDrivers] = useState([]);
@@ -54,13 +64,13 @@ export default function RacerDirectory() {
       }
 
       const visibleDrivers = data.filter((d) => {
+        if (!directoryRules.show_juniors && d.is_junior) return false;
+
         const p = d.driver_profiles?.[0];
         if (!p) return false;
 
-        // Visible to everyone
         if (p.visible_in_directory) return true;
 
-        // Hidden but visible to owner
         if (membership && d.membership_id === membership.id) return true;
 
         return false;
@@ -78,20 +88,43 @@ export default function RacerDirectory() {
     };
 
     load();
-  }, [membership]);
+  }, [membership, directoryRules.show_juniors]);
 
-  // Non-members cannot view directory
-  if (!loading && !isMember) {
+  if (!loading && directoryRules.enabled === false) {
     return (
       <div className="p-4 max-w-xl mx-auto">
         <Card className="p-6 text-center space-y-4">
-          <h2 className="text-xl font-semibold">Members Only</h2>
-          <p className="text-gray-600">
-            The Racer Directory is only available to club members.
-          </p>
-          <Button onClick={() => navigate(`/${clubSlug}/profile/drivers`)}>
+          <p className="text-gray-600">{t("driverRules.directoryDisabled")}</p>
+          <Button onClick={() => navigate(`/${clubSlug}/app/profile/drivers`)}>
             Back to My Drivers
           </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (
+    !loading &&
+    directoryRules.audience === "members_only" &&
+    !isMember
+  ) {
+    return (
+      <div className="p-4 max-w-xl mx-auto">
+        <Card className="p-6 text-center space-y-4">
+          <p className="text-gray-600">{t("driverRules.directoryMembersOnly")}</p>
+          <Button onClick={() => navigate(`/${clubSlug}/app/profile/drivers`)}>
+            Back to My Drivers
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!loading && directoryRules.audience === "authenticated" && !user) {
+    return (
+      <div className="p-4 max-w-xl mx-auto">
+        <Card className="p-6 text-center space-y-4">
+          <p className="text-gray-600">{t("driverRules.directoryMembersOnly")}</p>
         </Card>
       </div>
     );
@@ -102,10 +135,13 @@ export default function RacerDirectory() {
   const filtered = drivers.filter((d) => {
     const p = d.driver_profiles?.[0];
     const fullName = `${d.first_name} ${d.last_name}`.toLowerCase();
-    const nick = p?.nickname?.toLowerCase() || "";
+    const nick =
+      namingRules.allow_nickname_in_directory !== false
+        ? p?.nickname?.toLowerCase() || ""
+        : "";
     return (
       fullName.includes(search.toLowerCase()) ||
-      nick.includes(search.toLowerCase())
+      (nick && nick.includes(search.toLowerCase()))
     );
   });
 
@@ -153,7 +189,7 @@ export default function RacerDirectory() {
                     {d.first_name} {d.last_name}
                   </h2>
 
-                  {p.nickname && (
+                  {namingRules.allow_nickname_in_directory !== false && p.nickname && (
                     <p className="text-gray-600 text-sm">“{p.nickname}”</p>
                   )}
 

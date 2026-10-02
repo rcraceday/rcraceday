@@ -17,6 +17,7 @@ import SicCarProfileSection from "@/components/driver/profile-sections/SicCarPro
 import DirtCarProfileSection from "@/components/driver/profile-sections/DirtCarProfileSection";
 import ExperienceSection from "@/components/driver/profile-sections/ExperienceSection";
 import FunTriviaSection from "@/components/driver/profile-sections/FunTriviaSection";
+import { isProfileSectionEnabled } from "@/app/lib/driverClubSettings";
 
 export default function EditDriverProfileCard({
   driver,
@@ -33,6 +34,12 @@ export default function EditDriverProfileCard({
   saveError = "",
   deleteDriver,
   showLivetimeNameNotice,
+  livetimeNoticeBody,
+  showLivetimeHints = true,
+  lockNameFields = false,
+  canDeleteDriver = true,
+  canChooseNumber = true,
+  canChangeNumber = true,
 }) {
   const { t } = useTranslation();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -71,15 +78,23 @@ export default function EditDriverProfileCard({
 
         <div className="p-6 space-y-10">
           {/* AVATAR + BASIC INFO */}
-          <AvatarAndBasicInfoSection
-            driver={driver}
-            update={update}
-            isMember={isMember}
-            brand={brand}
-            handleAvatarSelect={handleAvatarSelect}
-            handleRemoveAvatar={handleRemoveAvatar}
-            showLivetimeNameNotice={showLivetimeNameNotice}
-          />
+          {isProfileSectionEnabled(club, "basic") && (
+            <AvatarAndBasicInfoSection
+              driver={driver}
+              update={update}
+              isMember={isMember}
+              brand={brand}
+              handleAvatarSelect={handleAvatarSelect}
+              handleRemoveAvatar={handleRemoveAvatar}
+              showLivetimeNameNotice={showLivetimeNameNotice}
+              livetimeNoticeBody={livetimeNoticeBody}
+              lockNameFields={lockNameFields}
+            />
+          )}
+
+          {showLivetimeHints && isMember && (
+            <p className="text-xs text-gray-600">{t("driverProfile.livetimeFieldsHint")}</p>
+          )}
 
           {/* NON-MEMBER LOCKED BLOCK */}
           {!isMember && (
@@ -94,21 +109,24 @@ export default function EditDriverProfileCard({
                   pointerEvents: "none",
                 }}
               >
-                <NumberAndColoursSection
-                  driver={driver}
-                  update={() => {}}
-                  brand={brand}
-                  club={club}
-                  navigate={navigate}
-                  previewNumber={previewNumber}
-                />
+                {isProfileSectionEnabled(club, "colors_number") && (
+                  <NumberAndColoursSection
+                    driver={driver}
+                    update={() => {}}
+                    brand={brand}
+                    club={club}
+                    navigate={navigate}
+                    previewNumber={previewNumber}
+                    canChooseNumber={canChooseNumber}
+                    canChangeNumber={canChangeNumber}
+                  />
+                )}
 
                 <hr className="border-surfaceBorder" />
 
-                <SponsorsSection
-                  driver={driver}
-                  update={() => {}}
-                />
+                {isProfileSectionEnabled(club, "trivia_sponsors") && (
+                  <SponsorsSection driver={driver} update={() => {}} />
+                )}
               </div>
 
               <div className="space-y-4 text-center">
@@ -132,40 +150,67 @@ export default function EditDriverProfileCard({
             <>
               <hr className="border-surfaceBorder" />
 
-              <NumberAndColoursSection
-                driver={driver}
-                update={update}
-                brand={brand}
-                club={club}
-                navigate={navigate}
-                previewNumber={previewNumber}
-              />
+              {isProfileSectionEnabled(club, "colors_number") && (
+                <>
+                  <NumberAndColoursSection
+                    driver={driver}
+                    update={update}
+                    brand={brand}
+                    club={club}
+                    navigate={navigate}
+                    previewNumber={previewNumber}
+                    canChooseNumber={canChooseNumber}
+                    canChangeNumber={canChangeNumber}
+                  />
+                  <hr className="border-surfaceBorder" />
+                </>
+              )}
 
-              <hr className="border-surfaceBorder" />
+              {isProfileSectionEnabled(club, "trivia_sponsors") && (
+                <>
+                  <SponsorsSection driver={driver} update={update} />
+                  <hr className="border-surfaceBorder" />
+                </>
+              )}
 
-              <SponsorsSection
-                driver={driver}
-                update={update}
-              />
+              {isProfileSectionEnabled(club, "personal") && (
+                <>
+                  <PersonalDetailsSection driver={driver} update={update} />
+                  <hr className="border-surfaceBorder" />
+                </>
+              )}
 
-              <hr className="border-surfaceBorder" />
+              {isProfileSectionEnabled(club, "racing") && (
+                <>
+                  <RacingInfoSection driver={driver} update={update} />
+                  <hr className="border-surfaceBorder" />
+                </>
+              )}
 
-              <PersonalDetailsSection driver={driver} update={update} />
-              <hr className="border-surfaceBorder" />
+              {isProfileSectionEnabled(club, "on_road") && (
+                <>
+                  <SicCarProfileSection driver={driver} update={update} />
+                  <hr className="border-surfaceBorder" />
+                </>
+              )}
 
-              <RacingInfoSection driver={driver} update={update} />
-              <hr className="border-surfaceBorder" />
+              {isProfileSectionEnabled(club, "off_road") && (
+                <>
+                  <DirtCarProfileSection driver={driver} update={update} />
+                  <hr className="border-surfaceBorder" />
+                </>
+              )}
 
-              <SicCarProfileSection driver={driver} update={update} />
-              <hr className="border-surfaceBorder" />
+              {isProfileSectionEnabled(club, "experience") && (
+                <>
+                  <ExperienceSection driver={driver} update={update} />
+                  <hr className="border-surfaceBorder" />
+                </>
+              )}
 
-              <DirtCarProfileSection driver={driver} update={update} />
-              <hr className="border-surfaceBorder" />
-
-              <ExperienceSection driver={driver} update={update} />
-              <hr className="border-surfaceBorder" />
-
-              <FunTriviaSection driver={driver} update={update} />
+              {isProfileSectionEnabled(club, "trivia_sponsors") && (
+                <FunTriviaSection driver={driver} update={update} />
+              )}
             </>
           )}
 
@@ -197,17 +242,18 @@ export default function EditDriverProfileCard({
         </div>
       </Card>
 
-      {/* DELETE DRIVER BUTTON */}
-      <div className="flex flex-col items-center pt-4">
-        <Button
-          variant="danger"
-          className="!w-auto px-6 py-3"
-          onClick={() => setShowDeleteModal(true)}
-          disabled={deleting}
-        >
-          {deleting ? t("driverProfile.deleting") : t("driverUi.deleteDriverTitle")}
-        </Button>
-      </div>
+      {canDeleteDriver && (
+        <div className="flex flex-col items-center pt-4">
+          <Button
+            variant="danger"
+            className="!w-auto px-6 py-3"
+            onClick={() => setShowDeleteModal(true)}
+            disabled={deleting}
+          >
+            {deleting ? t("driverProfile.deleting") : t("driverUi.deleteDriverTitle")}
+          </Button>
+        </div>
+      )}
 
 {/* DELETE DRIVER MODAL */}
 {showDeleteModal && (

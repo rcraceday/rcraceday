@@ -8,9 +8,9 @@ import {
   ShoppingBagIcon,
   PlusCircleIcon,
   PencilSquareIcon,
-  ArrowLeftIcon,
 } from "@heroicons/react/24/solid";
 import Button from "@/components/ui/Button";
+import BackNavButton from "@/components/ui/BackNavButton";
 import PageTitle from "@/components/ui/PageTitle";
 import useTheme from "@/app/providers/useTheme";
 import { supabase } from "@/supabaseClient";
@@ -62,25 +62,13 @@ function formatLateFeeAmount(pricing) {
 // ---------------------------------------------
 // PAGE HEADER
 // ---------------------------------------------
-function PageHeader({ brand, clubSlug, t }) {
-  const navigate = useNavigate();
-
+function PageHeader({ brand, t }) {
   return (
     <PageTitle
       icon={CalendarDaysIcon}
       title={t("events.detailsTitle")}
       style={{ color: brand }}
-      actions={
-        <Button
-          variant="primary"
-          size="sm"
-          className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
-          onClick={() => navigate(`/${clubSlug}/app/events`)}
-        >
-          <ArrowLeftIcon className="h-3 w-3" />
-          {t("common.back")}
-        </Button>
-      }
+      actions={<BackNavButton />}
     />
   );
 }
@@ -427,7 +415,7 @@ useEffect(() => {
 if (loading) {
   return (
     <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
-      <PageHeader brand={brand} clubSlug={clubSlug} t={t} />
+      <PageHeader brand={brand} t={t} />
       <div
         style={{
           padding: "40px",
@@ -445,7 +433,7 @@ if (loading) {
 if (!event) {
   return (
     <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
-      <PageHeader brand={brand} clubSlug={clubSlug} t={t} />
+      <PageHeader brand={brand} t={t} />
       <div
         style={{
           padding: "40px",
@@ -483,7 +471,7 @@ const showEntryFees =
 return (
   
   <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
-    <PageHeader brand={brand} clubSlug={clubSlug} t={t} />
+    <PageHeader brand={brand} t={t} />
 
 <main className="app-page-main flex justify-center !py-10">
   <div

@@ -1,5 +1,5 @@
 // src/app/routes.jsx
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 
 import ClubSelect from "@/app/pages/global/ClubSelect.jsx";
 
@@ -52,6 +52,7 @@ import ChooseNumber from "@app/pages/profile/ChooseNumber";
 import WelcomeAddDrivers from "@app/pages/profile/WelcomeAddDrivers";
 
 import DriverProvider from "@/app/providers/DriverProvider";
+import DriverProfilesAccessGate from "@/app/components/driver/DriverProfilesAccessGate";
 
 // ADMIN PAGES
 import AdminDashboard from "@app/pages/admin/AdminDashboard";
@@ -106,6 +107,17 @@ function ClubRootRedirect() {
   return clubSlug ? <Navigate to={`/${clubSlug}/public/login`} replace /> : null;
 }
 
+function ResetPasswordTrailingSlashRedirect() {
+  const { clubSlug } = useParams();
+  const location = useLocation();
+  return (
+    <Navigate
+      to={`/${clubSlug}/public/reset-password${location.search}${location.hash}`}
+      replace
+    />
+  );
+}
+
 function AppPathRedirect({ to }) {
   const { clubSlug } = useParams();
   return clubSlug ? <Navigate to={`/${clubSlug}/app/${to}`} replace /> : null;
@@ -133,7 +145,11 @@ export default function AppRoutes() {
         <Route path="signup" element={<Signup />} />
         <Route path="check-email/*" element={<CheckEmail />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
-        <Route path="reset-password" element={<ResetPassword />} />
+        <Route path="reset-password/*" element={<ResetPassword />} />
+        <Route
+          path="reset-password/"
+          element={<ResetPasswordTrailingSlashRedirect />}
+        />
         <Route path="forgot-email" element={<ForgotEmail />} />
         <Route path="*" element={<Navigate to="login" replace />} />
       </Route>
@@ -183,7 +199,9 @@ export default function AppRoutes() {
           path="profile/drivers/*"
           element={
             <DriverProvider>
-              <DriverManager />
+              <DriverProfilesAccessGate>
+                <DriverManager />
+              </DriverProfilesAccessGate>
             </DriverProvider>
           }
         />
@@ -192,7 +210,9 @@ export default function AppRoutes() {
           path="profile/drivers/add"
           element={
             <DriverProvider>
-              <AddDriver />
+              <DriverProfilesAccessGate>
+                <AddDriver />
+              </DriverProfilesAccessGate>
             </DriverProvider>
           }
         />
@@ -201,7 +221,9 @@ export default function AppRoutes() {
           path="profile/drivers/:id/edit"
           element={
             <DriverProvider>
-              <EditProfile />
+              <DriverProfilesAccessGate>
+                <EditProfile />
+              </DriverProfilesAccessGate>
             </DriverProvider>
           }
         />
@@ -210,7 +232,9 @@ export default function AppRoutes() {
           path="profile/drivers/:id/choose-number"
           element={
             <DriverProvider>
-              <ChooseNumber />
+              <DriverProfilesAccessGate>
+                <ChooseNumber />
+              </DriverProfilesAccessGate>
             </DriverProvider>
           }
         />
@@ -219,7 +243,9 @@ export default function AppRoutes() {
           path="profile/drivers/:id"
           element={
             <DriverProvider>
-              <DriverProfile />
+              <DriverProfilesAccessGate>
+                <DriverProfile />
+              </DriverProfilesAccessGate>
             </DriverProvider>
           }
         />
@@ -228,7 +254,9 @@ export default function AppRoutes() {
           path="profile/drivers/welcome"
           element={
             <DriverProvider>
-              <WelcomeAddDrivers />
+              <DriverProfilesAccessGate>
+                <WelcomeAddDrivers />
+              </DriverProfilesAccessGate>
             </DriverProvider>
           }
         />

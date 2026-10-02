@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import BackNavButton from "@/components/ui/BackNavButton";
 import { useEffect, useState } from "react";
 import { supabase } from "@/supabaseClient";
 
@@ -91,12 +92,7 @@ export default function CalendarItemDetails() {
 
         {/* Back Button */}
         <div className="pt-2">
-          <Link
-            to={`/${clubSlug}/calendar`}
-            className="inline-block bg-black text-white px-4 py-2 rounded-md font-semibold shadow-sm"
-          >
-            Back to Calendar
-          </Link>
+          <BackNavButton variant="secondary" />
         </div>
 
       </div>

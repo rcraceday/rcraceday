@@ -12,36 +12,32 @@ import MemberView from "./membership-sections/MemberView";
 
 export default function Membership() {
   const { club } = useOutletContext();
-  const { membership } = useMembership();
+  const { membership, loadingMembership } = useMembership();
   const { palette } = useTheme();
   const { t } = useTranslation();
 
   const brand = palette?.primary || "#00438a";
-
   const isMember = membership?.isMember === true;
 
   return (
-    <div className="min-h-screen w-full bg-background text-text-base">
-
+    <>
       <PageTitle
         icon={IdentificationIcon}
         title={t("membership.title")}
         style={{ color: brand }}
       />
 
-      {/* ROUTING */}
-      {isMember ? (
-        <MemberView
-          brand={brand}
-          club={club}
-          membership={membership}
-        />
+      {loadingMembership ? (
+        <main className="app-page-main">
+          <p className="text-sm text-text-muted text-center">
+            {t("membershipUi.loadingMembership")}
+          </p>
+        </main>
+      ) : isMember ? (
+        <MemberView brand={brand} club={club} membership={membership} />
       ) : (
-        <NonMemberView
-          brand={brand}
-          club={club}
-        />
+        <NonMemberView brand={brand} club={club} />
       )}
-    </div>
+    </>
   );
 }
