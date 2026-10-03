@@ -12,6 +12,7 @@ import MobileDrawer from "@/components/ui/MobileDrawer";
 import { buildMenuItems } from "@/components/ui/menuItems.js";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { membershipHasFeature } from "@/app/lib/membershipClubLimits";
+import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
 
 export default function HamburgerMenu({
   clubSlug,
@@ -28,7 +29,8 @@ export default function HamburgerMenu({
   const { palette } = useTheme();
   const primaryColor = palette?.primary || "#00438a";
 
-  const isAdminUser = profile?.role === "admin";
+  const { hasAnyAdminAccess } = useAdminAccess();
+  const isAdminUser = hasAnyAdminAccess;
   const { club } = useClub();
   const { membership } = useMembership();
   const messageAudience = isAdmin ? "admin" : "member";

@@ -8,8 +8,9 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import useTheme from "@/app/providers/useTheme";
 
-import { HashtagIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
+import { HashtagIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
+import BackNavButton from "@/components/ui/BackNavButton";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { resolveDriverNumberRules } from "@/app/lib/driverClubSettings";
 
@@ -147,17 +148,7 @@ export default function ChooseNumber() {
         icon={HashtagIcon}
         title={t("drivers.chooseNumberTitle")}
         style={{ color: brand }}
-        actions={
-          <Button
-            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
-            onClick={() =>
-              navigate(`/${slug}/app/profile/drivers/${driverId}/edit`)
-            }
-          >
-            <ArrowLeftIcon className="h-3 w-3" />
-            Back
-          </Button>
-        }
+        actions={<BackNavButton />}
       />
 
       <main className="app-page-main space-y-8 !py-8">

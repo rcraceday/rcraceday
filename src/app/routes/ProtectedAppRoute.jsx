@@ -3,16 +3,14 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
-
-function isProfileAdmin(profile) {
-  return (profile?.role || "").toLowerCase() === "admin";
-}
+import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
 
 export default function ProtectedAppRoute({ children, admin = false }) {
   const { session, loadingUser } = useAuth();
   const { membership, loadingMembership } = useMembership();
   const { club, loadingClub } = useClub();
   const { profile, loadingProfile } = useProfile();
+  const { hasAnyAdminAccess, loadingAdminAccess } = useAdminAccess();
   const { clubSlug } = useParams();
   const location = useLocation();
 
@@ -38,7 +36,11 @@ export default function ProtectedAppRoute({ children, admin = false }) {
     );
   }
 
-  if (loadingClub || loadingMembership || (admin && loadingProfile)) {
+  if (
+    loadingClub ||
+    loadingMembership ||
+    (admin && (loadingProfile || loadingAdminAccess))
+  ) {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
         Checking access…
@@ -58,7 +60,7 @@ export default function ProtectedAppRoute({ children, admin = false }) {
     return <Navigate to={`/${clubSlug}/public/login`} replace />;
   }
 
-  if (admin && !isProfileAdmin(profile)) {
+  if (admin && !hasAnyAdminAccess) {
     return <Navigate to={`/${clubSlug}/app`} replace state={{ adminDenied: true }} />;
   }
 

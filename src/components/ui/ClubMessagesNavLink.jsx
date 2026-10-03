@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
-import { useProfile } from "@/app/providers/ProfileProvider";
+import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
 import { useClubMessageUnreadCount } from "@/app/hooks/useClubMessageUnreadCount";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
@@ -15,9 +15,9 @@ export default function ClubMessagesNavLink({
   const { clubSlug } = useParams();
   const { club } = useClub();
   const { membership } = useMembership();
-  const { profile } = useProfile();
-  const isAdmin = (profile?.role || "").toLowerCase() === "admin";
-  const audience = variant === "admin" && isAdmin ? "admin" : "member";
+  const { hasPermission } = useAdminAccess();
+  const isAdminMessenger = hasPermission("messages");
+  const audience = variant === "admin" && isAdminMessenger ? "admin" : "member";
 
   const { unreadCount } = useClubMessageUnreadCount({
     clubId: club?.id,
@@ -26,7 +26,7 @@ export default function ClubMessagesNavLink({
   });
 
   const to =
-    variant === "admin" && isAdmin
+    variant === "admin" && isAdminMessenger
       ? `/${clubSlug}/app/admin/messages`
       : `/${clubSlug}/app/messages`;
 

@@ -7,10 +7,15 @@ import HamburgerMenu from "@/components/ui/HamburgerMenu";
 import ClubMessagesNavLink from "@/components/ui/ClubMessagesNavLink";
 import { buildAdminMenuItems } from "./adminMenuItems";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { useProfile } from "@/app/providers/ProfileProvider";
+import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
+import { filterAdminMenuItems } from "@/app/lib/adminPermissions";
 
 export default function AdminTopBar() {
   const { clubSlug } = useParams();
   const { t } = useTranslation();
+  const { profile } = useProfile();
+  const { permissions } = useAdminAccess();
 
   const [adminLogo, setAdminLogo] = useState(null);
 
@@ -36,7 +41,11 @@ export default function AdminTopBar() {
     loadClub();
   }, [clubSlug]);
 
-  const adminItems = buildAdminMenuItems({ clubSlug, t });
+  const adminItems = filterAdminMenuItems(
+    buildAdminMenuItems({ clubSlug, t }),
+    profile,
+    permissions
+  );
 
   return (
     <header

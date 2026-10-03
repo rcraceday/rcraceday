@@ -23,7 +23,8 @@ import {
   suggestJuniorFromBirthYear,
 } from "@/app/lib/driverClubSettings";
 
-import { ArrowLeftIcon, PencilSquareIcon } from "@heroicons/react/24/solid";
+import BackNavButton from "@/components/ui/BackNavButton";
+import { PencilSquareIcon } from "@heroicons/react/24/solid";
 
 import { supabase } from "@/supabaseClient";
 import {
@@ -330,7 +331,7 @@ export default function EditProfile() {
     const target = pendingDestination ?? null;
     setShowPrompt(false);
     setPendingDestination(null);
-    if (target) navigate(target);
+    if (target != null) navigate(target);
   };
 
   const handleConfirmNameChange = async () => {
@@ -340,7 +341,7 @@ export default function EditProfile() {
     setShowNameWarning(false);
     setShowPrompt(false);
     setPendingDestination(null);
-    if (target) navigate(target);
+    if (target != null) navigate(target);
   };
 
   const handleDiscard = () => {
@@ -405,16 +406,7 @@ export default function EditProfile() {
         title={t("drivers.editTitle")}
         style={{ color: brand }}
         actions={
-          <Button
-            variant="primary"
-            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
-            onClick={() =>
-              requestNavigate(`/${club.slug}/app/profile/drivers`)
-            }
-          >
-            <ArrowLeftIcon className="h-3 w-3" />
-            Back
-          </Button>
+          <BackNavButton onClick={() => requestNavigate(-1)} />
         }
       />
 

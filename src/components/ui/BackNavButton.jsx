@@ -12,6 +12,7 @@ export default function BackNavButton({
   variant = "primary",
   size = "sm",
   className = "",
+  onClick,
 }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -24,6 +25,10 @@ export default function BackNavButton({
       size={size}
       className={`!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1 ${className}`.trim()}
       onClick={() => {
+        if (onClick) {
+          onClick();
+          return;
+        }
         if (to) navigate(to);
         else navigate(-1);
       }}

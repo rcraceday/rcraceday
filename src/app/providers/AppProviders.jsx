@@ -12,6 +12,7 @@ import MembershipProvider from "@/app/providers/MembershipProvider";
 import DriverProvider from "@/app/providers/DriverProvider";
 import NumberProvider from "@/app/providers/NumberProvider";
 import NotificationProvider from "@/app/providers/NotificationProvider";
+import AdminAccessProvider from "@/app/providers/AdminAccessProvider";
 
 function AuthenticatedProviders({ children }) {
   return (
@@ -19,13 +20,15 @@ function AuthenticatedProviders({ children }) {
       <ThemeProvider>
         <ProfileProvider>
           <MembershipProvider>
-            <DriverProvider>
-              <NumberProvider>
-                <NotificationProvider>
-                  {children}
-                </NotificationProvider>
-              </NumberProvider>
-            </DriverProvider>
+            <AdminAccessProvider>
+              <DriverProvider>
+                <NumberProvider>
+                  <NotificationProvider>
+                    {children}
+                  </NotificationProvider>
+                </NumberProvider>
+              </DriverProvider>
+            </AdminAccessProvider>
           </MembershipProvider>
         </ProfileProvider>
       </ThemeProvider>

@@ -7,8 +7,9 @@ import { supabase } from "@/supabaseClient";
 import DriverProfileCard from "@/components/driver/DriverProfileCard";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import BackNavButton from "@/components/ui/BackNavButton";
 
-import { IdentificationIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
+import { IdentificationIcon } from "@heroicons/react/24/solid";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
@@ -77,17 +78,7 @@ export default function DriverProfile() {
         icon={IdentificationIcon}
         title={t("drivers.profileTitle")}
         style={{ color: brand }}
-        actions={
-          <Button
-            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
-            onClick={() =>
-              navigate(`/${clubSlug}/app/profile/drivers/${id}/edit`)
-            }
-          >
-            <ArrowLeftIcon className="h-3 w-3" />
-            Back
-          </Button>
-        }
+        actions={<BackNavButton />}
       />
 
       {/* MAIN CONTENT */}

@@ -8,6 +8,7 @@ import HamburgerMenu from "@/components/ui/HamburgerMenu";
 import ClubMessagesNavLink from "@/components/ui/ClubMessagesNavLink";
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
 
 export default function Header({ hideMenu }) {
   const { t } = useTranslation();
@@ -16,7 +17,8 @@ export default function Header({ hideMenu }) {
   const { profile } = useProfile();
   const { palette } = useTheme();
 
-  const isAdmin = profile?.role === "admin";
+  const { hasAnyAdminAccess } = useAdminAccess();
+  const isAdmin = hasAnyAdminAccess;
   const logoSrc = palette.logoUrl;
 
   return (
