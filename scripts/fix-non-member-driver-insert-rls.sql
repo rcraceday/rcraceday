@@ -51,7 +51,7 @@ begin
     return v_juniors < v_max_juniors;
   end if;
 
-  return v_adults < v_max_adults;
+  return v_adults < greatest(v_max_adults, 1);
 end;
 $$;
 

@@ -34,13 +34,13 @@ export default function DriverProvider({ children }) {
   const requestIdRef = useRef(0);
 
   const loadDrivers = useCallback(async () => {
-    if (loadingUser || loadingMembership) return;
+    if (loadingUser || loadingMembership) return 0;
 
     // ⭐ FIX: membership may be null on first render
     if (!user?.id || !membership) {
       setDrivers([]);
       setLoadingDrivers(false);
-      return;
+      return 0;
     }
 
     const membershipId = membership.id;
@@ -51,7 +51,7 @@ export default function DriverProvider({ children }) {
       console.warn("[DriverProvider] membership missing club_id");
       setDrivers([]);
       setLoadingDrivers(false);
-      return;
+      return 0;
     }
 
     const requestId = ++requestIdRef.current;
@@ -71,7 +71,6 @@ export default function DriverProvider({ children }) {
           .from("drivers")
           .select("*")
           .eq("club_id", clubId)
-          .is("membership_id", null)
           .eq("created_by", user.id)
           .order("created_at", { ascending: true });
       } else {
@@ -188,17 +187,21 @@ export default function DriverProvider({ children }) {
         };
       }
 
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current) return 0;
 
       if (response.error) {
         console.warn("[DriverProvider] supabase error", response.error);
         setDrivers([]);
+        return 0;
       } else {
-        setDrivers(response.data || []);
+        const rows = response.data || [];
+        setDrivers(rows);
+        return rows.length;
       }
     } catch (err) {
       console.error("[DriverProvider] loadDrivers caught", err);
       if (requestId === requestIdRef.current) setDrivers([]);
+      return 0;
     } finally {
       if (requestId === requestIdRef.current) setLoadingDrivers(false);
     }

@@ -1101,6 +1101,13 @@ export default function EventNominate() {
       setPaymentConfirmed(false);
       setPaymentSettledForDue(null);
       setDraftScope(scope);
+      const familyMode =
+        normalizeMembershipProductType(membership?.membership_type) === "family" ||
+        drivers.length > 1;
+      if (familyMode && drivers[0]?.id) {
+        setFamilyEditorOpen(true);
+        setFamilyEditorDriverId(drivers[0].id);
+      }
       setHydrationReady(true);
     }
 

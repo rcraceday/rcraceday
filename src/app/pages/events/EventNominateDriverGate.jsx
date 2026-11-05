@@ -42,9 +42,11 @@ export default function EventNominateDriverGate({
         membership,
       });
       if (cancelled) return;
+
       if (ensured) {
-        await onDriverReady?.();
-        return;
+        const loadedCount = (await onDriverReady?.()) ?? 0;
+        if (cancelled) return;
+        if (loadedCount > 0) return;
       }
 
       const { first, last } = await resolveDriverNames({
@@ -70,6 +72,7 @@ export default function EventNominateDriverGate({
     const result = await createHostClubVisitorDriver({
       userId,
       clubId,
+      membership,
       firstName,
       lastName,
       isJunior,
@@ -87,7 +90,13 @@ export default function EventNominateDriverGate({
       return;
     }
 
-    await onDriverReady?.();
+    const loadedCount = (await onDriverReady?.()) ?? 0;
+    if (loadedCount === 0) {
+      setError(t("nominate.visitorDriverSaveFailed"));
+      setSaving(false);
+      return;
+    }
+
     setSaving(false);
   }
 
