@@ -490,7 +490,6 @@ const normalizedDays = Array.isArray(data.days)
     try {
       const childDeletes = [
         supabase.from("event_classes").delete().eq("event_id", id),
-        supabase.from("preference_nominations").delete().eq("event_id", id),
         supabase.from("nomination_classes").delete().eq("event_id", id),
       ];
 

@@ -42,10 +42,21 @@ export default function AppProviders() {
   const { t } = useTranslation();
 
   const isPublicRoute =
-    pathname === "/" || pathname.includes("/public/");
+    pathname === "/" ||
+    pathname === "/find-club" ||
+    pathname === "/launch" ||
+    pathname === "/forgot-password" ||
+    pathname === "/forgot-email" ||
+    pathname === "/recover-password" ||
+    pathname === "/reset-password" ||
+    pathname.startsWith("/forgot-password/") ||
+    pathname.startsWith("/forgot-email/") ||
+    pathname.startsWith("/recover-password/") ||
+    pathname.startsWith("/reset-password/") ||
+    pathname.includes("/public/");
 
-  // ⭐ 1. Still loading session → show splash
-  if (loadingUser) {
+  // Public routes must render immediately (auth callbacks, recovery links).
+  if (loadingUser && !isPublicRoute) {
     return (
       <div style={{ padding: 40, fontSize: 24 }}>
         {t("loading.checkingSession")}

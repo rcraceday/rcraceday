@@ -11,6 +11,10 @@ import {
 import { supabase } from "@/supabaseClient";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useClub } from "@/app/providers/ClubProvider";
+import {
+  pickHouseholdMembership,
+  withMembershipFlags,
+} from "@/app/lib/householdMembership";
 
 export const MembershipContext = createContext({
   membership: null,
@@ -24,7 +28,7 @@ export function useMembership() {
 
 export default function MembershipProvider({ children }) {
   const { user, loadingUser } = useAuth();
-  const { club } = useClub();
+  const { club, loadingClub } = useClub();
 
   const [membership, setMembership] = useState(null);
   const [loadingMembership, setLoadingMembership] = useState(true);
@@ -35,9 +39,9 @@ export default function MembershipProvider({ children }) {
     if (inFlightRef.current) return;
 
     // If auth or club isn't ready, do NOT flip loadingMembership repeatedly
-    if (loadingUser || !club?.id) return;
+    if (loadingUser || loadingClub) return;
 
-    if (!user?.id) {
+    if (!user?.id || !club?.id) {
       setMembership(null);
       setLoadingMembership(false);
       return;
@@ -51,21 +55,13 @@ export default function MembershipProvider({ children }) {
         .from("household_memberships")
         .select("*")
         .eq("user_id", user.id)
-        .eq("club_id", club.id)
-        .maybeSingle();
+        .eq("club_id", club.id);
 
       if (error) {
         console.warn("[MembershipProvider] select error", error);
         setMembership(null);
       } else {
-        const row = data || null;
-
-        const isMember =
-          row &&
-          row.membership_type &&
-          row.membership_type !== "non_member";
-
-        setMembership(row ? { ...row, isMember } : null);
+        setMembership(withMembershipFlags(pickHouseholdMembership(data)));
       }
     } catch (err) {
       console.error("[MembershipProvider] loadMembership caught", err);
@@ -74,14 +70,14 @@ export default function MembershipProvider({ children }) {
       inFlightRef.current = false;
       setLoadingMembership(false);
     }
-  }, [user?.id, loadingUser, club?.id]);
+  }, [user?.id, loadingUser, loadingClub, club?.id]);
 
   useEffect(() => {
     // Only run when ALL dependencies are ready
-    if (!loadingUser && user?.id && club?.id) {
+    if (!loadingUser && !loadingClub) {
       loadMembership();
     }
-  }, [loadingUser, user?.id, club?.id, loadMembership]);
+  }, [loadingUser, loadingClub, user?.id, club?.id, loadMembership]);
 
   return (
     <MembershipContext.Provider

@@ -25,6 +25,7 @@ import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import Input from "@/components/ui/Input";
+import ImportDriverFromOtherClubs from "@/components/driver/ImportDriverFromOtherClubs";
 
 function SimpleSpinner() {
   return (
@@ -323,6 +324,26 @@ export default function AddDriver() {
               {error}
             </div>
           )}
+
+          <ImportDriverFromOtherClubs
+            user={user}
+            club={club}
+            membership={membership}
+            membershipType={membershipType}
+            isNonMember={isNonMember}
+            drivers={drivers}
+            clubMembers={clubMembers}
+            maxAdults={maxAdults}
+            maxJuniors={maxJuniors}
+            onImported={async () => {
+              await refreshDrivers();
+              navigate(`/${clubSlug}/app/profile/drivers`);
+            }}
+          />
+
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#64748b" }}>
+            {t("drivers.addManuallyLabel")}
+          </p>
 
           <Input
             label="First Name"

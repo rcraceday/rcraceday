@@ -5,7 +5,12 @@ import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
-import { normalizeResetPasswordLocation } from "@/app/lib/publicAuthRedirect";
+import {
+  clearAuthCallbackErrorsFromUrl,
+  getAuthCallbackErrorFromLocation,
+  normalizeResetPasswordLocation,
+} from "@/app/lib/publicAuthRedirect";
+import rcracedayLogo from "@/assets/rcraceday_logo.png";
 
 function hasRecoveryCallbackInUrl() {
   const { hash, search } = window.location;
@@ -19,8 +24,9 @@ function hasRecoveryCallbackInUrl() {
 function clearAuthCallbackFromUrl() {
   const url = new URL(window.location.href);
   url.hash = "";
-  if (url.searchParams.has("code")) url.searchParams.delete("code");
-  if (url.searchParams.has("token_hash")) url.searchParams.delete("token_hash");
+  ["code", "token_hash", "type"].forEach((key) => {
+    url.searchParams.delete(key);
+  });
   const search = url.searchParams.toString();
   window.history.replaceState(
     {},
@@ -29,8 +35,17 @@ function clearAuthCallbackFromUrl() {
   );
 }
 
+function recoveryTypeFromSearch(typeParam) {
+  const t = String(typeParam || "").toLowerCase();
+  if (t === "recovery" || t === "signup" || t === "email" || t === "invite") {
+    return t;
+  }
+  return "recovery";
+}
+
 export default function ResetPassword() {
-  const { club } = useOutletContext();
+  const outlet = useOutletContext();
+  const club = outlet?.club;
   const { clubSlug } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -41,32 +56,78 @@ export default function ResetPassword() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [linkStatus, setLinkStatus] = useState("pending");
-  const [legacyAccessToken, setLegacyAccessToken] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     let authListener = null;
 
-    function markReady(accessToken = null) {
+    function markReady() {
       if (cancelled) return;
-      if (accessToken) setLegacyAccessToken(accessToken);
       setLinkStatus("ready");
     }
 
-    function markInvalid() {
+    function markInvalid(message) {
       if (cancelled) return;
+      setErrorMsg(message || t("auth.resetLinkInvalid"));
       setLinkStatus("invalid");
-      setErrorMsg("Invalid or expired reset link.");
     }
 
     async function resolveRecoveryLink() {
       normalizeResetPasswordLocation();
 
-      const searchParams = new URLSearchParams(window.location.search);
-      const code = searchParams.get("code");
-      const tokenHash = searchParams.get("token_hash");
-      const otpType = searchParams.get("type");
+      const callbackError = getAuthCallbackErrorFromLocation();
+      if (callbackError) {
+        clearAuthCallbackErrorsFromUrl();
+        const msg =
+          callbackError.errorCode === "otp_expired" ||
+          /expired|invalid/i.test(callbackError.description)
+            ? t("auth.resetLinkExpired")
+            : callbackError.description || t("auth.resetLinkInvalid");
+        markInvalid(msg);
+        return;
+      }
 
+      const searchParams = new URLSearchParams(window.location.search);
+      const tokenHash = searchParams.get("token_hash");
+      const otpType = recoveryTypeFromSearch(searchParams.get("type"));
+
+      if (tokenHash) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: otpType,
+        });
+        if (verifyError) {
+          console.warn("ResetPassword verifyOtp:", verifyError.message);
+          markInvalid(verifyError.message);
+          return;
+        }
+        clearAuthCallbackFromUrl();
+        markReady();
+        return;
+      }
+
+      const hashParams = new URLSearchParams(
+        window.location.hash.replace(/^#/, "?")
+      );
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (sessionError) {
+          console.warn("ResetPassword setSession:", sessionError.message);
+          markInvalid(sessionError.message);
+          return;
+        }
+        clearAuthCallbackFromUrl();
+        markReady();
+        return;
+      }
+
+      const code = searchParams.get("code");
       if (code) {
         const { error: exchangeError } =
           await supabase.auth.exchangeCodeForSession(code);
@@ -75,38 +136,19 @@ export default function ResetPassword() {
             "ResetPassword exchangeCodeForSession:",
             exchangeError.message
           );
-        } else {
-          clearAuthCallbackFromUrl();
-          markReady();
+          if (/code verifier|pkce/i.test(exchangeError.message)) {
+            markInvalid(t("auth.resetLinkPkce"));
+          } else {
+            markInvalid(exchangeError.message);
+          }
           return;
         }
-      }
-
-      if (tokenHash && otpType) {
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: otpType,
-        });
-        if (!verifyError) {
-          clearAuthCallbackFromUrl();
-          markReady();
-          return;
-        }
-        console.warn("ResetPassword verifyOtp:", verifyError.message);
-      }
-
-      const hash = window.location.hash;
-      const hashParams = new URLSearchParams(hash.replace(/^#/, "?"));
-      const accessToken = hashParams.get("access_token");
-
-      if (accessToken) {
         clearAuthCallbackFromUrl();
-        markReady(accessToken);
+        markReady();
         return;
       }
 
       const hasCallback = hasRecoveryCallbackInUrl();
-
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -118,23 +160,21 @@ export default function ResetPassword() {
       }
 
       if (!hasCallback) {
-        markInvalid();
+        markInvalid(t("auth.resetLinkInvalid"));
         return;
       }
 
       const { data: listener } = supabase.auth.onAuthStateChange(
-        async (event, newSession) => {
+        (event, newSession) => {
           if (cancelled) return;
           if (
-            event !== "SIGNED_IN" &&
-            event !== "INITIAL_SESSION" &&
             event !== "PASSWORD_RECOVERY" &&
-            event !== "TOKEN_REFRESHED"
+            event !== "SIGNED_IN" &&
+            event !== "INITIAL_SESSION"
           ) {
             return;
           }
           if (!newSession?.user) return;
-
           listener.subscription.unsubscribe();
           clearAuthCallbackFromUrl();
           markReady();
@@ -144,25 +184,16 @@ export default function ResetPassword() {
 
       window.setTimeout(async () => {
         if (cancelled) return;
-
         const {
           data: { session: lateSession },
         } = await supabase.auth.getSession();
-
         if (lateSession?.user) {
           clearAuthCallbackFromUrl();
           markReady();
           return;
         }
-
-        setLinkStatus((current) => {
-          if (current === "pending") {
-            setErrorMsg("Invalid or expired reset link.");
-            return "invalid";
-          }
-          return current;
-        });
-      }, 10000);
+        markInvalid(t("auth.resetLinkInvalid"));
+      }, 8000);
     }
 
     resolveRecoveryLink();
@@ -171,7 +202,7 @@ export default function ResetPassword() {
       cancelled = true;
       authListener?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [t]);
 
   async function handleReset(e) {
     e.preventDefault();
@@ -200,12 +231,7 @@ export default function ResetPassword() {
 
     setLoading(true);
 
-    const { error } = legacyAccessToken
-      ? await supabase.auth.updateUser(
-          { password },
-          { accessToken: legacyAccessToken }
-        )
-      : await supabase.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
       setErrorMsg(error.message);
@@ -219,11 +245,11 @@ export default function ResetPassword() {
     setLoading(false);
 
     setTimeout(() => {
-      navigate(`/${clubSlug}/public/login`);
+      navigate("/");
     }, 1500);
   }
 
-  if (!club) {
+  if (clubSlug && !club) {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
         {t("loading.loading")}
@@ -238,147 +264,69 @@ export default function ResetPassword() {
     club?.theme?.hero?.logo ||
     club?.branding?.logo ||
     club?.assets?.logo ||
-    null;
+    rcracedayLogo;
 
   const canShowForm = linkStatus === "ready";
   const checkingLink = linkStatus === "pending";
 
   return (
-    <div
-      style={{
-        width: "100%",
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        padding: "32px 24px",
-        boxSizing: "border-box",
-        overflowX: "hidden",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "360px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          boxSizing: "border-box",
-        }}
-      >
-        {logoSrc && (
-          <img
-            src={logoSrc}
-            alt={club.name}
-            style={{
-              maxWidth: "160px",
-              width: "100%",
-              height: "auto",
-              display: "block",
-              marginBottom: "20px",
-            }}
+    <div className="public-auth" style={{ paddingTop: 32, paddingBottom: 32 }}>
+      {logoSrc ? (
+        <img
+          src={logoSrc}
+          alt={club?.name || t("header.brandAlt")}
+          className="public-auth-logo"
+        />
+      ) : null}
+
+      <h1 className="public-auth-title">{t("auth.resetPasswordTitle")}</h1>
+
+      {checkingLink ? (
+        <p className="public-auth-lead">{t("loading.checkingSession")}</p>
+      ) : null}
+
+      {linkStatus === "invalid" ? (
+        <>
+          <p className="public-auth-error">{errorMsg || t("auth.resetLinkInvalid")}</p>
+          <p className="public-auth-footer">
+            <Link to="/forgot-password" className="public-auth-link">
+              {t("auth.forgotPasswordTitle")}
+            </Link>
+          </p>
+        </>
+      ) : null}
+
+      {canShowForm ? (
+        <form onSubmit={handleReset} className="public-auth-form">
+          <Input
+            label="New Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
-        )}
 
-        <h1
-          style={{
-            fontSize: "24px",
-            fontWeight: "bold",
-            marginBottom: "24px",
-            textAlign: "center",
-          }}
-        >
-          {t("auth.resetPasswordTitle")}
-        </h1>
+          <Input
+            label="Confirm Password"
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
 
-        {checkingLink && (
-          <p style={{ textAlign: "center", marginBottom: "24px", color: "#666" }}>
-            {t("loading.checkingSession")}
-          </p>
-        )}
+          {errorMsg ? <p className="public-auth-error">{errorMsg}</p> : null}
+          {message ? <p className="public-auth-success">{message}</p> : null}
 
-        {linkStatus === "invalid" && (
-          <p
-            style={{
-              color: "#dc2626",
-              textAlign: "center",
-              marginBottom: "24px",
-              wordBreak: "break-word",
-            }}
-          >
-            {errorMsg || "Invalid or expired reset link."}
-          </p>
-        )}
+          <Button type="submit" variant="primary" disabled={loading}>
+            {loading ? t("common.updating") : t("auth.updatePassword")}
+          </Button>
+        </form>
+      ) : null}
 
-        {canShowForm && (
-          <form
-            onSubmit={handleReset}
-            style={{
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-              boxSizing: "border-box",
-            }}
-          >
-            <Input
-              label="New Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-
-            <Input
-              label="Confirm Password"
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-            />
-
-            {errorMsg && (
-              <p
-                style={{
-                  color: "#dc2626",
-                  fontSize: "14px",
-                  textAlign: "center",
-                  wordBreak: "break-word",
-                }}
-              >
-                {errorMsg}
-              </p>
-            )}
-
-            {message && (
-              <p
-                style={{
-                  color: "#059669",
-                  fontSize: "14px",
-                  textAlign: "center",
-                  wordBreak: "break-word",
-                }}
-              >
-                {message}
-              </p>
-            )}
-
-            <div style={{ width: "100%", maxWidth: "360px", margin: "0 auto" }}>
-              <Button type="submit" variant="primary" disabled={loading}>
-                {loading ? t("common.updating") : t("auth.updatePassword")}
-              </Button>
-            </div>
-          </form>
-        )}
-
-        <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
-          Back to{" "}
-          <Link
-            to={`/${clubSlug}/public/login`}
-            style={{ color: "#2563eb", textDecoration: "underline" }}
-          >
-            {t("auth.logIn")}
-          </Link>
-        </p>
-      </div>
+      <p className="public-auth-footer">
+        Back to{" "}
+        <Link to="/" className="public-auth-link">
+          {t("auth.logIn")}
+        </Link>
+      </p>
     </div>
   );
 }

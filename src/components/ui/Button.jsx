@@ -10,7 +10,7 @@ export default function Button({
   ...props
 }) {
   const { palette } = useTheme();
-  const brand = palette?.primary || "#0A66C2";
+  const brand = palette?.primary || "#ce0202";
   const buttonColor = palette?.button || brand;
   const buttonTextColor = palette?.buttonText || "#FFFFFF";
 

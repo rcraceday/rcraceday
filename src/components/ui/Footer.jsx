@@ -1,5 +1,4 @@
 // src/components/ui/Footer.jsx
-import rcracedayLogo from "@/assets/RCRaceday_logo_300x300_Powered.png";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function Footer() {
@@ -7,19 +6,6 @@ export default function Footer() {
   return (
     <footer className="w-full border-t border-slate-200 bg-white mt-0">
       <div className="max-w-[720px] mx-auto px-4 py-6 flex flex-col items-center gap-4">
-
-        {/* Logo */}
-        <a
-          href="/clubselect"
-          className="opacity-90 hover:opacity-100 transition"
-          style={{ lineHeight: 0 }}
-        >
-          <img
-            src={rcracedayLogo}
-            alt={t("clubSelect.brandAlt")}
-            className="h-18 w-auto"   // ⭐ 20px logo
-          />
-        </a>
 
         {/* Links */}
         <nav className="flex flex-wrap justify-center gap-3 text-sm">

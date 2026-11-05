@@ -12,6 +12,7 @@ import {
   ChatBubbleLeftRightIcon,
   NewspaperIcon,
   TrophyIcon,
+  GlobeAltIcon,
 } from "@heroicons/react/24/solid";
 
 export function buildMenuItems({ clubSlug, isAdmin, user, t }) {
@@ -82,10 +83,14 @@ export function buildMenuItems({ clubSlug, isAdmin, user, t }) {
     ...(user
       ? [
           {
+            label: tr("nav.switchClub"),
+            icon: GlobeAltIcon,
+            to: "/find-club",
+          },
+          {
             label: tr("nav.logout"),
             icon: ArrowRightOnRectangleIcon,
-            to: `/${clubSlug}/public/login`,
-            logout: true,
+            to: `/${clubSlug}/app/logout`,
           },
         ]
       : []),

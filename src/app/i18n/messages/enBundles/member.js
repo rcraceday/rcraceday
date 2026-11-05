@@ -148,6 +148,22 @@ export default {
     requestSent: "Your request has been sent to the club administrator.",
     backTo: "Back to",
   },
+  claimMembership: {
+    title: "Club access",
+    signedInAs: "Signed in to RCRaceday as {{email}}.",
+    membershipEmailHelp:
+      "Enter the email this club has on your membership if it is different from your login. We link that record to your RCRaceday account.",
+    lead: "We didn’t find a membership at {{clubName}} for {{email}}. If you joined the club with a different email, enter it below.",
+    membershipEmail: "Membership email at this club",
+    submit: "Link membership",
+    linking: "Linking…",
+    continueVisitor: "Continue without a membership",
+    continuing: "Continuing…",
+    notFound: "No membership found for that email at this club.",
+    alreadyLinked: "That membership is already linked to another account.",
+    alreadyHasMembership: "Your account is already linked to a membership at this club.",
+    failed: "Unable to link that membership. Please try again.",
+  },
   nominationsFlow: {
     title: "Nominations",
     selectClass: "Select class",

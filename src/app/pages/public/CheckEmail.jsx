@@ -5,10 +5,11 @@ import { supabase } from "@/supabaseClient";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import {
-  isSafeClubAppReturnPath,
-  publicLoginPath,
-  publicLoginRedirectUrl,
+  platformConfirmEmailRedirectUrl,
+  platformSignInPath,
+  publicClaimMembershipPath,
   returnToFromSearch,
+  sanitizeClubAppReturnPath,
 } from "@/app/lib/publicAuthRedirect";
 
 export default function CheckEmail() {
@@ -19,9 +20,10 @@ export default function CheckEmail() {
   const params = new URLSearchParams(window.location.search);
   const email = params.get("email");
   const returnTo = returnToFromSearch(params);
-  const safeReturnTo =
-    returnTo && isSafeClubAppReturnPath(returnTo, clubSlug) ? returnTo : "";
-  const loginPath = publicLoginPath(clubSlug, safeReturnTo);
+  const safeReturnTo = sanitizeClubAppReturnPath(returnTo, clubSlug);
+  const signInPath = platformSignInPath(
+    publicClaimMembershipPath(clubSlug, safeReturnTo)
+  );
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -35,7 +37,7 @@ export default function CheckEmail() {
     setLoading(true);
     setMessage("");
 
-    const redirectUrl = publicLoginRedirectUrl(clubSlug, safeReturnTo);
+    const redirectUrl = platformConfirmEmailRedirectUrl();
 
     const { error } = await supabase.auth.resend({
       type: "signup",
@@ -50,17 +52,17 @@ export default function CheckEmail() {
   }
 
   return (
-    <div className="px-6 py-10 max-w-sm mx-auto flex flex-col items-center">
+    <div className="public-auth">
 
       {logoSrc && (
         <img
           src={logoSrc}
           alt={club?.name}
-          className="h-16 w-auto object-contain mb-4"
+          className="public-auth-logo"
         />
       )}
 
-      <h1 className="text-2xl font-bold mb-4 text-center">{t("auth.checkEmailTitle")}</h1>
+      <h1 className="public-auth-title">{t("auth.checkEmailTitle")}</h1>
 
       <p className="text-center text-gray-700 mb-6">
         {t("signup.checkEmailSentTo")}
@@ -78,7 +80,7 @@ export default function CheckEmail() {
 
       <p className="text-center mt-8 text-gray-600">
         {t("signup.alreadyConfirmed")}{" "}
-        <Link to={loginPath} className="text-blue-600 underline">
+        <Link to={signInPath} className="public-auth-link">
           {t("auth.logIn")}
         </Link>
       </p>

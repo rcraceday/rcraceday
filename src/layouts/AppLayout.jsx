@@ -6,6 +6,10 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import useTheme from "@/app/providers/useTheme";
+import {
+  appReturnPathFromLocation,
+  platformLoginPathForClub,
+} from "@/app/lib/publicAuthRedirect";
 
 import Header from "@/components/ui/Header";
 import Footer from "@/components/ui/Footer";
@@ -29,7 +33,10 @@ export default function AppLayout() {
     !club;
 
   if (!loadingUser && club && !user) {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+    const returnTo = appReturnPathFromLocation(location, clubSlug);
+    return (
+      <Navigate to={platformLoginPathForClub(clubSlug, returnTo)} replace />
+    );
   }
 
   if (loading) {

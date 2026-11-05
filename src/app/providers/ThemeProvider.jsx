@@ -6,11 +6,11 @@ import { ThemeContext } from "@/app/providers/ThemeContext";
 
 const DEFAULT_PALETTE = {
   logoUrl: null,
-  primary: "#00438a",
-  primarySoft: "#0a5bb8",
+  primary: "#ce0202",
+  primarySoft: "#ce0202",
   text: "#1f2937",
   textMuted: "#6b7280",
-  button: "#00438a",
+  button: "#ce0202",
   buttonText: "#ffffff",
   background: "#ffffff",
   surface: "#ffffff",
@@ -18,10 +18,10 @@ const DEFAULT_PALETTE = {
   surfaceBorder: "#e5e7eb",
   cardColor: "#ffffff",
   borderColor: "#e5e7eb",
-  buttonColor: "#00438a",
-  headerAccent: "#00438a",
+  buttonColor: "#ce0202",
+  headerAccent: "#ce0202",
   headerText: "#1f2937",
-  headerColor: "#00438a",
+  headerColor: "#ce0202",
 };
 
 export default function ThemeProvider({

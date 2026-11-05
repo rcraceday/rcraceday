@@ -1,6 +1,6 @@
 // src/components/ui/Input.jsx
 import React from "react";
-import { useOutletContext } from "react-router-dom";
+import useTheme from "@/app/providers/useTheme";
 
 export default function Input({
   label,
@@ -13,11 +13,8 @@ export default function Input({
   style = {},
   ...props
 }) {
-  const outlet = useOutletContext() || {};
-  const club = outlet.club;
-  const theme = club?.theme;
-
-  const brand = theme?.hero?.backgroundColor || "#0A66C2";
+  const { palette } = useTheme();
+  const brand = palette?.primary || "#ce0202";
 
   // ⭐ FIX: remove width control — let parent decide
   const baseInputStyle = {

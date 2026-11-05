@@ -29,6 +29,17 @@ function Root() {
   );
 }
 
+if (!import.meta.env.PROD && "serviceWorker" in navigator) {
+  void navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      void registration.unregister();
+    }
+  });
+  if (navigator.serviceWorker.controller) {
+    void navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
+  }
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {

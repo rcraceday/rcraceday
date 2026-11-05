@@ -27,10 +27,32 @@ VITE_SITE_URL=https://rcraceday.com
 VITE_VAPID_PUBLIC_KEY=your-vapid-public-key
 These values come from your Supabase project settings. Set `VITE_SITE_URL` to your canonical production origin (no trailing slash) so password-reset and signup emails always use the same host as Supabase **Redirect URLs** (avoids `www` vs apex mismatches that drop recovery tokens).
 
+### Platform club directory (Phase 1)
+
+Run `scripts/add-platform-directory-primary-club.sql` in the Supabase SQL editor. Then enable listing for each subscriber club, for example:
+
+```sql
+update public.clubs set platform_subscribed = true where slug = 'your-club-slug';
+```
+
+Admins can edit optional directory text under **Admin → Settings → Club Info**. The PWA uses `start_url` `/launch`, which opens the user’s **home club** (`profiles.primary_club_id` or `localStorage` `rcraceday.primaryClubSlug`), or `/` if none is set.
+
+### Platform club directory (Phase 2 — geo & club type)
+
+Phase 2 stores **environment** (`land` | `air` | `water`) and **venue location** (suburb, state, postcode, country, lat/lng) inside `clubs.directory_profile`. No new columns are required; optionally run `scripts/add-platform-directory-phase2-geo.sql` to refresh the column comment.
+
+On `/`, racers can filter by club type and **Use my location** with a radius (25–200 km). Clubs need **latitude and longitude** in Club Info for radius search.
+
+### Platform club directory (Phase 3 — discipline catalogue)
+
+Run `scripts/add-platform-directory-phase3-disciplines.sql` in the Supabase SQL editor. This creates `platform_discipline_tags` (shared scale / surface / power / class vocabulary) and documents `directory_profile.discipline_slugs[]`.
+
+Admins tick directory tags under **Admin → Settings → Club Info**. The club finder loads tags from the database (with an in-app fallback if the script has not been run yet). Racers combine tag filters with club type, geo, and name search.
+
 In Supabase **Authentication → URL configuration**:
 
 - **Site URL**: `https://rcraceday.com` (app root only — not a `/public/reset-password` path).
-- **Redirect URLs** (add each club slug you use): `https://rcraceday.com/*/public/reset-password`, `https://rcraceday.com/*/public/login`, and the same paths on `http://localhost:5173` for local testing. Do not rely on a trailing slash on `reset-password`; the app normalizes it, but Supabase must allow the exact `redirectTo` sent from the app. Generate VAPID keys with `npx web-push generate-vapid-keys` (public key in `.env` **and** the production host env as `VITE_VAPID_PUBLIC_KEY`; private key only in Supabase Edge secrets as `VAPID_PRIVATE_KEY`, plus `VAPID_PUBLIC_KEY` and `VAPID_SUBJECT` e.g. `mailto:info@rcraceday.com`). Optional Edge secret `SITE_URL=https://rcraceday.com` is used as the tap target on push banners.
+- **Redirect URLs** (add each club slug you use): `https://rcraceday.com/*/public/reset-password`, `https://rcraceday.com/*/public/login` (legacy confirm callbacks only), `https://rcraceday.com/`, `https://rcraceday.com/recover-password`, `https://rcraceday.com/reset-password` (redirects to `/recover-password`), `https://rcraceday.com/forgot-password`, and the same paths on `http://localhost:5173` for local testing. Password reset emails use **`redirectTo` → `/recover-password`**; keep both `/recover-password` and `/reset-password` allowed in Supabase during transition. **Email templates:** paste HTML from `scripts/supabase-email-*.html`. **Logo:** use `https://rcraceday.com/rcraceday_logo.png` only (file in `public/rcraceday_logo.png`) — do not use base64 in Supabase templates. **Reset password** link: `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery`. Generate VAPID keys with `npx web-push generate-vapid-keys` (public key in `.env` **and** the production host env as `VITE_VAPID_PUBLIC_KEY`; private key only in Supabase Edge secrets as `VAPID_PRIVATE_KEY`, plus `VAPID_PUBLIC_KEY` and `VAPID_SUBJECT` e.g. `mailto:info@rcraceday.com`). Optional Edge secret `SITE_URL=https://rcraceday.com` is used as the tap target on push banners.
 
 **Edge Functions** (`process-nominations-open`, `send-web-push`, `import-liverc-results`): each folder includes its own `web_push.ts` where needed (Supabase bundles one function at a time and does not ship `../_shared`). Deploy with CLI from the repo root:
 
@@ -50,11 +72,9 @@ The app will be available at:
 Code
 http://localhost:5173
 First‑time local run checklist
-Visit / → ClubSelect should load
+Visit `/` → platform home; `/find-club` → club finder.
 
-Choose a club → /chargers-rc/public/login
-
-Login → should redirect to /chargers-rc/app
+Log in at `/`, open a club → club access (`/…/public/claim-membership`) or app if already linked.
 
 Refresh on any route → no crashes
 
@@ -63,19 +83,30 @@ Switch clubs → theme updates correctly
 If any of these fail, check ARCHITECTURE.md for provider/routing rules.
 
 🧭 Routing During Development
-Public routes
+Platform routes
 Code
-/:clubSlug/public/login
-/:clubSlug/public/signup
+/
+/find-club
+/forgot-password
+/forgot-email
+/recover-password   (password reset form; Supabase redirectTo)
+/reset-password     (redirects to /recover-password; keep in Supabase allow list)
+Club public routes (tenant context; sign-in is at `/`)
+Code
+/:clubSlug/public/claim-membership   (club access — link membership)
+/:clubSlug/public/access             (alias)
+/:clubSlug/public/login              (redirects to `/`; auth email callbacks only)
+/:clubSlug/public/signup             (redirects to `/?signup=1`)
+/:clubSlug/public/check-email
 /:clubSlug/public/forgot-password
 /:clubSlug/public/reset-password
 These routes:
 
 Load the club
 
-Do not require user/profile/membership
+Do not require user/profile/membership (except where the page itself needs a session)
 
-Must render instantly
+Must render without waiting on membership providers
 
 Private routes
 Code

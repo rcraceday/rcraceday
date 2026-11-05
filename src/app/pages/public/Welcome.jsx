@@ -1,7 +1,11 @@
-// src/app/pages/public/Welcome.jsx
+// Legacy club landing — use / and /?signup=1 instead.
 import { useOutletContext, useParams, useNavigate } from "react-router-dom";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import {
+  platformLoginPathForClub,
+  platformSignupPathForClub,
+} from "@/app/lib/publicAuthRedirect";
 
 export default function Welcome() {
   const { club, loadingClub } = useOutletContext();
@@ -36,7 +40,7 @@ export default function Welcome() {
         <Button
           variant="primary"
           className="w-full py-3"
-          onClick={() => navigate(`/${clubSlug}/public/login`)}
+          onClick={() => navigate(platformLoginPathForClub(clubSlug))}
         >
           {t("auth.logIn")}
         </Button>
@@ -44,7 +48,7 @@ export default function Welcome() {
         <Button
           variant="secondary"
           className="w-full py-3"
-          onClick={() => navigate(`/${clubSlug}/public/signup`)}
+          onClick={() => navigate(platformSignupPathForClub(clubSlug))}
         >
           {t("auth.createAccount")}
         </Button>

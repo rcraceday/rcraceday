@@ -6,9 +6,14 @@ import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { platformSignInPath } from "@/app/lib/publicAuthRedirect";
+import rcracedayLogo from "@/assets/rcraceday_logo.png";
+
+const PLATFORM_SUPPORT_EMAIL = "info@rcraceday.com";
 
 export default function ForgotEmail() {
-  const { club } = useOutletContext();
+  const outlet = useOutletContext();
+  const club = outlet?.club;
   const { clubSlug } = useParams();
   const { t } = useTranslation();
 
@@ -18,7 +23,7 @@ export default function ForgotEmail() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!club) {
+  if (clubSlug && !club) {
     return (
       <div style={{ padding: 24, textAlign: "center" }}>
         {t("loading.loading")}
@@ -30,7 +35,7 @@ export default function ForgotEmail() {
     club?.system_support_email ||
     club?.support_email ||
     club?.club_email ||
-    null;
+    PLATFORM_SUPPORT_EMAIL;
 
   const logoSrc =
     club?.logo_url ||
@@ -38,7 +43,7 @@ export default function ForgotEmail() {
     club?.theme?.hero?.logo ||
     club?.branding?.logo ||
     club?.assets?.logo ||
-    null;
+    rcracedayLogo;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -70,11 +75,11 @@ export default function ForgotEmail() {
       body: {
         fullName: fullName.trim(),
         message: messageText.trim(),
-        clubName: club?.name,
+        clubName: club?.name || "RCRaceday",
         clubLogo: logoSrc,
         supportEmail,
         ip,
-        clubSlug,
+        clubSlug: clubSlug || "",
       },
     });
 
@@ -89,63 +94,17 @@ export default function ForgotEmail() {
   }
 
   return (
-    <div
-      style={{
-        width: "100%",
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        padding: "32px 24px",
-        boxSizing: "border-box",
-        overflowX: "hidden",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "360px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          boxSizing: "border-box",
-        }}
-      >
-        {logoSrc && (
-          <img
-            src={logoSrc}
-            alt={club?.name}
-            style={{
-              maxWidth: "160px",
-              width: "100%",
-              height: "auto",
-              display: "block",
-              marginBottom: "20px",
-            }}
-          />
-        )}
+    <div className="public-auth">
+        {logoSrc ? (
+          <img src={logoSrc} alt={club?.name || t("header.brandAlt")} className="public-auth-logo" />
+        ) : null}
 
-        <h1
-          style={{
-            fontSize: "24px",
-            fontWeight: "bold",
-            marginBottom: "24px",
-            textAlign: "center",
-          }}
-        >
-          {t("auth.forgotEmailTitle")}
-        </h1>
+        <h1 className="public-auth-title">{t("auth.forgotEmailTitle")}</h1>
+        <p className="public-auth-lead">
+          {clubSlug ? t("auth.forgotEmailHint") : t("auth.forgotEmailHintPlatform")}
+        </p>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
-            boxSizing: "border-box",
-          }}
-        >
+        <form onSubmit={handleSubmit} className="public-auth-form">
           <Input
             label={t("signup.fullName")}
             value={fullName}
@@ -158,50 +117,20 @@ export default function ForgotEmail() {
             onChange={(e) => setMessageText(e.target.value)}
           />
 
-          {errorMsg && (
-            <p
-              style={{
-                color: "#dc2626",
-                fontSize: "14px",
-                textAlign: "center",
-                wordBreak: "break-word",
-              }}
-            >
-              {errorMsg}
-            </p>
-          )}
+          {errorMsg ? <p className="public-auth-error">{errorMsg}</p> : null}
+          {message ? <p className="public-auth-success">{message}</p> : null}
 
-          {message && (
-            <p
-              style={{
-                color: "#059669",
-                fontSize: "14px",
-                textAlign: "center",
-                wordBreak: "break-word",
-              }}
-            >
-              {message}
-            </p>
-          )}
-
-          <div style={{ width: "100%", maxWidth: "360px", margin: "0 auto" }}>
-            <Button type="submit" variant="primary" disabled={loading}>
-              {loading ? t("auth.sending") : t("auth.sendResetLink")}
-            </Button>
-          </div>
+          <Button type="submit" variant="primary" disabled={loading}>
+            {loading ? t("auth.sending") : t("auth.sendResetLink")}
+          </Button>
         </form>
 
-        <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
+        <p className="public-auth-footer">
           {t("signup.backTo")}{" "}
-          <Link
-            to={`/${clubSlug}/public/login/`}
-            replace={true}
-            style={{ color: "#2563eb", textDecoration: "underline" }}
-          >
+          <Link to="/" replace className="public-auth-link">
             {t("auth.logIn")}
           </Link>
         </p>
-      </div>
     </div>
   );
 }

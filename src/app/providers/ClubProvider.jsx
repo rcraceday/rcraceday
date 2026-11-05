@@ -20,19 +20,18 @@ export function useClub() {
 export async function userBelongsToClub(userId, clubId) {
   if (!userId || !clubId) return false;
 
-  const { data: membership, error } = await supabase
+  const { data: memberships, error } = await supabase
     .from("household_memberships")
     .select("id, status, membership_type")
     .eq("club_id", clubId)
-    .eq("user_id", userId)
-    .maybeSingle();
+    .eq("user_id", userId);
 
   if (error) {
     console.error("userBelongsToClub error:", error);
     return false;
   }
 
-  return !!membership;
+  return Array.isArray(memberships) && memberships.length > 0;
 }
 
 export default function ClubProvider({ children }) {
@@ -49,7 +48,13 @@ export default function ClubProvider({ children }) {
     "api",
     "static",
     "assets",
-  ]);
+    "find-club",
+    "launch",
+    "forgot-password",
+  "forgot-email",
+  "reset-password",
+  "recover-password",
+]);
 
   // ⭐ Extract club slug from the URL
   const clubSlug = (() => {

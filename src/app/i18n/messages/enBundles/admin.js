@@ -361,6 +361,41 @@ export default {
     messages: {
       title: "Club Messages",
     },
+    clubInfo: {
+      directorySectionTitle: "RCRaceDay directory profile",
+      directorySectionHint:
+        "Optional details shown when racers search for your club on rcraceday.com. Only subscribed clubs appear in the list.",
+      platformSubscribed: "Listed on RCRaceday club finder (platform subscriber)",
+      shortNameHint: "Acronym shown on the club finder (e.g. SBCRCCC). Display name is Club Name above.",
+      directoryFormalName: "Full club name (directory)",
+      directoryTagline: "Optional one-line promo (about section)",
+      directoryScales: "Scales offered (comma-separated, e.g. 1/10, 1/8)",
+      directoryClasses: "Classes & disciplines offered",
+      directoryEnvironmentTitle: "Club type (directory search)",
+      directoryEnvironmentHint: "Select every environment your club runs. Racers can filter the club finder by these.",
+      directoryEnvLand: "Land (surface / motorsport)",
+      directoryEnvAir: "Air (aviation)",
+      directoryEnvWater: "Water (marine)",
+      directoryLocationTitle: "Venue location (directory)",
+      directoryLocationHint:
+        "Suburb and coordinates power near-me search on rcraceday.com. Copy latitude/longitude from your track on Google Maps.",
+      directorySuburb: "Suburb / city",
+      directoryState: "State / region",
+      directoryPostcode: "Postcode",
+      directoryCountry: "Country",
+      directoryLat: "Latitude",
+      directoryLng: "Longitude",
+      directoryDisciplinesTitle: "Directory tags (searchable)",
+      directoryDisciplinesHint:
+        "Choose scale, surface, power, and class types your club runs. Racers filter the club finder using these tags.",
+      directoryDisciplinesSearch: "Search tags",
+      directoryDisciplineSuggestion: "Missing a tag?",
+      directoryDisciplineSuggestionHint:
+        "Describe what to add (stored on your club profile for platform review). The free-text classes field below is still shown on your listing.",
+      saveChanges: "Save changes",
+      saveSuccess: "Club info saved.",
+      saveFailed: "Failed to save club info.",
+    },
     settings: {
       hubTitle: "Admin Settings",
       hubSubtitle: "Configure your club and platform behaviour.",

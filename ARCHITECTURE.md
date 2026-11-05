@@ -1,11 +1,10 @@
 Overview
-The RCRaceDay app is a club‑scoped multi‑tenant application with two major route types:
+The RCRaceDay app is a club‑scoped multi‑tenant application:
 
-Public routes (login, signup, password reset)
+- **Platform routes** (`/`, `/find-club`, account recovery) — one RCRaceday login
+- **Club routes** (`/:clubSlug/public/*`, `/:clubSlug/app/*`, `/:clubSlug/admin/*`) — tenant context (events, membership, drivers at that club)
 
-Private routes (app, admin)
-
-Every route is scoped by a clubSlug, and every provider depends on the one above it. The system only works when providers and routes are composed in the correct order.
+Every club route is scoped by `clubSlug`. Authenticated providers depend on the order below.
 
 Provider Stack (MUST remain in this exact order)
 Code
@@ -34,12 +33,14 @@ If this order changes, the app will break.
 
 Routing Structure (MUST remain in this order)
 Code
-/                          → ClubSelect
-/:clubSlug                 → redirect to /:clubSlug/public/login
-
-/:clubSlug/public/*        → PublicLayout (club only)
+/                          → PlatformHome (sign in / sign up / favorites)
+/find-club                 → Club finder
+/:clubSlug/public/*        → PublicLayout (club access, check-email; login URL = auth callbacks only)
 /:clubSlug/app/*           → AppLayout (club + user + profile + membership)
-/:clubSlug/admin/*         → AdminLayout (club + user + profile + membership + admin)
+/:clubSlug/admin/*         → AdminLayout
+/:clubSlug                 → redirect to club access (claim-membership)
+
+Unauthenticated users needing the app are sent to `/?returnTo=…` (platform login), not a per-club login form.
 Why public routes must come first
 React Router matches top‑to‑bottom.
 If /:clubSlug/* or /:clubSlug/app/* appears before /:clubSlug/public/*, the login page will never render.
@@ -62,7 +63,7 @@ Must not redirect to login
 
 Must not wait for profile or membership
 
-Must render login/signup immediately
+Must render club access / recovery without requiring membership
 
 Private Mode (for /app/* and /admin/*)
 Requires:
@@ -75,7 +76,7 @@ profile
 
 membership
 
-If user === null, redirect to /public/login
+If user === null, redirect to platform sign-in with returnTo (see `platformLoginPathForClub`)
 
 Must wait for all providers to finish loading
 

@@ -19,8 +19,8 @@ import Card from "@/components/ui/Card";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import {
-  isSafeClubAppReturnPath,
   returnToFromSearch,
+  sanitizeClubAppReturnPath,
 } from "@/app/lib/publicAuthRedirect";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -40,10 +40,7 @@ export default function WelcomeAddDrivers() {
   const clubSlug = club?.slug;
 
   const welcomeReturnTo = returnToFromSearch(searchParams);
-  const safeWelcomeReturnTo =
-    welcomeReturnTo && clubSlug && isSafeClubAppReturnPath(welcomeReturnTo, clubSlug)
-      ? welcomeReturnTo
-      : "";
+  const safeWelcomeReturnTo = sanitizeClubAppReturnPath(welcomeReturnTo, clubSlug);
 
   const afterWelcomePath = () =>
     safeWelcomeReturnTo || `/${clubSlug}/app/profile/drivers`;

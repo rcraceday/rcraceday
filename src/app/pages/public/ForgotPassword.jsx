@@ -5,10 +5,14 @@ import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
-import { publicAuthRedirectUrl } from "@/app/lib/publicAuthRedirect";
+import {
+  passwordResetRedirectUrl,
+} from "@/app/lib/publicAuthRedirect";
+import rcracedayLogo from "@/assets/rcraceday_logo.png";
 
 export default function ForgotPassword() {
-  const { club } = useOutletContext();
+  const outlet = useOutletContext();
+  const club = outlet?.club;
   const { clubSlug } = useParams();
   const { t } = useTranslation();
 
@@ -17,7 +21,7 @@ export default function ForgotPassword() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!club) return <div style={{ padding: "24px", textAlign: "center" }}>{t("loading.loading")}</div>;
+  if (clubSlug && !club) return <div style={{ padding: "24px", textAlign: "center" }}>{t("loading.loading")}</div>;
 
   const logoSrc =
     club?.logoUrl ||
@@ -26,7 +30,7 @@ export default function ForgotPassword() {
     club?.theme?.hero?.logo ||
     club?.branding?.logo ||
     club?.assets?.logo ||
-    null;
+    rcracedayLogo;
 
   async function handleReset(e) {
     e.preventDefault();
@@ -40,7 +44,7 @@ export default function ForgotPassword() {
 
     setLoading(true);
 
-    const redirectUrl = publicAuthRedirectUrl(clubSlug, "reset-password");
+    const redirectUrl = passwordResetRedirectUrl(clubSlug);
 
     const { error } = await supabase.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),
@@ -58,52 +62,14 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div
-      style={{
-        padding: "32px 24px",
-        width: "100%",
-        maxWidth: "360px",
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        boxSizing: "border-box",
-      }}
-    >
-      {logoSrc && (
-        <img
-          src={logoSrc}
-          alt={club.name}
-          style={{
-            maxWidth: "160px",
-            width: "100%",
-            height: "auto",
-            display: "block",
-            marginBottom: "20px",
-          }}
-        />
-      )}
+    <div className="public-auth">
+      {logoSrc ? (
+        <img src={logoSrc} alt={club?.name || t("header.brandAlt")} className="public-auth-logo" />
+      ) : null}
 
-      <h1
-        style={{
-          fontSize: "24px",
-          fontWeight: "bold",
-          marginBottom: "24px",
-          textAlign: "center",
-        }}
-      >
-        {t("auth.forgotPasswordTitle")}
-      </h1>
+      <h1 className="public-auth-title">{t("auth.forgotPasswordTitle")}</h1>
 
-      <form
-        onSubmit={handleReset}
-        style={{
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px",
-        }}
-      >
+      <form onSubmit={handleReset} className="public-auth-form">
         <Input
           label={t("auth.email")}
           type="email"
@@ -111,29 +77,17 @@ export default function ForgotPassword() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
-        {errorMsg && (
-          <p style={{ color: "#dc2626", fontSize: "14px", textAlign: "center", wordBreak: "break-word" }}>
-            {errorMsg}
-          </p>
-        )}
-
-        {message && (
-          <p style={{ color: "#059669", fontSize: "14px", textAlign: "center", wordBreak: "break-word" }}>
-            {message}
-          </p>
-        )}
+        {errorMsg ? <p className="public-auth-error">{errorMsg}</p> : null}
+        {message ? <p className="public-auth-success">{message}</p> : null}
 
         <Button type="submit" variant="primary" disabled={loading}>
           {loading ? t("auth.sending") : t("auth.sendResetLink")}
         </Button>
       </form>
 
-      <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
+      <p className="public-auth-footer">
         Remember your password?{" "}
-        <Link
-          to={`/${clubSlug}/public/login`}
-          style={{ color: "#2563eb", textDecoration: "underline" }}
-        >
+        <Link to="/" className="public-auth-link">
           {t("auth.logIn")}
         </Link>
       </p>

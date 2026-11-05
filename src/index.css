@@ -36,6 +36,117 @@ a:hover {
   text-decoration: none;
 }
 
+/* ===========================
+   PUBLIC AUTH (login / signup)
+   =========================== */
+
+.public-auth {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 32px 24px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.public-auth-logo {
+  max-width: 160px;
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto 20px;
+}
+
+.public-auth-title {
+  margin: 0 0 24px;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--theme-text, #1f2937);
+}
+
+.public-auth-lead {
+  margin: 0 0 24px;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--text-muted, #6b7280);
+}
+
+.public-auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.public-auth-error {
+  margin: 0 0 16px;
+  color: #dc2626;
+  font-size: 14px;
+  text-align: center;
+  word-break: break-word;
+}
+
+.public-auth-form .public-auth-error {
+  margin: 0;
+}
+
+.public-auth-form button[type="submit"] {
+  width: 100%;
+}
+
+.public-auth-success {
+  margin: 0;
+  color: #059669;
+  font-size: 14px;
+  text-align: center;
+  word-break: break-word;
+}
+
+.public-auth-footer {
+  margin: 24px 0 0;
+  text-align: center;
+  color: #666;
+  font-size: 15px;
+}
+
+.public-auth-link {
+  color: var(--theme-primary, #ce0202);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.public-auth-link:hover {
+  color: var(--theme-primary, #ce0202);
+  text-decoration: underline;
+}
+
+.public-auth-aux {
+  width: 100%;
+  margin-top: 6px;
+  text-align: center;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.public-auth-actions {
+  margin-top: 16px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
 .filter-dropdown {
   position: relative;
 }
@@ -60,9 +171,13 @@ a:hover {
   outline-offset: 2px;
 }
 
+.filter-dropdown-menu {
+  background: #ffffff;
+}
+
 .filter-dropdown-option:hover,
 .filter-dropdown-option:focus-visible {
-  background: #f3f4f6;
+  background: #e5e7eb;
   color: #111827;
   outline: none;
 }
@@ -147,25 +262,71 @@ a:hover {
   transform: translateY(0);
 }
 
-.desktop-dropdown nav a {
+.desktop-dropdown nav a,
+.desktop-dropdown nav button.desktop-dropdown-item {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   padding: 10px 14px;
   text-decoration: none;
   color: #222;
   font-size: 15px;
+  font-family: inherit;
+  font-weight: 400;
+  line-height: 1.4;
+  border: none;
   border-left: 4px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.desktop-dropdown nav a:hover {
-  background: rgba(0,0,0,0.04);
-  border-left-color: var(--brand-color, #0A66C2);
+.desktop-dropdown nav a:hover,
+.desktop-dropdown nav button.desktop-dropdown-item:hover,
+.desktop-dropdown nav button.desktop-dropdown-item:focus-visible {
+  background: rgba(0, 0, 0, 0.04);
+  border-left-color: var(--brand-color, #0a66c2);
+  outline: none;
 }
 
 .desktop-dropdown nav a.admin-accent-item:hover {
   border-left-color: var(--admin-accent) !important;
+}
+
+.desktop-dropdown nav button.desktop-dropdown-item--danger {
+  color: #ce0202;
+}
+
+.desktop-dropdown nav button.desktop-dropdown-item--danger:hover,
+.desktop-dropdown nav button.desktop-dropdown-item--danger:focus-visible {
+  border-left-color: #ce0202;
+}
+
+.desktop-dropdown--align-end {
+  left: auto;
+  right: 0;
+}
+
+.platform-club-tile-menu {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 2;
+}
+
+.platform-club-tile-menu.is-open {
+  z-index: 300;
+}
+
+.menu-button--icon-only {
+  padding: 0.125rem;
+}
+
+.platform-club-tile-menu .hamburger-icon {
+  color: #64748b;
 }
 
 /* ===========================

@@ -6,9 +6,9 @@ import { useProfile } from "@/app/providers/ProfileProvider";
 import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
 import {
   appReturnPathFromLocation,
-  isSafeClubAppReturnPath,
+  platformLoginPathForClub,
   publicCheckEmailPath,
-  publicLoginPath,
+  publicClaimMembershipPath,
 } from "@/app/lib/publicAuthRedirect";
 
 export default function ProtectedAppRoute({ children, admin = false }) {
@@ -19,9 +19,8 @@ export default function ProtectedAppRoute({ children, admin = false }) {
   const { hasAnyAdminAccess, loadingAdminAccess } = useAdminAccess();
   const { clubSlug } = useParams();
   const location = useLocation();
-  const returnTo = appReturnPathFromLocation(location);
-  const safeReturnTo = isSafeClubAppReturnPath(returnTo, clubSlug) ? returnTo : "";
-  const loginTo = publicLoginPath(clubSlug, safeReturnTo);
+  const safeReturnTo = appReturnPathFromLocation(location, clubSlug);
+  const loginTo = platformLoginPathForClub(clubSlug, safeReturnTo);
 
   if (loadingUser) {
     return (
@@ -56,16 +55,15 @@ export default function ProtectedAppRoute({ children, admin = false }) {
     );
   }
 
-  if (!membership) {
-    return <Navigate to={loginTo} replace />;
-  }
-
-  if (!club?.id || membership.club_id !== club.id) {
-    return <Navigate to={loginTo} replace />;
-  }
-
-  if (membership.status !== "active") {
-    return <Navigate to={loginTo} replace />;
+  if (
+    !membership ||
+    !club?.id ||
+    membership.club_id !== club.id ||
+    membership.status !== "active"
+  ) {
+    return (
+      <Navigate to={publicClaimMembershipPath(clubSlug, safeReturnTo)} replace />
+    );
   }
 
   if (admin && !hasAnyAdminAccess) {

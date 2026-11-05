@@ -7,6 +7,7 @@ import { useTranslation } from "@/app/i18n/I18nContext";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
+import { platformConfirmEmailRedirectUrl } from "@/app/lib/publicAuthRedirect";
 import SettingsPage from "./SettingsPage";
 import SettingsCard from "./SettingsCard";
 import { settingsStyles as s } from "./settingsStyles";
@@ -166,7 +167,10 @@ export default function AccountSettings() {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+    const { error } = await supabase.auth.updateUser({
+      email: newEmail.trim(),
+      options: { emailRedirectTo: platformConfirmEmailRedirectUrl() },
+    });
     setSavingEmail(false);
 
     if (error) {

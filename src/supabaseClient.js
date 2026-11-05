@@ -7,7 +7,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     detectSessionInUrl: true,
-    flowType: "pkce",
+    // Implicit flow: recovery/confirm email links work in any browser (PKCE needs same-tab storage).
+    flowType: "implicit",
   },
   global: {
     headers: {

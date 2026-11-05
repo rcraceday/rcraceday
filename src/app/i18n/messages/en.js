@@ -19,6 +19,7 @@ export default {
     results: "Results",
     championships: "Championships",
     adminPortal: "Admin Portal",
+    switchClub: "Change club",
     logout: "Logout",
   },
   settings: {

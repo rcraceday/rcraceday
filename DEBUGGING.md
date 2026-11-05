@@ -259,6 +259,30 @@ Whether routing is correct
 
 Whether context is flowing
 
+6. PWA service worker — white page on auth routes
+
+Symptoms
+
+Blank page on `/reset-password`, `/forgot-password`, or `/` after a password reset email link
+
+Console: `FetchEvent for ".../reset-password" resulted in a network error` or `sw.js ... Failed to convert value to 'Response'`
+
+Checklist
+
+Are you on `pnpm dev` but still see `sw.js` errors? A stale worker from an old `pnpm preview` or production visit may still control `localhost:5173`.
+
+Dev now unregisters all service workers on load (`src/main.jsx`). Hard refresh (Ctrl+Shift+R) once after pulling.
+
+If it persists: DevTools → Application → Service Workers → Unregister, then Clear site data for localhost.
+
+Production builds use a Workbox `navigateFallbackDenylist` for auth paths so navigation is not broken by offline fallback.
+
+Fix Pattern
+
+Rebuild and redeploy after `vite.config.js` PWA changes.
+
+Re-paste Supabase email HTML from `scripts/` if logo URLs changed.
+
 Final Rule
 
 If something "impossible" happens, check these first:

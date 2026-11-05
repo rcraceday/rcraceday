@@ -3,7 +3,7 @@
   "name": "RCRaceday",
   "short_name": "RCRaceday",
   "description": "Race day management for RC clubs",
-  "start_url": "/",
+  "start_url": "/launch",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "browser"],

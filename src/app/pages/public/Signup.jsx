@@ -1,15 +1,18 @@
+// Legacy multi-step club signup — route uses RedirectClubSignup.jsx → platform /?signup=1.
 // src/app/pages/public/Signup.jsx
 import { useOutletContext, Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { useAuth } from "@/app/providers/AuthProvider";
 import {
-  isSafeClubAppReturnPath,
   publicCheckEmailPath,
+  publicClaimMembershipPath,
   publicLoginPath,
   publicLoginRedirectUrl,
   returnToFromSearch,
+  sanitizeClubAppReturnPath,
 } from "@/app/lib/publicAuthRedirect";
 
 export default function Signup() {
@@ -17,6 +20,7 @@ export default function Signup() {
   const { clubSlug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const clubId = club?.id;
   const createUserUrl =
@@ -59,10 +63,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
 
   const signupReturnTo = returnToFromSearch(location.search);
-  const safeSignupReturnTo =
-    signupReturnTo && isSafeClubAppReturnPath(signupReturnTo, clubSlug)
-      ? signupReturnTo
-      : "";
+  const safeSignupReturnTo = sanitizeClubAppReturnPath(signupReturnTo, clubSlug);
   const loginPath = publicLoginPath(clubSlug, safeSignupReturnTo);
 
   if (!club || !clubId) {
@@ -86,14 +87,7 @@ export default function Signup() {
   function renderMemberQuestion() {
     return (
       <div
-        style={{
-          padding: "32px 24px 0 24px",
-          width: "100%",
-          maxWidth: "360px",
-          margin: "0 auto",
-          minHeight: "100vh",
-          boxSizing: "border-box",
-        }}
+        className="public-auth"
       >
         {logoSrc && (
           <img
@@ -135,7 +129,13 @@ export default function Signup() {
         <Button
           variant="primary"
           size="lg"
-          onClick={() => setStep("memberLookup")}
+          onClick={() => {
+            if (user) {
+              navigate(publicClaimMembershipPath(clubSlug, safeSignupReturnTo));
+              return;
+            }
+            setStep("memberLookup");
+          }}
           style={{ width: "100%", marginBottom: "12px" }}
         >
           {t("signup.yesMember")}
@@ -201,14 +201,7 @@ export default function Signup() {
   function renderMemberLookup() {
     return (
       <div
-        style={{
-          padding: "32px 24px 0 24px",
-          width: "100%",
-          maxWidth: "360px",
-          margin: "0 auto",
-          minHeight: "100vh",
-          boxSizing: "border-box",
-        }}
+        className="public-auth"
       >
         {logoSrc && (
           <img
@@ -342,14 +335,7 @@ export default function Signup() {
   function renderMemberCreatePassword() {
     return (
       <div
-        style={{
-          padding: "32px 24px 0 24px",
-          width: "100%",
-          maxWidth: "360px",
-          margin: "0 auto",
-          minHeight: "100vh",
-          boxSizing: "border-box",
-        }}
+        className="public-auth"
       >
         {logoSrc && (
           <img
@@ -515,14 +501,7 @@ async function handleNonMemberSignup(e) {
   function renderNonMemberSignup() {
     return (
       <div
-        style={{
-          padding: "32px 24px 0 24px",
-          width: "100%",
-          maxWidth: "360px",
-          margin: "0 auto",
-          minHeight: "100vh",
-          boxSizing: "border-box",
-        }}
+        className="public-auth"
       >
         {logoSrc && (
           <img
@@ -592,7 +571,7 @@ async function handleNonMemberSignup(e) {
             {t("auth.alreadyHaveAccount")}{" "}
             <Link
               to={loginPath}
-              style={{ color: "#2563eb", textDecoration: "underline" }}
+              className="public-auth-link"
             >
               {t("auth.logIn")}
             </Link>
@@ -612,14 +591,7 @@ async function handleNonMemberSignup(e) {
   function renderSignupSuccess() {
     return (
       <div
-        style={{
-          padding: "32px 24px 0 24px",
-          width: "100%",
-          maxWidth: "360px",
-          margin: "0 auto",
-          minHeight: "100vh",
-          boxSizing: "border-box",
-        }}
+        className="public-auth"
       >
         {logoSrc && (
           <img

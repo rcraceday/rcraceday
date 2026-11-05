@@ -1,7 +1,9 @@
 // src/app/routes.jsx
 import { Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 
-import ClubSelect from "@/app/pages/global/ClubSelect.jsx";
+import PlatformHome from "@/app/pages/global/PlatformHome.jsx";
+import ClubFinder from "@/app/pages/global/ClubFinder.jsx";
+import LaunchRedirect from "@/app/pages/global/LaunchRedirect.jsx";
 
 import AppLayout from "@/layouts/AppLayout";
 import PublicLayout from "@/layouts/PublicLayout";
@@ -12,12 +14,13 @@ import ClubProvider from "@/app/providers/ClubProvider";
 import ThemeProvider from "@/app/providers/ThemeProvider";
 
 // PUBLIC PAGES
-import Login from "@app/pages/public/Login";
-import Signup from "@app/pages/public/Signup";
+import ClubPublicLoginEntry from "@app/pages/public/ClubPublicLoginEntry";
+import RedirectClubSignup from "@app/pages/public/RedirectClubSignup";
 import CheckEmail from "@app/pages/public/CheckEmail";
 import ForgotPassword from "@app/pages/public/ForgotPassword";
 import ResetPassword from "@app/pages/public/ResetPassword";
 import ForgotEmail from "@app/pages/public/ForgotEmail";
+import ClaimMembership from "@app/pages/public/ClaimMembership";
 
 // USER PAGES
 import Home from "@app/pages/home/Home";
@@ -103,9 +106,48 @@ import AdminMembershipEdit from "@app/pages/admin/AdminMembershipEdit";
 import AdminDrivers from "@app/pages/admin/AdminDrivers";
 import AdminDriverEdit from "@app/pages/admin/AdminDriverEdit";
 
+const RESERVED_TOP_LEVEL_SLUGS = new Set([
+  "find-club",
+  "launch",
+  "forgot-password",
+  "forgot-email",
+  "reset-password",
+  "recover-password",
+]);
+
 function ClubRootRedirect() {
   const { clubSlug } = useParams();
-  return clubSlug ? <Navigate to={`/${clubSlug}/public/login`} replace /> : null;
+  if (!clubSlug) return null;
+
+  const normalized = clubSlug.toLowerCase();
+  if (normalized === "reset-password" || normalized === "recover-password") {
+    return (
+      <PlatformAuthLayout>
+        <ResetPassword />
+      </PlatformAuthLayout>
+    );
+  }
+  if (normalized === "forgot-password") {
+    return (
+      <PlatformAuthLayout>
+        <ForgotPassword />
+      </PlatformAuthLayout>
+    );
+  }
+  if (normalized === "forgot-email") {
+    return (
+      <PlatformAuthLayout>
+        <ForgotEmail />
+      </PlatformAuthLayout>
+    );
+  }
+  if (RESERVED_TOP_LEVEL_SLUGS.has(normalized)) {
+    return <NotFound />;
+  }
+
+  return (
+    <Navigate to={`/${clubSlug}/public/claim-membership`} replace />
+  );
 }
 
 function ResetPasswordTrailingSlashRedirect() {
@@ -119,6 +161,46 @@ function ResetPasswordTrailingSlashRedirect() {
   );
 }
 
+function PlatformResetPasswordRedirect() {
+  const location = useLocation();
+  return (
+    <Navigate
+      to={`/recover-password${location.search}${location.hash}`}
+      replace
+    />
+  );
+}
+
+function PlatformResetPasswordTrailingSlashRedirect() {
+  const location = useLocation();
+  return (
+    <Navigate
+      to={`/recover-password${location.search}${location.hash}`}
+      replace
+    />
+  );
+}
+
+function PlatformAuthLayout({ children }) {
+  return (
+    <ThemeProvider>
+      <main
+        style={{
+          width: "100%",
+          minHeight: "100vh",
+          background: "white",
+          display: "flex",
+          justifyContent: "center",
+          padding: "24px",
+          boxSizing: "border-box",
+        }}
+      >
+        {children}
+      </main>
+    </ThemeProvider>
+  );
+}
+
 function AppPathRedirect({ to }) {
   const { clubSlug } = useParams();
   return clubSlug ? <Navigate to={`/${clubSlug}/app/${to}`} replace /> : null;
@@ -128,7 +210,56 @@ export default function AppRoutes() {
   return (
     <Routes>
       {/* ROOT */}
-      <Route path="/" element={<ClubSelect />} />
+      <Route
+        path="/"
+        element={
+          <ThemeProvider>
+            <PlatformHome />
+          </ThemeProvider>
+        }
+      />
+      <Route
+        path="/find-club"
+        element={
+          <ThemeProvider>
+            <ClubFinder />
+          </ThemeProvider>
+        }
+      />
+      <Route path="/launch" element={<LaunchRedirect />} />
+      <Route
+        path="/forgot-password"
+        element={
+          <PlatformAuthLayout>
+            <ForgotPassword />
+          </PlatformAuthLayout>
+        }
+      />
+      <Route
+        path="/forgot-email"
+        element={
+          <PlatformAuthLayout>
+            <ForgotEmail />
+          </PlatformAuthLayout>
+        }
+      />
+      <Route
+        path="/recover-password"
+        element={
+          <PlatformAuthLayout>
+            <ResetPassword />
+          </PlatformAuthLayout>
+        }
+      />
+      <Route path="/reset-password" element={<PlatformResetPasswordRedirect />} />
+      <Route
+        path="/reset-password/*"
+        element={<PlatformResetPasswordRedirect />}
+      />
+      <Route
+        path="/reset-password/"
+        element={<PlatformResetPasswordTrailingSlashRedirect />}
+      />
 
       {/* PUBLIC ROUTES */}
       <Route
@@ -142,8 +273,10 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<ClubRootRedirect />} />
-        <Route path="login" element={<Login />} />
-        <Route path="signup" element={<Signup />} />
+        <Route path="login" element={<ClubPublicLoginEntry />} />
+        <Route path="signup" element={<RedirectClubSignup />} />
+        <Route path="claim-membership" element={<ClaimMembership />} />
+        <Route path="access" element={<ClaimMembership />} />
         <Route path="check-email/*" element={<CheckEmail />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="reset-password/*" element={<ResetPassword />} />
@@ -159,13 +292,11 @@ export default function AppRoutes() {
       <Route
         path="/:clubSlug/app/*"
         element={
-          <ClubProvider>
-            <ThemeProvider>
-              <ProtectedAppRoute>
-                <AppLayout />
-              </ProtectedAppRoute>
-            </ThemeProvider>
-          </ClubProvider>
+          <ThemeProvider>
+            <ProtectedAppRoute>
+              <AppLayout />
+            </ProtectedAppRoute>
+          </ThemeProvider>
         }
       >
         <Route index element={<Home />} />
@@ -196,6 +327,16 @@ export default function AppRoutes() {
         <Route path="profile" element={<AppPathRedirect to="settings" />} />
         <Route path="profile/edit" element={<AppPathRedirect to="settings/account" />} />
 
+        <Route
+          path="profile/drivers/welcome"
+          element={
+            <DriverProvider>
+              <DriverProfilesAccessGate>
+                <WelcomeAddDrivers />
+              </DriverProfilesAccessGate>
+            </DriverProvider>
+          }
+        />
         <Route
           path="profile/drivers/*"
           element={
@@ -251,17 +392,6 @@ export default function AppRoutes() {
           }
         />
 
-        <Route
-          path="profile/drivers/welcome"
-          element={
-            <DriverProvider>
-              <DriverProfilesAccessGate>
-                <WelcomeAddDrivers />
-              </DriverProfilesAccessGate>
-            </DriverProvider>
-          }
-        />
-
         <Route path="logout" element={<Logout />} />
       </Route>
 
@@ -269,13 +399,11 @@ export default function AppRoutes() {
       <Route
         path="/:clubSlug/app/admin/*"
         element={
-          <ClubProvider>
-            <ThemeProvider mode="admin">
-              <ProtectedAppRoute admin>
-                <AdminLayout />
-              </ProtectedAppRoute>
-            </ThemeProvider>
-          </ClubProvider>
+          <ThemeProvider mode="admin">
+            <ProtectedAppRoute admin>
+              <AdminLayout />
+            </ProtectedAppRoute>
+          </ThemeProvider>
         }
       >
         <Route index element={<AdminDashboard />} />
