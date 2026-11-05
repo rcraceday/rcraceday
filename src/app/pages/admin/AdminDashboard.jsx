@@ -9,41 +9,58 @@ import {
   UserGroupIcon,
   Cog6ToothIcon,
   ArchiveBoxIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
+  ChartBarIcon,
+  NewspaperIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/solid";
 
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { useClub } from "@/app/providers/ClubProvider";
+import { useClubMessageUnreadCount } from "@/app/hooks/useClubMessageUnreadCount";
 import { cmsStyles } from "@cms/styles";
 import { richTextToPlainText } from "@/app/lib/richText";
-import AdminKeyMetrics from "@app/pages/admin/components/AdminKeyMetrics";
+import { loadAdminRecentActivity } from "@/app/lib/adminDashboardActivity";
+import { loadAdminSystemNotices } from "@/app/lib/adminDashboardNotices";
+import AdminRecentActivityPanel from "@app/pages/admin/components/AdminRecentActivityPanel";
+import AdminSystemNoticesPanel from "@app/pages/admin/components/AdminSystemNoticesPanel";
 import {
-  buildStatsForYear,
-  emptyDashboardStats,
   getCalendarYear,
   loadClubMetricsContext,
 } from "@app/pages/admin/adminDashboardMetrics";
 
-function QuickAction({ to, icon: Icon, label }) {
+const DASHBOARD_SECTION_GAP = "12px";
+
+const sectionHeadingStyle = {
+  fontSize: "12px",
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: "0.12em",
+  color: "#6B7280",
+  margin: 0,
+};
+
+function QuickAction({ to, icon: Icon, label, badge = 0 }) {
   const content = (
     <div
       style={{
         backgroundColor: "#FFFFFF",
         borderRadius: "8px",
         border: "1px solid #E5E7EB",
-        padding: "14px 16px",
+        padding: "12px 14px",
         display: "flex",
         alignItems: "center",
         gap: "10px",
         cursor: "pointer",
         transition: "background-color 0.15s ease",
+        position: "relative",
       }}
     >
       <Icon
         style={{
           width: "18px",
           height: "18px",
-          color: "#4B5563",
+          color: "var(--admin-accent, #c20a0a)",
+          flexShrink: 0,
         }}
       />
       <span
@@ -51,10 +68,30 @@ function QuickAction({ to, icon: Icon, label }) {
           fontSize: "14px",
           fontWeight: 500,
           color: "#111827",
+          flex: 1,
         }}
       >
         {label}
       </span>
+      {badge > 0 ? (
+        <span
+          style={{
+            minWidth: "20px",
+            height: "20px",
+            padding: "0 6px",
+            borderRadius: "999px",
+            backgroundColor: "#DC2626",
+            color: "#FFFFFF",
+            fontSize: "11px",
+            fontWeight: 700,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
     </div>
   );
 
@@ -77,21 +114,17 @@ function CurrentNominationsPanel({ events, totalCount, t }) {
         backgroundColor: "#FFFFFF",
         borderRadius: "8px",
         border: "1px solid #E5E7EB",
-        padding: "16px",
+        padding: "14px",
         display: "flex",
         flexDirection: "column",
-        gap: "12px",
+        gap: "10px",
         boxSizing: "border-box",
       }}
     >
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", gap: "8px" }}>
         <span
           style={{
-            fontSize: "12px",
-            textTransform: "uppercase",
-            letterSpacing: "0.12em",
-            color: "#6B7280",
-            fontWeight: 600,
+            ...sectionHeadingStyle,
           }}
         >
           {t("admin.dashboard.currentNominations")}
@@ -147,21 +180,27 @@ function CurrentNominationsPanel({ events, totalCount, t }) {
 export default function AdminDashboard() {
   const { t } = useTranslation();
   const { clubSlug } = useParams();
+  const { club } = useClub();
   const metricsYear = getCalendarYear();
+  const { unreadCount: unreadMessages } = useClubMessageUnreadCount({
+    clubId: club?.id,
+    audience: "admin",
+  });
 
-  const [stats, setStats] = useState(() => emptyDashboardStats());
   const [nominationsByEvent, setNominationsByEvent] = useState([]);
-  const [keyMetricsExpanded, setKeyMetricsExpanded] = useState(false);
+  const [activityItems, setActivityItems] = useState([]);
+  const [systemNotices, setSystemNotices] = useState([]);
+  const [panelsLoading, setPanelsLoading] = useState(true);
 
   useEffect(() => {
-    async function loadMetrics() {
+    async function loadDashboard() {
+      setPanelsLoading(true);
       const context = await loadClubMetricsContext(clubSlug);
       if (context.error) {
         console.error("Failed to load club:", context.error);
+        setPanelsLoading(false);
         return;
       }
-
-      setStats(buildStatsForYear(context, metricsYear));
 
       const upcomingEvents = context.upcomingEvents || [];
       const upcomingEventIds = upcomingEvents.map((event) => event.id);
@@ -186,182 +225,112 @@ export default function AdminDashboard() {
         }));
 
       setNominationsByEvent(eventsWithNominations);
+
+      const [activityResult, noticesResult] = await Promise.all([
+        loadAdminRecentActivity(context.clubId),
+        loadAdminSystemNotices(context.clubId, clubSlug),
+      ]);
+
+      if (activityResult.error) {
+        console.error("Failed to load activity:", activityResult.error);
+      }
+      if (noticesResult.error) {
+        console.error("Failed to load notices:", noticesResult.error);
+      }
+
+      setActivityItems(activityResult.items || []);
+      setSystemNotices(noticesResult.notices || []);
+      setPanelsLoading(false);
     }
 
-    loadMetrics();
-  }, [clubSlug, metricsYear]);
+    loadDashboard();
+  }, [clubSlug, t]);
 
   return (
     <div style={cmsStyles.pageContainer}>
-      <div style={cmsStyles.pageContent}>
+      <div style={{ ...cmsStyles.pageContent, gap: DASHBOARD_SECTION_GAP, padding: "12px 0 28px" }}>
 
-        {/* CANONICAL HEADER */}
-        <div style={cmsStyles.sectionHeader}>
+        <div style={{ ...cmsStyles.sectionHeader, gap: "2px" }}>
           <h1 style={cmsStyles.sectionHeaderTitle}>{t("admin.dashboard.title")}</h1>
           <p style={cmsStyles.sectionHeaderSubtitle}>{t("admin.dashboard.subtitle")}</p>
         </div>
 
-        {/* KEY METRICS */}
-        <section>
-          <button
-            type="button"
-            onClick={() => setKeyMetricsExpanded((open) => !open)}
-            aria-expanded={keyMetricsExpanded}
-            aria-label={
-              keyMetricsExpanded
-                ? t("admin.dashboard.keyMetricsHide")
-                : t("admin.dashboard.keyMetricsShow")
-            }
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              margin: "0 0 10px",
-              padding: 0,
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.16em",
-              color: "#6B7280",
-              textAlign: "left",
-            }}
-          >
-            {keyMetricsExpanded ? (
-              <ChevronDownIcon
-                style={{ width: "16px", height: "16px", flexShrink: 0, color: "#DC2626" }}
-              />
-            ) : (
-              <ChevronRightIcon
-                style={{ width: "16px", height: "16px", flexShrink: 0, color: "#DC2626" }}
-              />
-            )}
-            {t("admin.dashboard.keyMetrics", { year: metricsYear })}
-          </button>
-
-          {keyMetricsExpanded ? (
-            <>
-              <p
-                style={{
-                  fontSize: "13px",
-                  color: "#6B7280",
-                  margin: "0 0 12px",
-                  lineHeight: 1.5,
-                }}
-              >
-                {t("admin.dashboard.keyMetricsNote", { year: metricsYear })}
-              </p>
-
-              <AdminKeyMetrics stats={stats} metricsYear={metricsYear} />
-            </>
-          ) : null}
-
-          <div style={{ width: "100%", marginTop: keyMetricsExpanded ? "12px" : 0 }}>
-            <CurrentNominationsPanel
-              events={nominationsByEvent}
-              totalCount={nominationsByEvent.reduce((sum, event) => sum + event.nominationCount, 0)}
-              t={t}
-            />
-          </div>
-        </section>
-
-        {/* QUICK ACTIONS */}
-        <section>
-          <h2
-            style={{
-              fontSize: "13px",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.16em",
-              color: "#6B7280",
-              marginBottom: "10px",
-            }}
-          >
-            {t("admin.dashboard.quickActions")}
-          </h2>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "12px",
-            }}
-          >
-            <QuickAction to="events" icon={CalendarDaysIcon} label={t("admin.dashboard.manageEvents")} />
-            <QuickAction to="nominations" icon={UserPlusIcon} label={t("admin.dashboard.manageNominations")} />
-            <QuickAction to="membership" icon={IdentificationIcon} label={t("admin.dashboard.manageMembership")} />
-            <QuickAction to="drivers" icon={UserGroupIcon} label={t("admin.dashboard.manageDrivers")} />
-            <QuickAction to="settings" icon={Cog6ToothIcon} label={t("admin.dashboard.adminSettings")} />
-            <QuickAction to="archives" icon={ArchiveBoxIcon} label={t("admin.dashboard.archives")} />
-          </div>
-        </section>
-
-        {/* PANELS */}
         <section
           style={{
-            marginTop: "24px",
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1.4fr)",
-            gap: "16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: DASHBOARD_SECTION_GAP,
           }}
         >
-          <div
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "8px",
-              border: "1px solid #E5E7EB",
-              padding: "16px",
-            }}
+          <Link
+            to={`/${clubSlug}/app/admin/metrics`}
+            style={{ textDecoration: "none" }}
           >
-            <h3
+            <div
               style={{
-                fontSize: "14px",
-                fontWeight: 600,
-                marginBottom: "6px",
-                color: "#111827",
+                backgroundColor: "#FFFFFF",
+                borderRadius: "8px",
+                border: "1px solid #E5E7EB",
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
               }}
             >
-              {t("admin.dashboard.recentActivity")}
-            </h3>
-            <p
-              style={{
-                fontSize: "13px",
-                color: "#6B7280",
-              }}
-            >
-              {t("admin.dashboard.recentActivityBody")}
-            </p>
-          </div>
+              <ChartBarIcon style={{ width: "20px", height: "20px", color: "var(--admin-accent, #c20a0a)", flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>
+                  {t("admin.dashboard.keyMetricsLinkTitle", { year: metricsYear })}
+                </div>
+                <div style={{ fontSize: "12px", color: "#6B7280", marginTop: "2px" }}>
+                  {t("admin.dashboard.keyMetricsLinkBody")}
+                </div>
+              </div>
+            </div>
+          </Link>
 
-          <div
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "8px",
-              border: "1px solid #E5E7EB",
-              padding: "16px",
-            }}
-          >
-            <h3
+          <CurrentNominationsPanel
+            events={nominationsByEvent}
+            totalCount={nominationsByEvent.reduce((sum, event) => sum + event.nominationCount, 0)}
+            t={t}
+          />
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <h2 style={sectionHeadingStyle}>{t("admin.dashboard.quickActions")}</h2>
+            <div
               style={{
-                fontSize: "14px",
-                fontWeight: 600,
-                marginBottom: "6px",
-                color: "#111827",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: DASHBOARD_SECTION_GAP,
               }}
             >
-              {t("admin.dashboard.systemNotices")}
-            </h3>
-            <p
-              style={{
-                fontSize: "13px",
-                color: "#6B7280",
-              }}
-            >
-              {t("admin.dashboard.systemNoticesBody")}
-            </p>
+              <QuickAction to="events" icon={CalendarDaysIcon} label={t("admin.dashboard.manageEvents")} />
+              <QuickAction to="nominations" icon={UserPlusIcon} label={t("admin.dashboard.manageNominations")} />
+              <QuickAction to="membership" icon={IdentificationIcon} label={t("admin.dashboard.manageMembership")} />
+              <QuickAction to="drivers" icon={UserGroupIcon} label={t("admin.dashboard.manageDrivers")} />
+              <QuickAction to="news" icon={NewspaperIcon} label={t("admin.dashboard.manageNews")} />
+              <QuickAction
+                to="messages"
+                icon={ChatBubbleLeftRightIcon}
+                label={t("admin.dashboard.manageMessages")}
+                badge={unreadMessages}
+              />
+              <QuickAction to="settings" icon={Cog6ToothIcon} label={t("admin.dashboard.adminSettings")} />
+              <QuickAction to="metrics" icon={ChartBarIcon} label={t("admin.dashboard.keyMetricsLinkShort")} />
+              <QuickAction to="archives" icon={ArchiveBoxIcon} label={t("admin.dashboard.archives")} />
+            </div>
           </div>
+        </section>
+
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1.4fr)",
+            gap: DASHBOARD_SECTION_GAP,
+          }}
+        >
+          <AdminRecentActivityPanel items={activityItems} loading={panelsLoading} />
+          <AdminSystemNoticesPanel notices={systemNotices} loading={panelsLoading} />
         </section>
 
       </div>

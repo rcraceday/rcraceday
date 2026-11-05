@@ -69,6 +69,16 @@ export function listArchiveYears(events, currentYear = getCalendarYear()) {
   return [...years].sort((a, b) => b - a);
 }
 
+/** Calendar years that have at least one event, plus the current year. */
+export function listMetricsYears(events, currentYear = getCalendarYear()) {
+  const years = new Set([currentYear]);
+  (events || []).forEach((event) => {
+    const year = getEventYear(event);
+    if (year != null) years.add(year);
+  });
+  return [...years].sort((a, b) => b - a);
+}
+
 function normalizeMembershipType(raw) {
   const type = (raw || "").toLowerCase().trim();
   if (!type) return "unknown";
@@ -256,6 +266,17 @@ export function computeNominationMetrics(
   });
 
   return counts;
+}
+
+export function revenueByMonthFromNominations(nominations, year) {
+  const totals = Array(12).fill(0);
+  (nominations || []).forEach((row) => {
+    if (!row.created_at) return;
+    const date = new Date(row.created_at);
+    if (date.getFullYear() !== year) return;
+    totals[date.getMonth()] += entryRevenueFromNomination(row);
+  });
+  return totals;
 }
 
 export const emptyDashboardStats = () => ({

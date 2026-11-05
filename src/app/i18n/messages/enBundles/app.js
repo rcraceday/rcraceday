@@ -188,6 +188,14 @@ export default {
     payment: "Payment",
     back: "Back",
     loadingForm: "Loading nomination form…",
+    visitorDriverTitle: "Who is racing?",
+    visitorDriverHint:
+      "This club needs a driver profile for you before you can nominate. Confirm the name that should appear on the entry form.",
+    visitorDriverContinue: "Continue to nomination",
+    visitorDriverDuplicate:
+      "This driver name is already registered at this club. Use the spelling shown on previous entries, or choose a different name.",
+    visitorDriverNameRequired: "First and last name are required.",
+    visitorDriverSaveFailed: "Could not save your driver profile. Please try again.",
     eventNotFound: "Event not found.",
     eventType: "Event Type:",
     when: "When:",

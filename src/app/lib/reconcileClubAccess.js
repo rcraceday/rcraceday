@@ -5,6 +5,8 @@ import {
   publicSignupPath,
   resolvePostAuthAppPath,
 } from "@/app/lib/publicAuthRedirect";
+import { isNominateAppReturnPath } from "@/app/lib/nominationLinks";
+import { ensureHostClubVisitorDriver } from "@/app/lib/ensureHostClubVisitorDriver";
 
 async function resolveMembershipNames(user) {
   const metadata = user.user_metadata || {};
@@ -193,10 +195,22 @@ export async function reconcileClubAccess({
     }
   }
 
+  let navigateFirstLogin = firstLogin;
+  if (safeReturnTo && isNominateAppReturnPath(safeReturnTo)) {
+    const ensured = await ensureHostClubVisitorDriver({
+      userId,
+      clubId: club.id,
+      membership,
+    });
+    if (ensured) {
+      navigateFirstLogin = false;
+    }
+  }
+
   navigate(
     resolvePostAuthAppPath({
       clubSlug,
-      firstLogin,
+      firstLogin: navigateFirstLogin,
       returnTo: safeReturnTo,
     })
   );

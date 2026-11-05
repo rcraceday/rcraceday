@@ -1,0 +1,21 @@
+-- Optional future enhancement: append-only club activity log with automatic purge.
+-- The dashboard currently derives activity from memberships, nominations, drivers, and events
+-- (see src/app/lib/adminDashboardActivity.js, ADMIN_ACTIVITY_RETENTION_DAYS = 90).
+--
+-- Recommended retention: 90 days for operational feed; 1 year if you need audit/compliance.
+-- Purge: daily job, e.g. delete from club_activity_log where occurred_at < now() - interval '90 days'.
+--
+-- Example table (not wired in app yet):
+--
+-- create table if not exists public.club_activity_log (
+--   id uuid primary key default gen_random_uuid(),
+--   club_id uuid not null references public.clubs (id) on delete cascade,
+--   kind text not null,
+--   summary text not null,
+--   actor_user_id uuid references auth.users (id) on delete set null,
+--   metadata jsonb not null default '{}',
+--   occurred_at timestamptz not null default now()
+-- );
+--
+-- create index if not exists club_activity_log_club_occurred_idx
+--   on public.club_activity_log (club_id, occurred_at desc);

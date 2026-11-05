@@ -3,7 +3,7 @@
    ============================================================ */
 
 .admin-root {
-  --admin-accent: #ed2024; /* Default admin red */
+  --admin-accent: #c20a0a; /* Matches admin header / menu accent */
   --admin-control-height: 38px;
   --admin-btn-height: 28px;
 }

@@ -56,6 +56,7 @@ import DriverProfilesAccessGate from "@/app/components/driver/DriverProfilesAcce
 
 // ADMIN PAGES
 import AdminDashboard from "@app/pages/admin/AdminDashboard";
+import AdminMetrics from "@app/pages/admin/AdminMetrics";
 import AdminMetricsArchives from "@app/pages/admin/AdminMetricsArchives";
 import AdminEvents from "@app/pages/admin/events/AdminEvents";
 import AdminEventEdit from "@app/pages/admin/events/eventsedit/AdminEventEdit";
@@ -278,6 +279,7 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<AdminDashboard />} />
+        <Route path="metrics" element={<AdminMetrics />} />
         <Route path="messages" element={<AdminClubMessages />} />
         <Route path="news" element={<AdminClubNews />} />
         <Route path="news/new" element={<AdminClubNewsEdit />} />

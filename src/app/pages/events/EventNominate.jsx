@@ -26,6 +26,7 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { sendMemberClubMessage } from "@/app/lib/clubMessages";
 import { useDrivers } from "@/app/providers/DriverProvider";
+import EventNominateDriverGate from "@/app/pages/events/EventNominateDriverGate";
 import { normalizeMembershipProductType } from "@/app/pages/profile/householdDriverLimits";
 import { driverNominationBlockReason } from "@/app/lib/driverNominationValidation";
 import { resolveDriverProfilePolicy } from "@/app/lib/driverClubSettings";
@@ -674,7 +675,7 @@ export default function EventNominate() {
   const { t } = useTranslation();
   const { club } = useClub();
   const { membership } = useMembership();
-  const { drivers, loadingDrivers } = useDrivers();
+  const { drivers, loadingDrivers, refreshDrivers } = useDrivers();
   const { palette } = useTheme();
   const brand = palette?.primary || "#00438a";
   const contentText = palette?.text || "#1f2937";
@@ -2317,6 +2318,17 @@ export default function EventNominate() {
         <PageTitle icon={ClipboardDocumentCheckIcon} title={t("nominate.title")} style={{ color: brand }} />
         <div style={{ padding: "40px", textAlign: "center", color: "#666", fontSize: "14px" }}>{t("nominate.eventNotFound")}</div>
       </div>
+    );
+  }
+
+  if (membership?.id && drivers.length === 0 && user?.id && club?.id) {
+    return (
+      <EventNominateDriverGate
+        userId={user.id}
+        clubId={club.id}
+        membership={membership}
+        onDriverReady={refreshDrivers}
+      />
     );
   }
 
