@@ -151,7 +151,7 @@ export default function AdminDashboard() {
 
   const [stats, setStats] = useState(() => emptyDashboardStats());
   const [nominationsByEvent, setNominationsByEvent] = useState([]);
-  const [keyMetricsExpanded, setKeyMetricsExpanded] = useState(true);
+  const [keyMetricsExpanded, setKeyMetricsExpanded] = useState(false);
 
   useEffect(() => {
     async function loadMetrics() {

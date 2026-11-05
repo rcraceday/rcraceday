@@ -32,7 +32,7 @@ export default function AdminEvents() {
   const [trackFilter, setTrackFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("asc");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("upcoming");
 
   useEffect(() => {
     loadEvents();

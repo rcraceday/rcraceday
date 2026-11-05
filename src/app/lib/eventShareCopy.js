@@ -1,4 +1,11 @@
 import { eventNominationUrl } from "@/app/lib/nominationLinks";
+import { normalizeRichTextValue, richTextToPlainText } from "@/app/lib/richText";
+
+function collapseWhitespace(text) {
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function escapeHtml(value) {
   return String(value || "")
@@ -10,10 +17,8 @@ function escapeHtml(value) {
 
 export function normalizeEventDisplayName(event) {
   if (!event) return "";
-  if (typeof event.name === "string") return event.name.trim();
-  return String(
-    event.name?.value || event.name?.text || event.name?.richText || ""
-  ).trim();
+  const raw = normalizeRichTextValue(event.name);
+  return collapseWhitespace(richTextToPlainText(raw));
 }
 
 export function buildEventNominationShareContent({
@@ -26,7 +31,7 @@ export function buildEventNominationShareContent({
   const url =
     urlOverride ||
     (clubSlug && eventId ? eventNominationUrl(clubSlug, eventId) : "");
-  const name = String(eventName || "").trim() || "this event";
+  const name = collapseWhitespace(String(eventName || "")) || "this event";
   const club = String(clubName || "").trim();
   const headline = club ? `Nominate for ${name} — ${club}` : `Nominate for ${name}`;
   const plain = `${headline}\n\n${url}\n\nEnter online with your RCRaceday login (visitors welcome).`;
