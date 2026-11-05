@@ -16,6 +16,7 @@ import PageTitle from "@/components/ui/PageTitle";
 import { isNominationsOpen } from "@/app/pages/events/events-sections/helpers";
 import EventCard from "@/app/pages/events/EventCard";
 import { loadPublishedResultEventIds } from "@/app/lib/results/loadEventResults";
+import { isClubNewsVisible } from "@/app/lib/clubNews";
 
 import { useTranslation } from "@/app/i18n/I18nContext";
 import {
@@ -131,7 +132,9 @@ export default function Home() {
     async function fetchNews() {
       const { data, error } = await supabase
         .from("club_news")
-        .select("id, title, body, image_url, published_at, created_at")
+        .select(
+          "id, title, body, image_url, published_at, created_at, display_from, display_until"
+        )
         .eq("club_id", club.id)
         .eq("is_published", true)
         .order("published_at", { ascending: false });
@@ -142,7 +145,7 @@ export default function Home() {
         setNewsItems([]);
         return;
       }
-      setNewsItems(data || []);
+      setNewsItems((data || []).filter((item) => isClubNewsVisible(item)));
     }
 
     fetchNews();

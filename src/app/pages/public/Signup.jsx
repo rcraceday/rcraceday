@@ -4,6 +4,13 @@ import { useState } from "react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import {
+  isSafeClubAppReturnPath,
+  publicCheckEmailPath,
+  publicLoginPath,
+  publicLoginRedirectUrl,
+  returnToFromSearch,
+} from "@/app/lib/publicAuthRedirect";
 
 export default function Signup() {
   const { club } = useOutletContext();
@@ -50,6 +57,13 @@ export default function Signup() {
 
   const [errorMsg, setErrorMsg] = useState(location.state?.message || "");
   const [loading, setLoading] = useState(false);
+
+  const signupReturnTo = returnToFromSearch(location.search);
+  const safeSignupReturnTo =
+    signupReturnTo && isSafeClubAppReturnPath(signupReturnTo, clubSlug)
+      ? signupReturnTo
+      : "";
+  const loginPath = publicLoginPath(clubSlug, safeSignupReturnTo);
 
   if (!club || !clubId) {
     return <div style={{ padding: 24, textAlign: "center" }}>{t("loading.loading")}</div>;
@@ -298,7 +312,7 @@ export default function Signup() {
             club_id: clubId,
             club_name: club?.name,
             club_logo_url: club?.logo_url,
-            email_redirect_to: `${window.location.origin}/${clubSlug}/public/login`,
+            email_redirect_to: publicLoginRedirectUrl(clubSlug, safeSignupReturnTo),
             signup_type: membership?.id
               ? "member_signup"
               : "non_member_signup",
@@ -316,7 +330,11 @@ export default function Signup() {
     }
 
     navigate(
-      `/${clubSlug}/public/check-email?email=${encodeURIComponent(email.trim().toLowerCase())}`
+      publicCheckEmailPath(
+        clubSlug,
+        email.trim().toLowerCase(),
+        safeSignupReturnTo
+      )
     );
     setLoading(false);
   }
@@ -470,7 +488,7 @@ async function handleNonMemberSignup(e) {
             club_id: clubId,
             club_name: club?.name,
             club_logo_url: club?.logo_url,
-            email_redirect_to: `${window.location.origin}/${clubSlug}/public/login`,
+            email_redirect_to: publicLoginRedirectUrl(clubSlug, safeSignupReturnTo),
             signup_type: "non_member_signup",
           },
         }),
@@ -484,7 +502,7 @@ async function handleNonMemberSignup(e) {
     }
 
     navigate(
-      `/${clubSlug}/public/check-email?email=${encodeURIComponent(cleanEmail)}`
+      publicCheckEmailPath(clubSlug, cleanEmail, safeSignupReturnTo)
     );
   } catch (err) {
     console.error("Non-member signup error", err);
@@ -573,7 +591,7 @@ async function handleNonMemberSignup(e) {
           <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
             {t("auth.alreadyHaveAccount")}{" "}
             <Link
-              to={`/${clubSlug}/public/login`}
+              to={loginPath}
               style={{ color: "#2563eb", textDecoration: "underline" }}
             >
               {t("auth.logIn")}
@@ -638,9 +656,7 @@ async function handleNonMemberSignup(e) {
           variant="primary"
           size="lg"
           style={{ width: "100%" }}
-          onClick={() =>
-            navigate(`/${clubSlug}/public/login`, { replace: true })
-          }
+          onClick={() => navigate(loginPath, { replace: true })}
         >
           {t("signup.proceedToLogin")}
         </Button>

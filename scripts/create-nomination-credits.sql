@@ -41,7 +41,10 @@ create index if not exists nomination_credits_group_id_idx
 create index if not exists nomination_credits_club_id_idx
   on public.nomination_credits (club_id);
 
-create or replace view public.nomination_credit_balances as
+-- security_invoker: balances respect RLS on nomination_credits (see fix-nomination-credit-balances-security-invoker.sql).
+create or replace view public.nomination_credit_balances
+with (security_invoker = true)
+as
 select
   group_id,
   club_id,

@@ -1,7 +1,7 @@
 // src/app/pages/profile/WelcomeAddDrivers.jsx
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 
 import { useMembership } from "@/app/providers/MembershipProvider";
@@ -18,6 +18,10 @@ import useTheme from "@/app/providers/useTheme";
 import Card from "@/components/ui/Card";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import {
+  isSafeClubAppReturnPath,
+  returnToFromSearch,
+} from "@/app/lib/publicAuthRedirect";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
@@ -31,8 +35,18 @@ function SimpleSpinner() {
 
 export default function WelcomeAddDrivers() {
   const navigate = useNavigate();
-  const { club } = useClub();            // ⭐ FIXED — now works
+  const [searchParams] = useSearchParams();
+  const { club } = useClub();
   const clubSlug = club?.slug;
+
+  const welcomeReturnTo = returnToFromSearch(searchParams);
+  const safeWelcomeReturnTo =
+    welcomeReturnTo && clubSlug && isSafeClubAppReturnPath(welcomeReturnTo, clubSlug)
+      ? welcomeReturnTo
+      : "";
+
+  const afterWelcomePath = () =>
+    safeWelcomeReturnTo || `/${clubSlug}/app/profile/drivers`;
 
   const { membership, loadingMembership } = useMembership();
   const { user, loadingProfile } = useProfile();
@@ -159,7 +173,7 @@ export default function WelcomeAddDrivers() {
         });
 
         refreshDrivers();
-        navigate(`/${clubSlug}/app/profile/drivers`);
+        navigate(afterWelcomePath());
         return;
       }
 
@@ -305,7 +319,7 @@ export default function WelcomeAddDrivers() {
       refreshDrivers();
       reloadMembers();
 
-      navigate(`/${clubSlug}/app/profile/drivers`);
+      navigate(afterWelcomePath());
     } catch (err) {
       console.error("[WelcomeAddDrivers] handleAddPerson error", err);
       setError("Something went wrong while adding this driver. Please try again.");

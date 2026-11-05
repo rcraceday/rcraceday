@@ -17,6 +17,7 @@ import SaveActions from "./components/SaveActions";
 import EventMerchandiseCard from "./components/EventMerchandiseCard";
 import EventClassAddOnsCard from "./components/EventClassAddOnsCard";
 import EventRequirementsCard from "./components/EventRequirementsCard";
+import EventShareLinkActions from "./components/EventShareLinkActions";
 
 import EventPreviewModal from "./components/EventPreviewModal";
 
@@ -933,13 +934,25 @@ if (data.is_multi_day) {
             <CMSCard
               title="Event Details"
               actions={
-                <CMSToggle
-                  label="Published"
-                  checked={eventData.is_published}
-                  onChange={(checked) =>
-                    handleFieldChange("is_published", checked)
-                  }
-                />
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                    gap: 12,
+                  }}
+                >
+                  <CMSToggle
+                    label="Published"
+                    checked={eventData.is_published}
+                    onChange={(checked) =>
+                      handleFieldChange("is_published", checked)
+                    }
+                  />
+                  {!isNew && id ? (
+                    <EventShareLinkActions event={eventData} compact showHelp={false} />
+                  ) : null}
+                </div>
               }
             >
               <EventBasicsCard

@@ -4,6 +4,7 @@ import CMSToggle from "@cms/CMSToggle";
 import CMSButton from "@cms/CMSButton";
 import { cmsLayout } from "@cms/layout";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import EventShareLinkActions from "./EventShareLinkActions";
 
 export default function EventNominationsCard({
   event = {},
@@ -16,11 +17,6 @@ export default function EventNominationsCard({
   canSendReminderNotifications = false,
 }) {
   const { t } = useTranslation();
-  const isMulti = !!event.is_multi_day;
-
-  const days = Array.isArray(event.days)
-    ? event.days.map((d) => (typeof d === "string" ? { date: d, label: "" } : d))
-    : [];
 
   const update = (field, value) => {
     onChange(field, value);
@@ -28,6 +24,20 @@ export default function EventNominationsCard({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: cmsLayout.spacing.lg }}>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: cmsLayout.spacing.sm,
+          padding: cmsLayout.spacing.md,
+          borderRadius: 8,
+          border: "1px solid #e5e7eb",
+          background: "#f9fafb",
+        }}
+      >
+        <EventShareLinkActions event={event} />
+      </div>
 
       {/* NOMINATIONS OPEN / CLOSE */}
       <div style={cmsLayout.row}>

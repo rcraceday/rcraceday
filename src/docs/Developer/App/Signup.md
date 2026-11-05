@@ -142,6 +142,8 @@ user_metadata.signup_type === "non_member_signup"
 
 For that case it creates an active `household_memberships` row with `membership_type: "non_member"`, using the metadata name fields. This is the non-member account's first club membership.
 
+The same non-member row is also created at login when someone signs in with an existing confirmed Auth account that has no membership at the current club (cross-club visitor). Names come from Auth metadata or the user's profile.
+
 If the membership belongs to another Auth user, or the metadata does not identify a valid non-member signup for the current club, login signs out and returns the user to signup or displays an error.
 
 ### Destination after login

@@ -4,15 +4,24 @@ import { useState } from "react";
 import { supabase } from "@/supabaseClient";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import {
+  isSafeClubAppReturnPath,
+  publicLoginPath,
+  publicLoginRedirectUrl,
+  returnToFromSearch,
+} from "@/app/lib/publicAuthRedirect";
 
 export default function CheckEmail() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
   const { t } = useTranslation();
 
-  // Read email from URL
   const params = new URLSearchParams(window.location.search);
   const email = params.get("email");
+  const returnTo = returnToFromSearch(params);
+  const safeReturnTo =
+    returnTo && isSafeClubAppReturnPath(returnTo, clubSlug) ? returnTo : "";
+  const loginPath = publicLoginPath(clubSlug, safeReturnTo);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -26,7 +35,7 @@ export default function CheckEmail() {
     setLoading(true);
     setMessage("");
 
-    const redirectUrl = `${window.location.origin}/${clubSlug}/public/login`;
+    const redirectUrl = publicLoginRedirectUrl(clubSlug, safeReturnTo);
 
     const { error } = await supabase.auth.resend({
       type: "signup",
@@ -69,10 +78,7 @@ export default function CheckEmail() {
 
       <p className="text-center mt-8 text-gray-600">
         {t("signup.alreadyConfirmed")}{" "}
-        <Link
-          to={`/${clubSlug}/public/login`}
-          className="text-blue-600 underline"
-        >
+        <Link to={loginPath} className="text-blue-600 underline">
           {t("auth.logIn")}
         </Link>
       </p>

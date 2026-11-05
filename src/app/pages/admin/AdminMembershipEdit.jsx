@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
+import { useAuth } from "@/app/providers/AuthProvider";
 import { useClub } from "@/app/providers/ClubProvider";
 import { syncDriversIntoClubMembers } from "@/app/lib/syncClubMembers";
 import CMSCard from "@cms/CMSCard";
@@ -49,6 +50,7 @@ export default function AdminMembershipEdit() {
   const navigate = useNavigate();
   const { clubSlug, id } = useParams();
   const { club } = useClub();
+  const { user } = useAuth();
   const isNew = !id || id === "new";
 
   const [household, setHousehold] = useState(emptyHousehold);
@@ -195,6 +197,7 @@ export default function AdminMembershipEdit() {
           first_name: draft.first_name.trim(),
           last_name: draft.last_name.trim(),
           is_junior: draft.is_junior,
+          created_by: user?.id || null,
         })
         .select("id")
         .single();
@@ -211,6 +214,7 @@ export default function AdminMembershipEdit() {
       .from("club_members")
       .insert({
         membership_id: id,
+        club_id: club.id,
         driver_id: driverId,
         first_name: draft.first_name.trim(),
         last_name: draft.last_name.trim(),
@@ -585,7 +589,13 @@ export default function AdminMembershipEdit() {
                   <CMSToggle
                     label="Junior"
                     checked={draft.is_junior}
-                    onChange={(checked) => setDraft((prev) => ({ ...prev, is_junior: checked }))}
+                    onChange={(checked) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        is_junior: checked,
+                        is_driver: checked ? true : prev.is_driver,
+                      }))
+                    }
                   />
                   <CMSToggle
                     label="Also a driver"

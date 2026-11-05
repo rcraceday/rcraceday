@@ -54,6 +54,15 @@
     z-index: 10 !important;
   }
 
+  .carousel-desktop.carousel-desktop--single {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .carousel-desktop.carousel-desktop--single .carousel-card.center {
+    width: 100% !important;
+  }
+
   /* SIDE CARDS — inset so borders stay inside content column */
   .carousel-card.ghost-left {
     width: 46% !important;

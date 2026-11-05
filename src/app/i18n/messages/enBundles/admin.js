@@ -160,6 +160,26 @@ export default {
       merchandise: "Merchandise",
       requirements: "Requirements",
       lateFeeLabel: "Late Fee",
+      shareLinkTitle: "Share nomination link",
+      shareLinkHelp:
+        "Use these links in Facebook posts, club emails, or SMS. Copy link for a clean URL, or copy message for a ready-made headline and link (rich paste in Gmail and Outlook).",
+      copyShareLink: "Copy link",
+      copyShareMessage: "Copy message for email / social",
+      copiedShareLink: "Link copied",
+      copiedShareMessage: "Message copied — paste into your post or email",
+      copyShareLinkFailed: "Could not copy — select the text and copy manually.",
+      saveEventForShareLink: "Save the event first to generate a shareable link.",
+      nominationLinkTitle: "Share nomination link",
+      nominationLinkHelp:
+        "Share this URL so members and visitors can log in and nominate. The club slug is your club URL segment; the event ID is this event’s id in Supabase (same as in the admin URL when editing).",
+      nominationLinkPattern:
+        "Pattern: {{origin}}/{{clubSlug}}/app/events/{{eventId}}/nominate",
+      copyNominationLink: "Copy nomination link",
+      copiedNominationLink: "Copied to clipboard",
+      copyNominationLinkFailed: "Could not copy — select the URL and copy manually.",
+      eventIdLabel: "Event ID",
+      saveEventForNominationLink:
+        "Save the event first to generate a shareable nomination link.",
       notifyOpenHelp:
         "Sends a lock-screen push (and optional email) when nominations open. Members must tap Enable push on this device in RCRaceday Settings. Phone Settings → Apps notifications alone will not register the device. Use the button below to resend after nominations have opened.",
       sendOpenNotificationsNow: "Send open notifications now",

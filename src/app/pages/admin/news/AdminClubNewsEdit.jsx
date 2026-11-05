@@ -23,7 +23,7 @@ import {
   uploadClubAsset,
 } from "@/app/lib/clubAssetStorage";
 import {
-  isClubNewsNotifyDue,
+  shouldAutoSendClubNewsNotifications,
   validateClubNewsDisplayDates,
 } from "@/app/lib/clubNews";
 import { triggerNominationsOpenProcessing } from "@/app/lib/userNotifications";
@@ -128,11 +128,18 @@ export default function AdminClubNewsEdit() {
       const row = Array.isArray(data?.summary)
         ? data.summary.find((item) => item?.type === "club_news") || data.summary[0]
         : null;
-      const noticeText = row
-        ? `In-app: ${row.inApp}. Email: ${row.email}. Push: ${row.push}.`
-        : "Notification job ran, but nothing was sent. Use Send notification now.";
-      setNotice(noticeText);
-      return { ok: true, error: null, notice: noticeText };
+      if (row) {
+        const noticeText = `In-app: ${row.inApp}. Email: ${row.email}. Push: ${row.push}.`;
+        setNotice(noticeText);
+        return { ok: true, error: null, notice: noticeText };
+      }
+      if (force) {
+        const noticeText =
+          "Notification job ran, but nothing was sent. Use Send notification now.";
+        setNotice(noticeText);
+        return { ok: true, error: null, notice: noticeText };
+      }
+      return { ok: true, error: null, notice: null };
     } finally {
       setSending(false);
     }
@@ -173,6 +180,9 @@ export default function AdminClubNewsEdit() {
     setSaving(true);
     setError(null);
     setNotice(null);
+
+    const wasPublished = !!news.is_published;
+    const nowPublished = !!isPublished;
 
     try {
       const newsId = isNew ? crypto.randomUUID() : id;
@@ -248,7 +258,13 @@ export default function AdminClubNewsEdit() {
 
       let sendNotice = null;
       let sendError = null;
-      if (isClubNewsNotifyDue(res.data)) {
+      if (
+        shouldAutoSendClubNewsNotifications({
+          wasPublished,
+          nowPublished,
+          news: res.data,
+        })
+      ) {
         const result = await runNewsNotifications(res.data.id);
         sendNotice = result?.notice || null;
         sendError = result?.ok ? null : result?.error || "Could not send news notifications.";

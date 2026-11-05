@@ -39,7 +39,9 @@ export default function Carousel({ brand, items, onOpenItem, newsBackgroundUrl }
         </div>
       </div>
 
-      <div className="carousel-desktop">
+      <div
+        className={`carousel-desktop${showSides ? "" : " carousel-desktop--single"}`}
+      >
         {showSides && (
           <div className="carousel-card ghost-left" onClick={goPrev}>
             <NewsCard

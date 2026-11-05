@@ -36,3 +36,12 @@ export function isClubNewsNotifyDue(news, now = new Date()) {
   }
   return true;
 }
+
+/** Auto-send on save only when the item is newly published (not on later edits). */
+export function shouldAutoSendClubNewsNotifications(
+  { wasPublished, nowPublished, news },
+  now = new Date()
+) {
+  if (!nowPublished || wasPublished) return false;
+  return isClubNewsNotifyDue(news, now);
+}

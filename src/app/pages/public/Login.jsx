@@ -1,10 +1,23 @@
 // src/app/pages/public/Login.jsx
 import { useState, useEffect } from "react";
-import { useNavigate, useParams, useOutletContext, Link } from "react-router-dom";
+import {
+  useNavigate,
+  useParams,
+  useOutletContext,
+  Link,
+  useSearchParams,
+} from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import TextInput from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import {
+  isSafeClubAppReturnPath,
+  publicCheckEmailPath,
+  publicSignupPath,
+  returnToFromSearch,
+} from "@/app/lib/publicAuthRedirect";
+import { reconcileClubAccess } from "@/app/lib/reconcileClubAccess";
 
 function hasAuthCallbackInUrl() {
   const { hash, search } = window.location;
@@ -42,150 +55,17 @@ async function resolveFreshUser() {
   return data?.user ?? null;
 }
 
-async function reconcileClubAccess({
-  user,
-  club,
-  clubSlug,
-  navigate,
-  onError,
-  userNotFoundMessage,
-}) {
-  if (!user?.email_confirmed_at) {
-    navigate(
-      `/${clubSlug}/public/check-email?email=${encodeURIComponent(user?.email || "")}`
-    );
-    return false;
-  }
-
-  const userId = user.id;
-  const userEmail = user.email?.toLowerCase();
-  const metadata = user.user_metadata || {};
-
-  let { data: membership, error: membershipLookupError } = await supabase
-    .from("household_memberships")
-    .select("*")
-    .eq("club_id", club.id)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (membershipLookupError) {
-    onError?.(membershipLookupError.message);
-    return false;
-  }
-
-  if (!membership) {
-    const emailLookup = await supabase
-      .from("household_memberships")
-      .select("*")
-      .eq("club_id", club.id)
-      .ilike("email", userEmail)
-      .maybeSingle();
-
-    membership = emailLookup.data;
-    membershipLookupError = emailLookup.error;
-
-    if (membershipLookupError) {
-      onError?.(membershipLookupError.message);
-      return false;
-    }
-  }
-
-  if (!membership && metadata.membership_id) {
-    const idLookup = await supabase
-      .from("household_memberships")
-      .select("*")
-      .eq("club_id", club.id)
-      .eq("id", metadata.membership_id)
-      .maybeSingle();
-
-    membership = idLookup.data;
-    if (idLookup.error) {
-      onError?.(idLookup.error.message);
-      return false;
-    }
-  }
-
-  let firstLogin = false;
-  let membershipUpdates = {};
-
-  if (!membership) {
-    const signupType = metadata.signup_type;
-    const isNonMemberSignup =
-      String(metadata.club_id) === String(club.id) &&
-      signupType === "non_member_signup";
-
-    if (!isNonMemberSignup) {
-      await supabase.auth.signOut();
-      navigate(`/${clubSlug}/public/signup`, {
-        state: {
-          message: userNotFoundMessage,
-        },
-      });
-      return false;
-    }
-
-    const { data: createdMembership, error: membershipError } = await supabase
-      .from("household_memberships")
-      .insert({
-        user_id: userId,
-        email: userEmail,
-        primary_first_name: metadata.first_name || "",
-        primary_last_name: metadata.last_name || "",
-        membership_type: "non_member",
-        status: "active",
-        club_id: club.id,
-      })
-      .select("*")
-      .single();
-
-    if (membershipError) {
-      onError?.("Unable to create your club access. Please try again.");
-      return false;
-    }
-
-    firstLogin = true;
-    membership = createdMembership;
-  }
-
-  if (membership.user_id && membership.user_id !== userId) {
-    await supabase.auth.signOut();
-    onError?.("This membership is already linked to another account.");
-    return false;
-  }
-
-  if (!membership.user_id) {
-    membershipUpdates.user_id = userId;
-    firstLogin = true;
-  }
-
-  if (
-    membership.membership_type === "non_member" &&
-    membership.status !== "active"
-  ) {
-    membershipUpdates.status = "active";
-  }
-
-  if (Object.keys(membershipUpdates).length > 0) {
-    const { error: updateError } = await supabase
-      .from("household_memberships")
-      .update(membershipUpdates)
-      .eq("id", membership.id);
-
-    if (updateError) {
-      onError?.("Unable to link your membership. Please try again.");
-      return false;
-    }
-  }
-
-  navigate(`/${clubSlug}/app/${firstLogin ? "profile/drivers/welcome" : ""}`);
-  return true;
-}
-
 export default function Login() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
+  const loginReturnTo = returnToFromSearch(searchParams);
+  const safeLoginReturnTo =
+    loginReturnTo && isSafeClubAppReturnPath(loginReturnTo, clubSlug)
+      ? loginReturnTo
+      : "";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -209,6 +89,7 @@ export default function Login() {
         clubSlug,
         navigate,
         userNotFoundMessage: t("auth.userNotFoundSignup"),
+        returnTo: safeLoginReturnTo,
         onError: (message) => {
           if (!cancelled) setErrorMsg(message);
         },
@@ -264,8 +145,24 @@ export default function Login() {
         return;
       }
 
-      await supabase.auth.signOut();
-      setCheckingExistingSession(false);
+      if (!existingUser.email_confirmed_at) {
+        await supabase.auth.signOut();
+        setCheckingExistingSession(false);
+        return;
+      }
+
+      await reconcileClubAccess({
+        user: existingUser,
+        club,
+        clubSlug,
+        navigate,
+        userNotFoundMessage: t("auth.userNotFoundSignup"),
+        returnTo: safeLoginReturnTo,
+        onError: (message) => {
+          if (!cancelled) setErrorMsg(message);
+        },
+      });
+      if (!cancelled) setCheckingExistingSession(false);
     }
 
     checkSession();
@@ -274,7 +171,7 @@ export default function Login() {
       cancelled = true;
       authListener?.subscription?.unsubscribe();
     };
-  }, [club, clubSlug, navigate, t]);
+  }, [club, clubSlug, navigate, safeLoginReturnTo, t]);
 
   // ⭐ SAFE CONDITIONAL RETURNS (AFTER HOOKS)
   if (!club) {
@@ -317,10 +214,14 @@ export default function Login() {
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed")) {
         navigate(
-          `/${clubSlug}/public/check-email?email=${encodeURIComponent(email.trim().toLowerCase())}`
+          publicCheckEmailPath(
+            clubSlug,
+            email.trim().toLowerCase(),
+            safeLoginReturnTo
+          )
         );
       } else if (error.message.includes("Invalid login credentials")) {
-        navigate(`/${clubSlug}/public/signup`, {
+        navigate(publicSignupPath(clubSlug, safeLoginReturnTo), {
           state: {
             message: t("auth.userNotFoundSignup"),
           },
@@ -346,6 +247,7 @@ export default function Login() {
       clubSlug,
       navigate,
       userNotFoundMessage: t("auth.userNotFoundSignup"),
+      returnTo: safeLoginReturnTo,
       onError: (message) => setErrorMsg(message),
     });
     setLoading(false);
@@ -428,7 +330,7 @@ export default function Login() {
       <p style={{ textAlign: "center", marginTop: "24px", color: "#666" }}>
         {t("auth.noAccount")}{" "}
         <Link
-          to={`/${clubSlug}/public/signup`}
+          to={publicSignupPath(clubSlug, safeLoginReturnTo)}
           style={{ color: "#2563eb", textDecoration: "underline" }}
         >
           {t("auth.signUp")}

@@ -10,6 +10,7 @@ import Card from "@/components/ui/Card";
 import NewsItemImage from "@/components/news/NewsItemImage";
 import { richTextToPlainText } from "@/app/lib/richText";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
+import { isClubNewsVisible } from "@/app/lib/clubNews";
 
 function formatPublished(iso) {
   const d = parseStoredTimestamp(iso);
@@ -39,7 +40,7 @@ export default function ClubNews() {
       setLoading(true);
       const { data, error } = await supabase
         .from("club_news")
-        .select("id, title, body, image_url, published_at")
+        .select("id, title, body, image_url, published_at, display_from, display_until")
         .eq("club_id", club.id)
         .eq("is_published", true)
         .order("published_at", { ascending: false });
@@ -49,7 +50,7 @@ export default function ClubNews() {
         console.warn(error);
         setItems([]);
       } else {
-        setItems(data || []);
+        setItems((data || []).filter((item) => isClubNewsVisible(item)));
       }
       setLoading(false);
     }

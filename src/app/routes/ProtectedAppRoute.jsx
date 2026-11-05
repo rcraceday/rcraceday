@@ -4,6 +4,12 @@ import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
+import {
+  appReturnPathFromLocation,
+  isSafeClubAppReturnPath,
+  publicCheckEmailPath,
+  publicLoginPath,
+} from "@/app/lib/publicAuthRedirect";
 
 export default function ProtectedAppRoute({ children, admin = false }) {
   const { session, loadingUser } = useAuth();
@@ -13,6 +19,9 @@ export default function ProtectedAppRoute({ children, admin = false }) {
   const { hasAnyAdminAccess, loadingAdminAccess } = useAdminAccess();
   const { clubSlug } = useParams();
   const location = useLocation();
+  const returnTo = appReturnPathFromLocation(location);
+  const safeReturnTo = isSafeClubAppReturnPath(returnTo, clubSlug) ? returnTo : "";
+  const loginTo = publicLoginPath(clubSlug, safeReturnTo);
 
   if (loadingUser) {
     return (
@@ -23,14 +32,13 @@ export default function ProtectedAppRoute({ children, admin = false }) {
   }
 
   if (!session?.user) {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+    return <Navigate to={loginTo} replace />;
   }
 
   if (!session.user.email_confirmed_at) {
     return (
       <Navigate
-        to={`/${clubSlug}/public/check-email?email=${encodeURIComponent(session.user.email || "")}`}
-        state={{ from: location.pathname }}
+        to={publicCheckEmailPath(clubSlug, session.user.email || "", safeReturnTo)}
         replace
       />
     );
@@ -49,15 +57,15 @@ export default function ProtectedAppRoute({ children, admin = false }) {
   }
 
   if (!membership) {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+    return <Navigate to={loginTo} replace />;
   }
 
   if (!club?.id || membership.club_id !== club.id) {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+    return <Navigate to={loginTo} replace />;
   }
 
   if (membership.status !== "active") {
-    return <Navigate to={`/${clubSlug}/public/login`} replace />;
+    return <Navigate to={loginTo} replace />;
   }
 
   if (admin && !hasAnyAdminAccess) {

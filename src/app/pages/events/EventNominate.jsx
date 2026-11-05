@@ -26,6 +26,7 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { sendMemberClubMessage } from "@/app/lib/clubMessages";
 import { useDrivers } from "@/app/providers/DriverProvider";
+import { normalizeMembershipProductType } from "@/app/pages/profile/householdDriverLimits";
 import { driverNominationBlockReason } from "@/app/lib/driverNominationValidation";
 import { resolveDriverProfilePolicy } from "@/app/lib/driverClubSettings";
 import useTheme from "@app/providers/useTheme";
@@ -701,6 +702,9 @@ export default function EventNominate() {
   const [clubAffiliationConfirmed, setClubAffiliationConfirmed] = useState(false);
   const [affiliatedClubId, setAffiliatedClubId] = useState("");
   const [selectedDriverId, setSelectedDriverId] = useState("");
+  const [familyEditorOpen, setFamilyEditorOpen] = useState(false);
+  const [familyEditorDriverId, setFamilyEditorDriverId] = useState("");
+  const familyEditorBaselineRef = useRef(null);
   const [draftScope, setDraftScope] = useState("");
   const [hydrationReady, setHydrationReady] = useState(false);
   const [priorHouseholdPaid, setPriorHouseholdPaid] = useState(0);
@@ -710,6 +714,7 @@ export default function EventNominate() {
   const [accountCreditBalance, setAccountCreditBalance] = useState(0);
   const paidSnapshotCapturedRef = useRef(false);
   const [clubMessageNote, setClubMessageNote] = useState("");
+  const [nominationReloadToken, setNominationReloadToken] = useState(0);
   const { user } = useAuth();
 
   const logoSrc = event?.logourl
@@ -899,7 +904,9 @@ export default function EventNominate() {
   }
   const pricing = useMemo(() => resolveEventPricing(event), [event]);
   const entryLimits = event?.class_entry_limits || {};
-  const isFamily = membership?.membership_type === "family" || drivers.length > 1;
+  const isFamily =
+    normalizeMembershipProductType(membership?.membership_type) === "family" ||
+    drivers.length > 1;
 
   function racingSelectionIds(selection) {
     if (!selection) return [];
@@ -968,7 +975,7 @@ export default function EventNominate() {
     setPaidBreakdownSnapshot([]);
     setAccountCreditBalance(0);
     paidSnapshotCapturedRef.current = false;
-  }, [eventId, membership?.id, location.key]);
+  }, [eventId, membership?.id, location.key, nominationReloadToken]);
 
   useEffect(() => {
     if (!eventId || !membership?.id || !event || loadingDrivers || !drivers.length) return;
@@ -1085,6 +1092,10 @@ export default function EventNominate() {
       }
       if (typeof draft?.affiliatedClubId === "string") setAffiliatedClubId(draft.affiliatedClubId);
       if (typeof draft?.selectedDriverId === "string") setSelectedDriverId(draft.selectedDriverId);
+      if (typeof draft?.familyEditorOpen === "boolean") setFamilyEditorOpen(draft.familyEditorOpen);
+      if (typeof draft?.familyEditorDriverId === "string") {
+        setFamilyEditorDriverId(draft.familyEditorDriverId);
+      }
       setPaymentMethod("");
       setPaymentConfirmed(false);
       setPaymentSettledForDue(null);
@@ -1096,7 +1107,7 @@ export default function EventNominate() {
     return () => {
       cancelled = true;
     };
-  }, [eventId, membership?.id, event, drivers, loadingDrivers, classLimit, rcraClubs, club?.id, location.key]);
+  }, [eventId, membership?.id, event, drivers, loadingDrivers, classLimit, rcraClubs, club?.id, location.key, nominationReloadToken]);
 
   useEffect(() => {
     if (!hydrationReady || !event || !drivers.length) return;
@@ -1112,6 +1123,8 @@ export default function EventNominate() {
       clubAffiliationConfirmed,
       affiliatedClubId,
       selectedDriverId,
+      familyEditorOpen,
+      familyEditorDriverId,
     });
   }, [
     eventId,
@@ -1122,13 +1135,21 @@ export default function EventNominate() {
     clubAffiliationConfirmed,
     affiliatedClubId,
     selectedDriverId,
+    familyEditorOpen,
+    familyEditorDriverId,
     hydrationReady,
   ]);
 
   useEffect(() => {
     if (!drivers.length) return;
-    setSelectedDriverId((current) => (current && drivers.some((d) => d.id === current) ? current : drivers[0].id));
-  }, [drivers]);
+    const multiDriverHousehold =
+      normalizeMembershipProductType(membership?.membership_type) === "family" ||
+      drivers.length > 1;
+    if (multiDriverHousehold) return;
+    setSelectedDriverId((current) =>
+      current && drivers.some((d) => d.id === current) ? current : drivers[0].id
+    );
+  }, [drivers, membership?.membership_type]);
 
   function updateSelection(driverId, update) {
     setSelections((current) => {
@@ -1359,6 +1380,112 @@ export default function EventNominate() {
       }
     }
     return false;
+  }
+
+  function driverHasSavedNomination(driverId) {
+    return hasNominationActivity(selections[driverId] || emptySelection());
+  }
+
+  function nominationSummaryLines(driverId) {
+    const selection = selections[driverId] || emptySelection();
+    const lines = [];
+    if (!event?.is_multi_day) {
+      (selection.classSlots || []).filter(Boolean).forEach((classId) => {
+        lines.push(classMap.get(classId) || classId);
+      });
+      if (selection.preference) {
+        const prefName = classMap.get(selection.preference) || selection.preference;
+        lines.push(`${prefName} (${t("nominate.preferenceShort")})`);
+      }
+      return lines;
+    }
+    const dayList = event.is_multi_day ? event.days || [] : [];
+    dayList.forEach((day, dayIndex) => {
+      if (!selection.racingDays?.[dayIndex]) return;
+      if (isOpenPracticeDay(event, dayIndex)) {
+        lines.push(t("nominate.openPracticeDay"));
+        return;
+      }
+      const slots = selection.classesByDay?.[dayIndex];
+      if (!Array.isArray(slots)) return;
+      slots.filter(Boolean).forEach((classId) => {
+        lines.push(classMap.get(classId) || classId);
+      });
+      const dayPref = selection.preferencesByDay?.[dayIndex];
+      if (dayPref) {
+        const prefName = classMap.get(dayPref) || dayPref;
+        lines.push(`${prefName} (${t("nominate.preferenceShort")})`);
+      }
+    });
+    return lines;
+  }
+
+  function openFamilyEditor(driverId) {
+    const nextId =
+      driverId || drivers.find((d) => !driverHasSavedNomination(d.id))?.id || "";
+    familyEditorBaselineRef.current = nextId
+      ? JSON.stringify(selections[nextId] || emptySelection())
+      : null;
+    setFamilyEditorDriverId(nextId);
+    setFamilyEditorOpen(true);
+    setError("");
+    setErrorPlacement("page");
+  }
+
+  function cancelFamilyEditor() {
+    const id = familyEditorDriverId;
+    if (id && familyEditorBaselineRef.current) {
+      try {
+        const parsed = JSON.parse(familyEditorBaselineRef.current);
+        setSelections((current) => ({
+          ...current,
+          [id]: { ...emptySelection(), ...parsed },
+        }));
+      } catch {
+        /* ignore */
+      }
+    }
+    setFamilyEditorOpen(false);
+    setFamilyEditorDriverId("");
+    familyEditorBaselineRef.current = null;
+  }
+
+  function saveFamilyEditor() {
+    const driver = drivers.find((d) => d.id === familyEditorDriverId);
+    if (!driver) return;
+    const sel = selections[driver.id] || emptySelection();
+    if (!hasNominationActivity(sel)) {
+      showCheckoutError(t("nominate.errSelectClassOrPractice"), "classes");
+      return;
+    }
+    const purchaseErr = validatePurchaseSelection(sel, driver.id);
+    if (purchaseErr) {
+      showCheckoutError(
+        t("nominate.errDriverPrefix", {
+          driverName: `${driver.first_name} ${driver.last_name}`,
+          message: purchaseErr.message,
+        }),
+        purchaseErr.section
+      );
+      return;
+    }
+    setFamilyEditorOpen(false);
+    setFamilyEditorDriverId("");
+    familyEditorBaselineRef.current = null;
+    setError("");
+    setErrorPlacement("page");
+    setFocusSection("");
+  }
+
+  function removeFamilyNomination(driverId) {
+    setSelections((current) =>
+      padDriverSelectionsForEvent({ ...current, [driverId]: emptySelection() }, event, drivers, classLimit)
+    );
+    if (familyEditorDriverId === driverId) {
+      setFamilyEditorOpen(false);
+      setFamilyEditorDriverId("");
+      familyEditorBaselineRef.current = null;
+    }
   }
 
   function practiceMetaForSelection(selection) {
@@ -1869,7 +1996,9 @@ export default function EventNominate() {
   }
 
   function householdCheckoutBreakdown(selectionsMap = selections, driverList = drivers) {
-    const family = membership?.membership_type === "family" || driverList.length > 1;
+    const family =
+      normalizeMembershipProductType(membership?.membership_type) === "family" ||
+      driverList.length > 1;
     return driverList.flatMap((driver) => {
       const driverSelection = selectionsMap[driver.id] || emptySelection();
       if (!hasNominationActivity(driverSelection)) return [];
@@ -1927,6 +2056,21 @@ export default function EventNominate() {
     setPaymentMethod(method);
     setPaymentSettledForDue(amountToPay);
     setPaymentConfirmed(true);
+  }
+
+  function cancelNominationEdits() {
+    if (!eventId || !membership?.id) return;
+    clearNominateDraft(eventId, membership.id);
+    setFamilyEditorOpen(false);
+    setFamilyEditorDriverId("");
+    familyEditorBaselineRef.current = null;
+    setPaymentConfirmed(false);
+    setPaymentMethod("");
+    setPaymentSettledForDue(null);
+    setError("");
+    setErrorPlacement("page");
+    setFocusSection("");
+    setNominationReloadToken((token) => token + 1);
   }
 
   async function confirmPaymentAndNominations() {
@@ -2183,10 +2327,20 @@ export default function EventNominate() {
   const eventTypeLabel = event.event_type
     ? event.event_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : "";
-  const selectedDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
+  const familyCommittedDrivers = drivers.filter((d) =>
+    driverHasSavedNomination(d.id)
+  );
+  const familyDriversPendingNomination = drivers.filter(
+    (d) => !driverHasSavedNomination(d.id)
+  );
+  const editorDriver = isFamily
+    ? drivers.find((d) => d.id === familyEditorDriverId) || null
+    : drivers.find((d) => d.id === selectedDriverId) || drivers[0] || null;
+  const showDriverEditor = isFamily ? familyEditorOpen && !!editorDriver : !!editorDriver;
+  const showCheckoutSections = isFamily ? familyCommittedDrivers.length > 0 : !!editorDriver;
+  const selectedDriver = showDriverEditor ? editorDriver : null;
   const selection = selectedDriver ? selections[selectedDriver.id] || emptySelection() : emptySelection();
   const classIds = selectedClassIds(selection);
-  const currentDriverTotal = selectedDriver ? driverTotal(selectedDriver) : 0;
   const pricingBreakdownRows = householdCheckoutBreakdown();
   const editingPaidNomination = hadPaidNominations || priorHouseholdPaid > 0;
   const settledBreakdownRows = paidBreakdownSnapshot.length
@@ -2202,6 +2356,11 @@ export default function EventNominate() {
   const showSettledBreakdown = editingPaidNomination && settledBreakdownRows.length > 0;
   const showAdditionalBreakdown = editingPaidNomination && additionalBreakdownRows.length > 0;
   const showNewNominationBreakdown = !editingPaidNomination && pricingBreakdownRows.length > 0;
+  const confirmSubmitLabel = saving
+    ? t("nominate.saving")
+    : hadPaidNominations && amountToPay <= 0.005
+      ? t("nominate.confirmChanges")
+      : t("nominate.confirmPaymentNominations");
 
   function renderPricingBreakdownRow(row, rowIndex, { readOnly = false } = {}) {
     const editablePurchase = !readOnly && (row.kind === "merch" || row.kind === "addon") && !row.included;
@@ -2378,7 +2537,84 @@ export default function EventNominate() {
               </Section>
             )}
 
-            {selectedDriver && (
+            {isFamily && (
+              <>
+                <hr className="border-surfaceBorder my-6" />
+                <Section title={t("nominate.householdNominations")} icon={UserIcon} brand={brand}>
+                  <div className="space-y-3">
+                    {familyCommittedDrivers.length === 0 && !familyEditorOpen && (
+                      <p className="text-sm text-text-muted m-0">{t("nominate.noNominationsYet")}</p>
+                    )}
+                    {familyCommittedDrivers.map((driver) => {
+                      const summary = nominationSummaryLines(driver.id);
+                      return (
+                        <div
+                          key={driver.id}
+                          className="rounded-md border p-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"
+                          style={{
+                            borderColor: palette?.surfaceBorder || "#e5e7eb",
+                            background: palette?.surfaceAlt || "#f9fafb",
+                          }}
+                        >
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm">
+                              {driver.first_name} {driver.last_name}
+                              {driver.is_junior ? ` (${t("nominate.juniorShort")})` : ""}
+                            </div>
+                            {summary.length > 0 && (
+                              <ul className="mt-1 mb-0 text-sm text-text-muted list-disc pl-5 space-y-0.5">
+                                {summary.map((line, idx) => (
+                                  <li key={`${driver.id}-${idx}`}>{line}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2 shrink-0">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="!text-xs"
+                              onClick={() => openFamilyEditor(driver.id)}
+                            >
+                              {t("nominate.editNomination")}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              className="!text-xs"
+                              onClick={() => removeFamilyNomination(driver.id)}
+                            >
+                              {t("nominate.removeNomination")}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {!familyEditorOpen && familyDriversPendingNomination.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full sm:w-auto"
+                        onClick={() => openFamilyEditor()}
+                      >
+                        {familyCommittedDrivers.length === 0
+                          ? t("nominate.addNomination")
+                          : t("nominate.addAnotherNomination")}
+                      </Button>
+                    )}
+                    {!familyEditorOpen &&
+                      familyDriversPendingNomination.length === 0 &&
+                      familyCommittedDrivers.length > 0 && (
+                        <p className="text-sm text-text-muted m-0">{t("nominate.allDriversNominated")}</p>
+                      )}
+                  </div>
+                </Section>
+              </>
+            )}
+
+            {showDriverEditor && selectedDriver && (
               <>
                 <hr className="border-surfaceBorder my-6" />
 
@@ -2391,22 +2627,33 @@ export default function EventNominate() {
                           variant="cms"
                           value={selectedDriver.id}
                           onChange={(value) => {
-                            setSelectedDriverId(value);
+                            familyEditorBaselineRef.current = JSON.stringify(
+                              selections[value] || emptySelection()
+                            );
+                            setFamilyEditorDriverId(value);
                           }}
-                          options={drivers.map((driver) => ({
-                            value: driver.id,
-                            label: `${driver.first_name} ${driver.last_name}${driver.is_junior ? " (Junior)" : ""}`,
-                          }))}
+                          options={drivers
+                            .filter(
+                              (driver) =>
+                                !driverHasSavedNomination(driver.id) ||
+                                driver.id === selectedDriver.id
+                            )
+                            .map((driver) => ({
+                              value: driver.id,
+                              label: `${driver.first_name} ${driver.last_name}${driver.is_junior ? " (Junior)" : ""}`,
+                            }))}
                           ariaLabel={t("nominate.selectDriverAria")}
                           triggerStyleOverrides={{ fontSize: "0.875rem" }}
                         />
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input label={t("nominate.firstName")} value={selectedDriver.first_name || ""} readOnly style={{ background: "#F5F5F5" }} />
-                      <Input label={t("nominate.lastName")} value={selectedDriver.last_name || ""} readOnly style={{ background: "#F5F5F5" }} />
-                    </div>
+                    {!isFamily && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input label={t("nominate.firstName")} value={selectedDriver.first_name || ""} readOnly style={{ background: "#F5F5F5" }} />
+                        <Input label={t("nominate.lastName")} value={selectedDriver.last_name || ""} readOnly style={{ background: "#F5F5F5" }} />
+                      </div>
+                    )}
                     {selectedDriver.is_junior && (
                       <div className="text-sm font-medium" style={{ color: brand }}>
                         {t("nominate.juniorPricingNote")}
@@ -2414,43 +2661,6 @@ export default function EventNominate() {
                     )}
                   </div>
                 </Section>
-
-                {flatRequirements.length > 0 && (
-                  <div className="mt-6 space-y-3">
-                    <div className="font-semibold text-base">{t("nominate.clubRequirements")}</div>
-                    {Object.values(
-                      flatRequirements.reduce((groups, requirement) => {
-                        if (!groups[requirement.requirementId]) {
-                          groups[requirement.requirementId] = { descriptor: requirement.descriptor, items: [] };
-                        }
-                        groups[requirement.requirementId].items.push(requirement);
-                        return groups;
-                      }, {})
-                    ).map((group) => (
-                      <div
-                        key={group.items[0].requirementId}
-                        className="grid grid-cols-1 md:grid-cols-2 gap-2 border rounded-md p-3"
-                        style={{ background: palette?.surface || "#ffffff", borderColor: palette?.surfaceBorder || "#e5e7eb" }}
-                      >
-                        <div className="font-medium text-sm">{group.descriptor || t("nominate.requirement")}</div>
-                        <div className="flex flex-col gap-1">
-                          {group.items.map((requirement) => (
-                            <label key={requirement.id} className="flex items-start gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={!!requirementSelections[requirement.id]}
-                                onChange={() =>
-                                  setRequirementSelections((current) => ({ ...current, [requirement.id]: !current[requirement.id] }))
-                                }
-                              />
-                              <span>{requirement.item}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
                 <Section
                   title={t("nominate.classes")}
@@ -3084,6 +3294,58 @@ export default function EventNominate() {
                   </Section>
                 )}
 
+                {isFamily && (
+                  <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                    <Button type="button" className="flex-1" onClick={saveFamilyEditor}>
+                      {t("nominate.saveNomination")}
+                    </Button>
+                    <Button type="button" variant="secondary" className="flex-1" onClick={cancelFamilyEditor}>
+                      {t("nominate.cancelEditing")}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {showCheckoutSections && (
+              <>
+                {flatRequirements.length > 0 && (
+                  <div className="mt-6 space-y-3">
+                    <div className="font-semibold text-base">{t("nominate.clubRequirements")}</div>
+                    {Object.values(
+                      flatRequirements.reduce((groups, requirement) => {
+                        if (!groups[requirement.requirementId]) {
+                          groups[requirement.requirementId] = { descriptor: requirement.descriptor, items: [] };
+                        }
+                        groups[requirement.requirementId].items.push(requirement);
+                        return groups;
+                      }, {})
+                    ).map((group) => (
+                      <div
+                        key={group.items[0].requirementId}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-2 border rounded-md p-3"
+                        style={{ background: palette?.surface || "#ffffff", borderColor: palette?.surfaceBorder || "#e5e7eb" }}
+                      >
+                        <div className="font-medium text-sm">{group.descriptor || t("nominate.requirement")}</div>
+                        <div className="flex flex-col gap-1">
+                          {group.items.map((requirement) => (
+                            <label key={requirement.id} className="flex items-start gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={!!requirementSelections[requirement.id]}
+                                onChange={() =>
+                                  setRequirementSelections((current) => ({ ...current, [requirement.id]: !current[requirement.id] }))
+                                }
+                              />
+                              <span>{requirement.item}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {requiresRcraClub && (
                   <div
                     id="nominate-focus-rcra"
@@ -3172,15 +3434,6 @@ export default function EventNominate() {
                         )}
                       </div>
                     )}
-                    {isFamily && !editingPaidNomination && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span>
-                          {selectedDriver.first_name} {selectedDriver.last_name}
-                          {selectedDriver.is_junior ? " (Junior)" : ""}
-                        </span>
-                        <span className="font-semibold">{money(currentDriverTotal)}</span>
-                      </div>
-                    )}
                     {editingPaidNomination ? (
                       amountToPay > 0.005 ? (
                         <div className="space-y-2 border-t border-surfaceBorder pt-3">
@@ -3256,9 +3509,25 @@ export default function EventNominate() {
                             })}
                           </p>
                         )}
-                        <Button className="w-full" disabled={saving || saved} onClick={confirmPaymentAndNominations}>
-                          {saving ? t("nominate.saving") : t("nominate.confirmPaymentNominations")}
-                        </Button>
+                        <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="flex-1"
+                            disabled={saving || saved}
+                            onClick={cancelNominationEdits}
+                          >
+                            {t("nominate.cancelChanges")}
+                          </Button>
+                          <Button
+                            type="button"
+                            className="flex-1"
+                            disabled={saving || saved}
+                            onClick={confirmPaymentAndNominations}
+                          >
+                            {confirmSubmitLabel}
+                          </Button>
+                        </div>
                       </>
                     )}
                   </div>

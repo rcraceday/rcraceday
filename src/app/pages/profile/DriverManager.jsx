@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
+import { useAuth } from "@/app/providers/AuthProvider";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import useTheme from "@/app/providers/useTheme";
@@ -20,7 +21,11 @@ import {
   countHouseholdSlots,
 } from "@/app/pages/profile/householdDriverLimits";
 import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
-import { evaluateDriverProfileReadiness } from "@/app/lib/driverClubSettings";
+import {
+  applyNewDriverProfileDefaults,
+  evaluateDriverProfileReadiness,
+  resolveDriverNumberRules,
+} from "@/app/lib/driverClubSettings";
 
 export default function DriverManager() {
   const navigate = useNavigate();
@@ -30,8 +35,9 @@ export default function DriverManager() {
   const brand = palette.primary;
   const clubSlug = club?.slug;
 
-  const { drivers, loadingDrivers } = useDrivers();
+  const { drivers, loadingDrivers, refreshDrivers } = useDrivers();
   const { membership } = useMembership();
+  const { user } = useAuth();
 
   const driverList = Array.isArray(drivers) ? drivers : [];
   const membershipType = membership?.membership_type;
@@ -110,6 +116,58 @@ export default function DriverManager() {
       driverList.filter((driver) => !evaluateDriverProfileReadiness(club, driver).ready),
     [driverList, club]
   );
+
+  async function reloadMembers() {
+    if (!membership?.id || membershipType !== "family") return;
+    const { data } = await supabase
+      .from("club_members")
+      .select("*")
+      .eq("membership_id", membership.id)
+      .order("first_name", { ascending: true });
+    setClubMembers(data || []);
+  }
+
+  async function promoteMemberToDriver(member) {
+    if (!member?.id || !membership?.id || !club?.id || !user?.id) return;
+
+    const { data: driver, error: insertError } = await supabase
+      .from("drivers")
+      .insert({
+        membership_id: membership.id,
+        club_id: club.id,
+        first_name: member.first_name,
+        last_name: member.last_name,
+        is_junior: !!member.is_junior,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !driver?.id) {
+      console.error("[DriverManager] promote member to driver", insertError);
+      return;
+    }
+
+    await supabase
+      .from("club_members")
+      .update({ driver_id: driver.id })
+      .eq("id", member.id);
+
+    await applyNewDriverProfileDefaults(supabase, driver.id, club);
+
+    const numberRules = resolveDriverNumberRules(club);
+    if (numberRules.auto_reconcile_on_create) {
+      await supabase.rpc("reconcile_driver_number", {
+        p_club_id: club.id,
+        p_driver_id: driver.id,
+        p_first_name: member.first_name,
+        p_last_name: member.last_name,
+      });
+    }
+
+    await refreshDrivers();
+    await reloadMembers();
+  }
 
   // ------------------------------------------------------------
   // DELETE MEMBER
@@ -286,17 +344,26 @@ export default function DriverManager() {
                               </span>
                             </div>
 
-                            {/* RIGHT: DELETE BUTTON */}
-                            <Button
-  variant="danger"
-  className="!py-1 !px-3 !text-xs"
-  onClick={() => {
-    setMemberToDelete(m);
-    setShowDeleteModal(true);
-  }}
->
-  Delete
-</Button>
+                            {/* RIGHT: PROMOTE / DELETE */}
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="secondary"
+                                className="!py-1 !px-3 !text-xs"
+                                onClick={() => promoteMemberToDriver(m)}
+                              >
+                                Add driver profile
+                              </Button>
+                              <Button
+                                variant="danger"
+                                className="!py-1 !px-3 !text-xs"
+                                onClick={() => {
+                                  setMemberToDelete(m);
+                                  setShowDeleteModal(true);
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}

@@ -11,6 +11,7 @@ import Card from "@/components/ui/Card";
 import { newsDetailHeaderStyle } from "@/components/news/NewsItemImage";
 import RichTextContent from "@/components/ui/RichTextContent";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
+import { isClubNewsVisible } from "@/app/lib/clubNews";
 
 function formatPublished(iso) {
   const d = parseStoredTimestamp(iso);
@@ -48,7 +49,7 @@ export default function NewsDetails() {
         .eq("is_published", true)
         .maybeSingle();
       if (cancelled) return;
-      if (error || !data) {
+      if (error || !data || !isClubNewsVisible(data)) {
         setMissing(true);
         setItem(null);
       } else {

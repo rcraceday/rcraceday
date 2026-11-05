@@ -215,6 +215,7 @@ export default function AddDriver() {
         .from("club_members")
         .insert({
           membership_id: membership.id,
+          club_id: club.id,
           first_name: trimmedFirst,
           last_name: trimmedLast,
           is_junior: isJunior,
@@ -268,6 +269,7 @@ export default function AddDriver() {
         first_name: trimmedFirst,
         last_name: trimmedLast,
         is_junior: isJunior,
+        created_by: user.id,
       })
       .select()
       .single();
@@ -281,6 +283,7 @@ export default function AddDriver() {
     // ⭐ 3. ALWAYS INSERT A NEW CLUB MEMBER ROW (correct behaviour)
     await supabase.from("club_members").insert({
       membership_id: membership.id,
+      club_id: club.id,
       driver_id: driver.id,
       first_name: trimmedFirst,
       last_name: trimmedLast,

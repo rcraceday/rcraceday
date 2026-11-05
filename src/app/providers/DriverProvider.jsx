@@ -31,10 +31,9 @@ export default function DriverProvider({ children }) {
   const [drivers, setDrivers] = useState([]);
   const [loadingDrivers, setLoadingDrivers] = useState(true);
 
-  const inFlightRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   const loadDrivers = useCallback(async () => {
-    if (inFlightRef.current) return;
     if (loadingUser || loadingMembership) return;
 
     // ⭐ FIX: membership may be null on first render
@@ -55,7 +54,7 @@ export default function DriverProvider({ children }) {
       return;
     }
 
-    inFlightRef.current = true;
+    const requestId = ++requestIdRef.current;
     setLoadingDrivers(true);
 
     try {
@@ -76,71 +75,120 @@ export default function DriverProvider({ children }) {
           .eq("created_by", user.id)
           .order("created_at", { ascending: true });
       } else {
-        response = await supabase
+        const [{ data: byMembership, error: membershipError }, { data: memberRows }] =
+          await Promise.all([
+            supabase
+              .from("drivers")
+              .select("*")
+              .eq("membership_id", membershipId)
+              .order("created_at", { ascending: true }),
+            supabase
+              .from("club_members")
+              .select("driver_id")
+              .eq("membership_id", membershipId)
+              .not("driver_id", "is", null),
+          ]);
+
+        const merged = new Map();
+        (byMembership || []).forEach((driver) => merged.set(driver.id, driver));
+
+        const missingIds = [
+          ...new Set(
+            (memberRows || [])
+              .map((row) => row.driver_id)
+              .filter((id) => id && !merged.has(id))
+          ),
+        ];
+
+        if (missingIds.length) {
+          const { data: linkedDrivers } = await supabase
+            .from("drivers")
+            .select("*")
+            .in("id", missingIds);
+
+          const relinkIds = (linkedDrivers || [])
+            .filter((driver) => driver.membership_id !== membershipId)
+            .map((driver) => driver.id);
+
+          if (relinkIds.length) {
+            await supabase
+              .from("drivers")
+              .update({ membership_id: membershipId })
+              .in("id", relinkIds);
+          }
+
+          (linkedDrivers || []).forEach((driver) =>
+            merged.set(driver.id, { ...driver, membership_id: membershipId })
+          );
+        }
+
+        const { data: orphans } = await supabase
           .from("drivers")
           .select("*")
           .eq("club_id", clubId)
-          .or(
-            `membership_id.eq.${membershipId},and(membership_id.is.null,created_by.eq.${user.id})`
-          )
-          .order("created_at", { ascending: true });
+          .is("membership_id", null)
+          .eq("created_by", user.id);
 
-        if (!response.error && response.data) {
-          const orphans = response.data.filter((d) => !d.membership_id);
+        if (orphans?.length) {
+          const orphanIds = orphans.map((driver) => driver.id);
+          const { error: linkError } = await supabase
+            .from("drivers")
+            .update({ membership_id: membershipId })
+            .in("id", orphanIds);
 
-          if (orphans.length > 0) {
-            const orphanIds = orphans.map((d) => d.id);
+          if (!linkError) {
+            orphans.forEach((driver) =>
+              merged.set(driver.id, { ...driver, membership_id: membershipId })
+            );
 
-            const { error: linkError } = await supabase
-              .from("drivers")
-              .update({ membership_id: membershipId })
-              .in("id", orphanIds);
+            if (membershipType === "family") {
+              for (const driver of orphans) {
+                const { data: linkedMember } = await supabase
+                  .from("club_members")
+                  .select("id")
+                  .eq("membership_id", membershipId)
+                  .eq("driver_id", driver.id)
+                  .maybeSingle();
 
-            if (!linkError) {
-              response.data = response.data.map((d) =>
-                !d.membership_id ? { ...d, membership_id: membershipId } : d
-              );
+                if (linkedMember) continue;
 
-              if (membershipType === "family") {
-                for (const driver of orphans) {
-                  const { data: linkedMember } = await supabase
+                const { data: nameMatch } = await supabase
+                  .from("club_members")
+                  .select("id, driver_id")
+                  .eq("membership_id", membershipId)
+                  .eq("first_name", driver.first_name)
+                  .eq("last_name", driver.last_name)
+                  .maybeSingle();
+
+                if (nameMatch && !nameMatch.driver_id) {
+                  await supabase
                     .from("club_members")
-                    .select("id")
-                    .eq("membership_id", membershipId)
-                    .eq("driver_id", driver.id)
-                    .maybeSingle();
-
-                  if (linkedMember) continue;
-
-                  const { data: nameMatch } = await supabase
-                    .from("club_members")
-                    .select("id, driver_id")
-                    .eq("membership_id", membershipId)
-                    .eq("first_name", driver.first_name)
-                    .eq("last_name", driver.last_name)
-                    .maybeSingle();
-
-                  if (nameMatch && !nameMatch.driver_id) {
-                    await supabase
-                      .from("club_members")
-                      .update({ driver_id: driver.id })
-                      .eq("id", nameMatch.id);
-                  } else if (!nameMatch) {
-                    await supabase.from("club_members").insert({
-                      membership_id: membershipId,
-                      club_id: clubId,
-                      driver_id: driver.id,
-                      first_name: driver.first_name,
-                      last_name: driver.last_name,
-                      is_junior: !!driver.is_junior,
-                    });
-                  }
+                    .update({ driver_id: driver.id })
+                    .eq("id", nameMatch.id);
+                } else if (!nameMatch) {
+                  await supabase.from("club_members").insert({
+                    membership_id: membershipId,
+                    club_id: clubId,
+                    driver_id: driver.id,
+                    first_name: driver.first_name,
+                    last_name: driver.last_name,
+                    is_junior: !!driver.is_junior,
+                  });
                 }
               }
             }
           }
         }
+
+        response = {
+          data: Array.from(merged.values()).sort((a, b) =>
+            String(a.created_at || "").localeCompare(String(b.created_at || ""))
+          ),
+          error: membershipError,
+        };
       }
+
+      if (requestId !== requestIdRef.current) return;
 
       if (response.error) {
         console.warn("[DriverProvider] supabase error", response.error);
@@ -150,10 +198,9 @@ export default function DriverProvider({ children }) {
       }
     } catch (err) {
       console.error("[DriverProvider] loadDrivers caught", err);
-      setDrivers([]);
+      if (requestId === requestIdRef.current) setDrivers([]);
     } finally {
-      inFlightRef.current = false;
-      setLoadingDrivers(false);
+      if (requestId === requestIdRef.current) setLoadingDrivers(false);
     }
   }, [
     user?.id,
