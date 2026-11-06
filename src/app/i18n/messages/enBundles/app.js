@@ -85,6 +85,7 @@ export default {
     yourClubs: "Your clubs",
     noFavorites: "No clubs on your home yet. Find a club and tap Add to home.",
     findClub: "Find another club",
+    findAClub: "Find a club",
     logOut: "Log out",
     removeClubFromHome: "Remove {{name}} from home",
     clubMenuLabel: "Options for {{name}}",

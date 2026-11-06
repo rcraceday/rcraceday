@@ -1,6 +1,34 @@
 // src/components/ui/Button.jsx
 import useTheme from "@/app/providers/useTheme";
 
+function parseColorToRgb(color) {
+  if (!color) return null;
+  const hex = String(color).trim();
+  if (hex.startsWith("#")) {
+    const num = parseInt(hex.replace("#", ""), 16);
+    if (Number.isNaN(num)) return null;
+    return { r: num >> 16, g: (num >> 8) & 0xff, b: num & 0xff };
+  }
+  const rgbMatch = hex.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+  if (rgbMatch) {
+    return {
+      r: Number(rgbMatch[1]),
+      g: Number(rgbMatch[2]),
+      b: Number(rgbMatch[3]),
+    };
+  }
+  return null;
+}
+
+function shiftRgb(color, amount) {
+  const rgb = parseColorToRgb(color);
+  if (!rgb) return color;
+  const r = Math.max(0, Math.min(255, rgb.r + amount));
+  const g = Math.max(0, Math.min(255, rgb.g + amount));
+  const b = Math.max(0, Math.min(255, rgb.b + amount));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 export default function Button({
   children,
   variant = "primary",
@@ -14,44 +42,34 @@ export default function Button({
   const buttonColor = palette?.button || brand;
   const buttonTextColor = palette?.buttonText || "#FFFFFF";
 
-  const lighten = (hex) => {
-    try {
-      const num = parseInt(hex.replace("#", ""), 16);
-      const r = Math.min(255, (num >> 16) + 30);
-      const g = Math.min(255, ((num >> 8) & 0xff) + 30);
-      const b = Math.min(255, (num & 0xff) + 30);
-      return `rgb(${r}, ${g}, ${b})`;
-    } catch {
-      return hex;
-    }
-  };
-
-  const buttonHover = lighten(buttonColor);
-
   const variants = {
     primary: {
       bg: buttonColor,
-      hover: buttonHover,
+      hover: shiftRgb(buttonColor, -28),
       text: buttonTextColor,
       border: "rgba(255,255,255,0.8)",
+      hoverBorder: "rgba(255,255,255,0.8)",
     },
     secondary: {
       bg: "#FFFFFF",
-      hover: "#F5F5F5",
+      hover: "#E5E7EB",
       text: brand,
       border: brand,
+      hoverBorder: brand,
     },
     success: {
       bg: "#16a34a",
-      hover: "#15803d",
+      hover: shiftRgb("#16a34a", -24),
       text: buttonTextColor,
       border: "#15803d",
+      hoverBorder: shiftRgb("#15803d", -12),
     },
     danger: {
       bg: "#dc2626",
-      hover: "#b91c1c",
+      hover: shiftRgb("#dc2626", -24),
       text: "#ffffff",
       border: "#b91c1c",
+      hoverBorder: shiftRgb("#b91c1c", -12),
     },
   };
 
@@ -65,10 +83,10 @@ export default function Button({
 
   const sizeStyle = sizeStyles[size] || sizeStyles.md;
 
-  // ⭐ Detect inline background override
   const inlineBg = props.style?.backgroundColor;
+  const baseBg = inlineBg || style.bg;
+  const hoverBg = inlineBg ? shiftRgb(inlineBg, -28) : style.hover;
 
-  // ⭐ Detect Tailwind padding override
   const userOverridesPadding =
     className.includes("px-") || className.includes("py-") || className.includes("p-");
 
@@ -85,7 +103,7 @@ export default function Button({
         ${className}
       `}
       style={{
-        backgroundColor: inlineBg || style.bg,
+        backgroundColor: baseBg,
         color: style.text,
         border: `1px solid ${style.border}`,
         padding: userOverridesPadding ? undefined : sizeStyle.padding,
@@ -95,16 +113,16 @@ export default function Button({
         ...(props.style || {}),
       }}
       onMouseEnter={(e) => {
-        if (!disabled) {
-          if (!inlineBg) e.currentTarget.style.backgroundColor = style.hover;
-          e.currentTarget.style.filter = "brightness(1.12)";
-        }
+        if (disabled) return;
+        e.currentTarget.style.backgroundColor = hoverBg;
+        e.currentTarget.style.color = style.text;
+        e.currentTarget.style.borderColor = style.hoverBorder || style.border;
       }}
       onMouseLeave={(e) => {
-        if (!disabled) {
-          if (!inlineBg) e.currentTarget.style.backgroundColor = style.bg;
-          e.currentTarget.style.filter = "";
-        }
+        if (disabled) return;
+        e.currentTarget.style.backgroundColor = baseBg;
+        e.currentTarget.style.color = style.text;
+        e.currentTarget.style.borderColor = style.border;
       }}
     >
       {children}

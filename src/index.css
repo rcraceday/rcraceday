@@ -51,6 +51,14 @@ a:hover {
   box-sizing: border-box;
 }
 
+.public-brand-logo {
+  max-width: 96px;
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto 8px;
+}
+
 .public-auth-logo {
   max-width: 160px;
   width: 100%;

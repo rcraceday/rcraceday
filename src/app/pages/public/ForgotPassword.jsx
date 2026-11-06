@@ -62,9 +62,9 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="public-auth">
+    <div className="public-auth" style={!club ? { padding: 0 } : undefined}>
       {logoSrc ? (
-        <img src={logoSrc} alt={club?.name || t("header.brandAlt")} className="public-auth-logo" />
+        <img src={logoSrc} alt={club?.name || t("header.brandAlt")} className={club ? "public-auth-logo" : "public-brand-logo"} />
       ) : null}
 
       <h1 className="public-auth-title">{t("auth.forgotPasswordTitle")}</h1>

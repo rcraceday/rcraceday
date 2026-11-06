@@ -288,7 +288,7 @@ export default function ClubFinder() {
           <Link to="/" style={styles.backLink}>
             ← {t("platformHome.backHome")}
           </Link>
-          <img src={rcracedayLogo} alt={t("clubSelect.brandAlt")} style={styles.brandLogoSmall} />
+          <img src={rcracedayLogo} alt={t("clubSelect.brandAlt")} className="public-brand-logo" />
         </header>
 
         <section style={styles.finderCard}>
@@ -446,7 +446,7 @@ const styles = {
     width: "100%",
     maxWidth: 640,
     margin: "0 auto",
-    padding: "24px 20px 32px",
+    padding: "20px 20px 24px",
     boxSizing: "border-box",
   },
   topBar: {
@@ -454,8 +454,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 40,
-    marginBottom: 20,
+    minHeight: 96,
+    marginBottom: 16,
   },
   backLink: {
     position: "absolute",
@@ -466,10 +466,6 @@ const styles = {
     fontWeight: 600,
     color: "#475569",
     textDecoration: "none",
-  },
-  brandLogoSmall: {
-    height: 40,
-    display: "block",
   },
   finderCard: {
     width: "100%",

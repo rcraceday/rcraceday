@@ -270,12 +270,12 @@ export default function ResetPassword() {
   const checkingLink = linkStatus === "pending";
 
   return (
-    <div className="public-auth" style={{ paddingTop: 32, paddingBottom: 32 }}>
+    <div className="public-auth" style={!club ? { padding: 0 } : undefined}>
       {logoSrc ? (
         <img
           src={logoSrc}
           alt={club?.name || t("header.brandAlt")}
-          className="public-auth-logo"
+          className={club ? "public-auth-logo" : "public-brand-logo"}
         />
       ) : null}
 

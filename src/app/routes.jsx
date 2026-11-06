@@ -191,7 +191,7 @@ function PlatformAuthLayout({ children }) {
           background: "white",
           display: "flex",
           justifyContent: "center",
-          padding: "24px",
+          padding: "20px 20px 24px",
           boxSizing: "border-box",
         }}
       >

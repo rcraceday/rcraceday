@@ -26,7 +26,6 @@ import {
 import { userBelongsToClub } from "@/app/providers/ClubProvider";
 
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
-import vehiclesImage from "@/assets/RCRaceday_Vehicles_Image.png";
 import Footer from "@/components/ui/Footer";
 
 const PLATFORM_BRAND = "#ce0202";
@@ -283,8 +282,7 @@ export default function PlatformHome() {
     <div style={styles.page}>
       <div style={styles.content}>
         <header style={styles.hero}>
-          <img src={rcracedayLogo} alt={t("clubSelect.brandAlt")} style={styles.brandLogo} />
-          <img src={vehiclesImage} alt="" style={styles.vehicles} />
+          <img src={rcracedayLogo} alt={t("clubSelect.brandAlt")} className="public-brand-logo" />
           <h1 style={styles.welcome}>{t("clubSelect.welcome")}</h1>
           {!user ? <p style={styles.heroLead}>{t("platformHome.guestLead")}</p> : null}
         </header>
@@ -336,7 +334,7 @@ export default function PlatformHome() {
             )}
             <div style={styles.sectionLinks}>
               <Button type="button" size="sm" onClick={() => navigate("/find-club")}>
-                {t("platformHome.findClub")}
+                {t(favoriteClubs.length === 0 ? "platformHome.findAClub" : "platformHome.findClub")}
               </Button>
               <Button type="button" size="sm" variant="secondary" onClick={handleLogOut}>
                 {t("platformHome.logOut")}
@@ -482,19 +480,6 @@ const styles = {
     alignItems: "center",
     marginBottom: 16,
   },
-  brandLogo: {
-    maxWidth: 96,
-    width: "100%",
-    height: "auto",
-    marginBottom: 8,
-  },
-  vehicles: {
-    width: "100%",
-    maxWidth: 280,
-    height: "auto",
-    marginBottom: 10,
-    opacity: 0.92,
-  },
   welcome: {
     fontSize: "clamp(1.35rem, 3.5vw, 1.625rem)",
     fontWeight: 700,
@@ -592,7 +577,7 @@ const styles = {
   },
   sectionLinks: {
     display: "flex",
-    flexWrap: "wrap",
+    flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
