@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/solid";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { parseDirectoryProfile } from "@/app/lib/primaryClub";
 import {
@@ -10,8 +9,6 @@ import { resolveDisciplineLabels } from "@/app/lib/platformDisciplines";
 import Button from "@/components/ui/Button";
 
 const PLATFORM_BRAND = "#ce0202";
-const PANEL_DARK = "#43464c";
-
 function ContactRow({ href, label, external }) {
   if (!label) return null;
   const content = (
@@ -153,17 +150,7 @@ export default function ClubDirectoryDetail({
             aria-expanded={detailsOpen}
             onClick={() => setDetailsOpen((open) => !open)}
           >
-            {detailsOpen ? (
-              <ChevronUpIcon style={styles.detailsChevron} aria-hidden />
-            ) : (
-              <ChevronDownIcon style={styles.detailsChevron} aria-hidden />
-            )}
-            <span>{t("clubSelect.clubDetails")}</span>
-            {detailsOpen ? (
-              <ChevronUpIcon style={styles.detailsChevron} aria-hidden />
-            ) : (
-              <ChevronDownIcon style={styles.detailsChevron} aria-hidden />
-            )}
+            <span>{t("clubSelect.moreInformation")}</span>
           </button>
         ) : null}
       </div>
@@ -352,7 +339,7 @@ const styles = {
     textTransform: "uppercase",
     letterSpacing: "0.04em",
     padding: "3px 8px",
-    borderRadius: 999,
+    borderRadius: 6,
     background: "#f3f4f6",
     color: "#475569",
     border: "1px solid #e5e7eb",
@@ -361,7 +348,7 @@ const styles = {
     fontSize: 12,
     fontWeight: 500,
     padding: "4px 10px",
-    borderRadius: 999,
+    borderRadius: 6,
     background: "#f3f4f6",
     color: "#334155",
     border: "1px solid #e5e7eb",
@@ -383,7 +370,7 @@ const styles = {
     color: "#fff",
     background: PLATFORM_BRAND,
     padding: "2px 6px",
-    borderRadius: 999,
+    borderRadius: 6,
     lineHeight: 1.2,
     whiteSpace: "nowrap",
   },
@@ -393,21 +380,15 @@ const styles = {
     padding: "9px 14px",
     fontSize: 14,
     fontWeight: 600,
-    color: "#f9fafb",
-    background: PANEL_DARK,
-    border: `1px solid ${PANEL_DARK}`,
+    color: PLATFORM_BRAND,
+    background: "#ffffff",
+    border: `2px solid ${PLATFORM_BRAND}`,
     borderRadius: 8,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-  },
-  detailsChevron: {
-    width: 20,
-    height: 20,
-    color: PLATFORM_BRAND,
-    flexShrink: 0,
   },
   body: {
     padding: "0 18px 8px",
@@ -441,7 +422,7 @@ const styles = {
     fontSize: 13,
     fontWeight: 500,
     padding: "6px 12px",
-    borderRadius: 999,
+    borderRadius: 6,
     background: "#f3f4f6",
     color: "#111827",
     border: "1px solid #e5e7eb",

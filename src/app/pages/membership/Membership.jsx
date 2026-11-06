@@ -1,10 +1,11 @@
 // src/app/pages/membership/Membership.jsx
 
 import { IdentificationIcon } from "@heroicons/react/24/solid";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useParams } from "react-router-dom";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
+import BackNavButton from "@/components/ui/BackNavButton";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
 import NonMemberView from "./membership-sections/NonMemberView";
@@ -12,12 +13,14 @@ import MemberView from "./membership-sections/MemberView";
 
 export default function Membership() {
   const { club } = useOutletContext();
+  const { clubSlug } = useParams();
   const { membership, loadingMembership } = useMembership();
   const { palette } = useTheme();
   const { t } = useTranslation();
 
   const brand = palette?.primary || "#00438a";
   const isMember = membership?.isMember === true;
+  const homePath = clubSlug ? `/${clubSlug}/app` : null;
 
   return (
     <>
@@ -25,6 +28,11 @@ export default function Membership() {
         icon={IdentificationIcon}
         title={t("membership.title")}
         style={{ color: brand }}
+        actions={
+          <BackNavButton
+            to={loadingMembership || !isMember ? homePath : null}
+          />
+        }
       />
 
       {loadingMembership ? (

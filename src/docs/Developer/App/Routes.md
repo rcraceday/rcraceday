@@ -54,11 +54,13 @@ ClubProvider
       Public Pages
 Used for:
 
-login
+club access (claim-membership / access)
 
-signup
+check-email
 
 password reset
+
+legacy `/public/login` and `/public/signup` (redirect or auth callbacks only)
 
 public info pages
 

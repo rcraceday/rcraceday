@@ -8,6 +8,8 @@ import { useTranslation } from "@/app/i18n/I18nContext";
 import ClubProvider from "@/app/providers/ClubProvider";
 import ThemeProvider from "@/app/providers/ThemeProvider";
 import ProfileProvider from "@/app/providers/ProfileProvider";
+import UserTranspondersProvider from "@/app/providers/UserTranspondersProvider";
+import PlatformPeopleProvider from "@/app/providers/PlatformPeopleProvider";
 import MembershipProvider from "@/app/providers/MembershipProvider";
 import DriverProvider from "@/app/providers/DriverProvider";
 import NumberProvider from "@/app/providers/NumberProvider";
@@ -19,17 +21,21 @@ function AuthenticatedProviders({ children }) {
     <ClubProvider>
       <ThemeProvider>
         <ProfileProvider>
-          <MembershipProvider>
-            <AdminAccessProvider>
-              <DriverProvider>
-                <NumberProvider>
-                  <NotificationProvider>
-                    {children}
-                  </NotificationProvider>
-                </NumberProvider>
-              </DriverProvider>
-            </AdminAccessProvider>
-          </MembershipProvider>
+          <UserTranspondersProvider>
+            <PlatformPeopleProvider>
+              <MembershipProvider>
+                <AdminAccessProvider>
+                  <DriverProvider>
+                    <NumberProvider>
+                      <NotificationProvider>
+                        {children}
+                      </NotificationProvider>
+                    </NumberProvider>
+                  </DriverProvider>
+                </AdminAccessProvider>
+              </MembershipProvider>
+            </PlatformPeopleProvider>
+          </UserTranspondersProvider>
         </ProfileProvider>
       </ThemeProvider>
     </ClubProvider>

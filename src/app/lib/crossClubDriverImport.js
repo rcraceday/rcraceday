@@ -5,6 +5,7 @@ import {
   resolveDriverNumberRules,
 } from "@/app/lib/driverClubSettings";
 import { canAddHouseholdDriver } from "@/app/pages/profile/householdDriverLimits";
+import { linkDriverToPlatformPerson } from "@/app/lib/platformPeople";
 
 export function normalizeClassNameForMatch(name) {
   return String(name || "")
@@ -218,6 +219,13 @@ export async function importDriverFromOtherClub({
 
     if (insertError) return { ok: false, error: insertError.message };
     newDriverId = guestDriver.id;
+    await linkDriverToPlatformPerson(supabase, {
+      driverId: newDriverId,
+      userId: user.id,
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
+      isJunior: isJunior,
+    });
   } else {
     const { data: driver, error: insertError } = await supabase
       .from("drivers")
@@ -234,6 +242,14 @@ export async function importDriverFromOtherClub({
 
     if (insertError) return { ok: false, error: insertError.message };
     newDriverId = driver.id;
+
+    await linkDriverToPlatformPerson(supabase, {
+      driverId: newDriverId,
+      userId: user.id,
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
+      isJunior: isJunior,
+    });
 
     await supabase.from("club_members").insert({
       membership_id: membership.id,

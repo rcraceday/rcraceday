@@ -163,6 +163,11 @@ export default {
     alreadyLinked: "That membership is already linked to another account.",
     alreadyHasMembership: "Your account is already linked to a membership at this club.",
     failed: "Unable to link that membership. Please try again.",
+    rosterTitle: "Add racers to {{club}}",
+    rosterHint:
+      "Tick anyone on your account roster who should have a driver profile at this club. You can add more later in Driver Manager.",
+    rosterAddSelected: "Add selected & continue",
+    rosterSkip: "Skip — I’ll add drivers later",
   },
   nominationsFlow: {
     title: "Nominations",

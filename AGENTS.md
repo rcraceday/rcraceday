@@ -15,7 +15,7 @@ Supabase configuration is required for the app to load data. Define `VITE_SUPABA
 ## Architecture Rules
 
 - This is a club-scoped multi-tenant React/Vite app. Club URLs use `/:clubSlug/...`.
-- Keep the provider dependency order in `src/app/providers/AppProviders.jsx`: Auth, Club, Profile, Membership, Driver, Number, Notification.
+- Keep the provider dependency order in `src/app/providers/AppProviders.jsx`: Auth, Club, Profile, **UserTransponders**, **PlatformPeople**, Membership, Driver, Number, Notification.
 - Do not make public routes depend on authenticated-only providers or data.
 - Keep route layers separate:
   - `/:clubSlug/public/*` uses `PublicLayout`.

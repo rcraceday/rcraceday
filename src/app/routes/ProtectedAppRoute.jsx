@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
+import { supabase } from "@/supabaseClient";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
@@ -21,8 +23,30 @@ export default function ProtectedAppRoute({ children, admin = false }) {
   const location = useLocation();
   const safeReturnTo = appReturnPathFromLocation(location, clubSlug);
   const loginTo = platformLoginPathForClub(clubSlug, safeReturnTo);
+  const [sessionProbe, setSessionProbe] = useState(
+    loadingUser || session?.user ? "ready" : "checking"
+  );
 
-  if (loadingUser) {
+  useEffect(() => {
+    if (loadingUser || session?.user) {
+      setSessionProbe("ready");
+      return undefined;
+    }
+    let cancelled = false;
+    setSessionProbe("checking");
+    (async () => {
+      const {
+        data: { session: stored },
+      } = await supabase.auth.getSession();
+      if (cancelled) return;
+      setSessionProbe(stored?.user ? "ready" : "missing");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadingUser, session?.user]);
+
+  if (loadingUser || (!session?.user && sessionProbe === "checking")) {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
         Checking access…

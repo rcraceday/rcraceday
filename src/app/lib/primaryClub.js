@@ -62,18 +62,30 @@ export async function resolvePrimaryClubSlug({ userId } = {}) {
       .eq("id", userId)
       .maybeSingle();
 
-    if (!error && profile?.primary_club_id) {
-      const { data: club } = await supabase
-        .from("clubs")
-        .select("slug")
-        .eq("id", profile.primary_club_id)
-        .maybeSingle();
-
-      if (club?.slug) {
-        setPrimaryClubSlugInStorage(club.slug);
-        return club.slug;
-      }
+    if (error) {
+      console.warn("[resolvePrimaryClubSlug] profile", error.message);
+      return getPrimaryClubSlugFromStorage();
     }
+
+    // Logged-in but no home club in profile — do not reuse another user's localStorage slug.
+    if (!profile?.primary_club_id) {
+      setPrimaryClubSlugInStorage("");
+      return "";
+    }
+
+    const { data: club } = await supabase
+      .from("clubs")
+      .select("slug")
+      .eq("id", profile.primary_club_id)
+      .maybeSingle();
+
+    if (club?.slug) {
+      setPrimaryClubSlugInStorage(club.slug);
+      return club.slug;
+    }
+
+    setPrimaryClubSlugInStorage("");
+    return "";
   }
 
   return getPrimaryClubSlugFromStorage();

@@ -44,11 +44,13 @@ src/app/providers/
   NotificationContext.jsx
   NotificationProvider.jsx
   NumberProvider.jsx
+  PlatformPeopleProvider.jsx
   ProfileContext.jsx
   ProfileProvider.jsx
   RacerDirectoryContext.jsx
   RacerDirectoryProvider.jsx
   ThemeProvider.jsx
+  UserTranspondersProvider.jsx
   useTheme.js
 These providers form the global state backbone of RCRaceDay.
 
@@ -259,13 +261,16 @@ ClubProvider
 User App Pages
 Code
 ClubProvider
-  AuthProvider
+  ThemeProvider
     ProfileProvider
-      MembershipProvider
-        ThemeProvider
-          NotificationProvider
-            DriverProvider (only in driver pages)
-              AppLayout
+      UserTranspondersProvider
+        PlatformPeopleProvider
+          MembershipProvider
+            DriverProvider
+              NumberProvider
+                NotificationProvider
+                  AppLayout
+Note: `AppProviders.jsx` composes the authenticated stack (see `ARCHITECTURE.md`). Public routes render without the inner providers.
 Admin Pages
 Code
 ClubProvider

@@ -44,8 +44,6 @@ const CLUB_DIRECTORY_SELECT =
   "id, name, slug, logo_url, short_name, description, contact_email, website, phone, facebook, instagram, directory_profile, platform_subscribed";
 
 const PLATFORM_BRAND = "#ce0202";
-const FINDER_PANEL = "#43464c";
-const FINDER_BORDER = "#64748b";
 
 export default function ClubFinder() {
   const navigate = useNavigate();
@@ -291,20 +289,21 @@ export default function ClubFinder() {
           <img src={rcracedayLogo} alt={t("clubSelect.brandAlt")} className="public-brand-logo" />
         </header>
 
-        <section style={styles.finderCard}>
-          <div style={styles.finderHeader}>
-            <h1 style={styles.title}>{t("clubSelect.title")}</h1>
-            <p style={styles.subtitle}>{t("clubSelect.subtitle")}</p>
-          </div>
+        <div className="platform-surface-card platform-find-club-card">
+          <section className="club-directory-panel">
+            <div style={styles.finderHeader}>
+              <h1 style={styles.title}>{t("clubSelect.title")}</h1>
+              <p style={styles.subtitle}>{t("clubSelect.subtitle")}</p>
+            </div>
 
-          {loading ? (
-            <p style={styles.status}>{t("loading.loading")}</p>
-          ) : loadError ? (
-            <p style={styles.error}>{t("clubSelect.loadError")}</p>
-          ) : clubs.length === 0 ? (
-            <p style={styles.status}>{t("clubSelect.noSubscribedClubs")}</p>
-          ) : (
-            <>
+            {loading ? (
+              <p style={styles.status}>{t("loading.loading")}</p>
+            ) : loadError ? (
+              <p style={styles.error}>{t("clubSelect.loadError")}</p>
+            ) : clubs.length === 0 ? (
+              <p style={styles.status}>{t("clubSelect.noSubscribedClubs")}</p>
+            ) : (
+              <>
               <div style={styles.searchWrap}>
                 <label style={styles.searchLabel} htmlFor="club-directory-search">
                   {t("clubSelect.searchLabel")}
@@ -421,11 +420,12 @@ export default function ClubFinder() {
                 onToggleFavorite={() => selectedClub && handleToggleFavorite(selectedClub)}
               />
               ) : null}
-            </>
-          )}
-        </section>
+              </>
+            )}
+          </section>
+        </div>
 
-        <p style={styles.clubSignup}>{t("clubSelect.clubSignupPitch")}</p>
+        <p className="platform-home-club-signup-pitch">{t("clubSelect.clubSignupPitch")}</p>
       </div>
       <Footer />
     </div>
@@ -467,16 +467,6 @@ const styles = {
     color: "#475569",
     textDecoration: "none",
   },
-  finderCard: {
-    width: "100%",
-    maxWidth: "100%",
-    boxSizing: "border-box",
-    overflow: "hidden",
-    background: "#2f3237",
-    borderRadius: 16,
-    border: "1px solid #43464c",
-    padding: "24px 20px 20px",
-  },
   finderHeader: {
     marginBottom: 20,
     textAlign: "center",
@@ -484,13 +474,13 @@ const styles = {
   title: {
     fontSize: "clamp(1.5rem, 4vw, 1.875rem)",
     fontWeight: 700,
-    color: "#f9fafb",
+    color: "#111827",
     margin: "0 0 8px",
     letterSpacing: "-0.02em",
   },
   subtitle: {
     fontSize: 13,
-    color: "#cbd5e1",
+    color: "#64748b",
     margin: 0,
     lineHeight: 1.5,
   },
@@ -514,7 +504,7 @@ const styles = {
     padding: "6px 0",
     border: "none",
     background: "transparent",
-    color: "#cbd5e1",
+    color: "#475569",
     cursor: "pointer",
     textDecoration: "underline",
   },
@@ -524,9 +514,9 @@ const styles = {
     fontWeight: 700,
     padding: "2px 7px",
     borderRadius: 999,
-    background: FINDER_PANEL,
-    border: `1px solid ${FINDER_BORDER}`,
-    color: "#f9fafb",
+    background: "#e2e8f0",
+    border: "1px solid #cbd5e1",
+    color: "#334155",
   },
   filtersPanel: {
     marginTop: 8,
@@ -540,7 +530,7 @@ const styles = {
     display: "block",
     fontSize: 12,
     fontWeight: 600,
-    color: "#e2e8f0",
+    color: "#475569",
     marginBottom: 6,
     textAlign: "left",
   },
@@ -552,7 +542,7 @@ const styles = {
     display: "block",
     fontSize: 12,
     fontWeight: 600,
-    color: "#e2e8f0",
+    color: "#475569",
     marginBottom: 8,
   },
   geoRow: {
@@ -569,9 +559,9 @@ const styles = {
     fontWeight: 600,
     padding: "9px 14px",
     borderRadius: 8,
-    border: `1px solid ${FINDER_BORDER}`,
-    background: FINDER_PANEL,
-    color: "#f9fafb",
+    border: "1px solid #cbd5e1",
+    background: "#f8fafc",
+    color: "#1e293b",
     cursor: "pointer",
   },
   geoClear: {
@@ -590,15 +580,15 @@ const styles = {
     alignItems: "center",
     gap: 8,
     fontSize: 13,
-    color: "#e2e8f0",
+    color: "#475569",
   },
   radiusSelect: {
     fontSize: 13,
     padding: "6px 8px",
     borderRadius: 6,
-    border: "1px solid #64748b",
-    background: "#43464c",
-    color: "#f9fafb",
+    border: "1px solid #cbd5e1",
+    background: "#fff",
+    color: "#1e293b",
   },
   geoHint: {
     margin: "8px 0 0",
@@ -640,9 +630,9 @@ const styles = {
     fontWeight: 600,
     padding: "9px 14px",
     borderRadius: 8,
-    border: `1px solid ${FINDER_BORDER}`,
-    background: FINDER_PANEL,
-    color: "#f9fafb",
+    border: "1px solid #cbd5e1",
+    background: "#f8fafc",
+    color: "#1e293b",
     cursor: "pointer",
   },
 };

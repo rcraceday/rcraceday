@@ -155,6 +155,320 @@ a:hover {
   justify-content: center;
 }
 
+/* ===========================
+   CLUB DIRECTORY PANEL (/, /find-club shared)
+   Lighter grey than original finder card.
+   =========================== */
+
+.club-directory-panel {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #4b5563;
+  border-radius: 16px;
+  border: 1px solid #6b7280;
+  padding: 24px 20px 20px;
+}
+
+.club-directory-panel .platform-club-tile-menu .hamburger-icon {
+  color: #e2e8f0;
+}
+
+/* White bordered surface (platform / and /find-club) */
+.platform-surface-card {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 24px 20px 28px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.platform-find-club-card {
+  max-width: 640px;
+  padding: 20px 20px 24px;
+}
+
+.platform-find-club-card .club-directory-panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.platform-home-club-signup-pitch {
+  margin-top: 16px;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #64748b;
+  text-align: center;
+}
+
+.platform-home-skip-club {
+  margin: 16px 0 0;
+  font-size: 14px;
+  color: #475569;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.platform-home-skip-club label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.platform-home-skip-club input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.platform-home-signup-leads .public-auth-lead:first-child {
+  margin-bottom: 8px;
+}
+
+.platform-home-signup-leads .public-auth-lead:last-child {
+  margin-bottom: 24px;
+}
+
+.platform-home-loading {
+  margin: 0;
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 15px;
+  color: #64748b;
+}
+
+/* ===========================
+   PLATFORM HOME (/)
+   =========================== */
+
+.platform-home-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  background: #ffffff;
+}
+
+.platform-home-content {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 20px 24px;
+  box-sizing: border-box;
+}
+
+/* White strip above grey panel on / */
+.platform-home-hero {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.platform-home-hero .public-brand-logo {
+  margin-bottom: 12px;
+}
+
+.platform-home-hero-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 3.5vw, 1.625rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.platform-home-hero-lead {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #64748b;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.platform-home-signed-in {
+  width: 100%;
+  margin: 0;
+}
+
+/* Signed-in club chooser: same width as login until multiple clubs need room */
+.platform-home-signed-in-card {
+  max-width: 420px;
+  width: 100%;
+}
+
+.platform-home-signed-in-card--expanded {
+  max-width: 680px;
+}
+
+.platform-home-skip-club--signed-in {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 4px auto 14px;
+  box-sizing: border-box;
+}
+
+.platform-home-skip-club-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  column-gap: 0;
+  row-gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.platform-home-skip-club--signed-in label.platform-home-skip-club-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 0 1 auto;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  line-height: 1.35;
+}
+
+.platform-home-skip-club-label span {
+  flex: 0 1 auto;
+}
+
+.platform-home-skip-club-label input[type="checkbox"] {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.platform-home-skip-info-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.platform-home-skip-info-btn:hover,
+.platform-home-skip-info-btn:focus-visible {
+  color: #0f172a;
+  background: #f1f5f9;
+  outline: none;
+}
+
+.platform-home-skip-info-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.platform-home-skip-info-panel {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.platform-home-skip-info-panel-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.platform-home-skip-info-panel-text + .platform-home-skip-info-panel-text {
+  margin-top: 8px;
+}
+
+.platform-home-signed-in-card--expanded .platform-home-skip-club--signed-in {
+  max-width: none;
+}
+
+.platform-home-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.platform-home-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.platform-home-muted {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.platform-home-club-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  margin: 0 auto 20px;
+}
+
+/* Match club tile width (168px) */
+.platform-home-section-links {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.platform-home-action-stack {
+  width: 168px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.platform-home-action-stack .platform-home-action-btn {
+  width: 100%;
+  box-sizing: border-box;
+  justify-content: center;
+}
+
 .filter-dropdown {
   position: relative;
 }

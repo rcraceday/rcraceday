@@ -10,6 +10,8 @@ import Button from "@/components/ui/Button";
 import { platformConfirmEmailRedirectUrl } from "@/app/lib/publicAuthRedirect";
 import SettingsPage from "./SettingsPage";
 import SettingsCard from "./SettingsCard";
+import TransponderInventoryCard from "./TransponderInventoryCard";
+import PlatformRosterCard from "./PlatformRosterCard";
 import { settingsStyles as s } from "./settingsStyles";
 
 const AU_STATES = ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
@@ -367,6 +369,10 @@ export default function AccountSettings() {
           </Button>
         </div>
       </SettingsCard>
+
+      <TransponderInventoryCard />
+
+      <PlatformRosterCard />
     </SettingsPage>
   );
 }

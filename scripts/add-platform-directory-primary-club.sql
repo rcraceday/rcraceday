@@ -33,4 +33,4 @@ create policy "profiles_update_own_primary_club"
   with check (id = auth.uid());
 
 -- Enable directory for existing tenants during rollout (adjust slug as needed):
--- update public.clubs set platform_subscribed = true where slug in ('chargers-rc');
+-- update public.clubs set platform_subscribed = true where slug in ('chargers-rc', 'rcraceday');

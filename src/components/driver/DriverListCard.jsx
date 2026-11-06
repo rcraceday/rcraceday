@@ -10,6 +10,8 @@ import TransponderCombobox from "@/components/ui/TransponderCombobox";
 import { UserCircleIcon, ChevronDownIcon, ChevronUpIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/supabaseClient";
+import { useUserTransponders } from "@/app/providers/UserTranspondersProvider";
+import { persistDriverClassTransponder } from "@/app/lib/userTransponders";
 
 export default function DriverListCard({
   driver,
@@ -20,6 +22,8 @@ export default function DriverListCard({
   const { t } = useTranslation();
   const { club } = useClub();
   const { palette } = useTheme();
+  const { transponders, mergeSuggestions, ensureTransponderNumber } =
+    useUserTransponders();
   const brand = brandProp || palette?.primary || "#0A66C2";
   if (!driver) return null;
 
@@ -158,30 +162,33 @@ export default function DriverListCard({
 
   const handleTransponderChange = async (driverClassId, value) => {
     if (!driverClassId) return;
-    const { error } = await supabase
-      .from("driver_classes")
-      .update({ transponder_number: value })
-      .eq("id", driverClassId);
+    const { error } = await persistDriverClassTransponder(supabase, {
+      driverClassId,
+      number: value,
+      inventoryRows: transponders,
+      ensureTransponderNumber,
+    });
 
     if (error) {
       console.error("Error updating transponder number:", error);
       return;
     }
+    const sanitized = String(value ?? "").replace(/\D/g, "").slice(0, 8);
     setAssignedClasses((prev) =>
       prev.map((dc) =>
-        dc.id === driverClassId ? { ...dc, transponder_number: value } : dc
+        dc.id === driverClassId ? { ...dc, transponder_number: sanitized } : dc
       )
     );
   };
 
   const savedTransponders = useMemo(() => {
-    const values = new Set();
+    const local = [];
     assignedClasses.forEach((row) => {
       const trimmed = (row.transponder_number || "").trim();
-      if (trimmed) values.add(trimmed);
+      if (trimmed) local.push(trimmed);
     });
-    return Array.from(values).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, [assignedClasses]);
+    return mergeSuggestions(local);
+  }, [assignedClasses, mergeSuggestions]);
 
   const classesById = useMemo(
     () => Object.fromEntries(availableClubClasses.map((clubClass) => [clubClass.id, clubClass])),

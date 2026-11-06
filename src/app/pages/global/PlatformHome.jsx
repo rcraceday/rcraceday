@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   platformConfirmEmailRedirectUrl,
@@ -24,11 +25,31 @@ import {
   setPrimaryClubSlugInStorage,
 } from "@/app/lib/primaryClub";
 import { userBelongsToClub } from "@/app/providers/ClubProvider";
+import { reconcileClubAccess } from "@/app/lib/reconcileClubAccess";
+import { platformAuthEmailRegistered } from "@/app/lib/platformAuthEmail";
+import {
+  consumeSkipRedirectPending,
+  getSkipClubSelection,
+  markSkipRedirectPending,
+  peekSkipRedirectPending,
+  setSkipClubSelection as persistSkipClubSelection,
+} from "@/app/lib/platformHomePrefs";
 
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
 import Footer from "@/components/ui/Footer";
 
 const PLATFORM_BRAND = "#ce0202";
+
+/** Home club first; remaining order unchanged (favorites placed after home via Set Favorite). */
+function orderClubsForDisplay(clubs, homeSlug) {
+  if (!clubs?.length) return [];
+  const home = String(homeSlug || "").trim();
+  if (!home) return [...clubs];
+  const homeClub = clubs.find((c) => c.slug === home);
+  if (!homeClub) return [...clubs];
+  const rest = clubs.filter((c) => c.slug !== home);
+  return [homeClub, ...rest];
+}
 
 export default function PlatformHome() {
   const { user, loadingUser } = useAuth();
@@ -46,11 +67,21 @@ export default function PlatformHome() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [authErrorPromptSignup, setAuthErrorPromptSignup] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const [openMenuSlug, setOpenMenuSlug] = useState("");
   const [menuBusy, setMenuBusy] = useState(false);
   const [primaryClubSlug, setPrimaryClubSlug] = useState("");
+  const [primaryClubResolved, setPrimaryClubResolved] = useState(false);
+  const [skipClubSelection, setSkipClubSelection] = useState(() => getSkipClubSelection());
+  const [skipClubInfoOpen, setSkipClubInfoOpen] = useState(false);
+  const skipClubInfoWrapRef = useRef(null);
+  const skipReconcileGenRef = useRef(0);
+  const skipClubInfoPanelId = useId();
+
+  const returnToParam = useMemo(() => searchParams.get("returnTo") ?? "", [searchParams]);
+  const chooseClubParam = searchParams.get("choose") === "1";
 
   useEffect(() => {
     if (!user?.id) {
@@ -64,7 +95,8 @@ export default function PlatformHome() {
       const slugs = await resolveFavoriteClubSlugs({ userId: user.id });
       const cards = await fetchFavoriteClubCards(slugs);
       if (!cancelled) {
-        setFavoriteClubs(cards);
+        const home = await resolvePrimaryClubSlug({ userId: user.id });
+        setFavoriteClubs(orderClubsForDisplay(cards, home));
         setLoadingClubs(false);
       }
     })();
@@ -75,14 +107,29 @@ export default function PlatformHome() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (!user?.id || !primaryClubSlug || favoriteClubs.length < 2) return;
+    setFavoriteClubs((prev) => {
+      const next = orderClubsForDisplay(prev, primaryClubSlug);
+      const prevKey = prev.map((c) => c.slug).join("|");
+      const nextKey = next.map((c) => c.slug).join("|");
+      return prevKey === nextKey ? prev : next;
+    });
+  }, [primaryClubSlug, user?.id, favoriteClubs.length]);
+
+  useEffect(() => {
     if (!user?.id) {
       setPrimaryClubSlug("");
+      setPrimaryClubResolved(false);
       return;
     }
+    setPrimaryClubResolved(false);
     let cancelled = false;
     (async () => {
       const slug = await resolvePrimaryClubSlug({ userId: user.id });
-      if (!cancelled) setPrimaryClubSlug(slug || "");
+      if (!cancelled) {
+        setPrimaryClubSlug(slug || "");
+        setPrimaryClubResolved(true);
+      }
     })();
     return () => {
       cancelled = true;
@@ -91,47 +138,125 @@ export default function PlatformHome() {
 
   useEffect(() => {
     if (loadingUser || !user) return;
-    const raw = searchParams.get("returnTo");
-    if (!raw) return;
-    const destination = sanitizePlatformReturnPath(raw);
+    if (!returnToParam) return;
+    const destination = sanitizePlatformReturnPath(returnToParam);
     if (!destination) return;
     setSearchParams({}, { replace: true });
     navigate(destination, { replace: true });
-  }, [loadingUser, user, searchParams, navigate, setSearchParams]);
+  }, [loadingUser, user, returnToParam, navigate, setSearchParams]);
+
+  useEffect(() => {
+    if (loadingUser || !user?.id) return;
+    if (returnToParam || chooseClubParam) return;
+    if (!primaryClubResolved) return;
+    if (!getSkipClubSelection()) return;
+    if (!peekSkipRedirectPending()) return;
+    const slug = String(primaryClubSlug || "").trim();
+    if (!slug) return;
+    consumeSkipRedirectPending();
+
+    const gen = ++skipReconcileGenRef.current;
+    (async () => {
+      const { data: clubRow, error } = await supabase
+        .from("clubs")
+        .select("id, slug, name")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (skipReconcileGenRef.current !== gen) return;
+      if (error || !clubRow?.id) {
+        persistSkipClubSelection(false);
+        setSkipClubSelection(false);
+        return;
+      }
+      await reconcileClubAccess({
+        user,
+        club: clubRow,
+        clubSlug: slug,
+        navigate,
+        returnTo: "",
+        skipMembershipClaim: true,
+      });
+    })();
+  }, [loadingUser, user, returnToParam, chooseClubParam, navigate, primaryClubResolved, primaryClubSlug]);
+
+  useEffect(() => {
+    if (!skipClubInfoOpen) return undefined;
+
+    function handlePointerDown(e) {
+      const root = skipClubInfoWrapRef.current;
+      if (root && !root.contains(e.target)) {
+        setSkipClubInfoOpen(false);
+      }
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === "Escape") setSkipClubInfoOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [skipClubInfoOpen]);
+
+  useEffect(() => {
+    if (!user?.id || loadingClubs || !primaryClubResolved) return;
+    if (primaryClubSlug) return;
+    if (!getSkipClubSelection()) return;
+    setSkipClubSelection(false);
+    persistSkipClubSelection(false);
+  }, [user?.id, loadingClubs, primaryClubSlug, primaryClubResolved]);
 
   function showLogin() {
     setAuthMode("login");
     setAuthError("");
+    setAuthErrorPromptSignup(false);
     setSearchParams({}, { replace: true });
   }
 
   function showSignup() {
     setAuthMode("signup");
     setAuthError("");
+    setAuthErrorPromptSignup(false);
     setSearchParams({ signup: "1" }, { replace: true });
   }
 
   async function handlePlatformLogin(e) {
     e.preventDefault();
     setAuthError("");
+    setAuthErrorPromptSignup(false);
     setAuthLoading(true);
+    const cleanEmail = email.trim().toLowerCase();
     const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       password,
     });
-    setAuthLoading(false);
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed")) {
-        setPendingEmail(email.trim().toLowerCase());
+        setAuthLoading(false);
+        setPendingEmail(cleanEmail);
         setAuthMode("checkEmail");
         return;
       }
       if (error.message.includes("Invalid login credentials")) {
+        const registered = await platformAuthEmailRegistered(cleanEmail);
+        setAuthLoading(false);
+        if (registered === false) {
+          setAuthError(t("auth.noAccountForEmail"));
+          setAuthErrorPromptSignup(true);
+          return;
+        }
         setAuthError(t("auth.invalidCredentials"));
         return;
       }
+      setAuthLoading(false);
       setAuthError(error.message);
+      return;
     }
+    if (getSkipClubSelection()) markSkipRedirectPending();
+    setAuthLoading(false);
   }
 
   async function handlePlatformSignup(e) {
@@ -181,6 +306,7 @@ export default function PlatformHome() {
     if (!data.session) {
       setPendingEmail(cleanEmail);
       setAuthMode("checkEmail");
+      return;
     }
   }
 
@@ -197,10 +323,11 @@ export default function PlatformHome() {
   }
 
   async function persistOrderFromClubs(orderedClubs) {
-    const slugs = orderedClubs.map((c) => c.slug).filter(Boolean);
+    const normalized = orderClubsForDisplay(orderedClubs, primaryClubSlug);
+    const slugs = normalized.map((c) => c.slug).filter(Boolean);
     const result = await persistFavoriteClubSlugs({ userId: user?.id, slugs });
     if (result.ok) {
-      setFavoriteClubs(orderedClubs);
+      setFavoriteClubs(normalized);
     }
     return result.ok;
   }
@@ -211,20 +338,49 @@ export default function PlatformHome() {
     const slugs = favoriteClubs.map((c) => c.slug).filter(Boolean);
     const nextSlugs = [club.slug, ...slugs.filter((s) => s !== club.slug)];
     const cards = await fetchFavoriteClubCards(nextSlugs);
-    await persistFavoriteClubSlugs({ userId: user?.id, slugs: nextSlugs });
+    const ordered = orderClubsForDisplay(cards, club.slug);
+    await persistFavoriteClubSlugs({
+      userId: user?.id,
+      slugs: ordered.map((c) => c.slug).filter(Boolean),
+    });
     await persistPrimaryClub({
       userId: user?.id,
       clubId: club.id,
       clubSlug: club.slug,
     });
-    setFavoriteClubs(cards);
+    setFavoriteClubs(ordered);
     setPrimaryClubSlug(club.slug);
+    setOpenMenuSlug("");
+    setMenuBusy(false);
+  }
+
+  async function handleSetFavoriteClub(club) {
+    if (!club?.slug || menuBusy) return;
+    const home = String(primaryClubSlug || "").trim();
+    if (!home || club.slug === home) return;
+
+    setMenuBusy(true);
+    const slugs = favoriteClubs.map((c) => c.slug).filter(Boolean);
+    const without = slugs.filter((s) => s !== club.slug);
+    if (!without.includes(home)) {
+      setMenuBusy(false);
+      return;
+    }
+    const tail = without.filter((s) => s !== home);
+    const nextSlugs = [home, club.slug, ...tail];
+    const cards = await fetchFavoriteClubCards(nextSlugs);
+    await persistOrderFromClubs(cards);
     setOpenMenuSlug("");
     setMenuBusy(false);
   }
 
   async function handleMoveClub(index, direction) {
     if (menuBusy) return;
+    const home = String(primaryClubSlug || "").trim();
+    const homeIndex = home ? favoriteClubs.findIndex((c) => c.slug === home) : -1;
+    if (homeIndex >= 0 && (index === homeIndex || (direction === "left" ? index - 1 : index + 1) === homeIndex)) {
+      return;
+    }
     const target = direction === "left" ? index - 1 : index + 1;
     if (target < 0 || target >= favoriteClubs.length) return;
     setMenuBusy(true);
@@ -251,7 +407,7 @@ export default function PlatformHome() {
     });
     if (result.ok) {
       const remaining = favoriteClubs.filter((c) => c.slug !== club.slug);
-      setFavoriteClubs(remaining);
+      setFavoriteClubs(orderClubsForDisplay(remaining, primaryClubSlug === club.slug ? "" : primaryClubSlug));
       if (primaryClubSlug === club.slug) {
         if (remaining[0]) {
           await persistPrimaryClub({
@@ -278,71 +434,180 @@ export default function PlatformHome() {
     await supabase.auth.signOut();
   }
 
+  const authErrorMessage =
+    authError ? (
+      <p className="public-auth-error">
+        {authError}{" "}
+        {authErrorPromptSignup ? (
+          <button
+            type="button"
+            className="public-auth-link"
+            onClick={showSignup}
+            style={styles.textLinkButton}
+          >
+            {t("auth.signUp")}
+          </button>
+        ) : null}
+      </p>
+    ) : null;
+
   return (
-    <div style={styles.page}>
-      <div style={styles.content}>
-        <header style={styles.hero}>
+    <div className="platform-home-page">
+      <div className="platform-home-content">
+        <header className="platform-home-hero">
           <img src={rcracedayLogo} alt={t("clubSelect.brandAlt")} className="public-brand-logo" />
-          <h1 style={styles.welcome}>{t("clubSelect.welcome")}</h1>
-          {!user ? <p style={styles.heroLead}>{t("platformHome.guestLead")}</p> : null}
+          {!user || loadingUser ? (
+            <>
+              <h1 className="platform-home-hero-title">{t("clubSelect.welcome")}</h1>
+              {!user && !loadingUser ? (
+                <p className="platform-home-hero-lead">{t("platformHome.guestLead")}</p>
+              ) : null}
+            </>
+          ) : (
+            <h1 className="platform-home-hero-title">{t("clubSelect.welcome")}</h1>
+          )}
         </header>
 
         {loadingUser ? (
-          <p style={styles.muted}>{t("loading.loading")}</p>
+          <p className="platform-home-loading">{t("loading.loading")}</p>
         ) : user ? (
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>{t("platformHome.yourClubs")}</h2>
-            {loadingClubs ? (
-              <p style={styles.muted}>{t("loading.loading")}</p>
-            ) : favoriteClubs.length === 0 ? (
-              <p style={styles.muted}>{t("platformHome.noFavorites")}</p>
-            ) : (
-              <div style={styles.clubGrid}>
-                {favoriteClubs.map((club, index) => (
-                  <div key={club.id} style={styles.clubTileWrap}>
-                    {primaryClubSlug === club.slug ? (
-                      <span style={styles.homeClubBadge}>{t("platformHome.homeClubBadge")}</span>
-                    ) : null}
+          <div
+            className={`platform-surface-card platform-home-signed-in-card${
+              favoriteClubs.length > 1 ? " platform-home-signed-in-card--expanded" : ""
+            }`}
+          >
+            <div className="platform-home-signed-in">
+              <h2 className="platform-home-section-title">{t("platformHome.yourClubs")}</h2>
+              {loadingClubs ? (
+                <p className="platform-home-muted">{t("loading.loading")}</p>
+              ) : favoriteClubs.length === 0 ? (
+                <p className="platform-home-muted">{t("platformHome.noFavorites")}</p>
+              ) : (
+                <div className="platform-home-club-grid">
+                  {favoriteClubs.map((club, index) => (
+                    <div key={club.id} style={styles.clubTileWrap}>
+                      {primaryClubSlug === club.slug ? (
+                        <span style={styles.homeClubBadge}>{t("platformHome.homeClubBadge")}</span>
+                      ) : null}
+                      <button
+                        type="button"
+                        style={styles.clubTile}
+                        onClick={() => openClub(club)}
+                        aria-label={club.name}
+                      >
+                        {club.logo_url ? (
+                          <img src={club.logo_url} alt="" style={styles.clubLogoFull} />
+                        ) : (
+                          <span style={styles.clubNameInBorder}>{club.name}</span>
+                        )}
+                      </button>
+                      <FavoriteClubTileMenu
+                        club={club}
+                        index={index}
+                        total={favoriteClubs.length}
+                        homeClubSlug={primaryClubSlug}
+                        homeIndex={
+                          primaryClubSlug
+                            ? favoriteClubs.findIndex((c) => c.slug === primaryClubSlug)
+                            : -1
+                        }
+                        isHomeClub={primaryClubSlug === club.slug}
+                        busy={menuBusy}
+                        open={openMenuSlug === club.slug}
+                        onToggleOpen={(next) => setOpenMenuSlug(next ? club.slug : "")}
+                        onMakeHomeClub={() => handleMakeHomeClub(club)}
+                        onSetFavoriteClub={() => handleSetFavoriteClub(club)}
+                        onMoveLeft={() => handleMoveClub(index, "left")}
+                        onMoveRight={() => handleMoveClub(index, "right")}
+                        onRemove={() => handleRemoveFromHome(club)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!loadingClubs && primaryClubSlug ? (
+                <div ref={skipClubInfoWrapRef} className="platform-home-skip-club platform-home-skip-club--signed-in">
+                  <div className="platform-home-skip-club-row">
+                    <label htmlFor="platform-home-skip-club-input" className="platform-home-skip-club-label">
+                      <input
+                        id="platform-home-skip-club-input"
+                        type="checkbox"
+                        checked={skipClubSelection}
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          setSkipClubSelection(next);
+                          persistSkipClubSelection(next);
+                        }}
+                        aria-describedby="platform-home-skip-club-desc"
+                      />
+                      <span>{t("platformHome.skipClubSelectionShort")}</span>
+                    </label>
                     <button
                       type="button"
-                      style={styles.clubTile}
-                      onClick={() => openClub(club)}
-                      aria-label={club.name}
+                      className="platform-home-skip-info-btn"
+                      aria-expanded={skipClubInfoOpen}
+                      aria-controls={skipClubInfoPanelId}
+                      aria-label={t("platformHome.skipClubSelectionInfoAriaLabel")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSkipClubInfoOpen((open) => !open);
+                      }}
                     >
-                      {club.logo_url ? (
-                        <img src={club.logo_url} alt="" style={styles.clubLogoFull} />
-                      ) : (
-                        <span style={styles.clubNameInBorder}>{club.name}</span>
-                      )}
+                      <InformationCircleIcon className="platform-home-skip-info-icon" aria-hidden />
                     </button>
-                    <FavoriteClubTileMenu
-                      club={club}
-                      index={index}
-                      total={favoriteClubs.length}
-                      isHomeClub={primaryClubSlug === club.slug}
-                      busy={menuBusy}
-                      open={openMenuSlug === club.slug}
-                      onToggleOpen={(next) => setOpenMenuSlug(next ? club.slug : "")}
-                      onMakeHomeClub={() => handleMakeHomeClub(club)}
-                      onMoveLeft={() => handleMoveClub(index, "left")}
-                      onMoveRight={() => handleMoveClub(index, "right")}
-                      onRemove={() => handleRemoveFromHome(club)}
-                    />
                   </div>
-                ))}
+                  {skipClubInfoOpen ? (
+                    <div
+                      id={skipClubInfoPanelId}
+                      className="platform-home-skip-info-panel"
+                      role="region"
+                      aria-label={t("platformHome.skipClubSelectionInfoAriaLabel")}
+                    >
+                      <p className="platform-home-skip-info-panel-text">{t("platformHome.skipClubSelectionInfoBody")}</p>
+                      <p className="platform-home-skip-info-panel-text">
+                        {t("platformHome.skipClubSelectionSetHomeHow", {
+                          setHomeAction: t("platformHome.setAsHomeClub"),
+                        })}
+                      </p>
+                      <p className="platform-home-skip-info-panel-text">
+                        {t("platformHome.skipClubSelectionReturnHow")}
+                      </p>
+                    </div>
+                  ) : null}
+                  <p id="platform-home-skip-club-desc" className="platform-home-sr-only">
+                    {t("platformHome.skipClubSelectionInfoBody")}{" "}
+                    {t("platformHome.skipClubSelectionSetHomeHow", {
+                      setHomeAction: t("platformHome.setAsHomeClub"),
+                    })}{" "}
+                    {t("platformHome.skipClubSelectionReturnHow")}
+                  </p>
+                </div>
+              ) : null}
+              <div className="platform-home-section-links">
+                <div className="platform-home-action-stack">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="platform-home-action-btn"
+                    onClick={() => navigate("/find-club")}
+                  >
+                    {t("platformHome.searchForClubs")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="platform-home-action-btn"
+                    onClick={handleLogOut}
+                  >
+                    {t("platformHome.logOut")}
+                  </Button>
+                </div>
               </div>
-            )}
-            <div style={styles.sectionLinks}>
-              <Button type="button" size="sm" onClick={() => navigate("/find-club")}>
-                {t(favoriteClubs.length === 0 ? "platformHome.findAClub" : "platformHome.findClub")}
-              </Button>
-              <Button type="button" size="sm" variant="secondary" onClick={handleLogOut}>
-                {t("platformHome.logOut")}
-              </Button>
             </div>
-          </section>
+          </div>
         ) : (
-          <section className="public-auth" style={{ paddingTop: 0 }}>
+          <section className="public-auth platform-home-guest-auth platform-surface-card">
             {authMode === "checkEmail" ? (
               <>
                 <h2 className="public-auth-title">{t("auth.checkEmailTitle")}</h2>
@@ -362,8 +627,11 @@ export default function PlatformHome() {
             ) : authMode === "signup" ? (
               <>
                 <h2 className="public-auth-title">{t("auth.createAccount")}</h2>
-                <p className="public-auth-lead">{t("platformHome.signUpLead")}</p>
-                {authError ? <p className="public-auth-error">{authError}</p> : null}
+                <div className="platform-home-signup-leads">
+                  <p className="public-auth-lead">{t("platformHome.signUpLeadLine1")}</p>
+                  <p className="public-auth-lead">{t("platformHome.signUpLeadLine2")}</p>
+                </div>
+                {authErrorMessage}
                 <form onSubmit={handlePlatformSignup} className="public-auth-form">
                   <Input
                     label={t("signup.fullName")}
@@ -410,7 +678,7 @@ export default function PlatformHome() {
             ) : (
               <>
                 <h2 className="public-auth-title">{t("auth.logIn")}</h2>
-                {authError ? <p className="public-auth-error">{authError}</p> : null}
+                {authErrorMessage}
                 <form onSubmit={handlePlatformLogin} className="public-auth-form">
                   <Input
                     label={t("auth.email")}
@@ -457,58 +725,6 @@ export default function PlatformHome() {
 }
 
 const styles = {
-  page: {
-    width: "100%",
-    minHeight: "100vh",
-    background: "#ffffff",
-    overflowX: "hidden",
-    display: "flex",
-    flexDirection: "column",
-  },
-  content: {
-    flex: 1,
-    width: "100%",
-    maxWidth: 720,
-    margin: "0 auto",
-    padding: "20px 20px 24px",
-    boxSizing: "border-box",
-  },
-  hero: {
-    textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  welcome: {
-    fontSize: "clamp(1.35rem, 3.5vw, 1.625rem)",
-    fontWeight: 700,
-    color: "#111827",
-    margin: "0 0 8px",
-    letterSpacing: "-0.02em",
-  },
-  heroLead: {
-    margin: 0,
-    fontSize: 15,
-    color: "#64748b",
-    lineHeight: 1.5,
-    maxWidth: 400,
-  },
-  section: { textAlign: "center" },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#111827",
-    margin: "0 0 16px",
-  },
-  clubGrid: {
-    display: "flex",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 20,
-    width: "100%",
-    margin: "0 auto 20px",
-  },
   clubTileWrap: {
     position: "relative",
     width: 168,
@@ -574,16 +790,8 @@ const styles = {
     lineHeight: 1.3,
     textAlign: "center",
     wordBreak: "break-word",
+    background: "#fff",
   },
-  sectionLinks: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 8,
-  },
-  muted: { fontSize: 14, color: "#64748b", textAlign: "center" },
   textLinkButton: {
     border: "none",
     background: "none",

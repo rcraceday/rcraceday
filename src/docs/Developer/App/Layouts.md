@@ -127,11 +127,13 @@ AppLayout
 AdminLayout
 
 Responsibilities
-Redirect unauthenticated users to /public/login
+Redirect unauthenticated users to **platform login** (`platformLoginPathForClub` → `/?returnTo=…`), not a club login form
 
-Wait for user loading
+Redirect users without active membership for this club to **club access** (`/public/claim-membership`)
 
-Support admin mode for admin‑only routes
+Wait for auth, club, and membership loading
+
+Support `admin` prop for admin-only routes
 
 🛣️ 4. Routing Architecture (routes.jsx)
 Routing is divided into three sections:

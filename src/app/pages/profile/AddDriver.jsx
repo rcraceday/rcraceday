@@ -19,6 +19,7 @@ import {
   resolveDriverNumberRules,
   showNonDriverMemberOption,
 } from "@/app/lib/driverClubSettings";
+import { linkDriverToPlatformPerson } from "@/app/lib/platformPeople";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -192,6 +193,14 @@ export default function AddDriver() {
         return;
       }
 
+      await linkDriverToPlatformPerson(supabase, {
+        driverId: guestDriver?.id,
+        userId: user.id,
+        firstName: trimmedFirst,
+        lastName: trimmedLast,
+        isJunior: isJunior,
+      });
+
       await applyNewDriverProfileDefaults(supabase, guestDriver?.id, club);
       const numberRules = resolveDriverNumberRules(club);
       if (numberRules.auto_reconcile_on_create && guestDriver?.id) {
@@ -280,6 +289,14 @@ export default function AddDriver() {
       setSaving(false);
       return;
     }
+
+    await linkDriverToPlatformPerson(supabase, {
+      driverId: driver?.id,
+      userId: user.id,
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
+      isJunior: isJunior,
+    });
 
     // ⭐ 3. ALWAYS INSERT A NEW CLUB MEMBER ROW (correct behaviour)
     await supabase.from("club_members").insert({

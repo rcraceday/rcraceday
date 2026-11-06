@@ -1,15 +1,32 @@
-## Login Flow
+## Login (platform + auth callbacks)
 
-`Login.jsx` authenticates with `supabase.auth.signInWithPassword`.
+Day-to-day sign-in is on **`/`** (`PlatformHome.jsx`) via `supabase.auth.signInWithPassword`. Club URLs do **not** show an email/password form except while processing Supabase auth links.
 
-After authentication, it:
+### Entry points
 
-1. Confirms the user's email.
-2. Finds membership by `user_id`, then by club-scoped email.
-3. Links existing memberships to the Auth user.
-4. Creates an active `non_member` membership when the user has no row at this club but a confirmed Auth account (including visitors from another club, not only fresh non-member signup metadata).
-5. Redirects first-time users to driver setup (preserving `returnTo` when present) and returning users to the app or `returnTo`.
+| Situation | Destination |
+|-----------|-------------|
+| Logged out, needs `/:clubSlug/app/*` | `platformLoginPathForClub` → `/?returnTo=/{slug}/public/claim-membership?…` |
+| User opens `/:clubSlug/public/login` (no tokens) | `ClubPublicLoginEntry` → same platform URL |
+| Email confirm / OAuth lands on `/:clubSlug/public/login` with hash or `token_hash` | `Login.jsx` → session refresh → `reconcileClubAccess` |
+| Already logged in on callback URL | `Login.jsx` / `reconcileClubAccess` |
 
-If the login page loads while the browser already has a confirmed session (for example after opening another club's nomination link), it runs the same reconciliation instead of signing the user out first.
+Helpers live in `src/app/lib/publicAuthRedirect.js`. Membership linking after auth is in `src/app/lib/reconcileClubAccess.js` (not inline in the login form).
 
-Users without a confirmed email, valid membership, or matching club are redirected to login or signup. Cross-club visitors with a valid password no longer need a second signup at the host club.
+### `Login.jsx` responsibilities
+
+1. Handle auth callbacks only (`hasAuthCallbackInUrl()`).
+2. Otherwise redirect to platform login (defense in depth; `ClubPublicLoginEntry` also redirects).
+3. On confirmed session, run `reconcileClubAccess` (link membership, visitor provisioning, `returnTo`, membership pitch state for visitors).
+4. If the callback stalls, show a short “check your email” style message with link back to `/`.
+
+There is **no** `signInWithPassword` on this page anymore.
+
+### Related files
+
+- `src/app/pages/public/ClubPublicLoginEntry.jsx` — route wrapper for `/public/login`
+- `src/app/pages/global/PlatformHome.jsx` — primary login UI
+- `src/app/routes/ProtectedAppRoute.jsx` — unauthenticated → `platformLoginPathForClub`
+- `src/app/pages/public/ClaimMembership.jsx` — club access after platform login
+
+See also `Platform One Account Roadmap.md` Phase 0.

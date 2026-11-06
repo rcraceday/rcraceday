@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useClub } from "@/app/providers/ClubProvider";
 import { cmsStyles } from "../cms/styles";
 import CMSCard from "@cms/CMSCard";
@@ -9,6 +9,7 @@ import { useTranslation } from "@/app/i18n/I18nContext";
 export default function BrandingSettings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { clubSlug } = useParams();
   const { club } = useClub();
 
   return (
@@ -27,7 +28,9 @@ export default function BrandingSettings() {
           {/* BACK BUTTON */}
           <CMSButton
             variant="secondary"
-            onClick={() => navigate("/chargers-rc/app/admin/settings")}
+            onClick={() =>
+              navigate(`/${clubSlug || club?.slug}/app/admin/settings`)
+            }
             style={{
               padding: "4px 10px",
               fontSize: "12px",

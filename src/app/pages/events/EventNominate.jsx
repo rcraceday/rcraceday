@@ -26,6 +26,8 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { sendMemberClubMessage } from "@/app/lib/clubMessages";
 import { useDrivers } from "@/app/providers/DriverProvider";
+import { useUserTransponders } from "@/app/providers/UserTranspondersProvider";
+import { persistDriverClassTransponder, sanitizeTransponderNumber } from "@/app/lib/userTransponders";
 import EventNominateDriverGate from "@/app/pages/events/EventNominateDriverGate";
 import { normalizeMembershipProductType } from "@/app/pages/profile/householdDriverLimits";
 import { driverNominationBlockReason } from "@/app/lib/driverNominationValidation";
@@ -676,6 +678,8 @@ export default function EventNominate() {
   const { club } = useClub();
   const { membership } = useMembership();
   const { drivers, loadingDrivers, refreshDrivers } = useDrivers();
+  const { transponders, mergeSuggestions, ensureTransponderNumber } =
+    useUserTransponders();
   const { palette } = useTheme();
   const brand = palette?.primary || "#00438a";
   const contentText = palette?.text || "#1f2937";
@@ -955,17 +959,17 @@ export default function EventNominate() {
   }
 
   function savedTranspondersFor(driverId) {
-    const values = new Set();
+    const local = [];
     assignedDriverClasses.forEach((row) => {
       if (row.driver_id !== driverId) return;
       const trimmed = (row.transponder_number || "").trim();
-      if (trimmed) values.add(trimmed);
+      if (trimmed) local.push(trimmed);
     });
     Object.values(selections[driverId]?.transponders || {}).forEach((value) => {
       const trimmed = String(value || "").trim();
-      if (trimmed) values.add(trimmed);
+      if (trimmed) local.push(trimmed);
     });
-    return Array.from(values).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    return mergeSuggestions(local);
   }
 
   useEffect(() => {
@@ -1636,15 +1640,18 @@ export default function EventNominate() {
   }
 
   function updateTransponder(driverId, classId, value) {
-    updateSelection(driverId, (current) => ({ transponders: { ...current.transponders, [classId]: value } }));
-    supabase
-      .from("driver_classes")
-      .update({ transponder_number: value })
-      .eq("driver_id", driverId)
-      .eq("class_id", classId)
-      .then(({ error: updateError }) => {
-        if (updateError) console.error("Error updating transponder number:", updateError);
-      });
+    updateSelection(driverId, (current) => ({
+      transponders: { ...current.transponders, [classId]: value },
+    }));
+    persistDriverClassTransponder(supabase, {
+      driverId,
+      classId,
+      number: value,
+      inventoryRows: transponders,
+      ensureTransponderNumber,
+    }).then(({ error: updateError }) => {
+      if (updateError) console.error("Error updating transponder number:", updateError);
+    });
   }
 
   function merchandiseCostFor(selection, driverId) {
@@ -2269,7 +2276,25 @@ export default function EventNominate() {
       }
     });
     if (driverClassesToUpdate.length > 0) {
-      const { error: upsertError } = await supabase.from("driver_classes").upsert(driverClassesToUpdate, { onConflict: ["driver_id", "class_id"] });
+      const enriched = [];
+      for (const row of driverClassesToUpdate) {
+        const sanitized = sanitizeTransponderNumber(row.transponder_number);
+        const invId = sanitized ? await ensureTransponderNumber(sanitized) : null;
+        enriched.push({
+          ...row,
+          transponder_number: sanitized,
+          user_transponder_id: invId,
+        });
+      }
+      let { error: upsertError } = await supabase
+        .from("driver_classes")
+        .upsert(enriched, { onConflict: ["driver_id", "class_id"] });
+      if (upsertError && String(upsertError.message || "").includes("user_transponder_id")) {
+        ({ error: upsertError } = await supabase.from("driver_classes").upsert(
+          enriched.map(({ user_transponder_id: _u, ...rest }) => rest),
+          { onConflict: ["driver_id", "class_id"] }
+        ));
+      }
       if (upsertError) console.error("Error upserting transponder numbers:", upsertError);
     }
 

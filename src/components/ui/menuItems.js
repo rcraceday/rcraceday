@@ -85,7 +85,9 @@ export function buildMenuItems({ clubSlug, isAdmin, user, t }) {
           {
             label: tr("nav.switchClub"),
             icon: GlobeAltIcon,
-            to: "/find-club",
+            to: "/?choose=1",
+            /** Platform scope — not club-branded */
+            neutralIcon: true,
           },
           {
             label: tr("nav.logout"),

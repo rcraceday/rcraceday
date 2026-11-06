@@ -156,14 +156,22 @@ async function finishClubEntry({
     }
   }
 
-  navigate(
-    resolvePostAuthAppPath({
-      clubSlug,
-      firstLogin: navigateFirstLogin,
-      returnTo: safeReturnTo,
-    }),
-    { replace: true }
-  );
+  const isVisitor = membership.membership_type === "non_member";
+  const destination = resolvePostAuthAppPath({
+    clubSlug,
+    firstLogin: isVisitor ? false : navigateFirstLogin,
+    returnTo: safeReturnTo,
+  });
+
+  const navState =
+    isVisitor && navigateFirstLogin
+      ? {
+          membershipPitch: true,
+          membershipPitchReturnTo: safeReturnTo || null,
+        }
+      : undefined;
+
+  navigate(destination, { replace: true, state: navState });
   return true;
 }
 

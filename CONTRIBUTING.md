@@ -159,13 +159,15 @@ Prefer hooks for data access (useAuth, useClub, useProfile, etc.).
 Keep logs during development; remove noisy logs before production.
 
 🧪 Testing Checklist (before pushing)
-Visit /chargers-rc/public/login while logged out → login page must appear
+Visit `/chargers-rc/public/login` while logged out → redirects to `/` (platform login), not a club login form
 
-Visit /chargers-rc/app while logged out → must redirect to login
+Visit `/chargers-rc/app` while logged out → redirects to `/` with returnTo club access (or claim-membership after login)
 
-Visit /chargers-rc/app while logged in → app loads normally
+Visit `/chargers-rc/app` while logged in with membership → app loads normally
 
-Visit /chargers-rc/admin as non-admin → must redirect or deny access
+Visit `/chargers-rc/app/admin` as non-admin → must redirect or deny access
+
+Log out from app menu → lands on `/`
 
 Switch clubs → theme updates correctly
 

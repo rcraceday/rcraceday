@@ -9,7 +9,7 @@ export default function Logout() {
   useEffect(() => {
     async function run() {
       await supabase.auth.signOut();
-      navigate("/");
+      navigate("/", { replace: true });
     }
     run();
   }, [navigate]);

@@ -11,17 +11,23 @@ Code
 <AuthProvider>
   <ClubProvider>
     <ProfileProvider>
-      <MembershipProvider>
-        <DriverProvider>
-          <NumberProvider>
-            <NotificationProvider>
-              <Outlet />
+      <UserTranspondersProvider>
+        <PlatformPeopleProvider>
+          <MembershipProvider>
+            <DriverProvider>
+              <NumberProvider>
+                <NotificationProvider>
+                  <Outlet />
 Why this order is required
 AuthProvider restores the session and loads the user profile.
 
 ClubProvider loads the club theme and metadata for both public and private routes.
 
 ProfileProvider loads the user profile only when a user exists.
+
+UserTranspondersProvider loads global transponder inventory when the user is confirmed.
+
+PlatformPeopleProvider loads the account roster (`platform_people`) when the user is confirmed.
 
 MembershipProvider loads membership only when user + club + profile exist.
 
@@ -43,7 +49,7 @@ Code
 Unauthenticated users needing the app are sent to `/?returnTo=…` (platform login), not a per-club login form.
 Why public routes must come first
 React Router matches top‑to‑bottom.
-If /:clubSlug/* or /:clubSlug/app/* appears before /:clubSlug/public/*, the login page will never render.
+If /:clubSlug/* or /:clubSlug/app/* appears before /:clubSlug/public/*, public club access and auth callback routes will not match.
 
 ClubLayout Behavior (critical)
 ClubLayout must operate in two modes:
@@ -140,6 +146,14 @@ Code
                 │
 ┌──────────────────────────────────────────────────────────────┐
 │                        ProfileProvider                        │
+└───────────────┬──────────────────────────────────────────────┘
+                │
+┌──────────────────────────────────────────────────────────────┐
+│                   UserTranspondersProvider                    │
+└───────────────┬──────────────────────────────────────────────┘
+                │
+┌──────────────────────────────────────────────────────────────┐
+│                    PlatformPeopleProvider                     │
 └───────────────┬──────────────────────────────────────────────┘
                 │
 ┌──────────────────────────────────────────────────────────────┐

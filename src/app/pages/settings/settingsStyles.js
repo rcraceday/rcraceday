@@ -136,6 +136,12 @@ export const settingsStyles = {
     margin: 0,
   },
 
+  muted: {
+    fontSize: "13px",
+    color: "#6B7280",
+    margin: 0,
+  },
+
   actions: {
     display: "flex",
     justifyContent: "flex-start",

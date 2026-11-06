@@ -134,9 +134,9 @@ Logged in + membership + drivers OK
 
 **Remove:** redirect to `/:slug/public/login` for unauthenticated users (grep remaining references).
 
-**Done (partial):** `platformLoginPathForClub`, `ProtectedAppRoute`, `PlatformHome`, `ClubFinder`, `ClaimMembership` copy, logout → `/`.
+**Done:** `platformLoginPathForClub`, `ProtectedAppRoute`, `PlatformHome`, `ClubFinder`, `ClaimMembership`, logout → `/`, `ClubPublicLoginEntry`, `RedirectClubSignup`, membership pitch overlay, developer docs (`Login.md`, `Signup.md`, `ProtectedAppRoute.md`, `Routes.md`, `Layouts.md`, `ARCHITECTURE.md`, `DEVELOPMENT.md`, `CONTRIBUTING.md`).
 
-**Still to do:** club `Signup`/`Welcome`/`menuItems`/`ARCHITECTURE.md`/`DEVELOPMENT.md` alignment; optional route redirects.
+**Ops (per environment):** Run `scripts/add-platform-auth-email-registered-rpc.sql`, directory SQL + `platform_subscribed` for pilot clubs; paste Supabase email templates; deploy `public/` logo assets.
 
 ---
 
@@ -190,30 +190,39 @@ No second login provider; club providers still wait on membership for **club** `
 
 Dependencies flow top to bottom. Ship each phase in a releasable state.
 
-### Phase 0 — Align auth UX (done)
+**Pilot context (Nov 2026):** Only two live tenants — **`chargers-rc`** (production club) and **`rcraceday`** (sandbox/demo). Validate every phase on Chargers first; use `rcraceday` to exercise cross-club flows (different `club_classes`, scales, `driver_settings`) without hardcoding either slug in app logic. See **§15**.
+
+### Phase 0 — Align auth UX ✅ (Nov 2026)
 
 - Platform login, club access, returnTo, no club login for logged-out users.
 - Club `/public/login` and `/public/signup` redirect to platform; login URL retained for Supabase email callbacks.
 - Logout → `/`; menu uses `/:slug/app/logout`.
-- **Docs:** `ARCHITECTURE.md`, `DEVELOPMENT.md` updated; developer Login/Signup/ProtectedAppRoute notes may still mention legacy paths.
+- Visitor membership **pitch overlay** (optional join; dismiss per club).
+- **Docs:** developer auth/routing docs and top-level testing checklists aligned.
 
-**Exit:** New user never sees club email/password form except auth email links.
+**Exit:** New user never sees club email/password form except auth email links / callback handling.
 
-### Phase 1 — Global transponders
+**Deferred to later phases:** blank-slate `WelcomeAddDrivers` (Phase 2–3); retire legacy `Signup.jsx` file (Phase 4); global transponders (Phase 1).
 
-- Schema + RLS `user_transponders`.
-- Account UI: CRUD transponders.
-- Profile + nominate: suggestions from inventory; saving class assignment writes FK + denormalized number.
-- Backfill from existing `driver_classes`.
+### Phase 1 — Global transponders (in progress)
+
+- [x] SQL + RLS `user_transponders` + optional `driver_classes.user_transponder_id` (`scripts/add-user-transponders.sql`).
+- [x] Backfill script from `driver_classes` (`scripts/backfill-user-transponders-from-driver-classes.sql`).
+- [x] Account UI: **Settings → Account → My transponders**.
+- [x] Driver manager + nominate: suggestions from inventory; save writes FK when migration applied.
+- [ ] Run SQL + backfill in Supabase for each environment.
 
 **Exit:** User registers three transponders once; all clubs suggest the same three.
 
 ### Phase 2 — Global roster (`platform_people`)
 
-- Schema + RLS; UI under account settings.
-- Link `drivers.platform_person_id` on create/import.
-- **Club access** step: “Add these racers to {club}” (checkboxes).
-- Replace welcome empty form with roster enablement.
+- [x] SQL + RLS `platform_people` + `drivers.platform_person_id` (`scripts/add-platform-people.sql`).
+- [x] Backfill script (`scripts/backfill-platform-people-from-drivers.sql`).
+- [x] Account UI: **Settings → Account → My racers**.
+- [x] Link `drivers.platform_person_id` on create/import (Add driver + cross-club import).
+- [ ] Run SQL (+ optional backfill) in Supabase for each environment.
+- [x] **Club access** step: “Add these racers to {club}” (checkboxes) on `/public/claim-membership` after a successful membership link.
+- [x] Welcome screen: add from **My racers** (`WelcomeAddDrivers.jsx` + roster checkboxes when `platform_people` exists).
 
 **Exit:** Junior + adults defined once; each club gets linked driver rows.
 
@@ -267,9 +276,23 @@ Dependencies flow top to bottom. Ship each phase in a releasable state.
 
 ## 11. Verification checklist (per phase)
 
+### Phase 0 (complete)
+
+- [x] Logged out: `/chargers-rc/public/login` → `/` with returnTo chain (no club login form).
+- [x] Logged out: `/chargers-rc/app` → platform login → club access.
+- [x] Logged in, no membership → claim-membership, not login.
+- [x] Log out → `/`.
+- [x] Visitor overlay + membership page Back (non-members).
+- [ ] Production: Supabase RPC + email templates + directory SQL (ops).
+
+### Phase 1+ (ongoing)
+
+Use **`chargers-rc`** as the primary sign-off club. Repeat critical paths on **`rcraceday`** when the phase involves class lists, import, or club policy differences.
+
 - [ ] Logged out: open club from finder → `/` → login → club access (not club login).
-- [ ] Logged in, member at Club A, open Club B → club access → class map → nominate with same transponders.
-- [ ] Logged in, member at Club A, open Club A → straight to app.
+- [ ] Logged in, member at Chargers, open **`rcraceday`** → club access → class map (when built) → nominate with same transponders.
+- [ ] Logged in, member at Chargers, open Chargers → straight to app.
+- [ ] Logged out visitor at Chargers: membership pitch overlay → No thanks → home/nominate; Find out more → membership page with Back.
 - [ ] Log out → `/`.
 - [ ] Email confirm / password reset links still work.
 - [ ] Public nominate link (visitor) still creates minimal driver when needed.
@@ -303,6 +326,43 @@ Dependencies flow top to bottom. Ship each phase in a releasable state.
 
 ## 14. Doc debt (update when phases land)
 
-- `ARCHITECTURE.md` — `/` platform home, auth gates, optional `PlatformRosterProvider`.
-- `DEVELOPMENT.md` — flows, redirect URLs.
-- `src/docs/Developer/App/Routes.md`, `Login.md`, `Signup.md`, `ProtectedAppRoute.md`.
+- ~~`Login.md`, `Signup.md`, `ProtectedAppRoute.md`, `Routes.md`, `Layouts.md` — Phase 0 auth~~
+- `ARCHITECTURE.md` — optional `PlatformRosterProvider` when Phase 2 lands.
+- `DEVELOPMENT.md` — keep redirect URLs in sync with Supabase dashboard.
+
+---
+
+## 15. Pilot tenants & extensibility (Nov 2026)
+
+### Current clubs
+
+| Club | Slug (expected) | Role |
+|------|-----------------|------|
+| **Chargers RC** | `chargers-rc` | Production pilot — all phases must work here before wider rollout. |
+| **RCRaceday sandbox** | `rcraceday` | Demo / second tenant — different classes or scales on purpose to stress import, class map, and admin settings without a third real club yet. |
+
+Directory: enable `platform_subscribed` for both tenants after `scripts/add-platform-directory-primary-club.sql`:
+
+```sql
+update public.clubs set platform_subscribed = true where slug in ('chargers-rc', 'rcraceday');
+```
+
+### Build rules while the fleet is small
+
+1. **No Chargers-only product logic** in shared code — only docs, SQL comments, and test checklists may name `chargers-rc`. Club behavior comes from **DB config**: `clubs.driver_settings`, `club_classes`, `membership_type_configs`, `directory_profile`, event/pricing admin.
+2. **Global layer stays dumb** — `user_transponders` and `platform_people` are account-owned; **which class uses which chip** stays on `driver_classes` per club.
+3. **Class / scale differences** — mapping UI (Phase 3) must not assume Chargers’ class names; reuse `crossClubDriverImport` / `suggestTargetClassId` name matching, admin-defined catalogs, and future directory discipline tags — not hardcoded lists.
+4. **Two-club testing** — Before a third club joins, run “Club A = `chargers-rc`, Club B = `rcraceday`” for: link membership → copy roster → map classes → nominate with shared transponders.
+5. **Known debt** — a few dev conveniences still mention `chargers-rc` (e.g. admin branding back link); replace with `clubSlug` from route params as touch those files.
+
+### Practical phase order for this pilot
+
+| Phase | Chargers focus | Keep flexible for future clubs |
+|-------|----------------|--------------------------------|
+| **0** (wrap-up) | Visitor overlay, club access, emails, directory go-live | Same UX for any slug |
+| **1** Transponders | Backfill from Chargers `driver_classes`; combobox on nominate | Inventory global; assignments per club |
+| **2** Roster | Household juniors/adults as Chargers families use them | `platform_people` schema not tied to one class list |
+| **3** Auto-fill | `chargers-rc` ↔ `rcraceday` class map test | Mapping table driven by target club’s `club_classes` |
+| **4** Cleanup | Redirect URLs for both slugs in Supabase | Pattern `/*/` not per-club code |
+
+When new clubs onboard, expect **per-club tuning** in admin (membership products, class catalog, driver profile sections, nominate required fields) — not new platform phases unless their needs expose a gap in the global roster or transponder model.

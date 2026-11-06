@@ -32,10 +32,28 @@ These values come from your Supabase project settings. Set `VITE_SITE_URL` to yo
 Run `scripts/add-platform-directory-primary-club.sql` in the Supabase SQL editor. Then enable listing for each subscriber club, for example:
 
 ```sql
-update public.clubs set platform_subscribed = true where slug = 'your-club-slug';
+update public.clubs set platform_subscribed = true where slug in ('chargers-rc', 'rcraceday');
 ```
 
 Admins can edit optional directory text under **Admin → Settings → Club Info**. The PWA uses `start_url` `/launch`, which opens the user’s **home club** (`profiles.primary_club_id` or `localStorage` `rcraceday.primaryClubSlug`), or `/` if none is set.
+
+### Global transponders (Phase 1)
+
+Run in order in the Supabase SQL editor:
+
+1. `scripts/add-user-transponders.sql`
+2. `scripts/backfill-user-transponders-from-driver-classes.sql` (optional; imports existing class transponder text)
+
+Users manage chips under **Settings → Account → My transponders**. Nominate and driver manager comboboxes suggest the same inventory at every club.
+
+### Global roster / platform people (Phase 2)
+
+Run in order in the Supabase SQL editor:
+
+1. `scripts/add-platform-people.sql`
+2. `scripts/backfill-platform-people-from-drivers.sql` (optional; links existing `drivers` created by the account)
+
+Users manage people under **Settings → Account → My racers**. New drivers created or imported from other clubs get `drivers.platform_person_id` when the migration is applied.
 
 ### Platform club directory (Phase 2 — geo & club type)
 
@@ -147,11 +165,13 @@ If a provider logs before its prerequisites are ready, the provider order is wro
 
 🧪 Testing Scenarios
 Logged‑out tests
-/chargers-rc/public/login → should show login
+/chargers-rc/public/login → redirects to `/` (platform sign-in)
 
-/chargers-rc/app → should redirect to login
+/chargers-rc/public/signup → redirects to `/?signup=1` with returnTo claim-membership
 
-/chargers-rc/admin → should redirect to login
+/chargers-rc/app → redirects to platform login with returnTo club access
+
+/chargers-rc/app/admin → same as app (protected)
 
 Logged‑in tests
 /chargers-rc/app → loads home
@@ -160,7 +180,9 @@ Logged‑in tests
 
 /chargers-rc/app/events → loads events
 
-/chargers-rc/admin → loads admin dashboard (if admin)
+/chargers-rc/app/admin → loads admin dashboard (if admin)
+
+Visitor (non_member): first entry → membership benefits overlay; No thanks → home; member-only areas can show overlay again
 
 Club switching
 Switch clubs → theme updates
@@ -258,9 +280,9 @@ Ensure /manifest.json and /service-worker.js are at root
 Post‑deploy checklist
 / loads
 
-/chargers-rc/public/login loads
+/chargers-rc/public/login → redirects to `/` when logged out (auth callbacks still work with tokens in URL)
 
-/chargers-rc/app loads when logged in
+/chargers-rc/app loads when logged in with membership
 
 Refresh on any route works
 

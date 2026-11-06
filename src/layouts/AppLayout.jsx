@@ -1,6 +1,6 @@
 // src/layouts/AppLayout.jsx
 
-import { Outlet, Navigate, useParams, useLocation } from "react-router-dom";
+import { Outlet, Navigate, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
@@ -13,15 +13,58 @@ import {
 
 import Header from "@/components/ui/Header";
 import Footer from "@/components/ui/Footer";
+import MembershipBenefitsOverlay from "@/app/components/membership/MembershipBenefitsOverlay";
+import {
+  isMembershipAppRoute,
+  isMembershipPitchDismissed,
+} from "@/app/lib/membershipPitchDismissal";
+import { useEffect, useState } from "react";
 
 export default function AppLayout() {
   const { club } = useClub();
   const { user, loadingUser } = useAuth();
   const { loadingProfile } = useProfile();
-  const { loadingMembership } = useMembership();
+  const { membership, loadingMembership } = useMembership();
   const { clubSlug } = useParams();
   const { palette } = useTheme() || {};
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const [membershipPitchOpen, setMembershipPitchOpen] = useState(false);
+  const [membershipPitchReturnTo, setMembershipPitchReturnTo] = useState(null);
+
+  useEffect(() => {
+    if (loadingMembership || !membership || membership.isMember) {
+      setMembershipPitchOpen(false);
+      return;
+    }
+    if (isMembershipAppRoute(location.pathname)) {
+      setMembershipPitchOpen(false);
+      return;
+    }
+
+    const state = location.state || {};
+    if (!state.membershipPitch) return;
+
+    const dismissed = isMembershipPitchDismissed(club?.id, user?.id);
+    if (dismissed && !state.memberOnlyAttempt) {
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+      return;
+    }
+
+    setMembershipPitchReturnTo(state.membershipPitchReturnTo || null);
+    setMembershipPitchOpen(true);
+    navigate(location.pathname + location.search, { replace: true, state: {} });
+  }, [
+    loadingMembership,
+    membership,
+    club?.id,
+    user?.id,
+    location.pathname,
+    location.search,
+    location.state,
+    navigate,
+  ]);
 
   // ⭐ Detect admin routes
   const isAdminRoute = location.pathname.includes(`/${clubSlug}/admin`);
@@ -88,6 +131,17 @@ export default function AppLayout() {
       </main>
 
       <Footer club={club} />
+
+      {!isAdminRoute && membership && !membership.isMember ? (
+        <MembershipBenefitsOverlay
+          open={membershipPitchOpen}
+          onClose={() => setMembershipPitchOpen(false)}
+          clubId={club?.id}
+          userId={user?.id}
+          brand={palette?.primary || "#00438a"}
+          returnTo={membershipPitchReturnTo}
+        />
+      ) : null}
     </Wrapper>
   );
 }

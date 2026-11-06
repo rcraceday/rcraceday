@@ -73,9 +73,11 @@ export default function MobileDrawer({
               <Icon
                 className="menu-icon"
                 style={
-                  ((isAdmin && !item.usePrimaryColor) || item.useAdminColor)
-                    ? { color: "var(--admin-accent)" }
-                    : { color: primaryColor }
+                  item.neutralIcon
+                    ? { color: "#000000" }
+                    : ((isAdmin && !item.usePrimaryColor) || item.useAdminColor)
+                      ? { color: "var(--admin-accent)" }
+                      : { color: primaryColor }
                 }
               />
               <span className="flex-1">{item.label}</span>

@@ -1,6 +1,11 @@
 // src/app/providers/AuthProvider.jsx
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/supabaseClient";
+import { setPrimaryClubSlugInStorage } from "@/app/lib/primaryClub";
+import {
+  clearSkipClubSelection,
+  clearSkipRedirectPending,
+} from "@/app/lib/platformHomePrefs";
 
 const AuthContext = createContext();
 
@@ -12,9 +17,34 @@ export default function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [signupEmail, setSignupEmail] = useState("");
+  const signedOutRef = useRef(false);
 
   async function handleSession(newSession) {
     setSession(newSession);
+  }
+
+  /**
+   * getSession() only reads local storage; JWTs stay until expiry after server-side user delete.
+   * getUser() hits Auth — invalid / deleted users must clear the client session.
+   */
+  async function validateStoredSessionWithServer() {
+    const {
+      data: { session: stored },
+    } = await supabase.auth.getSession();
+    if (!stored) {
+      await handleSession(null);
+      return;
+    }
+    const { error } = await supabase.auth.getUser();
+    if (error) {
+      await supabase.auth.signOut();
+      await handleSession(null);
+      return;
+    }
+    const {
+      data: { session: current },
+    } = await supabase.auth.getSession();
+    await handleSession(current ?? stored);
   }
 
   useEffect(() => {
@@ -22,12 +52,9 @@ export default function AuthProvider({ children }) {
 
     async function init() {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const initialSession = sessionData?.session ?? null;
+        await validateStoredSessionWithServer();
 
         if (!mounted) return;
-
-        await handleSession(initialSession);
       } catch (err) {
         console.error(">>> AuthProvider init error", err);
       } finally {
@@ -50,8 +77,27 @@ export default function AuthProvider({ children }) {
         }
 
         if (event === "SIGNED_OUT") {
+          signedOutRef.current = true;
+          setPrimaryClubSlugInStorage("");
+          clearSkipClubSelection();
+          clearSkipRedirectPending();
           setSession(null);
           setLoadingUser(false);
+          return;
+        }
+
+        if (event === "SIGNED_IN") {
+          signedOutRef.current = false;
+        }
+
+        // Restored from storage can still be stale if the user was deleted in the dashboard.
+        if (event === "INITIAL_SESSION" && newSession) {
+          setLoadingUser(true);
+          try {
+            await validateStoredSessionWithServer();
+          } finally {
+            if (mounted) setLoadingUser(false);
+          }
           return;
         }
 
@@ -65,6 +111,25 @@ export default function AuthProvider({ children }) {
       listener?.subscription?.unsubscribe?.();
     };
   }, []);
+
+  // Client navigation can render /:club/app before onAuthStateChange runs; session may be null briefly
+  // while Supabase still has tokens — recover so ProtectedAppRoute does not bounce to platform login.
+  useEffect(() => {
+    if (loadingUser || session?.user || signedOutRef.current) return;
+    let cancelled = false;
+    (async () => {
+      const {
+        data: { session: stored },
+      } = await supabase.auth.getSession();
+      if (cancelled || signedOutRef.current || !stored?.user) return;
+      const { error } = await supabase.auth.getUser();
+      if (cancelled || signedOutRef.current || error) return;
+      setSession(stored);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadingUser, session?.user]);
 
   return (
     <AuthContext.Provider

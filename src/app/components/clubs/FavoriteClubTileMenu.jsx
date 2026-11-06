@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from "react";
-import { Bars3Icon } from "@heroicons/react/24/outline";
+import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import useTheme from "@/app/providers/useTheme";
 
@@ -7,11 +7,14 @@ export default function FavoriteClubTileMenu({
   club,
   index,
   total,
+  homeClubSlug,
+  homeIndex,
   isHomeClub,
   busy,
   open,
   onToggleOpen,
   onMakeHomeClub,
+  onSetFavoriteClub,
   onMoveLeft,
   onMoveRight,
   onRemove,
@@ -43,9 +46,15 @@ export default function FavoriteClubTileMenu({
     };
   }, [open, onToggleOpen]);
 
-  const canMoveLeft = index > 0;
-  const canMoveRight = index < total - 1;
-  const showSetHome = !isHomeClub || index !== 0;
+  const home = String(homeClubSlug || "").trim();
+  const hi = typeof homeIndex === "number" && homeIndex >= 0 ? homeIndex : -1;
+  const homeIsFirst = hi === 0;
+
+  const canMoveLeft = index > 0 && !(homeIsFirst && index === 1);
+  const canMoveRight = index < total - 1 && !(homeIsFirst && index === 0);
+  const showSetHome = !isHomeClub;
+  const showSetFavorite =
+    Boolean(home) && !isHomeClub && total > 1 && !(homeIsFirst && index === 1);
 
   return (
     <div
@@ -68,7 +77,7 @@ export default function FavoriteClubTileMenu({
           onToggleOpen(!open);
         }}
       >
-        <Bars3Icon className="hamburger-icon" aria-hidden />
+        <EllipsisVerticalIcon className="hamburger-icon" aria-hidden />
       </button>
 
       <div
@@ -85,7 +94,18 @@ export default function FavoriteClubTileMenu({
               disabled={busy}
               onClick={() => onMakeHomeClub()}
             >
-              {t("platformHome.setHomeClub")}
+              {t("platformHome.setAsHomeClub")}
+            </button>
+          ) : null}
+          {showSetFavorite ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="desktop-dropdown-item"
+              disabled={busy}
+              onClick={() => onSetFavoriteClub()}
+            >
+              {t("platformHome.setFavoriteClub")}
             </button>
           ) : null}
           {canMoveLeft ? (
