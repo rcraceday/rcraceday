@@ -82,12 +82,12 @@ export default function DriverManager() {
   // REDIRECT IF NO DRIVERS
   // ------------------------------------------------------------
   useEffect(() => {
-    if (!loadingDrivers) {
-      if (!driverList || driverList.length === 0) {
-        navigate(`/${clubSlug}/app/profile/drivers/welcome`, { replace: true });
-      }
-    }
-  }, [loadingDrivers, driverList, navigate, clubSlug]);
+    if (loadingDrivers || !clubSlug) return;
+    if (driverList?.length > 0) return;
+    const welcome = `/${clubSlug}/app/profile/drivers/welcome`;
+    if (window.location.pathname.replace(/\/+$/, "") === welcome) return;
+    navigate(welcome, { replace: true });
+  }, [loadingDrivers, driverList?.length, navigate, clubSlug]);
 
   // ------------------------------------------------------------
   // ADD DRIVER BUTTON VISIBILITY

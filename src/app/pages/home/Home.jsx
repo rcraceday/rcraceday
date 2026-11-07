@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
-import { useDrivers } from "@/app/providers/DriverProvider";
 import useTheme from "@/app/providers/useTheme";
 
 import { supabase } from "@/supabaseClient";
@@ -46,7 +45,6 @@ function getEventEndDate(event) {
 export default function Home() {
   const { club } = useClub();
   const { membership, loadingMembership } = useMembership();
-  const { drivers, loadingDrivers } = useDrivers();
   const { palette } = useTheme();
   const { t } = useTranslation();
 
@@ -62,16 +60,6 @@ export default function Home() {
   const [eventsWithNominations, setEventsWithNominations] = useState(() => new Set());
   const [eventsWithResults, setEventsWithResults] = useState(() => new Set());
   const [newsItems, setNewsItems] = useState([]);
-
-  useEffect(() => {
-    if (!clubSlug) return;
-    if (loadingMembership || loadingDrivers) return;
-    if (!Array.isArray(drivers)) return;
-
-    if (drivers.length === 0) {
-      navigate(`/${clubSlug}/app/profile/drivers/welcome`, { replace: true });
-    }
-  }, [clubSlug, loadingMembership, loadingDrivers, drivers, navigate]);
 
   useEffect(() => {
     if (!club?.id) return;

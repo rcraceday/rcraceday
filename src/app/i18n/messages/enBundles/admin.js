@@ -634,6 +634,9 @@ export default {
       juniorMode: "Junior classification",
       juniorManual: "Manual checkbox when adding a driver",
       juniorAutoYear: "Auto from year of birth",
+      juniorDisplayTag: "Junior label in the app",
+      juniorDisplayTagHint:
+        "Shown in parentheses next to junior drivers (for example Under 16). Each club can set its own wording.",
       juniorCutoffYear: "Born in this year or later counts as junior",
       livetimeTitle: "LiveTime export",
       livetimeClubName: "Club name override for LiveTime export",

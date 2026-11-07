@@ -318,6 +318,16 @@ export default function DriverSettingsCard({ club }) {
             onChange={(value) => patch("juniors", "mode", value)}
             options={juniorModeOptions}
           />
+          <CMSInput
+            label={t("admin.driverSettings.juniorDisplayTag")}
+            value={form.juniors.display_tag ?? ""}
+            onChange={(value) =>
+              patch("juniors", "display_tag", value === "" ? null : String(value))
+            }
+          />
+          <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
+            {t("admin.driverSettings.juniorDisplayTagHint")}
+          </p>
           {form.juniors.mode === "auto_by_birth_year" && (
             <CMSInput
               label={t("admin.driverSettings.juniorCutoffYear")}

@@ -11,7 +11,6 @@ import DesktopDropdown from "@/components/ui/DesktopDropdown";
 import MobileDrawer from "@/components/ui/MobileDrawer";
 import { buildMenuItems } from "@/components/ui/menuItems.js";
 import { useTranslation } from "@/app/i18n/I18nContext";
-import { membershipHasFeature } from "@/app/lib/membershipClubLimits";
 import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
 
 export default function HamburgerMenu({
@@ -42,15 +41,7 @@ export default function HamburgerMenu({
 
   const items = useMemo(() => {
     const base = adminItems ?? buildMenuItems({ clubSlug, isAdmin: isAdminUser, user, t });
-    const driverProfilesAllowed = membershipHasFeature(
-      club,
-      membership?.membership_type,
-      "driver_profiles"
-    );
-    const filtered = driverProfilesAllowed
-      ? base
-      : base.filter((item) => !String(item.to || "").endsWith("/profile/drivers"));
-    return filtered.map((item) =>
+    return base.map((item) =>
       item.messagesMenu ? { ...item, unreadCount: messageUnreadCount } : item
     );
   }, [
@@ -61,7 +52,6 @@ export default function HamburgerMenu({
     messageUnreadCount,
     t,
     club,
-    membership?.membership_type,
   ]);
 
   useEffect(() => {

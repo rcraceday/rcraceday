@@ -6,6 +6,7 @@ import {
   IdentificationIcon,
   UserPlusIcon,
   UsersIcon,
+  UserGroupIcon,
   Cog6ToothIcon,
   ShieldCheckIcon,
   ArrowRightOnRectangleIcon,
@@ -54,6 +55,11 @@ export function buildMenuItems({ clubSlug, isAdmin, user, t }) {
       icon: ChatBubbleLeftRightIcon,
       to: `/${clubSlug}/app/messages`,
       messagesMenu: true,
+    },
+    {
+      label: tr("nav.myDrivers"),
+      icon: UserGroupIcon,
+      to: `/${clubSlug}/app/settings/my-drivers`,
     },
     {
       label: tr("nav.driverManager"),

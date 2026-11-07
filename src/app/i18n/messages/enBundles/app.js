@@ -288,19 +288,23 @@ export default {
     editTitle: "Edit Driver Profile",
     chooseNumberTitle: "Choose Race Number",
     profileTitle: "Driver Profile",
-    welcomeTitle: "Add your drivers",
-    welcomeSubtitle: "Add at least one driver to continue using the app.",
-    welcomeSectionIntro: "Add drivers",
-    welcomeIntroBody:
-      "Add each person who will race under your membership. The club needs a driver profile for LiveTime and your race history.",
-    welcomeLiveTimeTitle: "Important — read carefully",
+    welcomeTitle: "Add racers at {{club}}",
+    welcomeSubtitle: "Add at least one racer to continue.",
+    welcomeSectionIntro: "How It Works",
+    welcomeIntroPara1:
+      "Drivers are used by the club for memberships, race nominations, driver numbering and event management. The driver may be different from the person who owns or manages the account, such as a parent or guardian.",
+    welcomeIntroPara2:
+      "All drivers are stored in your RCRaceday account under My Drivers and can be used across participating clubs.",
+    welcomeIntroPara3:
+      "This step creates a driver profile at {{club}} for the person who will actually be racing.",
+    welcomeLiveTimeTitle: "LiveTime Names",
     welcomeLiveTimeExact:
-      "The name must match exactly how it appears in LiveTime — spelling, spacing, and capitalisation.",
+      "To ensure race history, rankings and seeding remain linked correctly, the driver's name must match their LiveTime profile exactly, including spelling, spacing and capitalisation.",
     welcomeLiveTimeVariation:
-      "Any variation creates a new racer; previous results and seeding will not carry over.",
-    welcomeRosterTitle: "Add racers from your account to {{club}}",
+      "Any variation, no matter how minor, will create a separate driver record in the timing system. Previous results, rankings and seeding will not transfer to the new record.",
+    welcomeRosterTitle: "From My Drivers",
     welcomeRosterHint:
-      "These people are saved under Settings → Account → My racers. Tick who races at this club, then add them in one step.",
+      "Choose someone from My Drivers to race at {{club}}. Use Driver Manager to adjust the name for LiveTime at this club if needed.",
     welcomeRosterAddSelected: "Add selected to this club",
     setupTitle: "Set up classes at this club",
     setupLead: "Map your classes for {{club}}",
@@ -325,8 +329,19 @@ export default {
       "Your club allows a maximum of {{max}} junior members for a family membership.",
     welcomeFamilyLimitAdult:
       "Your club allows a maximum of {{max}} adult members for a family membership.",
-    addDriver: "Add driver",
-    addManuallyLabel: "Or add a new driver manually",
+    addDriver: "Add Driver",
+    addManuallyLabel: "Add a Driver",
+    addAdditionalDriverLabel: "Add an additional driver",
+    addAdditionalDriverButton: "Add an additional driver",
+    welcomeDriversAtClubTitle: "Drivers at {{club}}",
+    welcomeContinueToApp: "Continue",
+    welcomeCloseAdditionalForm: "Close",
+    welcomeManualHint:
+      "Enter the details of the person who will be racing.",
+    welcomeManualSaveHint:
+      "When you save, the driver will be added to My Drivers and a driver profile will be created for this club. Club-specific driver details can be updated later through Driver Manager.",
+    welcomeManualPrefillNote:
+      "We've pre-filled these fields using your account details. If someone else will be racing, please update the information to match the driver's details before continuing.",
     importSectionTitle: "Bring a driver from another club",
     importSectionHint:
       "Reuse the same name and transponder numbers. Map each old class to the matching class at this club.",
@@ -364,9 +379,9 @@ export default {
     visitorDriverTitle: "Who is racing?",
     visitorDriverHint:
       "Add who is racing at this club — not the name on your RCRaceday login. Use the racer’s legal name if your club exports to timing software (e.g. LiveTime).",
-    driverGateRosterTitle: "From My racers",
+    driverGateRosterTitle: "From My Drivers",
     driverGateRosterHint:
-      "These people are on your account under Settings → Account → My racers. Add them to this club before you nominate.",
+      "These people are on your account under Settings → My Drivers. Add them to this club before you nominate.",
     driverGateRosterAdd: "Add selected & continue",
     driverGateRosterNoneSelected: "Select at least one racer, or add a name below.",
     driverGateOpenWelcome: "Set up drivers (recommended)",
@@ -386,6 +401,7 @@ export default {
     racingStarts: "Racing Starts:",
     selectDriver: "Select Driver",
     selectDriverAria: "Select driver",
+    manageDriversAtClub: "Wrong person or name? Open Driver Manager to add or edit racers.",
     householdNominations: "Household nominations",
     addNomination: "Add nomination",
     addAnotherNomination: "Add another driver",

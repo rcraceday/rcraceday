@@ -1,9 +1,13 @@
 -- Remove ONE test user from app tables + auth so you can retry flows from scratch.
 -- Run in Supabase → SQL → as postgres (or a role that can delete from auth.users).
 --
--- Deletes: nominations, driver_classes, drivers, club_members, household_memberships for that user,
--- profile (cascades user_transponders & platform_people when those FKs exist), notifications, push,
+-- Deletes: nominations, driver_classes, drivers (by membership_id, created_by, platform_person_id),
+-- club_members, household_memberships for that user,
+-- profile (user_transponders & platform_people), notifications, push,
 -- club_admin_grants, then auth.users.
+--
+-- If you sign in again with a NEW auth user id but the SAME email, set v_email to that email so
+-- household_memberships and orphan club drivers (no created_by) at those clubs are included.
 -- Does not delete clubs, events, or other members' data.
 --
 -- ---------------------------------------------------------------------------
@@ -59,7 +63,25 @@ begin
   select distinct d.id as driver_id
   from public.drivers d
   where d.membership_id in (select membership_id from _wipe_memberships)
-     or d.created_by in (select user_id from _wipe_users);
+     or d.created_by in (select user_id from _wipe_users)
+     or (
+       to_regclass('public.platform_people') is not null
+       and d.platform_person_id in (
+         select pp.id
+         from public.platform_people pp
+         where pp.user_id in (select user_id from _wipe_users)
+       )
+     )
+     or (
+       v_email is not null
+       and d.membership_id is null
+       and d.created_by is null
+       and exists (
+         select 1
+         from _wipe_memberships wm
+         where wm.club_id = d.club_id
+       )
+     );
 
   delete from public.nomination_entries ne
   using public.nominations n
@@ -140,6 +162,10 @@ $wipe$;
 
 commit;
 
--- Verify:
+-- Verify (replace UUID / email):
 -- select id, email from auth.users where id = 'YOUR-UUID'::uuid;
 -- select id from public.profiles where id = 'YOUR-UUID'::uuid;
+-- select d.id, d.club_id, d.first_name, d.last_name, d.created_by, d.membership_id
+-- from public.drivers d
+-- where d.created_by = 'YOUR-UUID'::uuid
+--    or d.membership_id in (select id from household_memberships where user_id = 'YOUR-UUID'::uuid);

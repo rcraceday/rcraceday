@@ -13,6 +13,7 @@ import { welcomeDriversPath, clubDriverSetupPath } from "@/app/lib/publicAuthRed
 import { isMissingPlatformPeopleTable } from "@/app/lib/platformPeople";
 import { addClubDriverForPlatformPerson, driverAtClubMatchesPerson } from "@/app/lib/clubDriverFromPlatformPerson";
 import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
+import { getJuniorCheckboxLabel, juniorTagInParens } from "@/app/lib/driverClubSettings";
 
 export default function EventNominateDriverGate({
   userId,
@@ -51,6 +52,8 @@ export default function EventNominateDriverGate({
     () => resolveHouseholdLimits(club, membershipType),
     [club, membershipType]
   );
+  const juniorCheckboxLabel = getJuniorCheckboxLabel(club);
+  const juniorParens = juniorTagInParens(club);
 
   useEffect(() => {
     let cancelled = false;
@@ -271,7 +274,7 @@ export default function EventNominateDriverGate({
                       />
                       <span>
                         {p.first_name} {p.last_name}
-                        {p.is_junior ? ` (${t("settings.roster.junior")})` : ""}
+                        {p.is_junior ? juniorParens : ""}
                       </span>
                     </label>
                   </li>
@@ -318,7 +321,7 @@ export default function EventNominateDriverGate({
                   disabled={saving}
                   onChange={(e) => setIsJunior(e.target.checked)}
                 />
-                {t("nominate.juniorShort")}
+                {juniorCheckboxLabel}
               </label>
               <Button type="submit" disabled={saving}>
                 {saving ? t("nominate.saving") : t("nominate.visitorDriverContinue")}

@@ -13,6 +13,7 @@ export default {
     news: "News",
     myNoms: "My Noms",
     messages: "Messages",
+    myDrivers: "My Drivers",
     driverManager: "Driver Manager",
     membership: "Membership",
     settings: "Settings",
@@ -27,7 +28,7 @@ export default {
     hubSubtitle: "Manage your account, alerts, and preferences.",
     account: {
       title: "Account",
-      menuDesc: "Name, address, transponders, roster, email, and password",
+      menuDesc: "Your contact details, sign-in email, and password",
       subtitle: "Your contact details, address, and sign-in.",
       personalDetails: "Personal details",
       firstName: "First name",
@@ -63,9 +64,39 @@ export default {
       wrongCurrentPassword: "Current password is incorrect.",
       passwordUpdated: "Password updated.",
     },
+    myDrivers: {
+      title: "My Drivers",
+      menuDesc: "Racers on your account and transponders — reuse at every club",
+      subtitle: "Account-Wide Drivers and Transponders",
+      pageLead1:
+        "Drivers and transponders in My Drivers are linked to your RCRaceday account and are available across all participating clubs.",
+      pageLead2:
+        "The driver details and transponder numbers you enter here are your account-wide records and can be reused whenever you race at a participating club.",
+      pageLead3:
+        "Each club can also maintain a club-specific driver name for the same driver. This allows you to use a different display name where required, such as matching an existing LiveTime profile, while still keeping a single driver record in your RCRaceday account.",
+      pageLead4:
+        "Club-specific settings—LiveTime-style driver profile (number, sponsors, colours), club display names, classes, and transponder assignments—are managed in the section below for this club. Changes there affect only this club and do not alter your account-wide driver records.",
+      clubSection: {
+        thisClub: "this club",
+        title: "At {{club}}",
+        hint:
+          "Driver profile is everything that syncs with LiveTime at this club: racing number, sponsors, colours, nickname, and related details. Driver Manager adds classes and club-specific naming for each racer.",
+        membershipRequired: "Your membership type at this club does not include driver profiles.",
+        membershipLink: "View membership options",
+        noDrivers: "No drivers are set up at this club yet. Add them here after you save racers on your account, or enable them when you visit a club.",
+        setUpAtClub: "Set up drivers at this club",
+        numberLabel: "No. {{number}}",
+        profileIncomplete: "Some required profile details are still missing.",
+        editDriverProfile: "Edit driver profile",
+        viewDriverProfile: "View profile",
+        managerBlurb:
+          "Open Driver Manager to assign race classes, club display names, and transponders per class.",
+        openDriverManager: "Open Driver Manager",
+      },
+    },
     transponders: {
-      title: "My transponders",
-      hint: "Register each chip once. They appear when you nominate or assign classes at any club.",
+      title: "Transponders",
+      hint: "Register each chip once on your account. Clubs suggest these when you assign classes.",
       empty: "No transponders saved yet. Add the numbers printed on your chips.",
       number: "Transponder number",
       labelOptional: "Label (optional)",
@@ -80,13 +111,15 @@ export default {
         "Transponder inventory is not enabled yet. Run scripts/add-user-transponders.sql in Supabase.",
     },
     roster: {
-      title: "My racers",
-      hint: "Define each person once under this login. When you join a club, pick who races there — names can differ per club if your timing system requires it.",
+      title: "Racers on your account",
+      hint: "Each person is saved once and can be enabled at any club. At a club you can use a different spelling if LiveTime requires it.",
       empty: "No racers on your account yet. Add everyone who races under this login.",
       firstName: "First name",
       lastName: "Last name",
-      junior: "Junior",
+      junior: "Under 16",
       addSection: "Add a racer",
+      addRacerButton: "Add a racer",
+      closeAddRacer: "Close",
       add: "Add racer",
       save: "Save",
       remove: "Remove",

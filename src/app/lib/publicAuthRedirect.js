@@ -133,6 +133,14 @@ export function isSafeClubAppReturnPath(returnPath, clubSlug) {
   return Boolean(sanitizeClubAppReturnPath(returnPath, clubSlug));
 }
 
+/** Member driver manager / profile routes (visitors get membership pitch if redirected here). */
+export function isDriverProfileMemberAppPath(pathname) {
+  const path = String(pathname || "").replace(/\/+$/, "");
+  if (!/\/app\/profile\/drivers(\/|$)/.test(path)) return false;
+  if (/\/app\/profile\/drivers\/(welcome|setup|add)(\/|$)/.test(path)) return false;
+  return true;
+}
+
 export function appReturnPathFromLocation(location, clubSlug) {
   if (!location) return "";
   const params = new URLSearchParams(

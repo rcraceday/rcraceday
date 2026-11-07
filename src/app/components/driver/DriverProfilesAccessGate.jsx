@@ -16,7 +16,11 @@ export default function DriverProfilesAccessGate({ children }) {
     );
   }
 
-  if (!allowed) {
+  const isDriverOnboardingPath = /\/profile\/drivers\/(welcome|setup|add)(\/|$)/.test(
+    location.pathname
+  );
+
+  if (!allowed && !isDriverOnboardingPath) {
     const isVisitor = membership?.membership_type === "non_member";
     if (isVisitor) {
       const returnTo = `${location.pathname}${location.search || ""}`;

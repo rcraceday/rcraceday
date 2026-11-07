@@ -31,7 +31,7 @@ import { persistDriverClassTransponder, sanitizeTransponderNumber } from "@/app/
 import EventNominateDriverGate from "@/app/pages/events/EventNominateDriverGate";
 import { normalizeMembershipProductType } from "@/app/pages/profile/householdDriverLimits";
 import { driverNominationBlockReason } from "@/app/lib/driverNominationValidation";
-import { resolveDriverProfilePolicy } from "@/app/lib/driverClubSettings";
+import { juniorTagInParens, resolveDriverProfilePolicy } from "@/app/lib/driverClubSettings";
 import useTheme from "@app/providers/useTheme";
 import { calculateUserPricing } from "@app/pages/events/events-sections/calculatePricing";
 import { resolveEventPricing } from "@app/pages/events/events-sections/helpers";
@@ -683,6 +683,7 @@ export default function EventNominate() {
   const { palette } = useTheme();
   const brand = palette?.primary || "#00438a";
   const contentText = palette?.text || "#1f2937";
+  const juniorParens = juniorTagInParens(club);
   const { clubs: rcraClubs } = useRcraClubs();
 
   const [event, setEvent] = useState(null);
@@ -2606,7 +2607,7 @@ export default function EventNominate() {
                           <div className="min-w-0">
                             <div className="font-semibold text-sm">
                               {driver.first_name} {driver.last_name}
-                              {driver.is_junior ? ` (${t("nominate.juniorShort")})` : ""}
+                              {driver.is_junior ? juniorParens : ""}
                             </div>
                             {summary.length > 0 && (
                               <ul className="mt-1 mb-0 text-sm text-text-muted list-disc pl-5 space-y-0.5">
@@ -2667,40 +2668,52 @@ export default function EventNominate() {
 
                 <Section title={t("nominate.driver")} icon={UserIcon} brand={brand}>
                   <div className="space-y-4">
-                    {isFamily && (
-                      <div>
-                        <label className="block text-sm font-medium mb-1">{t("nominate.selectDriver")}</label>
-                        <FilterDropdown
-                          variant="cms"
-                          value={selectedDriver.id}
-                          onChange={(value) => {
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t("nominate.selectDriver")}</label>
+                      <FilterDropdown
+                        variant="cms"
+                        value={selectedDriver.id}
+                        onChange={(value) => {
+                          if (isFamily) {
                             familyEditorBaselineRef.current = JSON.stringify(
                               selections[value] || emptySelection()
                             );
                             setFamilyEditorDriverId(value);
-                          }}
-                          options={drivers
-                            .filter(
+                          } else {
+                            setSelectedDriverId(value);
+                          }
+                        }}
+                        options={(isFamily
+                          ? drivers.filter(
                               (driver) =>
                                 !driverHasSavedNomination(driver.id) ||
                                 driver.id === selectedDriver.id
                             )
-                            .map((driver) => ({
-                              value: driver.id,
-                              label: `${driver.first_name} ${driver.last_name}${driver.is_junior ? " (Junior)" : ""}`,
-                            }))}
-                          ariaLabel={t("nominate.selectDriverAria")}
-                          triggerStyleOverrides={{ fontSize: "0.875rem" }}
-                        />
-                      </div>
-                    )}
-
-                    {!isFamily && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input label={t("nominate.firstName")} value={selectedDriver.first_name || ""} readOnly style={{ background: "#F5F5F5" }} />
-                        <Input label={t("nominate.lastName")} value={selectedDriver.last_name || ""} readOnly style={{ background: "#F5F5F5" }} />
-                      </div>
-                    )}
+                          : drivers
+                        ).map((driver) => ({
+                          value: driver.id,
+                          label: `${driver.first_name} ${driver.last_name}${driver.is_junior ? juniorParens : ""}`,
+                        }))}
+                        ariaLabel={t("nominate.selectDriverAria")}
+                        triggerStyleOverrides={{ fontSize: "0.875rem" }}
+                      />
+                      <p className="text-sm text-text-muted mt-2 mb-0">
+                        <button
+                          type="button"
+                          className="underline"
+                          style={{ color: brand, background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                          onClick={() =>
+                            navigate(`/${clubSlug}/app/profile/drivers`, {
+                              state: {
+                                returnTo: `${location.pathname}${location.search || ""}`,
+                              },
+                            })
+                          }
+                        >
+                          {t("nominate.manageDriversAtClub")}
+                        </button>
+                      </p>
+                    </div>
                     {selectedDriver.is_junior && (
                       <div className="text-sm font-medium" style={{ color: brand }}>
                         {t("nominate.juniorPricingNote")}

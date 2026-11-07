@@ -8,6 +8,7 @@ import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   returnToFromSearch,
   sanitizeClubAppReturnPath,
+  welcomeDriversPath,
 } from "@/app/lib/publicAuthRedirect";
 import {
   loadClubAccessClassMap,
@@ -59,7 +60,11 @@ export default function ClubAccessClassMap() {
       });
       if (cancelled) return;
       if (!result.groups.length) {
-        navigate(afterPath(), { replace: true });
+        if (!driverList.length && clubSlug) {
+          navigate(welcomeDriversPath(clubSlug, safeReturnTo), { replace: true });
+        } else {
+          navigate(afterPath(), { replace: true });
+        }
         return;
       }
       setGroups(result.groups);
@@ -70,7 +75,7 @@ export default function ClubAccessClassMap() {
     return () => {
       cancelled = true;
     };
-  }, [club?.id, loadingDrivers, driverKey, navigate]);
+  }, [club?.id, loadingDrivers, driverKey, navigate, clubSlug, safeReturnTo, driverList.length]);
 
   const classOptions = useMemo(
     () => [

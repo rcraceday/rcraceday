@@ -1,6 +1,5 @@
 // src/components/ui/Card.jsx
 import useTheme from "@/app/providers/useTheme";
-import { useEffect } from "react";
 
 export default function Card({
   children,
@@ -26,11 +25,6 @@ export default function Card({
   const hoverStyle = {
   boxShadow: "0 6px 14px rgba(0,0,0,0.18)",
 };
-
-useEffect(() => {
-  if (!palette) return;
-  console.log("Palette from Card.jsx:", palette);
-}, [palette]);
 
 return (
   <div

@@ -2,7 +2,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { dismissMembershipPitch } from "@/app/lib/membershipPitchDismissal";
-import { sanitizeClubAppReturnPath } from "@/app/lib/publicAuthRedirect";
+import {
+  isDriverProfileMemberAppPath,
+  sanitizeClubAppReturnPath,
+} from "@/app/lib/publicAuthRedirect";
 
 export default function MembershipBenefitsOverlay({
   open,
@@ -11,6 +14,7 @@ export default function MembershipBenefitsOverlay({
   userId,
   brand,
   returnTo,
+  memberOnlyAttempt = false,
 }) {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
@@ -26,8 +30,12 @@ export default function MembershipBenefitsOverlay({
   function handleNoThanks() {
     dismissMembershipPitch(clubId, userId);
     onClose();
+    const home = `/${clubSlug}/app`;
     const safe = sanitizeClubAppReturnPath(returnTo, clubSlug);
-    navigate(safe || `/${clubSlug}/app`, { replace: true });
+    const pathname = safe ? safe.split("?")[0]?.split("#")[0] : "";
+    const sendHome =
+      memberOnlyAttempt || (pathname && isDriverProfileMemberAppPath(pathname));
+    navigate(sendHome ? home : safe || home, { replace: true });
   }
 
   return (

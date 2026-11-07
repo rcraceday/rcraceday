@@ -38,6 +38,7 @@ import NominationsReview from "@app/pages/nominations/NominationsReview";
 import ClubMessages from "@app/pages/messages/ClubMessages";
 import UserSettingsIndex from "@app/pages/settings/UserSettingsIndex";
 import AccountSettings from "@app/pages/settings/AccountSettings";
+import MyDriversSettings from "@app/pages/settings/MyDriversSettings";
 import UserNotificationSettings from "@app/pages/settings/UserNotificationSettings";
 import LanguageSettings from "@app/pages/settings/LanguageSettings";
 import TimezoneSettings from "@app/pages/settings/TimezoneSettings";
@@ -321,6 +322,7 @@ export default function AppRoutes() {
         <Route path="nominations" element={<NominationsReview />} />
         <Route path="messages" element={<ClubMessages />} />
         <Route path="settings" element={<UserSettingsIndex />} />
+        <Route path="settings/my-drivers" element={<MyDriversSettings />} />
         <Route path="settings/account" element={<AccountSettings />} />
         <Route path="settings/notifications" element={<UserNotificationSettings />} />
         <Route path="settings/language" element={<LanguageSettings />} />

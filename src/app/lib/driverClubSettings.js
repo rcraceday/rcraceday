@@ -56,6 +56,8 @@ export const DEFAULT_DRIVER_SETTINGS = {
   juniors: {
     mode: "manual_checkbox",
     cutoff_birth_year: null,
+    /** Shown in UI as “(Under 16)” — configurable per club in Driver Settings */
+    display_tag: "Under 16",
   },
   livetime: {
     club_name_override: "",
@@ -133,6 +135,24 @@ export function resolveDriverDirectoryRules(club) {
 
 export function resolveDriverJuniorRules(club) {
   return getDriverSettings(club).juniors;
+}
+
+const DEFAULT_JUNIOR_DISPLAY_TAG = "Under 16";
+
+export function getJuniorDisplayTag(club) {
+  const rules = resolveDriverJuniorRules(club);
+  const custom = String(rules.display_tag ?? "").trim();
+  return custom || DEFAULT_JUNIOR_DISPLAY_TAG;
+}
+
+/** e.g. " (Under 16)" for lists and dropdowns */
+export function juniorTagInParens(club) {
+  return ` (${getJuniorDisplayTag(club)})`;
+}
+
+/** Checkbox label, e.g. "Junior (Under 16)" */
+export function getJuniorCheckboxLabel(club) {
+  return `Junior (${getJuniorDisplayTag(club)})`;
 }
 
 export function resolveLiveTimeDriverRules(club) {
