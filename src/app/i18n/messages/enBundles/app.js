@@ -302,6 +302,12 @@ export default {
     welcomeRosterHint:
       "These people are saved under Settings → Account → My racers. Tick who races at this club, then add them in one step.",
     welcomeRosterAddSelected: "Add selected to this club",
+    setupTitle: "Set up classes at this club",
+    setupLead: "Map your classes for {{club}}",
+    setupHint:
+      "We copied your classes from other clubs and matched names where we could. Confirm each class and keep the same transponder, then continue.",
+    setupSave: "Save class map",
+    setupSkip: "Skip for now",
     welcomeHouseholdHeading: "Household members",
     welcomeAdultLabel: "Adult",
     welcomeSaveContinue: "Save & continue",
@@ -357,7 +363,14 @@ export default {
     loadingForm: "Loading nomination form…",
     visitorDriverTitle: "Who is racing?",
     visitorDriverHint:
-      "This club needs a driver profile for you before you can nominate. Confirm the name that should appear on the entry form.",
+      "Add who is racing at this club — not the name on your RCRaceday login. Use the racer’s legal name if your club exports to timing software (e.g. LiveTime).",
+    driverGateRosterTitle: "From My racers",
+    driverGateRosterHint:
+      "These people are on your account under Settings → Account → My racers. Add them to this club before you nominate.",
+    driverGateRosterAdd: "Add selected & continue",
+    driverGateRosterNoneSelected: "Select at least one racer, or add a name below.",
+    driverGateOpenWelcome: "Set up drivers (recommended)",
+    driverGateManualLead: "Or add one driver now:",
     visitorDriverContinue: "Continue to nomination",
     visitorDriverDuplicate:
       "This driver name is already registered at this club. Use the spelling shown on previous entries, or choose a different name.",

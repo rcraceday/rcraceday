@@ -20,6 +20,7 @@ import Card from "@/components/ui/Card";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import {
+  clubDriverSetupPath,
   returnToFromSearch,
   sanitizeClubAppReturnPath,
 } from "@/app/lib/publicAuthRedirect";
@@ -219,7 +220,7 @@ export default function WelcomeAddDrivers() {
 
       await refreshDrivers();
       await reloadMembers();
-      navigate(afterWelcomePath());
+      navigate(clubDriverSetupPath(clubSlug, safeWelcomeReturnTo));
     } catch (err) {
       console.error("[WelcomeAddDrivers] handleAddSelectedFromRoster", err);
       setError(t("drivers.welcomeGenericError"));
@@ -270,7 +271,7 @@ export default function WelcomeAddDrivers() {
       refreshDrivers();
       reloadMembers();
 
-      navigate(afterWelcomePath());
+      navigate(clubDriverSetupPath(clubSlug, safeWelcomeReturnTo));
     } catch (err) {
       console.error("[WelcomeAddDrivers] handleAddPerson error", err);
       setError(t("drivers.welcomeGenericError"));

@@ -68,10 +68,10 @@ export default function Home() {
     if (loadingMembership || loadingDrivers) return;
     if (!Array.isArray(drivers)) return;
 
-    if (drivers.length === 0 && membership?.membership_type !== "non_member") {
+    if (drivers.length === 0) {
       navigate(`/${clubSlug}/app/profile/drivers/welcome`, { replace: true });
     }
-  }, [clubSlug, loadingMembership, loadingDrivers, drivers, membership?.membership_type, navigate]);
+  }, [clubSlug, loadingMembership, loadingDrivers, drivers, navigate]);
 
   useEffect(() => {
     if (!club?.id) return;

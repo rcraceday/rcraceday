@@ -55,6 +55,7 @@ export async function fetchImportableDriversFromOtherClubs(targetClubId) {
       `
       id,
       club_id,
+      platform_person_id,
       first_name,
       last_name,
       is_junior,
@@ -93,7 +94,7 @@ export async function fetchTargetClubClasses(clubId) {
   return { classes: data || [], error: null };
 }
 
-async function resolveTrackForClass(clubId, classId) {
+export async function resolveTrackForClass(clubId, classId) {
   const { data: tracks } = await supabase
     .from("club_tracks")
     .select("id")

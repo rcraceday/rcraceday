@@ -12,7 +12,7 @@ export async function claimHouseholdMembership({ clubId, membershipEmail }) {
   });
 
   if (error) {
-    const message = String(error.message || "");
+    const message = String(error.message || "").toLowerCase();
     if (message.includes("membership_already_linked")) {
       return { ok: false, membership: null, error: "already_linked" };
     }
@@ -22,10 +22,17 @@ export async function claimHouseholdMembership({ clubId, membershipEmail }) {
     if (message.includes("not_authenticated")) {
       return { ok: false, membership: null, error: "not_authenticated" };
     }
+    if (
+      error.code === "PGRST116" ||
+      message.includes("not found") ||
+      message.includes("0 rows")
+    ) {
+      return { ok: false, membership: null, error: "not_found" };
+    }
     return { ok: false, membership: null, error: "failed" };
   }
 
-  if (!data) {
+  if (!data || !data.id) {
     return { ok: false, membership: null, error: "not_found" };
   }
 

@@ -2358,7 +2358,10 @@ export default function EventNominate() {
       <EventNominateDriverGate
         userId={user.id}
         clubId={club.id}
+        club={club}
+        clubSlug={club?.slug}
         membership={membership}
+        driversAtClub={drivers}
         onDriverReady={refreshDrivers}
       />
     );

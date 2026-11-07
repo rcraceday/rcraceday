@@ -31,7 +31,7 @@ begin;
 do $wipe$
 declare
   -- >>> REQUIRED: paste user id from Dashboard → Authentication → Users <<<
-  v_user_id uuid := null;
+  v_user_id uuid := '03caae7a-4186-457e-90fa-5be0f3497d32'::uuid;
   -- >>> OPTIONAL: match household_memberships by email if user_id was not always set <<<
   v_email   text := null::text;  -- e.g. 'racer@example.com'
 begin

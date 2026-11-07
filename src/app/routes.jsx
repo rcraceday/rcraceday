@@ -53,6 +53,7 @@ import DriverProfile from "@app/pages/profile/DriverProfile";
 import AddDriver from "@app/pages/profile/AddDriver";
 import ChooseNumber from "@app/pages/profile/ChooseNumber";
 import WelcomeAddDrivers from "@app/pages/profile/WelcomeAddDrivers";
+import ClubAccessClassMap from "@app/pages/profile/ClubAccessClassMap";
 
 import DriverProvider from "@/app/providers/DriverProvider";
 import DriverProfilesAccessGate from "@/app/components/driver/DriverProfilesAccessGate";
@@ -333,6 +334,16 @@ export default function AppRoutes() {
             <DriverProvider>
               <DriverProfilesAccessGate>
                 <WelcomeAddDrivers />
+              </DriverProfilesAccessGate>
+            </DriverProvider>
+          }
+        />
+        <Route
+          path="profile/drivers/setup"
+          element={
+            <DriverProvider>
+              <DriverProfilesAccessGate>
+                <ClubAccessClassMap />
               </DriverProfilesAccessGate>
             </DriverProvider>
           }

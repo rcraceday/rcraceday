@@ -6,8 +6,7 @@ import {
   resolvePostAuthAppPath,
   sanitizeClubAppReturnPath,
 } from "@/app/lib/publicAuthRedirect";
-import { isNominateAppReturnPath } from "@/app/lib/nominationLinks";
-import { ensureHostClubVisitorDriver } from "@/app/lib/ensureHostClubVisitorDriver";
+import { listHostClubDriversForMembership } from "@/app/lib/ensureHostClubVisitorDriver";
 
 function isVisitorMembership(membership) {
   return !membership || membership.membership_type === "non_member";
@@ -144,22 +143,30 @@ async function finishClubEntry({
     }
   }
 
-  let navigateFirstLogin = linkedFirstLogin;
-  if (safeReturnTo && isNominateAppReturnPath(safeReturnTo)) {
-    const ensured = await ensureHostClubVisitorDriver({
+  const { drivers: clubDrivers, error: driversLookupError } =
+    await listHostClubDriversForMembership({
       userId,
       clubId: club.id,
       membership,
     });
-    if (ensured) {
-      navigateFirstLogin = false;
-    }
+
+  if (driversLookupError) {
+    console.warn("[reconcileClubAccess] driver lookup", driversLookupError);
   }
 
+  const needsDriverWelcome = !(clubDrivers?.length > 0);
   const isVisitor = membership.membership_type === "non_member";
+
+  let navigateFirstLogin = linkedFirstLogin;
+  if (needsDriverWelcome) {
+    navigateFirstLogin = true;
+  } else if (isVisitor) {
+    navigateFirstLogin = false;
+  }
+
   const destination = resolvePostAuthAppPath({
     clubSlug,
-    firstLogin: isVisitor ? false : navigateFirstLogin,
+    firstLogin: navigateFirstLogin,
     returnTo: safeReturnTo,
   });
 

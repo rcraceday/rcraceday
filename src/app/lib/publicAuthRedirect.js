@@ -318,6 +318,16 @@ export function welcomeDriversPath(clubSlug, returnTo) {
   return path;
 }
 
+export function clubDriverSetupPath(clubSlug, returnTo) {
+  const slug = normalizeClubSlug(clubSlug);
+  const path = `/${slug}/app/profile/drivers/setup`;
+  const safeReturnTo = sanitizeClubAppReturnPath(returnTo, slug);
+  if (safeReturnTo) {
+    return `${path}?returnTo=${encodeURIComponent(safeReturnTo)}`;
+  }
+  return path;
+}
+
 export function resolvePostAuthAppPath({ clubSlug, firstLogin, returnTo }) {
   const slug = normalizeClubSlug(clubSlug);
   const safeReturnTo = sanitizeClubAppReturnPath(returnTo, slug);

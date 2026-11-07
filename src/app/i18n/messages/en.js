@@ -81,7 +81,7 @@ export default {
     },
     roster: {
       title: "My racers",
-      hint: "Define each person once. New club drivers can link to this list when the feature is fully rolled out.",
+      hint: "Define each person once under this login. When you join a club, pick who races there — names can differ per club if your timing system requires it.",
       empty: "No racers on your account yet. Add everyone who races under this login.",
       firstName: "First name",
       lastName: "Last name",

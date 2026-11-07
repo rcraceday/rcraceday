@@ -99,6 +99,11 @@ a:hover {
   word-break: break-word;
 }
 
+.public-auth-error a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
 .public-auth-form .public-auth-error {
   margin: 0;
 }

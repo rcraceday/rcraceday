@@ -159,7 +159,11 @@ export default {
     linking: "Linking…",
     continueVisitor: "Continue without a membership",
     continuing: "Continuing…",
-    notFound: "No membership found for that email at this club.",
+    notFoundBefore:
+      "We couldn't find a membership associated with that email address. Please try a different email address or continue without a membership. If you're having trouble accessing your membership, contact the club administrator at",
+    notFoundAfter: "for help.",
+    notFoundNoContact:
+      "We couldn't find a membership associated with that email address. Please try a different email address or continue without a membership. If you're having trouble accessing your membership, contact the club administrator for help.",
     alreadyLinked: "That membership is already linked to another account.",
     alreadyHasMembership: "Your account is already linked to a membership at this club.",
     failed: "Unable to link that membership. Please try again.",

@@ -15,6 +15,7 @@ import { reconcileClubAccess } from "@/app/lib/reconcileClubAccess";
 import {
   platformHomePath,
   publicClaimMembershipPath,
+  clubDriverSetupPath,
   resolvePostAuthAppPath,
   returnToFromSearch,
   sanitizeClubAppReturnPath,
@@ -26,6 +27,20 @@ import {
   driverAtClubMatchesPerson,
 } from "@/app/lib/clubDriverFromPlatformPerson";
 
+function ClaimErrorMessage({ message, contactEmail, t }) {
+  if (!message && !contactEmail) return null;
+  if (contactEmail) {
+    return (
+      <p className="public-auth-error">
+        {t("claimMembership.notFoundBefore")}{" "}
+        <a href={`mailto:${contactEmail}`}>{contactEmail}</a>{" "}
+        {t("claimMembership.notFoundAfter")}
+      </p>
+    );
+  }
+  return <p className="public-auth-error">{message}</p>;
+}
+
 export default function ClaimMembership() {
   const { club } = useOutletContext();
   const { clubSlug } = useParams();
@@ -36,6 +51,7 @@ export default function ClaimMembership() {
 
   const [membershipEmail, setMembershipEmail] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [errorContactEmail, setErrorContactEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [continuing, setContinuing] = useState(false);
   const [checkingLoginEmail, setCheckingLoginEmail] = useState(true);
@@ -77,6 +93,7 @@ export default function ClaimMembership() {
   useEffect(() => {
     if (loadingUser) return;
     if (!user) {
+      if (loading || continuing) return;
       navigate(
         platformHomePath(publicClaimMembershipPath(clubSlug, safeReturnTo)),
         { replace: true }
@@ -84,7 +101,7 @@ export default function ClaimMembership() {
       return;
     }
     setCheckingLoginEmail(false);
-  }, [loadingUser, user, clubSlug, navigate, safeReturnTo]);
+  }, [loadingUser, user, loading, continuing, clubSlug, navigate, safeReturnTo]);
 
   useEffect(() => {
     if (!loginEmail || membershipEmail) return;
@@ -214,6 +231,7 @@ export default function ClaimMembership() {
   async function handleClaim(e) {
     e.preventDefault();
     setErrorMsg("");
+    setErrorContactEmail("");
 
     const email = membershipEmail.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -229,21 +247,27 @@ export default function ClaimMembership() {
     setLoading(false);
 
     if (!result.ok) {
+      setStep("claim");
+      const contactEmail = String(club?.contact_email || "").trim();
       const key = {
-        not_found: "claimMembership.notFound",
+        not_found: "claimMembership.notFoundNoContact",
         already_linked: "claimMembership.alreadyLinked",
         already_has_membership: "claimMembership.alreadyHasMembership",
       }[result.error];
+      setErrorContactEmail(result.error === "not_found" ? contactEmail : "");
       setErrorMsg(t(key || "claimMembership.failed"));
       return;
     }
 
+    setErrorMsg("");
+    setErrorContactEmail("");
     setClaimedMembership(result.membership);
     setStep("roster");
   }
 
   async function handleContinueVisitor() {
     setErrorMsg("");
+    setErrorContactEmail("");
     setContinuing(true);
     await reconcileClubAccess({
       user,
@@ -295,7 +319,7 @@ export default function ClaimMembership() {
         }
       }
 
-      goToAppAfterClaim();
+      navigate(clubDriverSetupPath(clubSlug, safeReturnTo));
     } catch (err) {
       console.error("[ClaimMembership] roster provision", err);
       setErrorMsg(t("drivers.welcomeGenericError"));
@@ -336,7 +360,7 @@ export default function ClaimMembership() {
         <h1 className="public-auth-title">{t("claimMembership.rosterTitle", { club: club.name })}</h1>
         <p className="public-auth-lead">{t("claimMembership.rosterHint")}</p>
 
-        {errorMsg ? <p className="public-auth-error">{errorMsg}</p> : null}
+        <ClaimErrorMessage message={errorMsg} contactEmail="" t={t} />
 
         <div className="public-auth-form" style={{ textAlign: "left" }}>
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 16px" }}>
@@ -393,7 +417,11 @@ export default function ClaimMembership() {
         {t("claimMembership.membershipEmailHelp", { clubName: club.name })}
       </p>
 
-      {errorMsg ? <p className="public-auth-error">{errorMsg}</p> : null}
+      <ClaimErrorMessage
+        message={errorMsg}
+        contactEmail={errorContactEmail}
+        t={t}
+      />
 
       <form onSubmit={handleClaim} className="public-auth-form">
         <Input

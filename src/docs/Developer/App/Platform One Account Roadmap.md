@@ -228,10 +228,10 @@ Dependencies flow top to bottom. Ship each phase in a releasable state.
 
 ### Phase 3 — Auto-fill at club access
 
-- After membership link: if no drivers at club, run **provision from roster** (names, juniors, defaults).
-- **Class map** screen: target club classes ↔ transponders from inventory (reuse `crossClubDriverImport` mapping).
-- Skip welcome when provision succeeds.
-- Smart defaults: match class names across clubs (`suggestTargetClassId`).
+- [x] After membership link: if no drivers at club, run **provision from roster** (names, juniors, defaults) — claim-membership roster checkboxes.
+- [x] **Class map** screen: `/:slug/app/profile/drivers/setup` maps other-club classes ↔ this club (`suggestTargetClassId`) and copies transponders (inventory FK when present).
+- [x] Skip welcome when provision succeeds — roster add goes to class map, not blank-name welcome.
+- [x] Smart defaults: match class names across clubs (`suggestTargetClassId`).
 
 **Exit:** Club B setup is membership email + class map only for state titles.
 

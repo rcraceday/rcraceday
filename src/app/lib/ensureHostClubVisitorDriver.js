@@ -1,4 +1,5 @@
 import { supabase } from "@/supabaseClient";
+import { linkDriverToPlatformPerson } from "@/app/lib/platformPeople";
 
 function isNonMemberHousehold(membership) {
   return String(membership?.membership_type || "")
@@ -158,8 +159,8 @@ async function normalizeNonMemberDriverRows({ userId, clubId, membership }) {
 }
 
 /**
- * Ensures the user has at least one driver row at this club (required to nominate).
- * Idempotent: no-op when a loadable driver already exists.
+ * Returns whether the user already has at least one driver row at this club.
+ * Does not create drivers — racers must be added via Driver Manager, welcome, or roster.
  */
 export async function ensureHostClubVisitorDriver({ userId, clubId, membership }) {
   if (!userId || !clubId || !membership?.id) return false;
@@ -173,26 +174,11 @@ export async function ensureHostClubVisitorDriver({ userId, clubId, membership }
     console.warn("[ensureHostClubVisitorDriver] lookup", lookupError);
     return false;
   }
-  if (existing?.length) return true;
+  return (existing?.length ?? 0) > 0;
+}
 
-  const { first, last } = await resolveDriverNames({ userId, membership });
-  const membershipIdOnInsert = isNonMemberHousehold(membership) ? null : membership.id;
-
-  const { error: insertError } = await supabase.from("drivers").insert({
-    membership_id: membershipIdOnInsert,
-    club_id: clubId,
-    first_name: first,
-    last_name: last,
-    is_junior: false,
-    created_by: userId,
-  });
-
-  if (insertError) {
-    console.warn("[ensureHostClubVisitorDriver] insert", insertError);
-    return false;
-  }
-
-  return true;
+export async function hostClubHasDrivers({ userId, clubId, membership }) {
+  return ensureHostClubVisitorDriver({ userId, clubId, membership });
 }
 
 export async function createHostClubVisitorDriver({
@@ -226,18 +212,32 @@ export async function createHostClubVisitorDriver({
 
   const membershipIdOnInsert = isNonMemberHousehold(membership) ? null : membership.id;
 
-  const { error } = await supabase.from("drivers").insert({
-    membership_id: membershipIdOnInsert,
-    club_id: clubId,
-    first_name: trimmedFirst,
-    last_name: trimmedLast,
-    is_junior: !!isJunior,
-    created_by: userId,
-  });
+  const { data: inserted, error } = await supabase
+    .from("drivers")
+    .insert({
+      membership_id: membershipIdOnInsert,
+      club_id: clubId,
+      first_name: trimmedFirst,
+      last_name: trimmedLast,
+      is_junior: !!isJunior,
+      created_by: userId,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     console.warn("[createHostClubVisitorDriver]", error);
     return { ok: false, error: error.message };
+  }
+
+  if (inserted?.id) {
+    await linkDriverToPlatformPerson(supabase, {
+      driverId: inserted.id,
+      userId,
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
+      isJunior: !!isJunior,
+    });
   }
 
   return { ok: true, error: null };
