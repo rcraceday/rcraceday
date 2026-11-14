@@ -15,12 +15,12 @@ export default function Card({
   const baseStyle = {
     background: "#FFFFFF",
     boxSizing: "border-box",
-  borderRadius: "16px",
-  boxShadow: "0 4px 10px rgba(0,0,0,0.12)",
-  transition: "all 0.25s ease",
-  ...style,
+    borderRadius: "16px",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.12)",
+    transition: "all 0.25s ease",
     border: `2px solid ${primary || "#00438a"}`,
-};
+    ...style,
+  };
 
   const hoverStyle = {
   boxShadow: "0 6px 14px rgba(0,0,0,0.18)",

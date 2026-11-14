@@ -202,32 +202,82 @@ export default function NominationsReview() {
           </Card>
         ) : (
           eventCards.map(({ event, drivers }) => (
-            <Card key={event.id} className="p-4 space-y-4">
-              <h2 className="font-semibold text-lg leading-tight" style={{ color: contentText }}>
-                {richTextToPlainText(event.name)}
-              </h2>
+            <Card
+              key={event.id}
+              className="p-5 space-y-5"
+              style={{
+                border: `1px solid color-mix(in srgb, ${brand} 28%, #e5e7eb)`,
+                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.06)",
+              }}
+            >
+              <header className="space-y-1">
+                <h2
+                  className="font-semibold text-lg leading-tight tracking-tight"
+                  style={{ color: contentText }}
+                >
+                  {richTextToPlainText(event.name)}
+                </h2>
+              </header>
 
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {drivers.map(({ driver, classes }) => (
-                  <div key={driver.id} className="space-y-1">
-                    <p className="font-medium" style={{ color: contentText }}>
+                  <section key={driver.id} className="space-y-2.5">
+                    <h3
+                      className="text-[15px] font-semibold leading-snug"
+                      style={{ color: contentText }}
+                    >
                       {driverName(driver) || "Unnamed driver"}
-                    </p>
+                    </h3>
                     {classes.length === 0 ? (
                       <p className="text-sm text-text-muted">No classes nominated.</p>
                     ) : (
-                      classes.map((item) => (
-                        <p key={item.id} className="text-sm text-text-muted">
-                          {item.name}
-                          {item.transponder ? ` · Transponder ${item.transponder}` : " · Transponder not set"}
-                        </p>
-                      ))
+                      <ul className="m-0 list-none space-y-2 p-0">
+                        {classes.map((item) => {
+                          const hasTransponder = Boolean(item.transponder);
+                          return (
+                            <li
+                              key={item.id}
+                              className="flex flex-col gap-1.5 rounded-lg px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                              style={{
+                                background: "color-mix(in srgb, #f8fafc 88%, white)",
+                                borderLeft: `3px solid color-mix(in srgb, ${brand} 45%, #cbd5e1)`,
+                              }}
+                            >
+                              <span
+                                className="text-sm font-medium leading-snug"
+                                style={{ color: contentText }}
+                              >
+                                {item.name}
+                              </span>
+                              {hasTransponder ? (
+                                <span className="text-xs sm:text-sm text-text-muted tabular-nums whitespace-nowrap">
+                                  Transponder {item.transponder}
+                                </span>
+                              ) : (
+                                <span
+                                  className="inline-flex w-fit items-center rounded-md px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+                                  style={{
+                                    background: "#fffbeb",
+                                    color: "#92400e",
+                                    border: "1px solid #fde68a",
+                                  }}
+                                >
+                                  Transponder not set
+                                </span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
                     )}
-                  </div>
+                  </section>
                 ))}
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div
+                className="flex flex-wrap gap-2 pt-4"
+                style={{ borderTop: "1px solid #eef2f7" }}
+              >
                 <Link
                   to={`/${clubSlug}/app/events/${event.id}/nominate`}
                   state={{ reloadSavedNominations: true }}
