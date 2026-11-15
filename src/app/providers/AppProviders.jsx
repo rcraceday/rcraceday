@@ -51,6 +51,10 @@ export default function AppProviders() {
     pathname === "/" ||
     pathname === "/find-club" ||
     pathname === "/launch" ||
+    pathname === "/terms" ||
+    pathname === "/privacy" ||
+    pathname === "/support" ||
+    pathname === "/contact" ||
     pathname === "/forgot-password" ||
     pathname === "/forgot-email" ||
     pathname === "/recover-password" ||

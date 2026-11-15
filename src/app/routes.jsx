@@ -4,6 +4,10 @@ import { Routes, Route, Navigate, useParams, useLocation } from "react-router-do
 import PlatformHome from "@/app/pages/global/PlatformHome.jsx";
 import ClubFinder from "@/app/pages/global/ClubFinder.jsx";
 import LaunchRedirect from "@/app/pages/global/LaunchRedirect.jsx";
+import TermsOfUse from "@/app/pages/global/TermsOfUse.jsx";
+import PrivacyPolicy from "@/app/pages/global/PrivacyPolicy.jsx";
+import Support from "@/app/pages/global/Support.jsx";
+import ContactRCRaceday from "@/app/pages/global/ContactRCRaceday.jsx";
 
 import AppLayout from "@/layouts/AppLayout";
 import PublicLayout from "@/layouts/PublicLayout";
@@ -12,6 +16,7 @@ import AdminLayout from "@/layouts/AdminLayout";
 import ProtectedAppRoute from "@/app/routes/ProtectedAppRoute";
 import ClubProvider from "@/app/providers/ClubProvider";
 import ThemeProvider from "@/app/providers/ThemeProvider";
+import Footer from "@/components/ui/Footer";
 
 // PUBLIC PAGES
 import ClubPublicLoginEntry from "@app/pages/public/ClubPublicLoginEntry";
@@ -116,6 +121,10 @@ const RESERVED_TOP_LEVEL_SLUGS = new Set([
   "forgot-email",
   "reset-password",
   "recover-password",
+  "terms",
+  "privacy",
+  "support",
+  "contact",
 ]);
 
 function ClubRootRedirect() {
@@ -143,6 +152,24 @@ function ClubRootRedirect() {
         <ForgotEmail />
       </PlatformAuthLayout>
     );
+  }
+  if (normalized === "find-club") {
+    return <Navigate to="/find-club" replace />;
+  }
+  if (normalized === "launch") {
+    return <Navigate to="/launch" replace />;
+  }
+  if (normalized === "terms") {
+    return <TermsOfUse />;
+  }
+  if (normalized === "privacy") {
+    return <PrivacyPolicy />;
+  }
+  if (normalized === "support") {
+    return <Support />;
+  }
+  if (normalized === "contact") {
+    return <ContactRCRaceday />;
   }
   if (RESERVED_TOP_LEVEL_SLUGS.has(normalized)) {
     return <NotFound />;
@@ -193,12 +220,23 @@ function PlatformAuthLayout({ children }) {
           minHeight: "100vh",
           background: "white",
           display: "flex",
-          justifyContent: "center",
-          padding: "20px 20px 24px",
+          flexDirection: "column",
           boxSizing: "border-box",
         }}
       >
-        {children}
+        <div
+          style={{
+            flex: "1 0 auto",
+            width: "100%",
+            display: "flex",
+            justifyContent: "center",
+            padding: "20px 20px 24px",
+            boxSizing: "border-box",
+          }}
+        >
+          {children}
+        </div>
+        <Footer />
       </main>
     </ThemeProvider>
   );
@@ -230,6 +268,10 @@ export default function AppRoutes() {
         }
       />
       <Route path="/launch" element={<LaunchRedirect />} />
+      <Route path="/terms" element={<TermsOfUse />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/support" element={<Support />} />
+      <Route path="/contact" element={<ContactRCRaceday />} />
       <Route
         path="/forgot-password"
         element={

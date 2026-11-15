@@ -53,8 +53,12 @@ export default function ClubProvider({ children }) {
     "forgot-password",
   "forgot-email",
   "reset-password",
-  "recover-password",
-]);
+    "recover-password",
+    "terms",
+    "privacy",
+    "support",
+    "contact",
+  ]);
 
   // ⭐ Extract club slug from the URL
   const clubSlug = (() => {

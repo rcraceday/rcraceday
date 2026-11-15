@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { useClub } from "@/app/providers/ClubProvider";
 import { normalizeResetPasswordLocation } from "@/app/lib/publicAuthRedirect";
+import Footer from "@/components/ui/Footer";
 
 export default function PublicLayout() {
   const { club } = useClub();
@@ -45,6 +46,7 @@ export default function PublicLayout() {
           <Outlet context={{ club }} />
         </div>
       </div>
+      <Footer club={club} />
     </main>
   );
 }

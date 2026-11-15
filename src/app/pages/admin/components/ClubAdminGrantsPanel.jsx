@@ -23,7 +23,7 @@ import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
 import CMSToggle from "@cms/CMSToggle";
 import CMSSelect from "@cms/CMSSelect";
-import AdminMemberAccountSearch from "./AdminMemberAccountSearch";
+import AdminMemberAccountSearch from "@/app/pages/admin/settings/components/AdminMemberAccountSearch";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
 const bannerStyle = (kind) => ({

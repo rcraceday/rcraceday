@@ -37,6 +37,7 @@ import {
 
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
 import Footer from "@/components/ui/Footer";
+import RequestConfirmationEmailHelp from "@/app/components/auth/RequestConfirmationEmailHelp";
 
 const PLATFORM_BRAND = "#ce0202";
 
@@ -617,6 +618,10 @@ export default function PlatformHome() {
                   <strong>{pendingEmail}</strong>
                 </p>
                 <p className="public-auth-lead">{t("platformHome.checkEmailLead")}</p>
+                <RequestConfirmationEmailHelp
+                  email={pendingEmail || email}
+                  defaultFullName={fullName}
+                />
                 <p className="public-auth-footer">
                   {t("signup.alreadyConfirmed")}{" "}
                   <button type="button" className="public-auth-link" onClick={showLogin} style={styles.textLinkButton}>

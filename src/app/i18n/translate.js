@@ -3,6 +3,7 @@ import enApp from "./messages/enBundles/app";
 import enMember from "./messages/enBundles/member";
 import enAdmin from "./messages/enBundles/admin";
 import enCms from "./messages/enBundles/cms";
+import enLegal from "./messages/enBundles/legal";
 import enAU from "./messages/en-AU";
 import fr from "./messages/fr";
 import frApp from "./messages/fr/app";
@@ -40,7 +41,7 @@ function deepMerge(base, override) {
 
 const en = deepMerge(
   deepMerge(enCore, enApp),
-  deepMerge(enMember, deepMerge(enAdmin, enCms))
+  deepMerge(enMember, deepMerge(enAdmin, deepMerge(enCms, enLegal)))
 );
 
 const catalogs = {

@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useParams, useOutletContext, Link } from "react-router-dom";
-import { supabase } from "@/supabaseClient";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { platformSignInPath } from "@/app/lib/publicAuthRedirect";
 import rcracedayLogo from "@/assets/rcraceday_logo.png";
-
-const PLATFORM_SUPPORT_EMAIL = "info@rcraceday.com";
+import { resolveSupportEmailForClub } from "@/app/lib/platformSupportEmail";
+import { invokeSupportEmail } from "@/app/lib/invokeSupportEmail";
 
 export default function ForgotEmail() {
   const outlet = useOutletContext();
@@ -31,11 +30,7 @@ export default function ForgotEmail() {
     );
   }
 
-  const supportEmail =
-    club?.system_support_email ||
-    club?.support_email ||
-    club?.club_email ||
-    PLATFORM_SUPPORT_EMAIL;
+  const supportEmail = resolveSupportEmailForClub(club);
 
   const logoSrc =
     club?.logo_url ||
@@ -71,16 +66,14 @@ export default function ForgotEmail() {
       ip = "0.0.0.0";
     }
 
-    const { error } = await supabase.functions.invoke("send-recovery-email", {
-      body: {
-        fullName: fullName.trim(),
-        message: messageText.trim(),
-        clubName: club?.name || "RCRaceday",
-        clubLogo: logoSrc,
-        supportEmail,
-        ip,
-        clubSlug: clubSlug || "",
-      },
+    const { error } = await invokeSupportEmail({
+      fullName: fullName.trim(),
+      message: messageText.trim(),
+      clubName: club?.name || "RCRaceday",
+      clubLogo: logoSrc,
+      supportEmail,
+      ip,
+      clubSlug: clubSlug || "",
     });
 
     if (error) {

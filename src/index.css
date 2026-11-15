@@ -266,6 +266,130 @@ a:hover {
   background: #ffffff;
 }
 
+/* Platform legal documents (terms, privacy, …) */
+.platform-legal-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  color: #111827;
+}
+
+.platform-legal-header {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 20px 0;
+  box-sizing: border-box;
+}
+
+.platform-legal-brand {
+  display: inline-block;
+}
+
+.platform-legal-logo {
+  display: block;
+  max-width: 140px;
+  height: auto;
+}
+
+.platform-legal-main {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px 20px 32px;
+  box-sizing: border-box;
+}
+
+.platform-legal-title {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #111827;
+}
+
+.platform-legal-lead {
+  margin: 0 0 28px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #4b5563;
+}
+
+.platform-legal-effective {
+  margin: 0 0 28px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.platform-legal-lead + .platform-legal-effective {
+  margin-top: -20px;
+}
+
+.platform-legal-section {
+  margin-bottom: 24px;
+}
+
+.platform-legal-section-title {
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.platform-legal-paragraph {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #374151;
+}
+
+.platform-legal-back {
+  margin: 32px 0 0;
+  font-size: 14px;
+}
+
+.platform-contact-form {
+  max-width: 480px;
+  margin-top: 20px;
+}
+
+.platform-contact-field {
+  display: block;
+  width: 100%;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.platform-contact-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.platform-contact-select,
+.platform-contact-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #111827;
+  background: #fff;
+}
+
+.platform-contact-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
 .platform-home-content {
   flex: 1;
   width: 100%;

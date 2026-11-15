@@ -138,6 +138,16 @@ export default {
     resendEmail: "Resend Email",
     resending: "Resending…",
     resendSent: "A new confirmation email has been sent.",
+    confirmationEmailTips:
+      "Check junk, spam, and Other folders. Microsoft (Outlook, Live, Hotmail) often filters new senders.",
+    requestConfirmationHelp: "Request help — email didn't arrive",
+    confirmationHelpLeadPlatform:
+      "We will email info@rcraceday.com with your details so we can confirm your account manually.",
+    confirmationHelpLeadClub:
+      "Your club or RCRaceday support will receive your details so we can confirm your account manually.",
+    sendHelpRequest: "Send help request",
+    confirmationHelpSentPlatform:
+      "Your request was sent. We will reply to your signup email when your account is ready.",
     checkEmailSentTo: "We sent a confirmation link to:",
     alreadyConfirmed: "Already confirmed?",
     fullName: "Full name",

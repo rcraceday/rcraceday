@@ -1,4 +1,5 @@
 // src/components/ui/Footer.jsx
+import { Link } from "react-router-dom";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function Footer() {
@@ -39,19 +40,27 @@ export default function Footer() {
 ---------------------------------------------- */
 
 function FooterLink({ href, children, external = false }) {
-  const props = external
-    ? { target: "_blank", rel: "noopener noreferrer" }
-    : {};
+  const className = "text-slate-500 hover:text-slate-900 transition-colors";
+  const style = {
+    textDecoration: "none",
+    fontWeight: 400,
+  };
+
+  if (!external && href?.startsWith("/")) {
+    return (
+      <Link to={href} className={className} style={style}>
+        {children}
+      </Link>
+    );
+  }
 
   return (
     <a
       href={href}
-      {...props}
-      className="text-slate-500 hover:text-slate-900 transition-colors"
-      style={{
-        textDecoration: "none",     // ⭐ Prevent global link styling
-        fontWeight: 400,
-      }}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      className={className}
+      style={style}
     >
       {children}
     </a>
