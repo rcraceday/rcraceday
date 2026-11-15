@@ -474,6 +474,37 @@ export default {
       permSettings: "Settings & users",
       permArchives: "Metrics archives",
     },
+    removeClubUser: {
+      cardTitle: "Remove user from club",
+      lead:
+        "Permanently remove this person's login and all club-linked data. Their global RCRaceday account (login, transponders, racers at other clubs) is kept.",
+      warnPermanent: "This cannot be undone.",
+      warnMembership: "Household membership and club member records at this club are deleted.",
+      warnDrivers: "All drivers and class assignments for this club are deleted.",
+      warnNominations: "Nominations, credits, and related entries for this club are deleted.",
+      warnMessages: "Club messages and notifications for this club are deleted.",
+      warnFreshStart:
+        "If they sign up or join this club again later, they start as a brand-new member (no auto link by email until you import them again).",
+      target: "Account: {{name}} ({{email}})",
+      acknowledge:
+        "I understand this is permanent and removes all of this user's data at this club.",
+      confirmLabel: 'Type "{{token}}" to confirm',
+      confirmDialog:
+        "Last chance: permanently remove this user from the club? This cannot be undone.",
+      submit: "Permanently remove from club",
+      removing: "Removing…",
+      success: "User removed from this club.",
+      globalAccountNote:
+        "Does not delete their RCRaceday login or data at other clubs. Global platform admins (profile role) are not changed.",
+      errNotAuthenticated: "You must be signed in.",
+      errPermission: "You do not have membership admin permission.",
+      errSelf: "You cannot remove your own account.",
+      errNothing: "No club data found for this user to remove.",
+      errInvalid: "Invalid request.",
+      errNotDeployed:
+        "This feature is not enabled yet. Run scripts/admin-remove-user-from-club.sql in Supabase.",
+      errGeneric: "Could not remove user from club.",
+    },
     archives: {
       title: "Metrics Archives",
     },

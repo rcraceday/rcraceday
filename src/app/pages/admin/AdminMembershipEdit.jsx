@@ -13,6 +13,8 @@ import { ClearFieldButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "@cms/styles";
 import { cmsLayout } from "@cms/layout";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import RemoveClubUserPanel from "@/app/pages/admin/components/RemoveClubUserPanel";
+import { displayNameFromMembershipRow } from "@/app/lib/membershipDisplayName";
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Active" },
@@ -460,6 +462,14 @@ export default function AdminMembershipEdit() {
             </div>
           </div>
         </CMSCard>
+
+        {!isNew && household.user_id && (
+          <RemoveClubUserPanel
+            userId={household.user_id}
+            accountLabel={displayNameFromMembershipRow(household)}
+            householdEmail={household.email || ""}
+          />
+        )}
 
         {!isNew && (
           <CMSCard titleKey="admin.common.members">
