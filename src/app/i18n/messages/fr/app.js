@@ -117,6 +117,7 @@ export default {
     installBody: "Ajoutez à l'écran d'accueil pour un accès rapide et les notifications.",
     install: "Installer",
     notNow: "Plus tard",
+    dontRemindAgain: "Ne plus rappeler",
     iosTitle: "Installer sur iPhone",
     iosLead: "Safari n'affiche pas de bouton Installer. Suivez ces étapes :",
     iosStepShare: "Appuyez sur Partager (carré avec une flèche).",

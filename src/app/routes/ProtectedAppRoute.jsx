@@ -12,6 +12,7 @@ import {
   publicCheckEmailPath,
   publicClaimMembershipPath,
 } from "@/app/lib/publicAuthRedirect";
+import { clearClubScopedClientState } from "@/app/lib/clubClientCache";
 
 export default function ProtectedAppRoute({ children, admin = false }) {
   const { session, loadingUser } = useAuth();
@@ -45,6 +46,32 @@ export default function ProtectedAppRoute({ children, admin = false }) {
       cancelled = true;
     };
   }, [loadingUser, session?.user]);
+
+  useEffect(() => {
+    if (loadingUser || loadingClub || loadingMembership) return;
+    if (!session?.user?.id || !club?.id || !clubSlug) return;
+
+    const hasActiveClubMembership =
+      membership &&
+      membership.club_id === club.id &&
+      membership.status === "active";
+
+    if (!hasActiveClubMembership) {
+      clearClubScopedClientState({
+        clubId: club.id,
+        clubSlug,
+        userId: session.user.id,
+      });
+    }
+  }, [
+    loadingUser,
+    loadingClub,
+    loadingMembership,
+    session?.user?.id,
+    club?.id,
+    clubSlug,
+    membership,
+  ]);
 
   if (loadingUser || (!session?.user && sessionProbe === "checking")) {
     return (

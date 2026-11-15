@@ -143,6 +143,9 @@ export default function RemoveClubUserPanel({ userId, accountLabel, householdEma
         <p style={{ ...cmsLayout.muted, margin: 0, fontSize: 12 }}>
           {t("admin.removeClubUser.globalAccountNote")}
         </p>
+        <p style={{ ...cmsLayout.muted, margin: 0, fontSize: 12 }}>
+          {t("admin.removeClubUser.deviceCacheNote")}
+        </p>
       </div>
     </CMSCard>
   );

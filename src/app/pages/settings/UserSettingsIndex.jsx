@@ -33,6 +33,11 @@ export default function UserSettingsIndex() {
       title: t("settings.timezone.title"),
       desc: t("settings.timezone.menuDesc"),
     },
+    {
+      path: `${base}/install`,
+      title: t("settings.installApp.title"),
+      desc: t("settings.installApp.menuDesc"),
+    },
   ];
 
   return (

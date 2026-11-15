@@ -1,53 +1,15 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/app/i18n/I18nContext";
-
-const SNOOZE_KEY = "pwa-install-snooze-until";
-const SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
-
-function isStandalone() {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true
-  );
-}
-
-function isIos() {
-  const ua = window.navigator.userAgent || "";
-  const iPhone = /iphone|ipod/i.test(ua);
-  const iPad =
-    /ipad/i.test(ua) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  return iPhone || iPad;
-}
-
-function isAndroid() {
-  return /android/i.test(window.navigator.userAgent || "");
-}
-
-function isSnoozed() {
-  const until = Number(localStorage.getItem(SNOOZE_KEY) || 0);
-  return Date.now() < until;
-}
-
-function IosShareIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 3v12" />
-      <path d="M8 7l4-4 4 4" />
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-    </svg>
-  );
-}
+import PwaInstallInstructions from "@/components/PwaInstallInstructions";
+import {
+  PWA_INSTALL_SNOOZE_MS,
+  dismissInstallPromptPermanently,
+  isAndroid,
+  isInstallSnoozed,
+  isIos,
+  isStandalone,
+  snoozeInstallPrompt,
+} from "@/app/lib/pwaInstall";
 
 export default function PwaInstallPrompt() {
   const { t } = useTranslation();
@@ -55,7 +17,7 @@ export default function PwaInstallPrompt() {
   const [mode, setMode] = useState(null);
 
   useEffect(() => {
-    if (isStandalone() || isSnoozed()) return;
+    if (isStandalone() || isInstallSnoozed()) return;
 
     if (isIos()) {
       const timer = setTimeout(() => setMode("ios"), 800);
@@ -76,7 +38,7 @@ export default function PwaInstallPrompt() {
 
     const onPrompt = (event) => capturePrompt(event);
     const onInstalled = () => {
-      localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_MS * 24));
+      snoozeInstallPrompt(PWA_INSTALL_SNOOZE_MS * 24);
       setMode(null);
       setDeferredPrompt(null);
       window.__pwaDeferredPrompt = null;
@@ -99,8 +61,14 @@ export default function PwaInstallPrompt() {
     };
   }, []);
 
-  const dismiss = () => {
-    localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_MS));
+  const dismissSnooze = () => {
+    snoozeInstallPrompt();
+    setMode(null);
+    setDeferredPrompt(null);
+  };
+
+  const dismissForever = () => {
+    dismissInstallPromptPermanently();
     setMode(null);
     setDeferredPrompt(null);
   };
@@ -110,7 +78,7 @@ export default function PwaInstallPrompt() {
     deferredPrompt.prompt();
     await deferredPrompt.userChoice;
     window.__pwaDeferredPrompt = null;
-    dismiss();
+    dismissSnooze();
   };
 
   if (!mode) return null;
@@ -121,34 +89,19 @@ export default function PwaInstallPrompt() {
         style={styles.overlay}
         role="dialog"
         aria-label={t("pwa.iosInstallAria")}
-        onClick={dismiss}
+        onClick={dismissSnooze}
       >
         <div style={styles.sheet} onClick={(event) => event.stopPropagation()}>
           <strong style={styles.title}>{t("pwa.iosTitle")}</strong>
-          <p style={styles.lead}>{t("pwa.iosLead")}</p>
-          <ol style={styles.steps}>
-            <li style={styles.step}>
-              <span style={styles.iconWrap}>
-                <IosShareIcon />
-              </span>
-              <span>{t("pwa.iosStepShare")}</span>
-            </li>
-            <li style={styles.step}>
-              <span style={styles.iconWrap}>
-                <strong style={styles.plus}>+</strong>
-              </span>
-              <span>{t("pwa.iosStepAddHome")}</span>
-            </li>
-            <li style={styles.step}>
-              <span style={styles.iconWrap}>
-                <strong style={styles.plus}>✓</strong>
-              </span>
-              <span>{t("pwa.iosStepConfirm")}</span>
-            </li>
-          </ol>
-          <button type="button" onClick={dismiss} style={styles.install}>
-            {t("actions.close")}
-          </button>
+          <PwaInstallInstructions variant="ios" />
+          <div style={styles.actionRow}>
+            <button type="button" onClick={dismissSnooze} style={styles.dismiss}>
+              {t("pwa.notNow")}
+            </button>
+            <button type="button" onClick={dismissForever} style={styles.never}>
+              {t("pwa.dontRemindAgain")}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -156,24 +109,27 @@ export default function PwaInstallPrompt() {
 
   return (
     <div style={styles.banner} role="dialog" aria-label={t("pwa.installAria")}>
-      <div style={styles.copy}>
-        <strong style={styles.title}>{t("pwa.installTitle")}</strong>
-        <span style={styles.text}>
-          {mode === "android-manual"
-            ? t("pwa.androidManual")
-            : t("pwa.installBody")}
-        </span>
-      </div>
-      <div style={styles.actions}>
-        {mode === "android" && (
-          <button type="button" onClick={install} style={styles.install}>
-            {t("pwa.install")}
+      <div style={styles.bannerRow}>
+        <div style={styles.copy}>
+          <strong style={styles.title}>{t("pwa.installTitle")}</strong>
+          <span style={styles.text}>
+            {mode === "android-manual" ? t("pwa.androidManual") : t("pwa.installBody")}
+          </span>
+        </div>
+        <div style={styles.actions}>
+          {mode === "android" && (
+            <button type="button" onClick={install} style={styles.install}>
+              {t("pwa.install")}
+            </button>
+          )}
+          <button type="button" onClick={dismissSnooze} style={styles.dismiss}>
+            {t("pwa.notNow")}
           </button>
-        )}
-        <button type="button" onClick={dismiss} style={styles.dismiss}>
-          {t("pwa.notNow")}
-        </button>
+        </div>
       </div>
+      <button type="button" onClick={dismissForever} style={styles.neverBanner}>
+        {t("pwa.dontRemindAgain")}
+      </button>
     </div>
   );
 }
@@ -203,42 +159,9 @@ const styles = {
     gap: "12px",
     textAlign: "left",
   },
-  lead: {
-    margin: 0,
-    fontSize: "13px",
-    color: "#555",
-    lineHeight: 1.45,
-  },
-  steps: {
-    margin: 0,
-    padding: 0,
-    listStyle: "none",
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  step: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "12px",
-    fontSize: "14px",
-    color: "#222",
-    lineHeight: 1.4,
-  },
-  iconWrap: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "10px",
-    background: "#f3f4f6",
+  title: {
+    fontSize: "15px",
     color: "#111",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  plus: {
-    fontSize: "18px",
-    lineHeight: 1,
   },
   banner: {
     position: "fixed",
@@ -249,24 +172,26 @@ const styles = {
     maxWidth: "480px",
     zIndex: 9200,
     display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "12px",
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: "8px",
     padding: "12px 14px",
     background: "#ffffff",
     border: "1px solid rgba(0,0,0,0.15)",
     borderRadius: "12px",
     boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
   },
+  bannerRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+  },
   copy: {
     display: "flex",
     flexDirection: "column",
     gap: "2px",
     textAlign: "left",
-  },
-  title: {
-    fontSize: "15px",
-    color: "#111",
   },
   text: {
     fontSize: "12px",
@@ -295,5 +220,30 @@ const styles = {
     padding: "8px 4px",
     fontSize: "13px",
     cursor: "pointer",
+  },
+  actionRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    alignItems: "stretch",
+  },
+  never: {
+    background: "transparent",
+    color: "#777",
+    border: "none",
+    padding: "8px 4px",
+    fontSize: "12px",
+    cursor: "pointer",
+    textAlign: "center",
+  },
+  neverBanner: {
+    background: "transparent",
+    color: "#777",
+    border: "none",
+    padding: "2px 0 0",
+    fontSize: "12px",
+    cursor: "pointer",
+    textAlign: "center",
+    width: "100%",
   },
 };

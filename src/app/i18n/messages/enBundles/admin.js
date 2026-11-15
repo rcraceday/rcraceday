@@ -477,7 +477,7 @@ export default {
     removeClubUser: {
       cardTitle: "Remove user from club",
       lead:
-        "Permanently remove this person's login and all club-linked data. Their global RCRaceday account (login, transponders, racers at other clubs) is kept.",
+        "Permanently remove this person from this club — membership, drivers, nominations, and other club-linked data. Their RCRaceday login and data at other clubs are kept.",
       warnPermanent: "This cannot be undone.",
       warnMembership: "Household membership and club member records at this club are deleted.",
       warnDrivers: "All drivers and class assignments for this club are deleted.",
@@ -496,6 +496,8 @@ export default {
       success: "User removed from this club.",
       globalAccountNote:
         "Does not delete their RCRaceday login or data at other clubs. Global platform admins (profile role) are not changed.",
+      deviceCacheNote:
+        "They stay signed in to RCRaceday (other clubs and account settings unchanged). Only this club's membership, drivers, and related data are removed. A refresh or reopen updates what they see at this club.",
       errNotAuthenticated: "You must be signed in.",
       errPermission: "You do not have membership admin permission.",
       errSelf: "You cannot remove your own account.",

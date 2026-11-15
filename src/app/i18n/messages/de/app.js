@@ -107,6 +107,7 @@ export default {
     installBody: "Zum Startbildschirm hinzufügen für schnellen Zugriff und Benachrichtigungen.",
     install: "Installieren",
     notNow: "Nicht jetzt",
+    dontRemindAgain: "Nicht mehr erinnern",
     iosTitle: "Auf iPhone installieren",
     iosLead: "Safari zeigt keine Installieren-Schaltfläche. Folgen Sie diesen Schritten:",
     iosStepShare: "Tippen Sie auf Teilen (Quadrat mit Pfeil).",

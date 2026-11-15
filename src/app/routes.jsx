@@ -42,6 +42,7 @@ import MyDriversSettings from "@app/pages/settings/MyDriversSettings";
 import UserNotificationSettings from "@app/pages/settings/UserNotificationSettings";
 import LanguageSettings from "@app/pages/settings/LanguageSettings";
 import TimezoneSettings from "@app/pages/settings/TimezoneSettings";
+import InstallAppSettings from "@app/pages/settings/InstallAppSettings";
 
 // CALENDAR
 import Calendar from "@app/pages/events/calendar/Calendar";
@@ -327,6 +328,7 @@ export default function AppRoutes() {
         <Route path="settings/notifications" element={<UserNotificationSettings />} />
         <Route path="settings/language" element={<LanguageSettings />} />
         <Route path="settings/timezone" element={<TimezoneSettings />} />
+        <Route path="settings/install" element={<InstallAppSettings />} />
         <Route path="profile" element={<AppPathRedirect to="settings" />} />
         <Route path="profile/edit" element={<AppPathRedirect to="settings/account" />} />
 

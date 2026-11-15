@@ -107,6 +107,7 @@ export default {
     installBody: "Añade a la pantalla de inicio para acceso rápido y notificaciones.",
     install: "Instalar",
     notNow: "Ahora no",
+    dontRemindAgain: "No volver a recordar",
     iosTitle: "Instalar en iPhone",
     iosLead: "Safari no muestra un botón Instalar. Siga estos pasos:",
     iosStepShare: "Pulse Compartir (cuadrado con flecha).",

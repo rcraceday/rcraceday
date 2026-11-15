@@ -106,6 +106,7 @@ export default {
     installBody: "添加到主屏幕，便于快速访问和接收通知。",
     install: "安装",
     notNow: "稍后",
+    dontRemindAgain: "不再提醒",
     iosTitle: "在 iPhone 上安装",
     iosLead: "Safari 不会显示“安装”按钮。请按以下步骤操作：",
     iosStepShare: "点按“分享”按钮（带箭头的方框）。",

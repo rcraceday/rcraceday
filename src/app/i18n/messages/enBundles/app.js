@@ -520,6 +520,7 @@ export default {
     installBody: "Add to your home screen for quick access and notifications.",
     install: "Install",
     notNow: "Not now",
+    dontRemindAgain: "Don't remind me again",
     iosTitle: "Install on iPhone",
     iosLead: "Safari does not show an Install button. Follow these steps:",
     iosStepShare: "Tap the Share button (square with an arrow).",

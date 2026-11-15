@@ -25,6 +25,16 @@ export function dismissMembershipPitch(clubId, userId) {
   }
 }
 
+export function clearMembershipPitchDismissed(clubId, userId) {
+  const key = storageKey(clubId, userId);
+  if (!key || typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function isMembershipAppRoute(pathname) {
   return /\/app\/membership(\/|$)/.test(String(pathname || ""));
 }

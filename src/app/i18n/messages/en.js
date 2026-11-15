@@ -134,6 +134,25 @@ export default {
       setupRequired:
         "Time zone is not set up yet. Run scripts/add-user-account-settings.sql in Supabase.",
     },
+    installApp: {
+      title: "Install app",
+      menuDesc: "Add RCRaceday to your home screen",
+      subtitle: "Install once for quick access, reminders, and push alerts.",
+      thisDeviceTitle: "On this device",
+      thisDeviceHint: "Steps for the phone or tablet you are using now.",
+      installedHint: "You are already using the installed app on this device.",
+      installedBody: "Open RCRaceday from your home screen icon to stay signed in and receive alerts.",
+      iphoneTitle: "iPhone / iPad",
+      iphoneHint: "Use Safari — other browsers on iOS cannot install the app.",
+      androidTitle: "Android",
+      androidHint: "Chrome or Edge work best.",
+      androidNoPrompt:
+        "If you do not see an Install button, use your browser menu (⋮) as described above.",
+      iosSafariNote:
+        "On iPhone, use Safari when adding to the Home Screen. Opening this page again here always shows these steps (unlike the one-time welcome prompt).",
+      desktopHint:
+        "Open RCRaceday on your phone, then return to Settings → Install app for step-by-step instructions.",
+    },
     notifications: {
       title: "Notifications",
       menuDesc: "In-app, email, push, and event alerts",

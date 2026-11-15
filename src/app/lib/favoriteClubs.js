@@ -36,8 +36,13 @@ export async function resolveFavoriteClubSlugs({ userId } = {}) {
     .eq("id", userId)
     .maybeSingle();
 
-  if (error || !Array.isArray(profile?.favorite_club_ids) || profile.favorite_club_ids.length === 0) {
+  if (error) {
     return fromStorage;
+  }
+
+  if (!Array.isArray(profile?.favorite_club_ids) || profile.favorite_club_ids.length === 0) {
+    setFavoriteClubSlugsInStorage([]);
+    return [];
   }
 
   const { data: clubs } = await supabase
