@@ -14,6 +14,8 @@ import { cmsStyles } from "@cms/styles";
 import { cmsLayout } from "@cms/layout";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import RemoveClubUserPanel from "@/app/pages/admin/components/RemoveClubUserPanel";
+import ClubAdminGrantsPanel from "@/app/pages/admin/components/ClubAdminGrantsPanel";
+import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
 import { displayNameFromMembershipRow } from "@/app/lib/membershipDisplayName";
 
 const STATUS_OPTIONS = [
@@ -53,6 +55,7 @@ export default function AdminMembershipEdit() {
   const { clubSlug, id } = useParams();
   const { club } = useClub();
   const { user } = useAuth();
+  const { canManageClubAdmins, loadingAdminAccess } = useAdminAccess();
   const isNew = !id || id === "new";
 
   const [household, setHousehold] = useState(emptyHousehold);
@@ -470,6 +473,10 @@ export default function AdminMembershipEdit() {
             householdEmail={household.email || ""}
           />
         )}
+
+        {!isNew && household.user_id && !loadingAdminAccess && canManageClubAdmins ? (
+          <ClubAdminGrantsPanel focusUserId={household.user_id} />
+        ) : null}
 
         {!isNew && (
           <CMSCard titleKey="admin.common.members">

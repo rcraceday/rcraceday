@@ -106,6 +106,27 @@ export function canManageAdminUsers(profile, permissions) {
   return hasAdminPermission(profile, permissions, "settings");
 }
 
+/** Who may add/remove club admins from Membership or Settings (server enforces the same rules). */
+export function resolveClubAdminManagement(profile, permissions) {
+  if (isFullProfileAdmin(profile)) {
+    return { canManage: true, limited: false };
+  }
+  const normalized = normalizeAdminPermissions(permissions);
+  if (normalized.settings) {
+    return { canManage: true, limited: false };
+  }
+  if (normalized.membership) {
+    return { canManage: true, limited: true };
+  }
+  return { canManage: false, limited: false };
+}
+
+export function targetHasProtectedClubAdmin(row) {
+  if (!row) return false;
+  if (row.legacyFullAdmin) return true;
+  return normalizeAdminPermissions(row.permissions).settings === true;
+}
+
 export function adminMenuPermissionForPath(pathSegment) {
   const map = {
     events: "events",

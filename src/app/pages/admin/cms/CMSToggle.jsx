@@ -1,7 +1,14 @@
 import React from "react";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
-export default function CMSToggle({ label, labelKey, checked, onChange, compact = false }) {
+export default function CMSToggle({
+  label,
+  labelKey,
+  checked,
+  onChange,
+  compact = false,
+  disabled = false,
+}) {
   const { t } = useTranslation();
   const resolvedLabel = labelKey ? t(labelKey) : label;
   const showLabel = !compact && resolvedLabel;
@@ -12,7 +19,8 @@ export default function CMSToggle({ label, labelKey, checked, onChange, compact 
         alignItems: "center",
         justifyContent: showLabel ? "space-between" : "center",
         gap: "12px",
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.55 : 1,
         userSelect: "none",
         fontSize: "14px",
         fontWeight: 500,
@@ -28,7 +36,11 @@ export default function CMSToggle({ label, labelKey, checked, onChange, compact 
       */}
       <button
         type="button"
-        onClick={() => onChange(!checked)}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          onChange(!checked);
+        }}
         style={{
           width: "42px",
           height: "22px",
@@ -38,7 +50,7 @@ export default function CMSToggle({ label, labelKey, checked, onChange, compact 
           transition: "background-color 0.2s ease",
           border: "none",
           padding: 0,
-          cursor: "pointer",
+          cursor: disabled ? "not-allowed" : "pointer",
         }}
       >
         <div

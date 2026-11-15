@@ -54,7 +54,7 @@ export default function UserSettingsIndex() {
             row-gap: 12px;
             column-gap: 24px;
           }
-          @media (min-width: 600px) {
+          @media (min-width: 720px) {
             .user-settings-grid {
               grid-template-columns: 1fr 1fr;
             }

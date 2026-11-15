@@ -17,7 +17,6 @@ export default function PublicLayout() {
     <main
       style={{
         width: "100%",
-        minHeight: "100vh",
         background: "white",
         display: "flex",
         flexDirection: "column",
@@ -25,7 +24,6 @@ export default function PublicLayout() {
     >
       <div
         style={{
-          flex: 1,
           width: "100%",
           display: "flex",
           justifyContent: "center",

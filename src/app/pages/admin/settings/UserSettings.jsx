@@ -9,9 +9,9 @@ export default function UserSettings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
-  const { loadingAdminAccess, canManageAdminUsers } = useAdminAccess();
+  const { loadingAdminAccess, canManageClubAdmins } = useAdminAccess();
 
-  if (!loadingAdminAccess && !canManageAdminUsers) {
+  if (!loadingAdminAccess && !canManageClubAdmins) {
     return <Navigate to={`/${clubSlug}/app/admin/settings`} replace />;
   }
 

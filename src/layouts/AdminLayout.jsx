@@ -9,9 +9,8 @@ export default function AdminLayout() {
 
   return (
     <div
-      className="admin-root"
+      className="admin-root app-layout"
       style={{
-        minHeight: "100vh",
         width: "100%",
         display: "flex",
         flexDirection: "column",
@@ -23,11 +22,11 @@ export default function AdminLayout() {
 
       <main
         style={{
-          flex: 1,
           width: "100%",
           backgroundColor: "#F5F5F5",
           minWidth: 0,
           boxSizing: "border-box",
+          flex: "0 0 auto",
         }}
       >
         <div className="app-column">

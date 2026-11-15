@@ -5,7 +5,7 @@
 html, body {
   margin: 0;
   padding: 0;
-  height: 100%;                 /* REQUIRED for full-screen splash */
+  min-height: 100%;
   background-color: var(--theme-background, #ffffff);
   overflow-x: hidden;
 
@@ -935,6 +935,15 @@ a:hover {
   padding-left: 16px;
   padding-right: 16px;
   box-sizing: border-box;
+}
+
+/* Club app pages: height follows content so the layout footer sits directly below */
+.app-layout .app-column > * {
+  min-height: unset !important;
+}
+
+.app-layout .app-column .min-h-screen {
+  min-height: unset !important;
 }
 .app-shell {
   width: 100%;

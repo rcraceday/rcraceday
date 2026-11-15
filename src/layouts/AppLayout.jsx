@@ -131,7 +131,6 @@ export default function AppLayout() {
     return (
       <div
         style={{
-          minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
           backgroundColor: palette?.background || "#ffffff",
@@ -146,14 +145,13 @@ export default function AppLayout() {
   // ⭐ WRAP ADMIN PAGES IN admin-root
   const Wrapper = isAdminRoute ? "div" : "div";
   const wrapperProps = isAdminRoute
-    ? { className: "admin-root" }
-    : {};
+    ? { className: "admin-root app-layout" }
+    : { className: "app-layout" };
 
   return (
     <Wrapper
       {...wrapperProps}
       style={{
-        minHeight: "100vh",
         width: "100%",
         display: "flex",
         flexDirection: "column",
@@ -165,9 +163,9 @@ export default function AppLayout() {
 
       <main
         style={{
-          flex: 1,
           width: "100%",
           boxSizing: "border-box",
+          flex: "0 0 auto",
         }}
       >
         <div className="app-column">

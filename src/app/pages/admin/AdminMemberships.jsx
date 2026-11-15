@@ -12,6 +12,9 @@ import CMSButton from "@cms/CMSButton";
 import CMSInput from "@cms/CMSInput";
 import { EditButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "@cms/styles";
+import ClubAdminGrantsPanel from "@/app/pages/admin/components/ClubAdminGrantsPanel";
+import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
+import { useTranslation } from "@/app/i18n/I18nContext";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -58,9 +61,11 @@ function statusStyle(status, isLife) {
 }
 
 export default function AdminMemberships() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug } = useParams();
   const { club } = useClub();
+  const { canManageClubAdmins, loadingAdminAccess } = useAdminAccess();
 
   const [households, setHouseholds] = useState([]);
   const [membersByHousehold, setMembersByHousehold] = useState({});
@@ -293,6 +298,25 @@ export default function AdminMemberships() {
             )}
           </div>
         </CMSCard>
+
+        {!loadingAdminAccess && canManageClubAdmins ? (
+          <div style={{ marginTop: 8 }}>
+            <h2
+              style={{
+                fontSize: 18,
+                fontWeight: 600,
+                color: "#111827",
+                margin: "0 0 4px",
+              }}
+            >
+              {t("admin.userSettings.membershipSectionTitle")}
+            </h2>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#6B7280", lineHeight: 1.5 }}>
+              {t("admin.userSettings.membershipSectionLead")}
+            </p>
+            <ClubAdminGrantsPanel />
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useClub } from "@/app/providers/ClubProvider";
 import { useProfile } from "@/app/providers/ProfileProvider";
 import {
   canManageAdminUsers,
+  resolveClubAdminManagement,
   fetchClubAdminGrant,
   hasAdminPermission,
   hasAnyAdminAccess,
@@ -18,6 +19,8 @@ const AdminAccessContext = createContext({
   isFullAdmin: false,
   hasAnyAdminAccess: false,
   canManageAdminUsers: false,
+  canManageClubAdmins: false,
+  limitedClubAdminManagement: false,
   hasPermission: () => false,
   refreshAdminAccess: async () => {},
 });
@@ -59,12 +62,15 @@ export default function AdminAccessProvider({ children }) {
   const value = useMemo(() => {
     const isFullAdmin = isFullProfileAdmin(profile);
     const hasAccess = hasAnyAdminAccess(profile, permissions);
+    const clubAdminMgmt = resolveClubAdminManagement(profile, permissions);
     return {
       loadingAdminAccess,
       permissions,
       isFullAdmin,
       hasAnyAdminAccess: hasAccess,
       canManageAdminUsers: canManageAdminUsers(profile, permissions),
+      canManageClubAdmins: clubAdminMgmt.canManage,
+      limitedClubAdminManagement: clubAdminMgmt.limited,
       hasPermission: (key) => hasAdminPermission(profile, permissions, key),
       refreshAdminAccess: load,
     };

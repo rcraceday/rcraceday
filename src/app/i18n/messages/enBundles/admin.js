@@ -453,10 +453,31 @@ export default {
       saved: "Permissions updated.",
       removed: "Admin access removed.",
       cannotRemoveSelf: "You cannot remove your own admin access here.",
+      lastSettingsAdmin:
+        "At least one admin with Settings access must remain for this club.",
+      cannotModifyProtected:
+        "You cannot change or remove an administrator with Settings access. Ask a Settings admin.",
+      cannotGrantSettings:
+        "Only administrators with Settings access can grant Settings permissions.",
+      permissionDenied: "You do not have permission for this change.",
+      notAuthenticated: "You must be signed in.",
+      limitedModeHint:
+        "You can add or remove delegated admins, but not anyone with Settings access or full platform administrators.",
+      membershipSectionTitle: "Club administrators",
+      membershipSectionLead:
+        "Grant admin access to members with linked accounts. Removing an admin requires confirmation; the club always keeps at least one Settings admin.",
+      accountAdminTitle: "Admin access for this account",
+      accountNotAdmin: "This account does not have club admin access.",
+      removeConfirmTitle: "Remove admin access?",
+      removeConfirmBody:
+        "They will lose admin menu access for this club. This does not remove their membership or login.",
+      removeAcknowledge: "I understand this removes their club admin permissions.",
+      removeConfirm: "Remove admin access",
+      removing: "Removing…",
       accessDenied: "You do not have permission to manage admin users.",
       loadFailed: "Could not load admin users.",
       migrationHint:
-        "Run scripts/create-club-admin-grants.sql in Supabase to enable delegated admin permissions.",
+        "Run scripts/create-club-admin-grants.sql and scripts/club-admin-grants-guardrails.sql in Supabase to enable delegated admin permissions.",
       presetLabel: "Permission preset",
       presetFull: "Full administrator",
       presetContent: "News & messages",
