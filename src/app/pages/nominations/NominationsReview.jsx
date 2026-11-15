@@ -45,6 +45,89 @@ function transponderFor(nomination, classId, driverClassMap) {
   return driverClassMap.get(`${nomination.driver_id}:${classId}`) || "";
 }
 
+function DriverClassTable({ classes, brand, t }) {
+  const rowText = "#0A1A2F";
+  const panelBorder = `color-mix(in srgb, ${brand} 24%, #e5e7eb)`;
+  const rowGridClass =
+    "grid grid-cols-[minmax(0,1fr)_minmax(6.25rem,max-content)] items-center gap-x-2.5 px-3 sm:gap-x-3";
+
+  return (
+    <div
+      className="mt-2 overflow-hidden rounded-[10px] border"
+      role="table"
+      style={{
+        borderColor: panelBorder,
+        background: "#ffffff",
+      }}
+    >
+      <div
+        role="row"
+        className={`${rowGridClass} border-b py-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted`}
+        style={{
+          borderColor: panelBorder,
+          background: `color-mix(in srgb, ${brand} 7%, #f8fafc)`,
+        }}
+      >
+        <span role="columnheader">{t("nominations.classHeading")}</span>
+        <span role="columnheader" className="text-right">
+          {t("nominations.transponderHeading")}
+        </span>
+      </div>
+
+      <ul className="m-0 list-none p-0" role="rowgroup">
+        {classes.map((item, index) => (
+          <li
+            key={item.id}
+            role="row"
+            className={rowGridClass}
+            style={{
+              paddingTop: 10,
+              paddingBottom: 10,
+              borderBottom: index < classes.length - 1 ? `1px solid ${panelBorder}` : undefined,
+              background: `color-mix(in srgb, ${brand} 8%, #f8fafc)`,
+            }}
+          >
+            <div role="cell" className="flex min-w-0 items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="h-6 w-1 shrink-0 rounded-full self-stretch min-h-[1.5rem]"
+                style={{ background: brand }}
+              />
+              <span className="text-sm font-semibold leading-snug break-words" style={{ color: rowText }}>
+                {item.name}
+              </span>
+            </div>
+            <div role="cell" className="text-right">
+              {item.transponder ? (
+                <span
+                  className="text-sm font-medium leading-snug break-all"
+                  style={{ color: rowText }}
+                >
+                  {item.transponder}
+                </span>
+              ) : (
+                <span
+                  className="inline-block text-xs font-semibold"
+                  style={{
+                    color: brand,
+                    background: "#ffffff",
+                    border: `1px solid ${brand}`,
+                    borderRadius: 6,
+                    padding: "2px 7px",
+                  }}
+                  title={t("nominations.transponderNotSet")}
+                >
+                  {t("nominations.transponderNotSet")}
+                </span>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function NominationsReview() {
   const { clubSlug } = useParams();
   const { membership } = useMembership();
@@ -202,38 +285,40 @@ export default function NominationsReview() {
           </Card>
         ) : (
           eventCards.map(({ event, drivers }) => (
-            <Card key={event.id} className="p-4 space-y-4">
-              <h2 className="font-semibold text-lg leading-tight" style={{ color: contentText }}>
+            <Card
+              key={event.id}
+              className="p-5 sm:p-6"
+              style={{ borderWidth: 1, boxShadow: "none" }}
+            >
+              <h2 className="text-lg font-bold leading-tight" style={{ color: contentText }}>
                 {richTextToPlainText(event.name)}
               </h2>
 
-              <div className="space-y-4">
+              <div className="mt-4 space-y-4">
                 {drivers.map(({ driver, classes }) => (
-                  <div key={driver.id} className="space-y-1">
-                    <p className="font-medium" style={{ color: contentText }}>
-                      {driverName(driver) || "Unnamed driver"}
+                  <div key={driver.id}>
+                    <p className="text-[15px] font-semibold leading-tight" style={{ color: contentText }}>
+                      {t("nominations.driverLabel")}: {driverName(driver) || "Unnamed driver"}
                     </p>
                     {classes.length === 0 ? (
-                      <p className="text-sm text-text-muted">No classes nominated.</p>
+                      <p className="mt-2 text-sm text-text-muted">No classes nominated.</p>
                     ) : (
-                      classes.map((item) => (
-                        <p key={item.id} className="text-sm text-text-muted">
-                          {item.name}
-                          {item.transponder ? ` · Transponder ${item.transponder}` : " · Transponder not set"}
-                        </p>
-                      ))
+                      <DriverClassTable classes={classes} brand={brand} t={t} />
                     )}
                   </div>
                 ))}
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div
+                className="mt-5 flex flex-wrap gap-2 pt-4"
+                style={{ borderTop: "1px solid #E5E7EB" }}
+              >
                 <Link
                   to={`/${clubSlug}/app/events/${event.id}/nominate`}
                   state={{ reloadSavedNominations: true }}
                   className="no-underline"
                 >
-                  <Button variant="secondary" className="!py-1.5 !text-xs w-full sm:w-auto">
+                  <Button variant="secondary" size="sm" className="!px-3.5 !py-1.5 !rounded-[6px]">
                     Update Nominations
                   </Button>
                 </Link>
@@ -241,7 +326,7 @@ export default function NominationsReview() {
                   to={`/${clubSlug}/app/events/${event.id}/nominations`}
                   className="no-underline"
                 >
-                  <Button className="!py-1.5 !text-xs w-full sm:w-auto">
+                  <Button size="sm" className="!px-3.5 !py-1.5 !rounded-[6px]">
                     View Nominations
                   </Button>
                 </Link>

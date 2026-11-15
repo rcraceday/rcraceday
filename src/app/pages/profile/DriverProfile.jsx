@@ -11,7 +11,10 @@ import BackNavButton from "@/components/ui/BackNavButton";
 
 import { IdentificationIcon } from "@heroicons/react/24/solid";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import { useAuth } from "@/app/providers/AuthProvider";
 import useTheme from "@/app/providers/useTheme";
+import { isOwnClubDriver } from "@/app/lib/driverClubSettings";
+import { canAccessExtendedDriverProfile } from "@/app/lib/membershipClubLimits";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
@@ -25,10 +28,8 @@ export default function DriverProfile() {
   const brand = palette.primary;
 
   const { membership } = useMembership();
-  const isMember =
-    membership &&
-    membership.membership_type &&
-    membership.membership_type !== "non_member";
+  const { user } = useAuth();
+  const canViewExtendedProfile = canAccessExtendedDriverProfile(club, membership);
 
   const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -86,8 +87,9 @@ export default function DriverProfile() {
         <DriverProfileCard
           driver={driver}
           club={club}
-          isMember={isMember}
           navigate={navigate}
+          isOwnDriver={isOwnClubDriver(driver, membership, user?.id)}
+          canViewExtendedProfile={canViewExtendedProfile}
         />
       </main>
     </div>

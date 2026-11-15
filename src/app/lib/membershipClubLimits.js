@@ -90,3 +90,16 @@ export function membershipHasFeature(club, membershipType, feature) {
   if (feature === "championship_points") return limits.accessChampionshipPoints;
   return true;
 }
+
+/** Paid club membership (excludes visitor / non_member). */
+export function isPayingClubMember(membership) {
+  return Boolean(
+    membership?.membership_type && membership.membership_type !== "non_member"
+  );
+}
+
+/** Extended driver profile sections + viewing other members’ profiles (not LiveTime essentials). */
+export function canAccessExtendedDriverProfile(club, membership) {
+  if (!isPayingClubMember(membership)) return false;
+  return membershipHasFeature(club, membership?.membership_type, "driver_profiles");
+}

@@ -75,24 +75,7 @@ export default {
       pageLead3:
         "Each club can also maintain a club-specific driver name for the same driver. This allows you to use a different display name where required, such as matching an existing LiveTime profile, while still keeping a single driver record in your RCRaceday account.",
       pageLead4:
-        "Club-specific settings—LiveTime-style driver profile (number, sponsors, colours), club display names, classes, and transponder assignments—are managed in the section below for this club. Changes there affect only this club and do not alter your account-wide driver records.",
-      clubSection: {
-        thisClub: "this club",
-        title: "At {{club}}",
-        hint:
-          "Driver profile is everything that syncs with LiveTime at this club: racing number, sponsors, colours, nickname, and related details. Driver Manager adds classes and club-specific naming for each racer.",
-        membershipRequired: "Your membership type at this club does not include driver profiles.",
-        membershipLink: "View membership options",
-        noDrivers: "No drivers are set up at this club yet. Add them here after you save racers on your account, or enable them when you visit a club.",
-        setUpAtClub: "Set up drivers at this club",
-        numberLabel: "No. {{number}}",
-        profileIncomplete: "Some required profile details are still missing.",
-        editDriverProfile: "Edit driver profile",
-        viewDriverProfile: "View profile",
-        managerBlurb:
-          "Open Driver Manager to assign race classes, club display names, and transponders per class.",
-        openDriverManager: "Open Driver Manager",
-      },
+        "For this club, open Driver Manager from the menu to complete LiveTime details (number, sponsors, colours), classes, and transponder assignments. Nothing on this page changes club-only data.",
     },
     transponders: {
       title: "Transponders",

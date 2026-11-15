@@ -142,24 +142,9 @@ export default function EventPricingCard({ event, onChange }) {
   };
 
   const renderMembershipRow = ({ values, onChangeForKey, cleared }) => (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        flexWrap: "nowrap",
-        gap: 8,
-        alignItems: "flex-end",
-        width: "100%",
-      }}
-    >
+    <div style={{ ...cmsLayout.row, width: "100%" }}>
       {MEMBERSHIP_KEYS.map(({ key, label }) => (
-        <div
-          key={key}
-          style={{
-            flex: "1 1 0",
-            minWidth: 72,
-          }}
-        >
+        <div key={key} style={{ ...cmsLayout.column, minWidth: 0 }}>
           <CMSInput
             label={label}
             type="number"
@@ -237,102 +222,120 @@ export default function EventPricingCard({ event, onChange }) {
           <CMSCard titleKey="admin.events.tiered">
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <strong>Member</strong>
-              <div style={{ display: "flex", gap: 12 }}>
-                <CMSInput
-                  labelKey="cms.firstClass"
-                  type="number"
-                  value={pricing.tiered?.member?.first_class || ""}
-                  onChange={(v) =>
-                    updateNested("tiered", "member", {
-                      ...(pricing.tiered?.member || {}),
-                      first_class: Math.max(0, Number(v)),
-                    })
-                  }
-                />
-                <CMSInput
-                  labelKey="cms.additionalClasses"
-                  type="number"
-                  value={pricing.tiered?.member?.additional_class || ""}
-                  onChange={(v) =>
-                    updateNested("tiered", "member", {
-                      ...(pricing.tiered?.member || {}),
-                      additional_class: Math.max(0, Number(v)),
-                    })
-                  }
-                />
-                <CMSInput
-                  labelKey="cms.practice"
-                  type="number"
-                  placeholder="Free if empty"
-                  value={tierPracticeValue(pricing.tiered?.member)}
-                  onChange={(v) => setTierPractice("member", v)}
-                />
+              <div style={cmsLayout.row}>
+                <div style={cmsLayout.column}>
+                  <CMSInput
+                    labelKey="cms.firstClass"
+                    type="number"
+                    value={pricing.tiered?.member?.first_class || ""}
+                    onChange={(v) =>
+                      updateNested("tiered", "member", {
+                        ...(pricing.tiered?.member || {}),
+                        first_class: Math.max(0, Number(v)),
+                      })
+                    }
+                  />
+                </div>
+                <div style={cmsLayout.column}>
+                  <CMSInput
+                    labelKey="cms.additionalClasses"
+                    type="number"
+                    value={pricing.tiered?.member?.additional_class || ""}
+                    onChange={(v) =>
+                      updateNested("tiered", "member", {
+                        ...(pricing.tiered?.member || {}),
+                        additional_class: Math.max(0, Number(v)),
+                      })
+                    }
+                  />
+                </div>
+                <div style={cmsLayout.column}>
+                  <CMSInput
+                    labelKey="cms.practice"
+                    type="number"
+                    placeholder="Free if empty"
+                    value={tierPracticeValue(pricing.tiered?.member)}
+                    onChange={(v) => setTierPractice("member", v)}
+                  />
+                </div>
               </div>
 
               <strong>Non‑Member</strong>
-              <div style={{ display: "flex", gap: 12 }}>
-                <CMSInput
-                  labelKey="cms.firstClass"
-                  type="number"
-                  value={pricing.tiered?.non_member?.first_class || ""}
-                  onChange={(v) =>
-                    updateNested("tiered", "non_member", {
-                      ...(pricing.tiered?.non_member || {}),
-                      first_class: Math.max(0, Number(v)),
-                    })
-                  }
-                />
-                <CMSInput
-                  labelKey="cms.additionalClasses"
-                  type="number"
-                  value={pricing.tiered?.non_member?.additional_class || ""}
-                  onChange={(v) =>
-                    updateNested("tiered", "non_member", {
-                      ...(pricing.tiered?.non_member || {}),
-                      additional_class: Math.max(0, Number(v)),
-                    })
-                  }
-                />
-                <CMSInput
-                  labelKey="cms.practice"
-                  type="number"
-                  placeholder="Free if empty"
-                  value={tierPracticeValue(pricing.tiered?.non_member)}
-                  onChange={(v) => setTierPractice("non_member", v)}
-                />
+              <div style={cmsLayout.row}>
+                <div style={cmsLayout.column}>
+                  <CMSInput
+                    labelKey="cms.firstClass"
+                    type="number"
+                    value={pricing.tiered?.non_member?.first_class || ""}
+                    onChange={(v) =>
+                      updateNested("tiered", "non_member", {
+                        ...(pricing.tiered?.non_member || {}),
+                        first_class: Math.max(0, Number(v)),
+                      })
+                    }
+                  />
+                </div>
+                <div style={cmsLayout.column}>
+                  <CMSInput
+                    labelKey="cms.additionalClasses"
+                    type="number"
+                    value={pricing.tiered?.non_member?.additional_class || ""}
+                    onChange={(v) =>
+                      updateNested("tiered", "non_member", {
+                        ...(pricing.tiered?.non_member || {}),
+                        additional_class: Math.max(0, Number(v)),
+                      })
+                    }
+                  />
+                </div>
+                <div style={cmsLayout.column}>
+                  <CMSInput
+                    labelKey="cms.practice"
+                    type="number"
+                    placeholder="Free if empty"
+                    value={tierPracticeValue(pricing.tiered?.non_member)}
+                    onChange={(v) => setTierPractice("non_member", v)}
+                  />
+                </div>
               </div>
 
               <strong>Junior</strong>
-              <div style={{ display: "flex", gap: 12 }}>
-                <CMSInput
-                  labelKey="cms.firstClass"
-                  type="number"
-                  value={pricing.tiered?.junior?.first_class || ""}
-                  onChange={(v) =>
-                    updateNested("tiered", "junior", {
-                      ...(pricing.tiered?.junior || {}),
-                      first_class: Math.max(0, Number(v)),
-                    })
-                  }
-                />
-                <CMSInput
-                  labelKey="cms.additionalClasses"
-                  type="number"
-                  value={pricing.tiered?.junior?.additional_class || ""}
-                  onChange={(v) =>
-                    updateNested("tiered", "junior", {
-                      ...(pricing.tiered?.junior || {}),
-                      additional_class: Math.max(0, Number(v)),
-                    })
-                  }
-                />
-                <CMSInput
-                  labelKey="cms.practice"
-                  type="number"
-                  placeholder="Free if empty"
-                  value={tierPracticeValue(pricing.tiered?.junior)}
-                  onChange={(v) => setTierPractice("junior", v)}
-                />
+              <div style={cmsLayout.row}>
+                <div style={cmsLayout.column}>
+                  <CMSInput
+                    labelKey="cms.firstClass"
+                    type="number"
+                    value={pricing.tiered?.junior?.first_class || ""}
+                    onChange={(v) =>
+                      updateNested("tiered", "junior", {
+                        ...(pricing.tiered?.junior || {}),
+                        first_class: Math.max(0, Number(v)),
+                      })
+                    }
+                  />
+                </div>
+                <div style={cmsLayout.column}>
+                  <CMSInput
+                    labelKey="cms.additionalClasses"
+                    type="number"
+                    value={pricing.tiered?.junior?.additional_class || ""}
+                    onChange={(v) =>
+                      updateNested("tiered", "junior", {
+                        ...(pricing.tiered?.junior || {}),
+                        additional_class: Math.max(0, Number(v)),
+                      })
+                    }
+                  />
+                </div>
+                <div style={cmsLayout.column}>
+                  <CMSInput
+                    labelKey="cms.practice"
+                    type="number"
+                    placeholder="Free if empty"
+                    value={tierPracticeValue(pricing.tiered?.junior)}
+                    onChange={(v) => setTierPractice("junior", v)}
+                  />
+                </div>
               </div>
             </div>
 

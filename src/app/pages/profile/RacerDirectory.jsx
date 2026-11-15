@@ -16,6 +16,10 @@ import {
   resolveDriverDirectoryRules,
   resolveDriverNamingRules,
 } from "@/app/lib/driverClubSettings";
+import {
+  canAccessExtendedDriverProfile,
+  isPayingClubMember,
+} from "@/app/lib/membershipClubLimits";
 import { COUNTRIES } from "@/data/countries";
 
 export default function RacerDirectory() {
@@ -33,7 +37,8 @@ export default function RacerDirectory() {
   const [drivers, setDrivers] = useState([]);
   const [search, setSearch] = useState("");
 
-  const isMember = Boolean(membership);
+  const isPayingMember = isPayingClubMember(membership);
+  const canBrowseDirectory = canAccessExtendedDriverProfile(club, membership);
 
   useEffect(() => {
     const load = async () => {
@@ -103,11 +108,7 @@ export default function RacerDirectory() {
     );
   }
 
-  if (
-    !loading &&
-    directoryRules.audience === "members_only" &&
-    !isMember
-  ) {
+  if (!loading && directoryRules.audience === "members_only" && !canBrowseDirectory) {
     return (
       <div className="p-4 max-w-xl mx-auto">
         <Card className="p-6 text-center space-y-4">

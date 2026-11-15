@@ -25,7 +25,13 @@ import TriviaSection from "./DriverProfileCard/sections/TriviaSection";
 import MobileLayout from "./DriverProfileCard/sections/MobileLayout";
 import SectionWrapper from "./DriverProfileCard/sections/SectionWrapper";
 
-export default function DriverProfileCard({ driver, club, isMember, navigate }) {
+export default function DriverProfileCard({
+  driver,
+  club,
+  navigate,
+  isOwnDriver = true,
+  canViewExtendedProfile = false,
+}) {
   const { t } = useTranslation();
   const { palette } = useTheme();
 
@@ -35,13 +41,15 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
   const country = COUNTRIES.find((c) => c.name === driver.country);
   const chassis = MANUFACTURERS.find((m) => m.name === driver.manufacturer);
 
+  const blockOtherProfile = !isOwnDriver && !canViewExtendedProfile;
+  const greyExtendedOnly = isOwnDriver && !canViewExtendedProfile;
+
   return (
     <div className="relative">
 
-      {/* GREYED OUT CARD WHEN NOT MEMBER */}
       <div
-        className={!isMember ? "opacity-40 pointer-events-none" : ""}
-        style={!isMember ? { filter: "grayscale(100%)" } : {}}
+        className={blockOtherProfile ? "opacity-40 pointer-events-none" : ""}
+        style={blockOtherProfile ? { filter: "grayscale(100%)" } : {}}
       >
         <Card
           className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
@@ -79,8 +87,12 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
               />
             </div>
 
+            {isOwnDriver || canViewExtendedProfile ? (
+              <>
             {/* MOBILE STACKED SECTIONS */}
-            <div className="md:hidden space-y-10">
+            <div
+              className={`md:hidden space-y-10 ${greyExtendedOnly ? "opacity-50 pointer-events-none" : ""}`}
+            >
               <PersonalDetailsSection driver={driver} />
               <RacingInformationSection driver={driver} chassis={chassis} />
               <SicCarProfileSection driver={driver} />
@@ -90,7 +102,9 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
             </div>
 
             {/* DESKTOP TWO-ROW LAYOUT */}
-            <div className="hidden md:grid md:grid-cols-12 md:gap-6">
+            <div
+              className={`hidden md:grid md:grid-cols-12 md:gap-6 ${greyExtendedOnly ? "opacity-50 pointer-events-none" : ""}`}
+            >
               <div className="col-span-6">
                 <SectionWrapper title={t("driverProfile.personalDetails")} brand={brand}>
                   <PersonalDetailsSection driver={driver} />
@@ -127,13 +141,21 @@ export default function DriverProfileCard({ driver, club, isMember, navigate }) 
                 </SectionWrapper>
               </div>
             </div>
+              </>
+            ) : null}
 
           </div>
         </Card>
       </div>
 
-      {/* MEMBERSHIP OVERLAY */}
-      {!isMember && (
+      {greyExtendedOnly ? (
+        <p className="text-sm text-gray-600 text-center mt-4 px-4">
+          {t("driverProfile.nonMemberExtendedUnlock")}
+        </p>
+      ) : null}
+
+      {/* MEMBERSHIP OVERLAY — other members’ profiles */}
+      {blockOtherProfile && (
         <div className="absolute inset-0 flex items-center justify-center px-4">
           <Card
             className="p-8 max-w-md text-center space-y-6"

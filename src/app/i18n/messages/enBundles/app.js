@@ -260,6 +260,10 @@ export default {
     myTitle: "My Nominations",
     viewTitle: "Nominations",
     none: "You have no nominations yet.",
+    driverLabel: "Driver",
+    classHeading: "Class",
+    transponderHeading: "Transponder",
+    transponderNotSet: "Not set",
   },
   membership: {
     title: "Membership",

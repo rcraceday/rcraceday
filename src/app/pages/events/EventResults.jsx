@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { FlagIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
 import Card from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
 import BackNavButton from "@/components/ui/BackNavButton";
+import FilterDropdown from "@/components/ui/FilterDropdown";
 import useTheme from "@/app/providers/useTheme";
 import { useDrivers } from "@/app/providers/DriverProvider";
 import { useTranslation } from "@/app/i18n/I18nContext";
@@ -89,6 +89,10 @@ export default function EventResults({ previewUnpublished = false, adminBack = f
   }, [bundle, driverIds, driverNameKeys]);
 
   const classes = bundle ? uniqueClassNames(bundle) : [];
+  const classOptions = useMemo(
+    () => classes.map((name) => ({ value: name, label: name })),
+    [classes]
+  );
   const overall = (bundle?.overall || [])
     .filter((row) => row.className === className)
     .sort((a, b) => (a.overallPosition || a.position || 0) - (b.overallPosition || b.position || 0));
@@ -100,19 +104,29 @@ export default function EventResults({ previewUnpublished = false, adminBack = f
 
   return (
     <div className="space-y-4 pb-8">
-      <PageTitle icon={FlagIcon} title={t("results.title")} style={{ color: palette.primary }}>
-        {richTextToPlainText(eventRow?.name) || t("results.title")}
-      </PageTitle>
+      <PageTitle
+        icon={FlagIcon}
+        title={t("results.title")}
+        style={{ color: palette.primary }}
+        actions={
+          adminBack ? (
+            <BackNavButton
+              to={`/${clubSlug}/app/admin/events/${id}/results`}
+              label={t("results.backToImport")}
+            />
+          ) : (
+            <BackNavButton />
+          )
+        }
+      />
 
-      {adminBack ? (
-        <Link
-          to={`/${clubSlug}/app/admin/events/${id}/results`}
-          className="no-underline"
+      {eventRow?.name && (
+        <h2
+          className="text-center text-lg font-semibold leading-snug px-2"
+          style={{ color: palette?.text || "#1f2937" }}
         >
-          <Button variant="secondary" size="sm">{t("results.backToImport")}</Button>
-        </Link>
-      ) : (
-        <BackNavButton variant="secondary" />
+          {richTextToPlainText(eventRow.name)}
+        </h2>
       )}
 
       {previewUnpublished && bundle?.result?.published === false && (
@@ -127,22 +141,15 @@ export default function EventResults({ previewUnpublished = false, adminBack = f
 
       {bundle && (
         <>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {classes.map((name) => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => setClassName(name)}
-                className="rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap"
-                style={{
-                  background: className === name ? palette.primary : "#F1F5F9",
-                  color: className === name ? "#fff" : "#334155",
-                }}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
+          {classOptions.length > 0 && (
+            <FilterDropdown
+              value={className}
+              onChange={setClassName}
+              ariaLabel={t("results.filterClass")}
+              options={classOptions}
+              hideSelectedOption={false}
+            />
+          )}
 
           {myRows.map((row) => {
             const entry = latestMainEntry(row, races);

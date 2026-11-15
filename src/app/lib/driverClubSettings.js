@@ -113,6 +113,14 @@ export function getDriverSettings(club) {
   return mergeDriverSettings(club?.driver_settings);
 }
 
+/** Driver belongs to the logged-in household at this club (edit LiveTime fields without membership). */
+export function isOwnClubDriver(driver, membership, userId) {
+  if (!driver) return false;
+  if (membership?.id && driver.membership_id === membership.id) return true;
+  if (userId && driver.created_by === userId) return true;
+  return false;
+}
+
 export function resolveDriverNamingRules(club) {
   return getDriverSettings(club).naming;
 }

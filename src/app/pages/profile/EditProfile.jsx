@@ -22,6 +22,10 @@ import {
   resolveLiveTimeDriverRules,
   suggestJuniorFromBirthYear,
 } from "@/app/lib/driverClubSettings";
+import {
+  canAccessExtendedDriverProfile,
+  isPayingClubMember,
+} from "@/app/lib/membershipClubLimits";
 
 import BackNavButton from "@/components/ui/BackNavButton";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
@@ -388,7 +392,8 @@ export default function EditProfile() {
     );
   }
 
-  const isMember = membership && membership.membership_type !== "non_member";
+  const isMember = isPayingClubMember(membership);
+  const canEditExtendedProfile = canAccessExtendedDriverProfile(club, membership);
   const householdRules = resolveDriverHouseholdRules(club);
   const numberRules = resolveDriverNumberRules(club);
   const livetimeRules = resolveLiveTimeDriverRules(club);
@@ -416,6 +421,7 @@ export default function EditProfile() {
           driver={driver}
           update={update}
           isMember={isMember}
+          canEditExtendedProfile={canEditExtendedProfile}
           brand={brand}
           club={club}
           navigate={navigate}

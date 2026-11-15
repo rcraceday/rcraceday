@@ -96,6 +96,7 @@ export default {
     backToResults: "Back to results",
     filterYear: "Year",
     filterTrack: "Track",
+    filterClass: "Class",
     filterEventType: "Event type",
     filterAllTracks: "All tracks",
     filterAllTypes: "All types",
@@ -447,7 +448,9 @@ export default {
     fieldFavouriteSportsTeam: "Favourite Sports Team:",
     fieldFavouriteProDriver: "Favourite Pro RC Driver:",
     nonMemberUnlock:
-      "Become a club member to unlock your full driver identity — permanent number, colours, sponsors, and complete profile tools.",
+      "Become a club member to unlock optional profile sections (directory listing, racing bio, trivia) and to browse other members’ profiles.",
+    nonMemberExtendedUnlock:
+      "Club membership unlocks optional profile sections beyond LiveTime — directory listing, racing bio, car details, and trivia.",
     joinMembership: "Join Membership",
     saveChanges: "Save Changes",
     previewProfile: "Preview Profile",
@@ -459,7 +462,7 @@ export default {
     deleting: "Deleting…",
     membersOnlyFeature: "Members Only Feature",
     membersOnlyOverlayBody:
-      "Become a club member to unlock full driver profiles and enjoy these benefits:",
+      "Become a club member to browse other racers’ profiles and unlock optional profile sections. LiveTime details for your own drivers are available without membership.",
     benefitRaceFees: "50% off race fees",
     benefitInsurance: "Insurance coverage",
     benefitJuniorFree: "Junior members race free",

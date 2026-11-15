@@ -23,6 +23,7 @@ export default function EditDriverProfileCard({
   driver,
   update,
   isMember,
+  canEditExtendedProfile = false,
   brand: brandProp,
   club,
   navigate,
@@ -68,7 +69,6 @@ export default function EditDriverProfileCard({
         className="w-full rounded-xl shadow-sm overflow-hidden !p-0 !pt-0"
         style={{ border: `2px solid ${brand}`, background: palette?.surface || "white" }}
       >
-        {/* HEADER */}
         <div
           className="px-5 py-3"
           style={{ background: brand, color: palette?.buttonText || "white" }}
@@ -77,7 +77,6 @@ export default function EditDriverProfileCard({
         </div>
 
         <div className="p-6 space-y-10">
-          {/* AVATAR + BASIC INFO */}
           {isProfileSectionEnabled(club, "basic") && (
             <AvatarAndBasicInfoSection
               driver={driver}
@@ -92,87 +91,37 @@ export default function EditDriverProfileCard({
             />
           )}
 
-          {showLivetimeHints && isMember && (
+          {showLivetimeHints ? (
             <p className="text-xs text-gray-600">{t("driverProfile.livetimeFieldsHint")}</p>
-          )}
+          ) : null}
 
-          {/* NON-MEMBER LOCKED BLOCK */}
-          {!isMember && (
+          <hr className="border-surfaceBorder" />
+
+          {isProfileSectionEnabled(club, "colors_number") && (
             <>
+              <NumberAndColoursSection
+                driver={driver}
+                update={update}
+                brand={brand}
+                club={club}
+                navigate={navigate}
+                previewNumber={previewNumber}
+                canChooseNumber={canChooseNumber}
+                canChangeNumber={canChangeNumber}
+              />
               <hr className="border-surfaceBorder" />
-
-              <div
-                className="space-y-6 p-6 rounded-lg"
-                style={{
-                  background: "#F5F5F5",
-                  opacity: 0.6,
-                  pointerEvents: "none",
-                }}
-              >
-                {isProfileSectionEnabled(club, "colors_number") && (
-                  <NumberAndColoursSection
-                    driver={driver}
-                    update={() => {}}
-                    brand={brand}
-                    club={club}
-                    navigate={navigate}
-                    previewNumber={previewNumber}
-                    canChooseNumber={canChooseNumber}
-                    canChangeNumber={canChangeNumber}
-                  />
-                )}
-
-                <hr className="border-surfaceBorder" />
-
-                {isProfileSectionEnabled(club, "trivia_sponsors") && (
-                  <SponsorsSection driver={driver} update={() => {}} />
-                )}
-              </div>
-
-              <div className="space-y-4 text-center">
-                <p className="text-sm text-gray-700 font-medium">
-                  {t("driverProfile.nonMemberUnlock")}
-                </p>
-
-                <button
-                  onClick={() => navigate(joinUrl)}
-                  className="px-6 py-3 rounded text-white text-sm font-semibold"
-                  style={{ background: brand }}
-                >
-                  {t("driverProfile.joinMembership")}
-                </button>
-              </div>
             </>
           )}
 
-          {/* MEMBER FULL PROFILE */}
-          {isMember && (
+          {isProfileSectionEnabled(club, "trivia_sponsors") && (
             <>
+              <SponsorsSection driver={driver} update={update} />
               <hr className="border-surfaceBorder" />
+            </>
+          )}
 
-              {isProfileSectionEnabled(club, "colors_number") && (
-                <>
-                  <NumberAndColoursSection
-                    driver={driver}
-                    update={update}
-                    brand={brand}
-                    club={club}
-                    navigate={navigate}
-                    previewNumber={previewNumber}
-                    canChooseNumber={canChooseNumber}
-                    canChangeNumber={canChangeNumber}
-                  />
-                  <hr className="border-surfaceBorder" />
-                </>
-              )}
-
-              {isProfileSectionEnabled(club, "trivia_sponsors") && (
-                <>
-                  <SponsorsSection driver={driver} update={update} />
-                  <hr className="border-surfaceBorder" />
-                </>
-              )}
-
+          {canEditExtendedProfile ? (
+            <>
               {isProfileSectionEnabled(club, "personal") && (
                 <>
                   <PersonalDetailsSection driver={driver} update={update} />
@@ -212,9 +161,22 @@ export default function EditDriverProfileCard({
                 <FunTriviaSection driver={driver} update={update} />
               )}
             </>
+          ) : (
+            <div className="space-y-4 text-center rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm text-gray-700 font-medium m-0">
+                {t("driverProfile.nonMemberExtendedUnlock")}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate(joinUrl)}
+                className="px-6 py-3 rounded text-white text-sm font-semibold"
+                style={{ background: brand }}
+              >
+                {t("driverProfile.joinMembership")}
+              </button>
+            </div>
           )}
 
-          {/* SAVE + PREVIEW BUTTONS */}
           <div className="flex flex-col items-center gap-4 pt-4">
             {saveError ? (
               <p className="text-sm text-red-600 text-center max-w-md" role="alert">
@@ -255,46 +217,43 @@ export default function EditDriverProfileCard({
         </div>
       )}
 
-{/* DELETE DRIVER MODAL */}
-{showDeleteModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-    <Card
-      className="p-6 space-y-4 bg-white max-w-sm w-full"
-    >
-      <h3 className="text-lg font-semibold text-black">
-        {t("driverUi.deleteDriverTitle")}
-      </h3>
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <Card className="p-6 space-y-4 bg-white max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-black">
+              {t("driverUi.deleteDriverTitle")}
+            </h3>
 
-      <p className="text-sm text-black">
-        {t("driverUi.deleteConfirm")}
-        <br />
-        <span className="text-red-600 font-semibold">
-          {t("driverProfile.deleteCannotUndo")}
-        </span>
-      </p>
+            <p className="text-sm text-black">
+              {t("driverUi.deleteConfirm")}
+              <br />
+              <span className="text-red-600 font-semibold">
+                {t("driverProfile.deleteCannotUndo")}
+              </span>
+            </p>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Button
-          variant="secondary"
-          className="w-full"
-          onClick={() => setShowDeleteModal(false)}
-          disabled={deleting}
-        >
-          {t("cms.cancel")}
-        </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+              >
+                {t("cms.cancel")}
+              </Button>
 
-        <Button
-          variant="danger"
-          className="w-full"
-          onClick={confirmDelete}
-          disabled={deleting}
-        >
-          {deleting ? t("driverProfile.deleting") : t("driverUi.confirmDelete")}
-        </Button>
-      </div>
-    </Card>
-  </div>
-)}
+              <Button
+                variant="danger"
+                className="w-full"
+                onClick={confirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? t("driverProfile.deleting") : t("driverUi.confirmDelete")}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </>
   );
 }

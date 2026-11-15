@@ -152,7 +152,7 @@ export default function ResultsIndex() {
   }, [eventTypesInData, t]);
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="flex flex-col gap-6 pb-8">
       <PageTitle icon={TrophyIcon} title={t("results.title")} style={{ color: palette.primary }} />
 
       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -187,38 +187,43 @@ export default function ResultsIndex() {
         />
       </div>
 
-      {loading && <p className="text-text-muted">{t("loading.loading")}</p>}
+      <div className="flex flex-col gap-4">
+        {loading && <p className="text-text-muted m-0">{t("loading.loading")}</p>}
 
-      {!loading && typeFilter === CHAMPIONSHIP_TYPE && promoChampionships.length > 0 && (
-        <section className="space-y-2">
-          {promoChampionships.map((champ) => (
-            <ChampionshipPromoCard key={champ.id} clubSlug={clubSlug} championship={champ} />
-          ))}
-        </section>
-      )}
+        {!loading && typeFilter === CHAMPIONSHIP_TYPE && promoChampionships.length > 0 && (
+          <section className="flex flex-col gap-3">
+            {promoChampionships.map((champ) => (
+              <ChampionshipPromoCard key={champ.id} clubSlug={clubSlug} championship={champ} />
+            ))}
+          </section>
+        )}
 
-      {!loading && filteredEvents.length === 0 && (
-        <p className="text-text-muted">{t("results.noneYet")}</p>
-      )}
+        {!loading && filteredEvents.length === 0 && (
+          <p className="text-text-muted m-0">{t("results.noneYet")}</p>
+        )}
 
-      {!loading &&
-        filteredEvents.map((event) => (
-          <Link
-            key={event.id}
-            to={`/${clubSlug}/app/events/${event.id}/results`}
-            className="no-underline"
-          >
-            <Card className="p-4 mb-2">
-              <div className="font-semibold text-slate-900">
-                {richTextToPlainText(event.name) || t("eventCard.event")}
-              </div>
-              <div className="text-sm text-slate-500">{event.event_date}</div>
-              {event.track && trackNames[event.track] ? (
-                <div className="text-sm text-slate-500 mt-1">{trackNames[event.track]}</div>
-              ) : null}
-            </Card>
-          </Link>
-        ))}
+        {!loading && filteredEvents.length > 0 && (
+          <section className="flex flex-col gap-3">
+            {filteredEvents.map((event) => (
+              <Link
+                key={event.id}
+                to={`/${clubSlug}/app/events/${event.id}/results`}
+                className="no-underline"
+              >
+                <Card className="p-4">
+                  <div className="font-semibold text-slate-900">
+                    {richTextToPlainText(event.name) || t("eventCard.event")}
+                  </div>
+                  <div className="text-sm text-slate-500">{event.event_date}</div>
+                  {event.track && trackNames[event.track] ? (
+                    <div className="text-sm text-slate-500 mt-1">{trackNames[event.track]}</div>
+                  ) : null}
+                </Card>
+              </Link>
+            ))}
+          </section>
+        )}
+      </div>
     </div>
   );
 }
