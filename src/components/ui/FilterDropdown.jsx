@@ -37,16 +37,17 @@ export default function FilterDropdown({
   variant = "public",
   /** In-flow menu — avoids clipping inside overflow-hidden ancestors. */
   menuInline = false,
+  preserveOptionOrder = false,
 }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
   const menuRef = useRef(null);
   const { palette } = useTheme();
   const menuOptions = useMemo(() => {
-    const sorted = sortOptionsAlphabetically(options);
+    const sorted = preserveOptionOrder ? options : sortOptionsAlphabetically(options);
     if (!hideSelectedOption) return sorted;
     return sorted.filter((option) => option.value === "" || option.value !== value);
-  }, [options, value, hideSelectedOption]);
+  }, [options, value, hideSelectedOption, preserveOptionOrder]);
   const selectedOption = options.find((option) => option.value === value) || options[0];
   const primary = palette?.primary || "#00438a";
   const isCms = variant === "cms" || variant === "public";

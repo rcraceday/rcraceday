@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ChevronDownIcon } from "@heroicons/react/24/solid";
 import Card from "@/components/ui/Card";
+import ClassFolderTabs from "@/components/ui/ClassFolderTabs";
 import FilterDropdown from "@/components/ui/FilterDropdown";
 import useTheme from "@/app/providers/useTheme";
 import { useTranslation } from "@/app/i18n/I18nContext";
@@ -8,7 +10,11 @@ import { useDrivers } from "@/app/providers/DriverProvider";
 import { supabase } from "@/supabaseClient";
 import { normalizeDriverName } from "@/app/lib/results/driverName";
 import { formatMs } from "@/app/lib/results/resultTime";
-import { buildMyResultsYearSummary } from "@/app/lib/results/buildMyResultsYearSummary";
+import {
+  buildMyResultsYearSummary,
+  competitorSeriesPoints,
+  sliceClassBundleForDriver,
+} from "@/app/lib/results/buildMyResultsYearSummary";
 import { buildMyChampionshipYearSummary } from "@/app/lib/results/buildMyChampionshipYearSummary";
 import { richTextToPlainText } from "@/app/lib/richText";
 import { ResultsDataTable } from "@/app/pages/events/results/ResultsTableSection";
@@ -49,6 +55,7 @@ export default function MyResultsYearDashboard({
   onDashboardClassChange,
   compareDriver = "",
   onCompareDriverChange,
+  onActiveHouseholdDriverChange,
 }) {
   const { t } = useTranslation();
   const { palette } = useTheme();
@@ -57,6 +64,7 @@ export default function MyResultsYearDashboard({
   const [championshipRows, setChampionshipRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [champLoading, setChampLoading] = useState(false);
+  const [activeDriver, setActiveDriver] = useState("");
 
   const driverIds = useMemo(() => new Set((drivers || []).map((d) => d.id)), [drivers]);
   const driverNameKeys = useMemo(() => {
@@ -73,7 +81,7 @@ export default function MyResultsYearDashboard({
   const canLoad = Boolean(events?.length && (driverIds.size || driverNameKeys.size));
   const shouldLoadChamps = Boolean(canLoad && clubId && championships?.length);
   const primaryColor = palette?.primary || "#2563eb";
-  const rivalColor = palette?.secondary || "#b45309";
+  const compareColor = palette?.secondary || "#b45309";
 
   useEffect(() => {
     if (!canLoad) return;
@@ -138,16 +146,92 @@ export default function MyResultsYearDashboard({
     [classBundles, activeClass]
   );
 
-  const classChampionships = useMemo(
-    () => championshipRows.filter((row) => row.className === activeClass),
-    [championshipRows, activeClass]
+  const householdDriverNames = useMemo(() => {
+    const names = new Set();
+    classBundles.forEach((row) => row.driverNames?.forEach((name) => names.add(name)));
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [classBundles]);
+
+  const driverTabOptions = useMemo(
+    () => householdDriverNames.map((name) => ({ value: name, label: name })),
+    [householdDriverNames]
   );
 
+  useEffect(() => {
+    if (householdDriverNames.length > 1) {
+      setActiveDriver((prev) =>
+        prev && householdDriverNames.includes(prev) ? prev : householdDriverNames[0]
+      );
+    } else {
+      setActiveDriver("");
+    }
+  }, [householdDriverNames]);
+
+  useEffect(() => {
+    if (!onActiveHouseholdDriverChange) return;
+    const name =
+      householdDriverNames.length > 1
+        ? activeDriver || householdDriverNames[0]
+        : householdDriverNames[0] || "";
+    onActiveHouseholdDriverChange(name);
+  }, [householdDriverNames, activeDriver, onActiveHouseholdDriverChange]);
+
+  const displayBundle = useMemo(() => {
+    if (!bundle) return null;
+    if (householdDriverNames.length <= 1) return bundle;
+    const driver = activeDriver || householdDriverNames[0];
+    return sliceClassBundleForDriver(bundle, driver);
+  }, [bundle, householdDriverNames, activeDriver]);
+
+  const rivalCompareOptions = useMemo(() => {
+    const rivals = displayBundle?.rivals || [];
+    if (!rivals.length) return [];
+    return [
+      { value: "", label: t("results.compareNone") },
+      ...rivals.map(({ name, avgGap }) => {
+        const gapLabel =
+          avgGap != null ? t("results.competitorAvgGapSuffix", { gap: avgGap }) : "";
+        return {
+          value: name,
+          label: `${t("results.competitorCloseMarker")}${name}${gapLabel}`,
+        };
+      }),
+    ];
+  }, [displayBundle?.rivals, t]);
+
+  useEffect(() => {
+    if (!compareDriver || !onCompareDriverChange) return;
+    const allowed = new Set((displayBundle?.rivals || []).map((r) => r.name));
+    if (!allowed.has(compareDriver)) onCompareDriverChange("");
+  }, [displayBundle?.rivals, compareDriver, onCompareDriverChange]);
+
   const compareKey = compareDriver ? normalizeDriverName(compareDriver) : "";
+
+  const selectedCompetitor = useMemo(() => {
+    if (!compareDriver || !displayBundle?.competitors) return null;
+    return (
+      displayBundle.competitors[compareDriver] ||
+      Object.values(displayBundle.competitors).find(
+        (row) => normalizeDriverName(row.name) === compareKey
+      ) ||
+      null
+    );
+  }, [compareDriver, displayBundle?.competitors, compareKey]);
+
+  const classChampionships = useMemo(() => {
+    const driver =
+      householdDriverNames.length > 1 ? activeDriver || householdDriverNames[0] : "";
+    return championshipRows.filter((row) => {
+      if (row.className !== activeClass) return false;
+      if (!driver) return true;
+      return normalizeDriverName(row.driverName) === normalizeDriverName(driver);
+    });
+  }, [championshipRows, activeClass, householdDriverNames, activeDriver]);
+
   const seasonMatchups = useMemo(() => {
-    if (!bundle || !compareKey) return [];
-    return bundle.matchupsByRivalKey?.[compareKey] || [];
-  }, [bundle, compareKey]);
+    if (!displayBundle || !compareKey) return [];
+    return displayBundle.matchupsByRivalKey?.[compareKey] || [];
+  }, [displayBundle, compareKey]);
 
   if (!drivers?.length) {
     return (
@@ -165,24 +249,24 @@ export default function MyResultsYearDashboard({
     return <p className="text-sm text-text-muted m-0">{t("results.dashboardLoading")}</p>;
   }
 
-  if (!summary || summary.eventsWithResults === 0 || !bundle) {
+  if (!summary || summary.eventsWithResults === 0 || !displayBundle) {
     return (
       <Card className="p-4 text-sm text-text-muted m-0">{t("results.dashboardNoDataYear")}</Card>
     );
   }
 
   const lapTrendLabel =
-    bundle.lapTrendMs == null
+    displayBundle.lapTrendMs == null
       ? "—"
-      : bundle.lapTrendMs < 0
-        ? t("results.trendFaster", { time: formatMs(Math.abs(bundle.lapTrendMs)) })
-        : bundle.lapTrendMs > 0
-          ? t("results.trendSlower", { time: formatMs(bundle.lapTrendMs) })
+      : displayBundle.lapTrendMs < 0
+        ? t("results.trendFaster", { time: formatMs(Math.abs(displayBundle.lapTrendMs)) })
+        : displayBundle.lapTrendMs > 0
+          ? t("results.trendSlower", { time: formatMs(displayBundle.lapTrendMs) })
           : t("results.trendFlat");
 
   const finishChartPoints =
-    bundle.monthlyFinishes?.length > 0
-      ? bundle.monthlyFinishes.map((row) => ({
+    displayBundle.monthlyFinishes?.length > 0
+      ? displayBundle.monthlyFinishes.map((row) => ({
           id: row.monthKey,
           sortKey: row.monthKey,
           monthKey: row.monthKey,
@@ -193,7 +277,7 @@ export default function MyResultsYearDashboard({
             pos: row.finish,
           }),
         }))
-      : bundle.eventFinishes.map((row, i) => ({
+      : displayBundle.eventFinishes.map((row, i) => ({
           id: `${row.eventId}-${i}`,
           sortKey: row.eventDate,
           monthLabel: formatShortDate(row.eventDate),
@@ -202,8 +286,8 @@ export default function MyResultsYearDashboard({
         }));
 
   const lapChartPoints =
-    bundle.monthlyLaps?.length > 0
-      ? bundle.monthlyLaps.map((row) => ({
+    displayBundle.monthlyLaps?.length > 0
+      ? displayBundle.monthlyLaps.map((row) => ({
           id: row.monthKey,
           sortKey: row.monthKey,
           monthKey: row.monthKey,
@@ -214,7 +298,7 @@ export default function MyResultsYearDashboard({
             lap: formatMs(row.fastLapMs),
           }),
         }))
-      : bundle.eventLaps.map((row, i) => ({
+      : displayBundle.eventLaps.map((row, i) => ({
           id: `${row.eventId}-${i}`,
           sortKey: row.eventDate,
           monthLabel: formatShortDate(row.eventDate),
@@ -222,192 +306,217 @@ export default function MyResultsYearDashboard({
           tooltip: formatMs(row.fastLapMs),
         }));
 
+  const monthlyChart = displayBundle.monthlyFinishes?.length > 0;
+  const compareFinishOverlays = selectedCompetitor
+    ? [
+        {
+          id: "compare-finish",
+          label: selectedCompetitor.name,
+          stroke: compareColor,
+          points: competitorSeriesPoints(selectedCompetitor, "finish", {
+            monthlyFirst: monthlyChart,
+            formatShortDate,
+          }),
+        },
+      ]
+    : [];
+  const compareLapOverlays = selectedCompetitor
+    ? [
+        {
+          id: "compare-lap",
+          label: selectedCompetitor.name,
+          stroke: compareColor,
+          points: competitorSeriesPoints(selectedCompetitor, "lap", {
+            monthlyFirst: displayBundle.monthlyLaps?.length > 0,
+            formatShortDate,
+          }),
+        },
+      ]
+    : [];
+
+  const dashboardTitle = t("results.yearDashboardTitle", { year });
+
   return (
     <Card className="p-0 overflow-hidden border-border shadow-sm">
-      <div
-        className="px-4 py-3 border-b border-border"
-        style={{ background: `linear-gradient(135deg, ${primaryColor}14 0%, transparent 55%)` }}
-      >
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[10px] uppercase tracking-widest text-text-muted m-0 font-semibold">
-              {t("results.yearDashboardTitle", { year })}
-            </p>
-            <h2 className="text-lg font-bold m-0 text-text-base tracking-tight">{activeClass}</h2>
-            <p className="text-[11px] text-text-muted m-0 mt-1">{t("results.yearDashboardHint")}</p>
-          </div>
-          {classOptions.length > 1 && onDashboardClassChange ? (
-            <FilterDropdown
-              value={activeClass}
-              onChange={(value) => onDashboardClassChange(value)}
-              ariaLabel={t("results.filterClass")}
-              options={classOptions}
-              hideSelectedOption={false}
-              compact
-              fullWidth={false}
-              className="!w-auto min-w-[10rem]"
+      <details className="group">
+        <summary
+          className="list-none [&::-webkit-details-marker]:hidden cursor-pointer px-4 py-3 border-b border-border"
+          style={{ background: `linear-gradient(135deg, ${primaryColor}14 0%, transparent 55%)` }}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-text-base m-0 leading-snug">{dashboardTitle}</p>
+              <p className="text-[11px] text-text-muted m-0 mt-1">{t("results.yearDashboardHint")}</p>
+            </div>
+            <ChevronDownIcon
+              className="h-5 w-5 shrink-0 text-text-muted transition-transform group-open:rotate-180"
+              style={{ color: primaryColor }}
+              aria-hidden
             />
+          </div>
+        </summary>
+
+        {householdDriverNames.length > 1 ? (
+          <ClassFolderTabs
+            options={driverTabOptions}
+            value={activeDriver || householdDriverNames[0]}
+            onChange={setActiveDriver}
+            brand={primaryColor}
+          />
+        ) : null}
+
+        {classOptions.length > 1 && onDashboardClassChange ? (
+          <ClassFolderTabs
+            options={classOptions}
+            value={activeClass}
+            onChange={onDashboardClassChange}
+            brand={primaryColor}
+          />
+        ) : null}
+
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <StatTile label={t("results.dashboardClassEntries")} value={displayBundle.starts} accent={primaryColor} />
+            <StatTile label={t("results.dashboardBestFinish")} value={`P${displayBundle.bestFinish ?? "—"}`} accent={primaryColor} />
+            <StatTile label={t("results.dashboardAvgFinish")} value={displayBundle.avgFinish} />
+            <StatTile
+              label={t("results.dashboardBestLap")}
+              value={displayBundle.bestLapMs ? formatMs(displayBundle.bestLapMs) : "—"}
+            />
+          </div>
+
+          {rivalCompareOptions.length > 0 ? (
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold text-text-muted m-0 px-0.5 leading-snug">
+                {t("results.mainCompetitors")}
+              </p>
+              <p className="text-[10px] text-text-muted m-0 px-0.5 leading-snug">
+                {t("results.mainCompetitorsHint")}
+              </p>
+              <FilterDropdown
+                value={compareDriver || ""}
+                onChange={(value) => onCompareDriverChange?.(value || "")}
+                ariaLabel={t("results.mainCompetitors")}
+                options={rivalCompareOptions}
+                hideSelectedOption={false}
+                preserveOptionOrder
+                compact
+                menuInline
+                className="w-full"
+              />
+            </div>
           ) : null}
-        </div>
-        {bundle.driverNames?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            <span className="text-[10px] uppercase text-text-muted self-center mr-1">
-              {t("results.yourDrivers")}
-            </span>
-            {bundle.driverNames.map((name) => (
-              <span
-                key={name}
-                className="text-xs font-bold px-2.5 py-1 rounded-full text-white shadow-sm"
-                style={{ backgroundColor: primaryColor }}
-              >
-                {name}
-              </span>
-            ))}
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <ResultsSeasonLineChart
+              title={t("results.finishPositionTrend")}
+              hint={
+                selectedCompetitor
+                  ? t("results.finishTrendCompareHint", { name: selectedCompetitor.name })
+                  : t("results.finishTrendByMonthHint")
+              }
+              points={finishChartPoints}
+              overlaySeries={compareFinishOverlays}
+              formatValue={(v) => `P${Math.round(v)}`}
+              lowerIsBetter
+              stroke={primaryColor}
+              fill={primaryColor}
+            />
+            <ResultsSeasonLineChart
+              title={t("results.fastLapTrendByMonth")}
+              hint={
+                selectedCompetitor
+                  ? t("results.lapTrendCompareHint", { name: selectedCompetitor.name, trend: lapTrendLabel })
+                  : t("results.lapTrendByMonthHint", { trend: lapTrendLabel })
+              }
+              points={lapChartPoints}
+              overlaySeries={compareLapOverlays}
+              formatValue={(v) => formatMs(v)}
+              lowerIsBetter
+              stroke={primaryColor}
+              fill={primaryColor}
+            />
           </div>
-        )}
-      </div>
 
-      <div className="p-4 space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <StatTile label={t("results.dashboardClassEntries")} value={bundle.starts} accent={primaryColor} />
-          <StatTile label={t("results.dashboardBestFinish")} value={`P${bundle.bestFinish ?? "—"}`} accent={primaryColor} />
-          <StatTile label={t("results.dashboardAvgFinish")} value={bundle.avgFinish} />
-          <StatTile
-            label={t("results.dashboardBestLap")}
-            value={bundle.bestLapMs ? formatMs(bundle.bestLapMs) : "—"}
-          />
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <ResultsSeasonLineChart
-            title={t("results.finishPositionTrend")}
-            hint={t("results.finishTrendByMonthHint")}
-            points={finishChartPoints}
-            formatValue={(v) => `P${Math.round(v)}`}
-            lowerIsBetter
-            stroke={primaryColor}
-            fill={primaryColor}
-          />
-          <ResultsSeasonLineChart
-            title={t("results.fastLapTrendByMonth")}
-            hint={t("results.lapTrendByMonthHint", { trend: lapTrendLabel })}
-            points={lapChartPoints}
-            formatValue={(v) => formatMs(v)}
-            lowerIsBetter
-            stroke={primaryColor}
-            fill={primaryColor}
-          />
-        </div>
-
-        {shouldLoadChamps && !champLoading && classChampionships.length > 0 && (
-          <div className="rounded-xl border border-border/80 px-3 py-2.5 space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-              {t("results.championshipYearTitle")}
-            </div>
-            {classChampionships.map((row) => (
-              <div key={`${row.championshipId}-${row.driverName}`} className="text-sm">
-                <span className="font-semibold">{richTextToPlainText(row.championshipName) || row.championshipName}</span>
-                <span className="text-text-muted text-xs ml-2">
-                  {t("results.championshipStandingLine", {
-                    rank: row.rank,
-                    points: row.totalPoints,
-                  })}
-                </span>
-                {clubSlug ? (
-                  <Link
-                    to={`/${clubSlug}/app/championships/${row.championshipId}`}
-                    className="text-xs font-medium ml-2 text-primary"
-                  >
-                    →
-                  </Link>
-                ) : null}
+          {shouldLoadChamps && !champLoading && classChampionships.length > 0 && (
+            <div className="rounded-xl border border-border/80 px-3 py-2.5 space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+                {t("results.championshipYearTitle")}
               </div>
-            ))}
-          </div>
-        )}
+              {classChampionships.map((row) => (
+                <div key={`${row.championshipId}-${row.driverName}`} className="text-sm">
+                  <span className="font-semibold">
+                    {richTextToPlainText(row.championshipName) || row.championshipName}
+                  </span>
+                  <span className="text-text-muted text-xs ml-2">
+                    {t("results.championshipStandingLine", {
+                      rank: row.rank,
+                      points: row.totalPoints,
+                    })}
+                  </span>
+                  {clubSlug ? (
+                    <Link
+                      to={`/${clubSlug}/app/championships/${row.championshipId}`}
+                      className="text-xs font-medium ml-2 text-primary"
+                    >
+                      →
+                    </Link>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
 
-        {bundle.rivals?.length > 0 && (
-          <div className="space-y-1.5">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-              {t("results.mainCompetitors")}
+          {compareDriver && seasonMatchups.length > 0 && (
+            <div className="rounded-xl border border-amber-200/80 bg-amber-50/30 px-3 py-2 overflow-x-auto">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-900/80 mb-2">
+                {t("results.seasonHeadToHead", { name: compareDriver })}
+              </div>
+              <ResultsDataTable className="text-xs">
+                <thead>
+                  <tr>
+                    <th className="my-results-th">{t("results.h2hEvent")}</th>
+                    <th className="my-results-th">{t("results.h2hYou")}</th>
+                    <th className="my-results-th">{t("results.h2hThem")}</th>
+                    <th className="my-results-th">{t("results.h2hGap")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {seasonMatchups.map((row) => {
+                    const gap = row.rivalFinish - row.myFinish;
+                    const gapLabel =
+                      gap === 0
+                        ? t("results.h2hTied")
+                        : gap > 0
+                          ? t("results.h2hAhead", { count: gap })
+                          : t("results.h2hBehind", { count: Math.abs(gap) });
+                    return (
+                      <tr key={row.eventId} className="my-results-row-you font-semibold">
+                        <td className="py-1 pr-2 whitespace-nowrap">
+                          {formatShortDate(row.eventDate)}
+                          {row.myDriverName ? (
+                            <span
+                              className="ml-1 text-[10px] font-bold px-1 rounded"
+                              style={{ color: primaryColor }}
+                            >
+                              {row.myDriverName.split(" ").pop()}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="py-1 pr-2 font-bold tabular-nums" style={{ color: primaryColor }}>
+                          P{row.myFinish}
+                        </td>
+                        <td className="py-1 pr-2 tabular-nums text-amber-900">P{row.rivalFinish}</td>
+                        <td className="py-1">{gapLabel}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </ResultsDataTable>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {bundle.rivals.map((rival) => {
-                const active = compareDriver === rival.name;
-                return (
-                  <button
-                    key={rival.name}
-                    type="button"
-                    onClick={() =>
-                      onCompareDriverChange?.(active ? "" : rival.name)
-                    }
-                    className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border transition-colors ${
-                      active
-                        ? "border-amber-400 bg-amber-50 text-amber-950"
-                        : "border-border bg-surface-alt/50 text-text-base hover:border-primary/40"
-                    }`}
-                    style={active ? { borderColor: rivalColor } : undefined}
-                  >
-                    <span className="truncate max-w-[8.5rem]">{rival.name}</span>
-                    <span className="text-[10px] tabular-nums text-text-muted font-semibold">
-                      {rival.closeRaces}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {compareDriver && seasonMatchups.length > 0 && (
-          <div className="rounded-xl border border-amber-200/80 bg-amber-50/30 px-3 py-2 overflow-x-auto">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-900/80 mb-2">
-              {t("results.seasonHeadToHead", { name: compareDriver })}
-            </div>
-            <ResultsDataTable className="text-xs">
-              <thead>
-                <tr>
-                  <th className="my-results-th">{t("results.h2hEvent")}</th>
-                  <th className="my-results-th">{t("results.h2hYou")}</th>
-                  <th className="my-results-th">{t("results.h2hThem")}</th>
-                  <th className="my-results-th">{t("results.h2hGap")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {seasonMatchups.map((row) => {
-                  const gap = row.rivalFinish - row.myFinish;
-                  const gapLabel =
-                    gap === 0
-                      ? t("results.h2hTied")
-                      : gap > 0
-                        ? t("results.h2hAhead", { count: gap })
-                        : t("results.h2hBehind", { count: Math.abs(gap) });
-                  return (
-                    <tr key={row.eventId} className="my-results-row-you font-semibold">
-                      <td className="py-1 pr-2 whitespace-nowrap">
-                        {formatShortDate(row.eventDate)}
-                        {row.myDriverName ? (
-                          <span
-                            className="ml-1 text-[10px] font-bold px-1 rounded"
-                            style={{ color: primaryColor }}
-                          >
-                            {row.myDriverName.split(" ").pop()}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="py-1 pr-2 font-bold tabular-nums" style={{ color: primaryColor }}>
-                        P{row.myFinish}
-                      </td>
-                      <td className="py-1 pr-2 tabular-nums text-amber-900">P{row.rivalFinish}</td>
-                      <td className="py-1">{gapLabel}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </ResultsDataTable>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </details>
     </Card>
   );
 }

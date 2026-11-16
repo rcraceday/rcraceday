@@ -4,6 +4,7 @@ import { TrophyIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
 import BackNavButton from "@/components/ui/BackNavButton";
 import Card from "@/components/ui/Card";
+import ClassFolderTabs from "@/components/ui/ClassFolderTabs";
 import useTheme from "@/app/providers/useTheme";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useTranslation } from "@/app/i18n/I18nContext";
@@ -15,6 +16,12 @@ import { isChampionshipSeasonComplete } from "@/app/lib/results/championshipSeas
 import { useHouseholdResultHighlight } from "@/app/hooks/useHouseholdResultHighlight";
 import ChampionshipPlaceTrophy from "./ChampionshipPlaceTrophy";
 import { ResultsDataTable, PositionCell } from "@/app/pages/events/results/ResultsTableSection";
+
+const cardSurfaceStyle = {
+  border: "1px solid var(--border, #e5e7eb)",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+  borderRadius: "16px",
+};
 
 export default function ChampionshipStandings() {
   const { id } = useParams();
@@ -28,11 +35,29 @@ export default function ChampionshipStandings() {
   const [roundCount, setRoundCount] = useState(0);
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeClass, setActiveClass] = useState("");
 
   const seasonComplete = useMemo(
     () => isChampionshipSeasonComplete(championship, roundCount),
     [championship, roundCount]
   );
+
+  const classTabOptions = useMemo(
+    () => tables.map((table) => ({ value: table.className, label: table.className })),
+    [tables]
+  );
+
+  const activeTable = useMemo(() => {
+    if (!tables.length) return null;
+    return tables.find((row) => row.className === activeClass) || tables[0];
+  }, [tables, activeClass]);
+
+  useEffect(() => {
+    if (!tables.length) return;
+    setActiveClass((prev) =>
+      tables.some((row) => row.className === prev) ? prev : tables[0].className
+    );
+  }, [tables]);
 
   useEffect(() => {
     async function load() {
@@ -73,36 +98,34 @@ export default function ChampionshipStandings() {
         icon={TrophyIcon}
         title={t("results.championshipPoints")}
         style={{ color: palette.primary }}
+        actions={<BackNavButton />}
       />
 
       {championship && (
         <Card
           className="p-0 overflow-hidden shadow-sm text-text-base"
-          style={{
-            border: "1px solid var(--border, #e5e7eb)",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-            borderRadius: "16px",
-          }}
+          style={cardSurfaceStyle}
         >
           <div
-            className="px-4 py-3 border-b border-border flex flex-wrap items-center gap-3"
+            className="px-4 py-3 border-b border-border"
             style={{ background: `linear-gradient(135deg, ${primaryColor}14 0%, transparent 55%)` }}
           >
-            <BackNavButton variant="secondary" className="shrink-0" />
-            {championship.logo_url ? (
-              <img
-                src={championship.logo_url}
-                alt=""
-                className="h-12 w-12 object-contain shrink-0"
-              />
-            ) : null}
-            <div className="min-w-0">
-              <h2 className="text-lg font-bold text-text-base m-0 tracking-tight">
-                {championship.name}
-              </h2>
-              <p className="text-sm text-text-muted m-0">
-                {t("results.seasonN", { season: championship.season })}
-              </p>
+            <div className="flex flex-wrap items-center gap-3 min-w-0">
+              {championship.logo_url ? (
+                <img
+                  src={championship.logo_url}
+                  alt=""
+                  className="h-12 w-12 object-contain shrink-0"
+                />
+              ) : null}
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-text-base m-0 tracking-tight">
+                  {championship.name}
+                </h2>
+                <p className="text-sm text-text-muted m-0">
+                  {t("results.seasonN", { season: championship.season })}
+                </p>
+              </div>
             </div>
           </div>
         </Card>
@@ -110,27 +133,29 @@ export default function ChampionshipStandings() {
 
       {loading && <p className="text-text-muted">{t("loading.loading")}</p>}
 
-      {tables.map((table) => (
-        <Card
-          key={table.className}
-          className="p-0 overflow-hidden shadow-sm text-text-base"
-          style={{
-            border: "1px solid var(--border, #e5e7eb)",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-            borderRadius: "16px",
-          }}
-        >
-          <div
-            className="px-4 py-2.5 border-b border-border"
-            style={{ background: `linear-gradient(135deg, ${primaryColor}10 0%, transparent 60%)` }}
-          >
-            <span
-              className="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md text-white"
-              style={{ backgroundColor: primaryColor }}
+      {!loading && activeTable ? (
+        <Card className="p-0 overflow-hidden shadow-sm text-text-base" style={cardSurfaceStyle}>
+          {classTabOptions.length > 1 ? (
+            <ClassFolderTabs
+              options={classTabOptions}
+              value={activeTable.className}
+              onChange={setActiveClass}
+              brand={primaryColor}
+              wrapWhenOverflow
+            />
+          ) : (
+            <div
+              className="px-4 py-2.5 border-b border-border"
+              style={{ background: `linear-gradient(135deg, ${primaryColor}10 0%, transparent 60%)` }}
             >
-              {table.className}
-            </span>
-          </div>
+              <span
+                className="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md text-white"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {activeTable.className}
+              </span>
+            </div>
+          )}
           <div className="p-3 overflow-x-auto">
             <ResultsDataTable>
               <thead>
@@ -141,7 +166,7 @@ export default function ChampionshipStandings() {
                 </tr>
               </thead>
               <tbody>
-                {table.standings.map((row) => (
+                {activeTable.standings.map((row) => (
                   <tr key={row.key} className={rowClass(row)}>
                     <PositionCell value={row.rank} />
                     <td className="py-2 pr-2 font-medium">
@@ -165,7 +190,7 @@ export default function ChampionshipStandings() {
             </ResultsDataTable>
           </div>
         </Card>
-      ))}
+      ) : null}
     </div>
   );
 }

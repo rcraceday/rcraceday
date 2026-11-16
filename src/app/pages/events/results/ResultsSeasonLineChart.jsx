@@ -1,12 +1,14 @@
-import { useId, useMemo } from "react";
+﻿import { useId, useMemo } from "react";
 
 /**
  * SVG line chart — lower values plotted higher when lowerIsBetter (positions, lap ms).
+ * overlaySeries: [{ id, label, points, stroke? }]
  */
 export default function ResultsSeasonLineChart({
   title,
   hint,
   points,
+  overlaySeries = [],
   formatValue = (v) => v,
   lowerIsBetter = true,
   stroke,
@@ -22,7 +24,28 @@ export default function ResultsSeasonLineChart({
     [points]
   );
 
-  if (!sorted.length) return null;
+  const axisKeys = useMemo(() => {
+    const keys = new Set();
+    sorted.forEach((p) => {
+      if (p.sortKey != null) keys.add(String(p.sortKey));
+    });
+    (overlaySeries || []).forEach((series) => {
+      (series.points || []).forEach((p) => {
+        if (p.sortKey != null) keys.add(String(p.sortKey));
+      });
+    });
+    return [...keys].sort((a, b) => a.localeCompare(b));
+  }, [sorted, overlaySeries]);
+
+  const valueByKey = useMemo(() => {
+    const map = new Map();
+    sorted.forEach((p) => {
+      if (p.sortKey != null) map.set(String(p.sortKey), Number(p.value));
+    });
+    return map;
+  }, [sorted]);
+
+  if (!sorted.length && !(overlaySeries || []).some((s) => s.points?.length)) return null;
 
   const pad = { top: 18, right: 10, bottom: 30, left: 42 };
   const vbW = 360;
@@ -30,9 +53,16 @@ export default function ResultsSeasonLineChart({
   const plotW = vbW - pad.left - pad.right;
   const plotH = vbH - pad.top - pad.bottom;
 
-  const values = sorted.map((p) => Number(p.value));
-  let yMin = Math.min(...values);
-  let yMax = Math.max(...values);
+  const allValues = [...sorted.map((p) => Number(p.value))];
+  (overlaySeries || []).forEach((series) => {
+    (series.points || []).forEach((p) => {
+      if (p.value != null) allValues.push(Number(p.value));
+    });
+  });
+
+  let yMin = Math.min(...allValues);
+  let yMax = Math.max(...allValues);
+  if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) return null;
   if (yMin === yMax) {
     yMin -= 1;
     yMax += 1;
@@ -41,19 +71,33 @@ export default function ResultsSeasonLineChart({
   yMin -= yPad;
   yMax += yPad;
 
-  const xAt = (index) => pad.left + (sorted.length === 1 ? plotW / 2 : (index / (sorted.length - 1)) * plotW);
+  const xAt = (index) =>
+    pad.left + (axisKeys.length === 1 ? plotW / 2 : (index / (axisKeys.length - 1)) * plotW);
   const yAt = (value) => {
     const t = (value - yMin) / (yMax - yMin);
-    const screenT = lowerIsBetter ? 1 - t : t;
-    return pad.top + screenT * plotH;
+    // Smaller values (better finish / faster lap) plot toward the top of the chart.
+    const fromTop = lowerIsBetter ? t : 1 - t;
+    return pad.top + fromTop * plotH;
   };
 
-  const coords = sorted.map((p, i) => ({ x: xAt(i), y: yAt(Number(p.value)), point: p }));
-  const linePath = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x.toFixed(2)} ${c.y.toFixed(2)}`).join(" ");
+  const primaryCoords = axisKeys
+    .map((key, index) => {
+      const value = valueByKey.get(key);
+      if (value == null) return null;
+      const point = sorted.find((p) => String(p.sortKey) === key);
+      return { x: xAt(index), y: yAt(value), key, point };
+    })
+    .filter(Boolean);
+
+  const linePath = primaryCoords
+    .map((c, i) => `${i === 0 ? "M" : "L"} ${c.x.toFixed(2)} ${c.y.toFixed(2)}`)
+    .join(" ");
   const areaPath =
-    linePath +
-    ` L ${coords[coords.length - 1].x.toFixed(2)} ${(pad.top + plotH).toFixed(2)}` +
-    ` L ${coords[0].x.toFixed(2)} ${(pad.top + plotH).toFixed(2)} Z`;
+    primaryCoords.length > 0
+      ? linePath +
+        ` L ${primaryCoords[primaryCoords.length - 1].x.toFixed(2)} ${(pad.top + plotH).toFixed(2)}` +
+        ` L ${primaryCoords[0].x.toFixed(2)} ${(pad.top + plotH).toFixed(2)} Z`
+      : "";
 
   const gridLines = 4;
   const yTicks = [];
@@ -64,6 +108,33 @@ export default function ResultsSeasonLineChart({
 
   const strokeColor = stroke || "#2563eb";
   const fillColor = fill || strokeColor;
+
+  const overlayPaths = (overlaySeries || []).map((series) => {
+    const byKey = new Map();
+    (series.points || []).forEach((p) => {
+      if (p.sortKey != null) byKey.set(String(p.sortKey), Number(p.value));
+    });
+    const coords = axisKeys
+      .map((key, index) => {
+        const value = byKey.get(key);
+        if (value == null) return null;
+        return { x: xAt(index), y: yAt(value), key };
+      })
+      .filter(Boolean);
+    const path = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x.toFixed(2)} ${c.y.toFixed(2)}`).join(" ");
+    return { ...series, coords, path };
+  });
+
+  const xLabels = axisKeys.map((key, index) => {
+    const fromPrimary = sorted.find((p) => String(p.sortKey) === key);
+    const label =
+      fromPrimary?.monthLabel ||
+      (overlaySeries || [])
+        .flatMap((s) => s.points || [])
+        .find((p) => String(p.sortKey) === key)?.monthLabel ||
+      "";
+    return { x: xAt(index), label };
+  });
 
   return (
     <div className="rounded-xl border border-border/80 bg-gradient-to-b from-surface-alt/40 to-transparent p-3">
@@ -106,8 +177,8 @@ export default function ResultsSeasonLineChart({
             </text>
           </g>
         ))}
-        <path d={areaPath} fill={`url(#${clipId}-area)`} />
-        {coords.length > 1 ? (
+        {areaPath ? <path d={areaPath} fill={`url(#${clipId}-area)`} /> : null}
+        {primaryCoords.length > 1 ? (
           <path
             d={linePath}
             fill="none"
@@ -117,26 +188,50 @@ export default function ResultsSeasonLineChart({
             strokeLinejoin="round"
           />
         ) : null}
-        {coords.map((c, i) => (
-          <g key={c.point.id || i}>
-            <circle cx={c.x} cy={c.y} r="5.5" fill={strokeColor} stroke="#fff" strokeWidth="2" />
-            <title>
-              {c.point.tooltip ||
-                `${c.point.monthLabel || c.point.xLabel}: ${formatValue(c.point.value)}`}
-            </title>
-            <text
-              x={c.x}
-              y={pad.top + plotH + 16}
-              textAnchor="middle"
-              fontSize="9"
-              fontWeight="600"
-              fill="currentColor"
-              opacity={0.55}
-            >
-              {c.point.monthLabel || c.point.xLabel || ""}
-            </text>
-          </g>
+        {primaryCoords.map((c) => (
+          <circle key={c.key} cx={c.x} cy={c.y} r="5.5" fill={strokeColor} stroke="#fff" strokeWidth="2" />
         ))}
+        {overlayPaths.map((row) =>
+          row.coords.length > 1 ? (
+            <path
+              key={row.id}
+              d={row.path}
+              fill="none"
+              stroke={row.stroke || "#b45309"}
+              strokeWidth="2"
+              strokeDasharray="5 4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ) : row.coords.length === 1 ? (
+            <circle
+              key={row.id}
+              cx={row.coords[0].x}
+              cy={row.coords[0].y}
+              r="4.5"
+              fill={row.stroke || "#b45309"}
+              stroke="#fff"
+              strokeWidth="1.5"
+            />
+          ) : null
+        )}
+        {xLabels.map(
+          (row, i) =>
+            row.label ? (
+              <text
+                key={`x-${i}`}
+                x={row.x}
+                y={pad.top + plotH + 16}
+                textAnchor="middle"
+                fontSize="9"
+                fontWeight="600"
+                fill="currentColor"
+                opacity={0.55}
+              >
+                {row.label}
+              </text>
+            ) : null
+        )}
       </svg>
     </div>
   );

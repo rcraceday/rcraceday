@@ -96,14 +96,6 @@ export default function EventsYearList({
               }}
             >
               <h2 className="text-lg font-bold text-text-base m-0 tracking-tight">{monthLabel}</h2>
-              {isCurrentMonth && (
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md text-white"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  {t("calendarUi.today")}
-                </span>
-              )}
               <span className="text-xs text-text-muted ml-auto tabular-nums">
                 {monthEvents.length === 1
                   ? t("calendarUi.eventCountOne")

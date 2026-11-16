@@ -11,7 +11,10 @@ import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import FilterDropdown from "@/components/ui/FilterDropdown";
-import { CalendarDaysIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
+import PageFilterBar from "@/components/ui/PageFilterBar";
+import { filterSummaryFromParts, readPageFilterPrefs } from "@/app/lib/pageFilterPrefs";
+import { usePageFilterPrefs } from "@/app/lib/usePageFilterPrefs";
+import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 import { extractYearsFromEvents, matchesEventsCategoryFilter } from "./events-sections/helpers";
 import { loadPublishedResultEventIds } from "@/app/lib/results/loadEventResults";
 import { eventTouchesYear } from "./calendar/calendarHelpers";
@@ -37,19 +40,29 @@ export default function Events() {
   const { profile } = useProfile();
 
   const currentYear = new Date().getFullYear();
-  const [view, setView] = useState("upcoming");
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-
-  const [events, setEvents] = useState([]);
-  const [trackNames, setTrackNames] = useState({});
-  const [tracks, setTracks] = useState([]);
-  const [trackFilter, setTrackFilter] = useState("all");
   const categoryFromUrl = searchParams.get("category");
   const initialCategory =
     categoryFromUrl === "major" || categoryFromUrl === "club" || categoryFromUrl === "all"
       ? categoryFromUrl
       : "all";
-  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
+
+  const savedEventsFilters = useMemo(
+    () => readPageFilterPrefs(clubSlug, "events"),
+    [clubSlug]
+  );
+
+  const [view, setView] = useState(() => savedEventsFilters?.view ?? "upcoming");
+  const [selectedYear, setSelectedYear] = useState(
+    () => savedEventsFilters?.selectedYear ?? currentYear
+  );
+  const [events, setEvents] = useState([]);
+  const [trackNames, setTrackNames] = useState({});
+  const [tracks, setTracks] = useState([]);
+  const [trackFilter, setTrackFilter] = useState(() => savedEventsFilters?.trackFilter ?? "all");
+  const [categoryFilter, setCategoryFilter] = useState(() => {
+    if (categoryFromUrl) return initialCategory;
+    return savedEventsFilters?.categoryFilter ?? "all";
+  });
   const [loading, setLoading] = useState(true);
   const [nominatedEventIds, setNominatedEventIds] = useState(() => new Set());
   const [nominationSummaries, setNominationSummaries] = useState(() => new Map());
@@ -69,6 +82,17 @@ export default function Events() {
       setCategoryFilter(next);
     }
   }, [searchParams]);
+
+  const eventsFilterPrefs = useMemo(
+    () => ({
+      view,
+      categoryFilter,
+      trackFilter,
+      selectedYear,
+    }),
+    [view, categoryFilter, trackFilter, selectedYear]
+  );
+  usePageFilterPrefs(clubSlug, "events", eventsFilterPrefs);
 
   useEffect(() => {
     async function loadEvents() {
@@ -266,7 +290,7 @@ export default function Events() {
     if (view === "year" && previousYearOptions.length > 0) {
       parts.push(String(activePreviousYear));
     }
-    return parts.join(" · ");
+    return filterSummaryFromParts(parts);
   }, [
     view,
     categoryFilter,
@@ -332,29 +356,13 @@ export default function Events() {
       />
 
       <main className="app-page-main">
-        <div
-          className="events-filter-bar mb-4 sm:mb-6 px-2 sm:px-3 py-2 sm:py-3 rounded-2xl border border-border/80 shadow-sm"
-          style={{ background: `linear-gradient(135deg, ${brand}0c 0%, transparent 65%)` }}
-        >
-          <details className="group w-full sm:hidden">
-            <summary className="flex items-center justify-between gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-              <span className="min-w-0 text-sm font-medium text-text-base truncate">
-                <span className="text-text-muted font-normal">{t("events.filtersLabel")}: </span>
-                {filterSummaryText}
-              </span>
-              <ChevronDownIcon
-                className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
-                style={{ color: brand }}
-                aria-hidden
-              />
-            </summary>
-            <div className="grid grid-cols-1 gap-2 pt-3">{renderEventFilters({ fullWidth: true })}</div>
-          </details>
-
-          <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:w-full">
-            {renderEventFilters({ fullWidth: false })}
-          </div>
-        </div>
+        <PageFilterBar
+          brand={brand}
+          filterLabel={t("events.filtersLabel")}
+          summaryText={filterSummaryText}
+          mobileFilters={renderEventFilters({ fullWidth: true })}
+          desktopFilters={renderEventFilters({ fullWidth: false })}
+        />
 
         {loading && <p className="text-text-muted text-center">{t("events.loading")}</p>}
 

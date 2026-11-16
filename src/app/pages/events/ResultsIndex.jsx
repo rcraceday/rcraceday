@@ -3,6 +3,9 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { TrophyIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
 import FilterDropdown from "@/components/ui/FilterDropdown";
+import PageFilterBar from "@/components/ui/PageFilterBar";
+import { filterSummaryFromParts, readPageFilterPrefs } from "@/app/lib/pageFilterPrefs";
+import { usePageFilterPrefs } from "@/app/lib/usePageFilterPrefs";
 import useTheme from "@/app/providers/useTheme";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useTranslation } from "@/app/i18n/I18nContext";
@@ -14,12 +17,6 @@ import MyResultsYearDashboard from "./MyResultsYearDashboard";
 import EventResultsPanel from "./EventResultsPanel";
 
 const CHAMPIONSHIP_TYPE = "championship_round";
-
-function eventYear(event) {
-  if (!event?.event_date) return null;
-  const y = new Date(event.event_date).getFullYear();
-  return Number.isFinite(y) ? y : null;
-}
 
 function formatEventDateLabel(date) {
   if (!date) return "";
@@ -34,6 +31,12 @@ function formatEventDateLabel(date) {
   }
 }
 
+function eventYear(event) {
+  if (!event?.event_date) return null;
+  const y = new Date(event.event_date).getFullYear();
+  return Number.isFinite(y) ? y : null;
+}
+
 export default function ResultsIndex() {
   const { clubSlug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,20 +45,54 @@ export default function ResultsIndex() {
   const { t } = useTranslation();
 
   const currentYear = new Date().getFullYear();
+  const savedResultsFilters = useMemo(
+    () => readPageFilterPrefs(clubSlug, "results"),
+    [clubSlug]
+  );
+
+  const initialResultsFilters = useMemo(() => {
+    const urlYear = searchParams.get("year");
+    const urlTrack = searchParams.get("track");
+    const urlType = searchParams.get("type");
+    const urlEvent = searchParams.get("event");
+    const urlCompare = searchParams.get("compare");
+    const urlClass = searchParams.get("class");
+    return {
+      year: urlYear ? Number(urlYear) : savedResultsFilters?.year ?? currentYear,
+      track: urlTrack || savedResultsFilters?.track || "all",
+      type: urlType || savedResultsFilters?.type || "all",
+      event: urlEvent || savedResultsFilters?.event || "",
+      compare: urlCompare || savedResultsFilters?.compare || "",
+      class: urlClass || savedResultsFilters?.class || "",
+    };
+  }, [clubSlug, currentYear, savedResultsFilters, searchParams]);
+
   const [events, setEvents] = useState([]);
   const [championships, setChampionships] = useState([]);
   const [tracks, setTracks] = useState([]);
   const [trackNames, setTrackNames] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const [selectedYear, setSelectedYear] = useState(
-    Number(searchParams.get("year")) || currentYear
+  const [selectedYear, setSelectedYear] = useState(() => initialResultsFilters.year);
+  const [trackFilter, setTrackFilter] = useState(() => initialResultsFilters.track);
+  const [typeFilter, setTypeFilter] = useState(() => initialResultsFilters.type);
+  const [selectedEventId, setSelectedEventId] = useState(() => initialResultsFilters.event);
+  const [compareDriver, setCompareDriver] = useState(() => initialResultsFilters.compare);
+  const [dashboardClass, setDashboardClass] = useState(() => initialResultsFilters.class);
+  const [activeHouseholdDriver, setActiveHouseholdDriver] = useState("");
+
+  const resultsFilterPrefs = useMemo(
+    () => ({
+      year: selectedYear,
+      track: trackFilter,
+      type: typeFilter,
+      event: selectedEventId,
+      compare: compareDriver,
+      class: dashboardClass,
+    }),
+    [selectedYear, trackFilter, typeFilter, selectedEventId, compareDriver, dashboardClass]
   );
-  const [trackFilter, setTrackFilter] = useState(searchParams.get("track") || "all");
-  const [typeFilter, setTypeFilter] = useState(searchParams.get("type") || "all");
-  const [selectedEventId, setSelectedEventId] = useState(searchParams.get("event") || "");
-  const [compareDriver, setCompareDriver] = useState(searchParams.get("compare") || "");
-  const [dashboardClass, setDashboardClass] = useState(searchParams.get("class") || "");
+  usePageFilterPrefs(clubSlug, "results", resultsFilterPrefs);
 
   useEffect(() => {
     async function load() {
@@ -148,6 +185,14 @@ export default function ResultsIndex() {
     return filteredEvents[0].id;
   }, [filteredEvents, selectedEventId, searchParams]);
 
+  const dashboardEvents = useMemo(
+    () =>
+      [...filteredEvents].sort(
+        (a, b) => new Date(a.event_date) - new Date(b.event_date)
+      ),
+    [filteredEvents]
+  );
+
   useEffect(() => {
     const next = new URLSearchParams();
     if (activeYear) next.set("year", String(activeYear));
@@ -187,21 +232,33 @@ export default function ResultsIndex() {
     return options;
   }, [eventTypesInData, t]);
 
-  const dashboardEvents = useMemo(
-    () =>
-      [...filteredEvents].sort(
-        (a, b) => new Date(a.event_date) - new Date(b.event_date)
-      ),
-    [filteredEvents]
+  const trackFilterOptions = useMemo(
+    () => [
+      { value: "all", label: t("results.filterAllTracks") },
+      ...tracks.map((track) => ({ value: track.id, label: track.name })),
+    ],
+    [tracks, t]
   );
 
-  return (
-    <div className="flex flex-col gap-6 pb-8">
-      <PageTitle icon={TrophyIcon} title={t("results.title")} style={{ color: palette.primary }} />
+  const filterSummaryText = useMemo(() => {
+    const trackLabel =
+      tracks.length > 1
+        ? trackFilterOptions.find((o) => o.value === trackFilter)?.label
+        : null;
+    return filterSummaryFromParts([String(activeYear), trackLabel]);
+  }, [activeYear, trackFilter, trackFilterOptions, tracks.length]);
 
-      <div className="flex flex-wrap items-center justify-center gap-3">
+  const renderResultsFilters = ({ fullWidth }) => {
+    const dropdownProps = {
+      compact: true,
+      fullWidth,
+      className: fullWidth ? "min-w-0 w-full" : "shrink-0",
+    };
+    return (
+      <>
         {(years.length > 1 || years.length === 1) && (
           <FilterDropdown
+            {...dropdownProps}
             value={activeYear}
             onChange={(year) => setSelectedYear(Number(year))}
             ariaLabel={t("results.filterYear")}
@@ -213,23 +270,58 @@ export default function ResultsIndex() {
         )}
         {tracks.length > 1 && (
           <FilterDropdown
+            {...dropdownProps}
             value={trackFilter}
             onChange={setTrackFilter}
             ariaLabel={t("results.filterTrack")}
-            options={[
-              { value: "all", label: t("results.filterAllTracks") },
-              ...tracks.map((track) => ({ value: track.id, label: track.name })),
-            ]}
+            options={trackFilterOptions}
           />
         )}
-        <FilterDropdown
-          value={typeFilter}
-          onChange={setTypeFilter}
-          ariaLabel={t("results.filterEventType")}
-          options={typeOptions}
-          hideSelectedOption={false}
-        />
-      </div>
+      </>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-6 pb-8">
+      <PageTitle icon={TrophyIcon} title={t("results.title")} style={{ color: palette.primary }} />
+
+      {!loading && (() => {
+        const seasonChamps = championships.filter(
+          (row) => String(row.season) === String(activeYear)
+        );
+        if (!seasonChamps.length) return null;
+        const standingsHref =
+          seasonChamps.length === 1
+            ? `/${clubSlug}/app/championships/${seasonChamps[0].id}`
+            : `/${clubSlug}/app/results?${new URLSearchParams({
+                type: CHAMPIONSHIP_TYPE,
+                year: String(activeYear),
+              }).toString()}`;
+        return (
+          <p className="text-sm m-0 -mt-2 text-center sm:text-left">
+            <Link
+              to={standingsHref}
+              className="font-medium text-primary underline-offset-2 hover:underline"
+              onClick={() => {
+                if (seasonChamps.length > 1) {
+                  setTypeFilter(CHAMPIONSHIP_TYPE);
+                  setSelectedYear(activeYear);
+                }
+              }}
+            >
+              {t("results.championshipStandingsLink")}
+            </Link>
+          </p>
+        );
+      })()}
+
+      <PageFilterBar
+        brand={palette.primary}
+        filterLabel={t("events.filtersLabel")}
+        summaryText={filterSummaryText}
+        mobileFilters={renderResultsFilters({ fullWidth: true })}
+        desktopFilters={renderResultsFilters({ fullWidth: false })}
+      />
 
       {!loading && dashboardEvents.length > 0 && (
         <MyResultsYearDashboard
@@ -245,22 +337,12 @@ export default function ResultsIndex() {
           }}
           compareDriver={compareDriver}
           onCompareDriverChange={setCompareDriver}
+          onActiveHouseholdDriverChange={setActiveHouseholdDriver}
         />
       )}
 
       <div className="flex flex-col gap-4">
         {loading && <p className="text-text-muted m-0">{t("loading.loading")}</p>}
-
-        {!loading && typeFilter === CHAMPIONSHIP_TYPE && promoChampionships.length > 0 && (
-          <p className="text-sm text-center m-0">
-            <Link
-              to={`/${clubSlug}/app/championships`}
-              className="font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {t("results.championshipStandingsLink")}
-            </Link>
-          </p>
-        )}
 
         {!loading && filteredEvents.length === 0 && (
           <p className="text-text-muted m-0">{t("results.noneYet")}</p>
@@ -274,6 +356,7 @@ export default function ResultsIndex() {
             compareDriver={compareDriver}
             onCompareDriverChange={setCompareDriver}
             preferredClass={dashboardClass}
+            compareExcludeDriver={activeHouseholdDriver}
             eventOptions={eventOptions}
             onEventChange={setSelectedEventId}
           />

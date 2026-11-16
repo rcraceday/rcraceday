@@ -72,6 +72,23 @@ export function positionsGained(seed, finish) {
   return Number(seed) - Number(finish);
 }
 
+function mainLetterRank(letter) {
+  const normalized = String(letter || "A").toUpperCase();
+  const code = normalized.charCodeAt(0);
+  if (code >= 65 && code <= 90) return code - 64;
+  return 99;
+}
+
+/** Qualifying before mains; A-main before B-main; then by main number. */
+export function compareRacesForDisplay(a, b) {
+  const aQual = a?.raceKind === "qualifying" ? 0 : 1;
+  const bQual = b?.raceKind === "qualifying" ? 0 : 1;
+  if (aQual !== bQual) return aQual - bQual;
+  const letterCmp = mainLetterRank(a?.mainLetter) - mainLetterRank(b?.mainLetter);
+  if (letterCmp !== 0) return letterCmp;
+  return (a?.mainNumber || 0) - (b?.mainNumber || 0);
+}
+
 export function raceTitle(race) {
   if (!race) return "";
   if (race.raceKind === "qualifying") {

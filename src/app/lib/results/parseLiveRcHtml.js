@@ -7,6 +7,7 @@ import {
   parseTimeToMs,
 } from "./resultTime.js";
 import { assignOverallPositions } from "./overallOrder.js";
+import { compareRacesForDisplay } from "./resultTime.js";
 import {
   DEFAULT_LIVE_RC_QUAL_ORDER,
   parseLiveRcMetricCell,
@@ -462,10 +463,7 @@ function sortRacesForDisplay(races) {
   return [...races].sort((a, b) => {
     const classCmp = String(a.className).localeCompare(String(b.className));
     if (classCmp !== 0) return classCmp;
-    const aQual = a.raceKind === "qualifying" ? 0 : 1;
-    const bQual = b.raceKind === "qualifying" ? 0 : 1;
-    if (aQual !== bQual) return aQual - bQual;
-    return (a.mainNumber || 0) - (b.mainNumber || 0);
+    return compareRacesForDisplay(a, b);
   });
 }
 

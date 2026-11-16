@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "@/components/ui/Card";
+import ClassFolderTabs from "@/components/ui/ClassFolderTabs";
 import FilterDropdown from "@/components/ui/FilterDropdown";
 import useTheme from "@/app/providers/useTheme";
 import { useHouseholdResultHighlight } from "@/app/hooks/useHouseholdResultHighlight";
@@ -9,7 +10,7 @@ import { richTextToPlainText } from "@/app/lib/richText";
 import { loadEventResultBundle } from "@/app/lib/results/loadEventResults";
 import { pickInitialResultClass, uniqueClassNames } from "@/app/lib/results/overallOrder";
 import { normalizeDriverName } from "@/app/lib/results/driverName";
-import { formatMs, positionsGained, raceTitle } from "@/app/lib/results/resultTime";
+import { compareRacesForDisplay, formatMs, positionsGained, raceTitle } from "@/app/lib/results/resultTime";
 import {
   aggregateDriverMainStats,
   formatOverallMainsColumn,
@@ -64,6 +65,7 @@ export default function EventResultsPanel({
   showDraftBanner = true,
   compareDriver = "",
   onCompareDriverChange,
+  compareExcludeDriver = "",
   preferredClass = "",
   embedded = false,
   eventOptions = null,
@@ -79,6 +81,7 @@ export default function EventResultsPanel({
   const [className, setClassName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [mainsScope, setMainsScope] = useState("mine");
 
   useEffect(() => {
     async function load() {
@@ -126,6 +129,44 @@ export default function EventResultsPanel({
     .filter((row) => row.className === className)
     .sort((a, b) => (a.overallPosition || a.position || 0) - (b.overallPosition || b.position || 0));
   const races = (bundle?.races || []).filter((race) => race.className === className);
+
+  const sortedClassRaces = useMemo(
+    () => [...races].sort(compareRacesForDisplay),
+    [races]
+  );
+
+  const raceHasHouseholdDriver = useCallback(
+    (race) =>
+      (race?.entries || []).some((entry) =>
+        isHouseholdResultRow(entry, driverIds, driverNameKeys)
+      ),
+    [driverIds, driverNameKeys]
+  );
+
+  const hasMyMains = useMemo(
+    () =>
+      sortedClassRaces.some(
+        (race) => race.raceKind !== "qualifying" && raceHasHouseholdDriver(race)
+      ),
+    [sortedClassRaces, raceHasHouseholdDriver]
+  );
+
+  const qualifyingRaces = useMemo(
+    () => sortedClassRaces.filter((race) => race.raceKind === "qualifying"),
+    [sortedClassRaces]
+  );
+
+  const mainRaces = useMemo(() => {
+    const mains = sortedClassRaces.filter((race) => race.raceKind !== "qualifying");
+    if (mainsScope === "mine" && hasMyMains) {
+      return mains.filter(raceHasHouseholdDriver);
+    }
+    return mains;
+  }, [sortedClassRaces, mainsScope, hasMyMains, raceHasHouseholdDriver]);
+
+  useEffect(() => {
+    setMainsScope(hasMyMains ? "mine" : "all");
+  }, [className, hasMyMains]);
   const myRows = useMemo(() => {
     const rows = overall.filter((row) => isHouseholdResultRow(row, driverIds, driverNameKeys));
     const seen = new Map();
@@ -146,10 +187,18 @@ export default function EventResultsPanel({
   }, [overall, driverIds, driverNameKeys]);
 
   const compareOptions = useMemo(() => {
+    const excludeKey = compareExcludeDriver
+      ? normalizeDriverName(compareExcludeDriver)
+      : null;
     const names = new Set();
     overall.forEach((row) => {
-      if (isMyRow(row)) return;
-      if (row.driverNameRaw) names.add(row.driverNameRaw);
+      const name = row.driverNameRaw;
+      if (!name) return;
+      const isHousehold = isHouseholdResultRow(row, driverIds, driverNameKeys);
+      if (isHousehold) {
+        if (!excludeKey || normalizeDriverName(name) === excludeKey) return;
+      }
+      names.add(name);
     });
     const items = [...names].sort((a, b) => a.localeCompare(b)).map((name) => ({
       value: name,
@@ -159,13 +208,35 @@ export default function EventResultsPanel({
       return [{ value: "", label: t("results.compareNone") }, ...items];
     }
     return items;
-  }, [overall, driverIds, driverNameKeys, onCompareDriverChange, t, isMyRow]);
+  }, [overall, onCompareDriverChange, compareExcludeDriver, driverIds, driverNameKeys, t]);
+
+  useEffect(() => {
+    if (!compareDriver || !onCompareDriverChange) return;
+    const allowed = new Set(compareOptions.map((o) => o.value).filter(Boolean));
+    if (!allowed.has(compareDriver)) onCompareDriverChange("");
+  }, [compareOptions, compareDriver, onCompareDriverChange]);
+
+  const mainsTabOptions = useMemo(() => {
+    const all = { value: "all", label: t("results.mainsTabAll") };
+    if (!hasMyMains) return [all];
+    return [
+      { value: "mine", label: t("results.mainsTabMine") },
+      all,
+    ];
+  }, [hasMyMains, t]);
 
   const rivalRow = useMemo(
     () => (compareDriver ? overall.find((row) => isCompareDriver(row, compareDriver)) : null),
     [overall, compareDriver]
   );
-  const primaryMyRow = myRows[0];
+  const primaryMyRow = useMemo(() => {
+    if (compareExcludeDriver) {
+      const key = normalizeDriverName(compareExcludeDriver);
+      const match = myRows.find((row) => normalizeDriverName(row.driverNameRaw) === key);
+      if (match) return match;
+    }
+    return myRows[0] || null;
+  }, [myRows, compareExcludeDriver]);
 
   const heading =
     eventName != null ? eventName : eventRow?.name ? richTextToPlainText(eventRow.name) : null;
@@ -187,30 +258,32 @@ export default function EventResultsPanel({
 
       {bundle && (
         <div className="p-4 space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            {embedded && eventOptions?.length && onEventChange ? (
-              <FilterDropdown
-                value={eventId}
-                onChange={onEventChange}
-                ariaLabel={t("results.filterEvent")}
-                options={eventOptions}
-                hideSelectedOption={false}
-                compact
-                className="flex-1 min-w-[12rem]"
-              />
-            ) : null}
-            {classOptions.length > 0 && (
-              <FilterDropdown
-                value={className}
-                onChange={setClassName}
-                ariaLabel={t("results.filterClass")}
-                options={classOptions}
-                hideSelectedOption={false}
-                compact
-                className="flex-1 min-w-[10rem]"
-              />
-            )}
-            {onCompareDriverChange && compareOptions.length > 1 && (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              {embedded && eventOptions?.length && onEventChange ? (
+                <FilterDropdown
+                  value={eventId}
+                  onChange={onEventChange}
+                  ariaLabel={t("results.filterEvent")}
+                  options={eventOptions}
+                  hideSelectedOption={false}
+                  compact
+                  className="flex-1 min-w-[12rem]"
+                />
+              ) : null}
+              {classOptions.length > 0 && (
+                <FilterDropdown
+                  value={className}
+                  onChange={setClassName}
+                  ariaLabel={t("results.filterClass")}
+                  options={classOptions}
+                  hideSelectedOption={false}
+                  compact
+                  className="flex-1 min-w-[10rem]"
+                />
+              )}
+            </div>
+            {onCompareDriverChange && compareOptions.length > 0 && (
               <FilterDropdown
                 value={compareDriver || ""}
                 onChange={(value) => onCompareDriverChange(value || "")}
@@ -218,7 +291,8 @@ export default function EventResultsPanel({
                 options={compareOptions}
                 hideSelectedOption={false}
                 compact
-                className="flex-1 min-w-[10rem]"
+                menuInline
+                className="w-full min-w-0"
               />
             )}
           </div>
@@ -333,7 +407,7 @@ export default function EventResultsPanel({
             );
           })}
 
-          <ResultsTableSection title={t("results.overall")}>
+          <ResultsTableSection title={t("results.finalResults")}>
             <ResultsDataTable>
               <thead>
                 <tr>
@@ -371,27 +445,46 @@ export default function EventResultsPanel({
             </ResultsDataTable>
           </ResultsTableSection>
 
-          {races.map((race) => (
-            <ResultsTableSection key={race.id || raceTitle(race)} title={raceTitle(race)}>
-              {race.raceKind === "qualifying" ? (
-                <QualifyingResultsTable
-                  race={race}
-                  driverIds={driverIds}
-                  driverNameKeys={driverNameKeys}
-                  compareDriver={compareDriver}
-                  t={t}
+          {(qualifyingRaces.length > 0 || mainRaces.length > 0) && (
+            <div className="space-y-3">
+              {mainsTabOptions.length > 1 ? (
+                <ClassFolderTabs
+                  options={mainsTabOptions}
+                  value={mainsScope}
+                  onChange={setMainsScope}
+                  brand={primaryColor}
                 />
-              ) : (
-                <MainResultsTable
-                  race={race}
-                  driverIds={driverIds}
-                  driverNameKeys={driverNameKeys}
-                  compareDriver={compareDriver}
-                  t={t}
-                />
+              ) : null}
+
+              {qualifyingRaces.map((race) => (
+                <ResultsTableSection key={race.id || raceTitle(race)} title={raceTitle(race)}>
+                  <QualifyingResultsTable
+                    race={race}
+                    driverIds={driverIds}
+                    driverNameKeys={driverNameKeys}
+                    compareDriver={compareDriver}
+                    t={t}
+                  />
+                </ResultsTableSection>
+              ))}
+
+              {mainRaces.map((race) => (
+                <ResultsTableSection key={race.id || raceTitle(race)} title={raceTitle(race)}>
+                  <MainResultsTable
+                    race={race}
+                    driverIds={driverIds}
+                    driverNameKeys={driverNameKeys}
+                    compareDriver={compareDriver}
+                    t={t}
+                  />
+                </ResultsTableSection>
+              ))}
+
+              {mainsScope === "mine" && mainRaces.length === 0 && (
+                <p className="text-sm text-text-muted m-0 px-1">{t("results.mainsTabNone")}</p>
               )}
-            </ResultsTableSection>
-          ))}
+            </div>
+          )}
         </div>
       )}
     </>
