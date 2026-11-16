@@ -437,12 +437,21 @@ export default {
       "Complete required driver profile fields before your next event nomination.",
     nameLocked:
       "Legal name cannot be changed after this driver has event nominations. Contact the club admin.",
+    accessExcludedFromClub:
+      "{{name}} is excluded from racing at this club. Contact the club admin.",
+    accessExcludedFromClubWithNote: "{{name}} is excluded from racing at this club: {{note}}",
     accessNoEvents: "{{name}} cannot enter events at this club right now. Contact the club admin.",
     accessNoEventsWithNote: "{{name}} cannot enter events: {{note}}",
-    accessEventCapReached:
-      "{{name}} has reached the club limit of {{limit}} events.{{note}}",
-    accessEventCapMisconfigured:
-      "{{name}} has an event entry limit that is not configured correctly. Contact the club admin.",
+    accessEventBanGeneral:
+      "{{name}} is banned from the next {{count}} upcoming events at this club.",
+    accessEventBanGeneralWithNote:
+      "{{name}} is banned from the next {{count}} upcoming events at this club: {{note}}",
+    accessEventBanThisEvent:
+      "{{name}} cannot enter this event (banned from the next {{count}} upcoming events).",
+    accessEventBanThisEventWithNote:
+      "{{name}} cannot enter this event: {{note}}",
+    accessEventBanMisconfigured:
+      "{{name}} has an event ban that is not configured correctly. Contact the club admin.",
     cannotDeleteDriver: "Driver deletion is disabled by your club.",
     numberChoiceDisabled: "Your club assigns race numbers. Contact an admin if you need a change.",
     numberChangeDisabled: "Your club does not allow changing your race number after it is assigned.",

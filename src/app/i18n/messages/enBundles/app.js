@@ -200,6 +200,7 @@ export default {
     viewByYear: "By year",
     viewFullYear: "Full Year",
     viewPreviousYears: "Previous Years",
+    filtersLabel: "Filters",
     categoryFilterLabel: "Meetings",
     filterShowAll: "Show All",
     filterClubMeets: "Club Meets",

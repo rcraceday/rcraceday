@@ -1,18 +1,26 @@
 export const DRIVER_ACCESS_RESTRICTIONS = {
   none: "none",
-  eventCap: "event_cap",
+  eventBan: "event_ban",
   noEvents: "no_events",
   noApp: "no_app",
 };
+
+/** @deprecated stored value from early builds */
+const LEGACY_EVENT_CAP = "event_cap";
 
 export const DRIVER_ACCESS_SITE_SCOPES = {
   driver: "driver",
   household: "household",
 };
 
+export function normalizeAccessRestriction(mode) {
+  if (mode === LEGACY_EVENT_CAP) return DRIVER_ACCESS_RESTRICTIONS.eventBan;
+  return mode || DRIVER_ACCESS_RESTRICTIONS.none;
+}
+
 export function isDriverAccessRestrictionActive(driver) {
   if (!driver) return false;
-  const mode = driver.access_restriction || DRIVER_ACCESS_RESTRICTIONS.none;
+  const mode = normalizeAccessRestriction(driver.access_restriction);
   if (mode === DRIVER_ACCESS_RESTRICTIONS.none) return false;
   const until = driver.access_restriction_until;
   if (!until) return true;
@@ -25,7 +33,7 @@ export function effectiveDriverAccessRestriction(driver) {
   if (!isDriverAccessRestrictionActive(driver)) {
     return DRIVER_ACCESS_RESTRICTIONS.none;
   }
-  return driver.access_restriction || DRIVER_ACCESS_RESTRICTIONS.none;
+  return normalizeAccessRestriction(driver.access_restriction);
 }
 
 export function isMembershipAppAccessSuspended(membership) {
@@ -39,84 +47,150 @@ export function isMembershipAppAccessSuspended(membership) {
 
 export function driverBlocksMemberAppForDriverScope(driver) {
   if (!isDriverAccessRestrictionActive(driver)) return false;
-  if (driver.access_restriction !== DRIVER_ACCESS_RESTRICTIONS.noApp) return false;
+  if (normalizeAccessRestriction(driver.access_restriction) !== DRIVER_ACCESS_RESTRICTIONS.noApp) {
+    return false;
+  }
   return (driver.access_site_scope || DRIVER_ACCESS_SITE_SCOPES.driver) === DRIVER_ACCESS_SITE_SCOPES.driver;
 }
 
-export function buildDriverNominationStats(rows) {
-  const byDriver = {};
-  for (const row of rows || []) {
-    const driverId = row.driver_id;
-    const eventId = row.event_id;
-    if (!driverId || !eventId) continue;
-    if (!byDriver[driverId]) {
-      byDriver[driverId] = { eventIds: new Set(), count: 0 };
-    }
-    byDriver[driverId].eventIds.add(eventId);
-    byDriver[driverId].count = byDriver[driverId].eventIds.size;
-  }
-  const normalized = {};
-  for (const [driverId, { eventIds, count }] of Object.entries(byDriver)) {
-    normalized[driverId] = {
-      count,
-      eventIds: [...eventIds],
-    };
-  }
-  return normalized;
+export function eventBanCount(driver) {
+  return Number(driver?.event_entry_limit);
 }
 
-export async function loadDriverNominationStatsForClub(supabase, clubId, driverIds) {
-  if (!supabase || !clubId || !driverIds?.length) {
-    return {};
+export function bannedEventIdsFromUpcoming(upcomingEventIds, banCount) {
+  const n = Number(banCount);
+  if (!Number.isFinite(n) || n < 1 || !Array.isArray(upcomingEventIds)) return [];
+  return upcomingEventIds.slice(0, n);
+}
+
+export function isDriverBannedFromEvent(driver, eventId, upcomingEventIds, { hasNominationForEvent = false } = {}) {
+  if (!driver || !eventId || !isDriverAccessRestrictionActive(driver)) return false;
+  if (hasNominationForEvent) return false;
+
+  const mode = normalizeAccessRestriction(driver.access_restriction);
+  if (mode === DRIVER_ACCESS_RESTRICTIONS.noEvents || mode === DRIVER_ACCESS_RESTRICTIONS.noApp) {
+    return true;
   }
+  if (mode === DRIVER_ACCESS_RESTRICTIONS.eventBan) {
+    const banCount = eventBanCount(driver);
+    if (!Number.isFinite(banCount) || banCount < 1) return true;
+    const banned = bannedEventIdsFromUpcoming(upcomingEventIds, banCount);
+    return banned.includes(eventId);
+  }
+  return false;
+}
+
+export async function loadUpcomingClubEventIds(supabase, clubId) {
+  if (!supabase || !clubId) return [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayIso = today.toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, event_date")
+    .eq("club_id", clubId)
+    .gte("event_date", todayIso)
+    .order("event_date", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error) {
+    console.warn("[driverAccessRestriction] upcoming events", error.message);
+    return [];
+  }
+  return (data || []).map((row) => row.id);
+}
+
+export async function loadDriverNominationEventIds(supabase, clubId, driverIds) {
+  if (!supabase || !clubId || !driverIds?.length) return {};
   const { data, error } = await supabase
     .from("nominations")
     .select("driver_id, event_id")
     .eq("club_id", clubId)
     .in("driver_id", driverIds);
   if (error) {
-    console.warn("[driverAccessRestriction] load nomination stats", error.message);
+    console.warn("[driverAccessRestriction] nominations", error.message);
     return {};
   }
-  return buildDriverNominationStats(data);
+  const byDriver = {};
+  for (const row of data || []) {
+    if (!row.driver_id || !row.event_id) continue;
+    if (!byDriver[row.driver_id]) byDriver[row.driver_id] = new Set();
+    byDriver[row.driver_id].add(row.event_id);
+  }
+  const out = {};
+  for (const [driverId, set] of Object.entries(byDriver)) {
+    out[driverId] = [...set];
+  }
+  return out;
 }
 
 export function driverAccessRestrictionBlockReason(driver, context, t) {
   const tr = t || ((key, opts) => key);
   if (!isDriverAccessRestrictionActive(driver)) return null;
 
-  const mode = driver.access_restriction;
+  const mode = normalizeAccessRestriction(driver.access_restriction);
   const note = (driver.access_restriction_note || "").trim();
   const name = [driver?.first_name, driver?.last_name].filter(Boolean).join(" ");
   const displayName = name || tr("driverRules.thisDriver");
 
-  if (mode === DRIVER_ACCESS_RESTRICTIONS.noEvents || mode === DRIVER_ACCESS_RESTRICTIONS.noApp) {
+  if (mode === DRIVER_ACCESS_RESTRICTIONS.noEvents) {
+    if (note) {
+      return tr("driverRules.accessExcludedFromClubWithNote", { name: displayName, note });
+    }
+    return tr("driverRules.accessExcludedFromClub", { name: displayName });
+  }
+
+  if (mode === DRIVER_ACCESS_RESTRICTIONS.noApp) {
     if (note) {
       return tr("driverRules.accessNoEventsWithNote", { name: displayName, note });
     }
     return tr("driverRules.accessNoEvents", { name: displayName });
   }
 
-  if (mode === DRIVER_ACCESS_RESTRICTIONS.eventCap) {
-    const limit = Number(driver.event_entry_limit);
-    if (!Number.isFinite(limit) || limit < 1) {
-      return tr("driverRules.accessEventCapMisconfigured", { name: displayName });
+  if (mode === DRIVER_ACCESS_RESTRICTIONS.eventBan) {
+    const banCount = eventBanCount(driver);
+    if (!Number.isFinite(banCount) || banCount < 1) {
+      return tr("driverRules.accessEventBanMisconfigured", { name: displayName });
     }
+
     const eventId = context?.eventId;
-    const stats = context?.nominationStats;
-    const eventIds = stats?.eventIds || [];
-    const count = stats?.count ?? 0;
-    if (eventId && eventIds.includes(eventId)) {
-      return null;
-    }
-    if (count >= limit) {
-      const noteSuffix = note ? ` ${note}` : "";
-      return tr("driverRules.accessEventCapReached", {
+    const upcomingEventIds = context?.upcomingEventIds;
+    const nominatedEventIds = context?.nominatedEventIds || [];
+    const hasNominationForEvent = eventId && nominatedEventIds.includes(eventId);
+
+    if (eventId && Array.isArray(upcomingEventIds)) {
+      if (
+        !isDriverBannedFromEvent(driver, eventId, upcomingEventIds, {
+          hasNominationForEvent,
+        })
+      ) {
+        return null;
+      }
+      if (note) {
+        return tr("driverRules.accessEventBanThisEventWithNote", {
+          name: displayName,
+          count: banCount,
+          note,
+        });
+      }
+      return tr("driverRules.accessEventBanThisEvent", {
         name: displayName,
-        limit,
-        note: noteSuffix,
+        count: banCount,
       });
     }
+
+    if (note) {
+      return tr("driverRules.accessEventBanGeneralWithNote", {
+        name: displayName,
+        count: banCount,
+        note,
+      });
+    }
+    return tr("driverRules.accessEventBanGeneral", {
+      name: displayName,
+      count: banCount,
+    });
   }
 
   return null;
@@ -140,7 +214,7 @@ export async function syncHouseholdAppAccessSuspend(supabase, { membershipId, cl
   const blocking = (drivers || []).find(
     (row) =>
       isDriverAccessRestrictionActive(row) &&
-      row.access_restriction === DRIVER_ACCESS_RESTRICTIONS.noApp &&
+      normalizeAccessRestriction(row.access_restriction) === DRIVER_ACCESS_RESTRICTIONS.noApp &&
       (row.access_site_scope || DRIVER_ACCESS_SITE_SCOPES.driver) ===
         DRIVER_ACCESS_SITE_SCOPES.household
   );
@@ -167,14 +241,14 @@ export async function syncHouseholdAppAccessSuspend(supabase, { membershipId, cl
 
 export function adminAccessRestrictionLabel(driver, t) {
   if (!isDriverAccessRestrictionActive(driver)) return null;
-  const mode = driver.access_restriction;
-  if (mode === DRIVER_ACCESS_RESTRICTIONS.eventCap) {
-    return t("admin.drivers.accessBadgeEventCap", {
-      limit: driver.event_entry_limit ?? "—",
+  const mode = normalizeAccessRestriction(driver.access_restriction);
+  if (mode === DRIVER_ACCESS_RESTRICTIONS.eventBan) {
+    return t("admin.drivers.accessBadgeEventBan", {
+      count: driver.event_entry_limit ?? "—",
     });
   }
   if (mode === DRIVER_ACCESS_RESTRICTIONS.noEvents) {
-    return t("admin.drivers.accessBadgeNoEvents");
+    return t("admin.drivers.accessBadgeExcluded");
   }
   if (mode === DRIVER_ACCESS_RESTRICTIONS.noApp) {
     const scope =

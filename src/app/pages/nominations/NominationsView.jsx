@@ -124,7 +124,7 @@ export default function NominationsView() {
   const [nominationByDriverId, setNominationByDriverId] = useState(() => new Map());
   const [driverClassChassisMap, setDriverClassChassisMap] = useState(() => new Map());
   const [activeClassId, setActiveClassId] = useState(null);
-  const [dashboardOpen, setDashboardOpen] = useState(true);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

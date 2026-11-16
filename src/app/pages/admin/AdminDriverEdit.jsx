@@ -61,9 +61,9 @@ const emptyDriver = {
 
 const ACCESS_RESTRICTION_OPTIONS = [
   { value: DRIVER_ACCESS_RESTRICTIONS.none, label: "No restriction" },
-  { value: DRIVER_ACCESS_RESTRICTIONS.eventCap, label: "Limit event entries" },
-  { value: DRIVER_ACCESS_RESTRICTIONS.noEvents, label: "Block event entry" },
-  { value: DRIVER_ACCESS_RESTRICTIONS.noApp, label: "Block member app access" },
+  { value: DRIVER_ACCESS_RESTRICTIONS.eventBan, label: "Ban from next N events" },
+  { value: DRIVER_ACCESS_RESTRICTIONS.noEvents, label: "Excluded from all events" },
+  { value: DRIVER_ACCESS_RESTRICTIONS.noApp, label: "Excluded from member app" },
 ];
 
 const ACCESS_SCOPE_OPTIONS = [
@@ -297,7 +297,7 @@ export default function AdminDriverEdit() {
             ? driver.access_site_scope || DRIVER_ACCESS_SITE_SCOPES.driver
             : DRIVER_ACCESS_SITE_SCOPES.driver,
         event_entry_limit:
-          restriction === DRIVER_ACCESS_RESTRICTIONS.eventCap
+          restriction === DRIVER_ACCESS_RESTRICTIONS.eventBan
             ? toIntOrNull(driver.event_entry_limit)
             : null,
         access_restriction_note: (driver.access_restriction_note || "").trim() || null,
@@ -699,8 +699,9 @@ export default function AdminDriverEdit() {
           <CMSCard title="Access limits">
             <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
               <p style={cmsLayout.muted}>
-                Control nominations and member app access for this driver. Event limits count
-                distinct events already nominated.
+                Sanctions for this driver. Event ban blocks the next N upcoming events on the club
+                calendar (not events after that). Full exclusion stops all racing; app exclusion can
+                target this driver or the whole household.
               </p>
               <CMSSelect
                 label="Restriction"
@@ -709,9 +710,9 @@ export default function AdminDriverEdit() {
                 options={ACCESS_RESTRICTION_OPTIONS}
                 sortOptions={false}
               />
-              {driver.access_restriction === DRIVER_ACCESS_RESTRICTIONS.eventCap && (
+              {driver.access_restriction === DRIVER_ACCESS_RESTRICTIONS.eventBan && (
                 <CMSInput
-                  label="Max distinct events"
+                  label="Number of events banned from"
                   type="number"
                   value={driver.event_entry_limit ?? ""}
                   onChange={(value) => update("event_entry_limit", value)}

@@ -11,7 +11,7 @@ import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import FilterDropdown from "@/components/ui/FilterDropdown";
-import { CalendarDaysIcon } from "@heroicons/react/24/solid";
+import { CalendarDaysIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 import { extractYearsFromEvents, matchesEventsCategoryFilter } from "./events-sections/helpers";
 import { loadPublishedResultEventIds } from "@/app/lib/results/loadEventResults";
 import { eventTouchesYear } from "./calendar/calendarHelpers";
@@ -227,6 +227,102 @@ export default function Events() {
   const listYear =
     view === "fullYear" ? currentYear : view === "year" ? activePreviousYear : null;
 
+  const viewOptions = useMemo(
+    () => [
+      { value: "fullYear", label: t("events.viewFullYear") },
+      { value: "upcoming", label: t("events.viewUpcoming") },
+      { value: "year", label: t("events.viewPreviousYears") },
+    ],
+    [t]
+  );
+  const categoryOptions = useMemo(
+    () => [
+      { value: "all", label: t("events.filterShowAll") },
+      { value: "club", label: t("events.filterClubMeets") },
+      { value: "major", label: t("events.filterMajorEvents") },
+    ],
+    [t]
+  );
+  const trackOptions = useMemo(
+    () => [
+      { value: "all", label: t("calendarUi.allTracks") },
+      ...tracks.map((track) => ({ value: track.id, label: track.name })),
+    ],
+    [tracks, t]
+  );
+  const yearOptionsList = useMemo(
+    () => previousYearOptions.map((y) => ({ value: y, label: String(y) })),
+    [previousYearOptions]
+  );
+
+  const filterSummaryText = useMemo(() => {
+    const viewLabel = viewOptions.find((o) => o.value === view)?.label || view;
+    const categoryLabel = categoryOptions.find((o) => o.value === categoryFilter)?.label || categoryFilter;
+    const parts = [viewLabel, categoryLabel];
+    if (tracks.length > 1) {
+      const trackLabel = trackOptions.find((o) => o.value === trackFilter)?.label;
+      if (trackLabel) parts.push(trackLabel);
+    }
+    if (view === "year" && previousYearOptions.length > 0) {
+      parts.push(String(activePreviousYear));
+    }
+    return parts.join(" · ");
+  }, [
+    view,
+    categoryFilter,
+    trackFilter,
+    tracks.length,
+    viewOptions,
+    categoryOptions,
+    trackOptions,
+    activePreviousYear,
+    previousYearOptions.length,
+  ]);
+
+  function renderEventFilters({ fullWidth }) {
+    const dropdownProps = {
+      compact: true,
+      fullWidth,
+      className: fullWidth ? "min-w-0 w-full" : "shrink-0",
+    };
+    return (
+      <>
+        <FilterDropdown
+          {...dropdownProps}
+          value={view}
+          onChange={setView}
+          ariaLabel={t("events.viewModeLabel")}
+          options={viewOptions}
+        />
+        <FilterDropdown
+          {...dropdownProps}
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          ariaLabel={t("events.categoryFilterLabel")}
+          options={categoryOptions}
+        />
+        {tracks.length > 1 && (
+          <FilterDropdown
+            {...dropdownProps}
+            value={trackFilter}
+            onChange={setTrackFilter}
+            ariaLabel={t("calendarUi.filterTrack")}
+            options={trackOptions}
+          />
+        )}
+        {view === "year" && previousYearOptions.length > 0 && (
+          <FilterDropdown
+            {...dropdownProps}
+            value={activePreviousYear}
+            onChange={(y) => setSelectedYear(Number(y))}
+            ariaLabel={t("calendarUi.filterYear")}
+            options={yearOptionsList}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       <PageTitle
@@ -237,48 +333,27 @@ export default function Events() {
 
       <main className="app-page-main">
         <div
-          className="events-filter-bar flex flex-wrap items-center justify-center gap-3 mb-6 px-3 py-3 rounded-2xl border border-border/80 shadow-sm"
+          className="events-filter-bar mb-4 sm:mb-6 px-2 sm:px-3 py-2 sm:py-3 rounded-2xl border border-border/80 shadow-sm"
           style={{ background: `linear-gradient(135deg, ${brand}0c 0%, transparent 65%)` }}
         >
-          <FilterDropdown
-            value={view}
-            onChange={setView}
-            ariaLabel={t("events.viewModeLabel")}
-            options={[
-              { value: "fullYear", label: t("events.viewFullYear") },
-              { value: "upcoming", label: t("events.viewUpcoming") },
-              { value: "year", label: t("events.viewPreviousYears") },
-            ]}
-          />
-          <FilterDropdown
-            value={categoryFilter}
-            onChange={setCategoryFilter}
-            ariaLabel={t("events.categoryFilterLabel")}
-            options={[
-              { value: "all", label: t("events.filterShowAll") },
-              { value: "club", label: t("events.filterClubMeets") },
-              { value: "major", label: t("events.filterMajorEvents") },
-            ]}
-          />
-          {tracks.length > 1 && (
-            <FilterDropdown
-              value={trackFilter}
-              onChange={setTrackFilter}
-              ariaLabel={t("calendarUi.filterTrack")}
-              options={[
-                { value: "all", label: t("calendarUi.allTracks") },
-                ...tracks.map((track) => ({ value: track.id, label: track.name })),
-              ]}
-            />
-          )}
-          {view === "year" && previousYearOptions.length > 0 && (
-            <FilterDropdown
-              value={activePreviousYear}
-              onChange={(y) => setSelectedYear(Number(y))}
-              ariaLabel={t("calendarUi.filterYear")}
-              options={previousYearOptions.map((y) => ({ value: y, label: String(y) }))}
-            />
-          )}
+          <details className="group w-full sm:hidden">
+            <summary className="flex items-center justify-between gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0 text-sm font-medium text-text-base truncate">
+                <span className="text-text-muted font-normal">{t("events.filtersLabel")}: </span>
+                {filterSummaryText}
+              </span>
+              <ChevronDownIcon
+                className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+                style={{ color: brand }}
+                aria-hidden
+              />
+            </summary>
+            <div className="grid grid-cols-1 gap-2 pt-3">{renderEventFilters({ fullWidth: true })}</div>
+          </details>
+
+          <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:w-full">
+            {renderEventFilters({ fullWidth: false })}
+          </div>
         </div>
 
         {loading && <p className="text-text-muted text-center">{t("events.loading")}</p>}

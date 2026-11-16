@@ -31,7 +31,10 @@ import { persistDriverClassTransponder, sanitizeTransponderNumber } from "@/app/
 import EventNominateDriverGate from "@/app/pages/events/EventNominateDriverGate";
 import { normalizeMembershipProductType } from "@/app/pages/profile/householdDriverLimits";
 import { driverNominationBlockReason } from "@/app/lib/driverNominationValidation";
-import { loadDriverNominationStatsForClub } from "@/app/lib/driverAccessRestriction";
+import {
+  loadDriverNominationEventIds,
+  loadUpcomingClubEventIds,
+} from "@/app/lib/driverAccessRestriction";
 import { juniorTagInParens, resolveDriverProfilePolicy } from "@/app/lib/driverClubSettings";
 import useTheme from "@app/providers/useTheme";
 import { calculateUserPricing } from "@app/pages/events/events-sections/calculatePricing";
@@ -739,13 +742,15 @@ export default function EventNominate() {
   const paidSnapshotCapturedRef = useRef(false);
   const [clubMessageNote, setClubMessageNote] = useState("");
   const [nominationReloadToken, setNominationReloadToken] = useState(0);
-  const [driverNominationStats, setDriverNominationStats] = useState({});
+  const [upcomingClubEventIds, setUpcomingClubEventIds] = useState([]);
+  const [driverNominatedEventIds, setDriverNominatedEventIds] = useState({});
   const { user } = useAuth();
 
   function accessContextForDriver(driverId) {
     return {
       eventId: event?.id,
-      nominationStats: driverNominationStats[driverId],
+      upcomingEventIds: upcomingClubEventIds,
+      nominatedEventIds: driverNominatedEventIds[driverId] || [],
     };
   }
 
@@ -775,18 +780,33 @@ export default function EventNominate() {
   }, [error, errorPlacement, focusSection]);
 
   useEffect(() => {
-    if (!club?.id || !drivers?.length) {
-      setDriverNominationStats({});
+    if (!club?.id) {
+      setUpcomingClubEventIds([]);
       return undefined;
     }
     let cancelled = false;
     (async () => {
-      const stats = await loadDriverNominationStatsForClub(
+      const ids = await loadUpcomingClubEventIds(supabase, club.id);
+      if (!cancelled) setUpcomingClubEventIds(ids);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [club?.id, nominationReloadToken]);
+
+  useEffect(() => {
+    if (!club?.id || !drivers?.length) {
+      setDriverNominatedEventIds({});
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      const byDriver = await loadDriverNominationEventIds(
         supabase,
         club.id,
         drivers.map((row) => row.id)
       );
-      if (!cancelled) setDriverNominationStats(stats);
+      if (!cancelled) setDriverNominatedEventIds(byDriver);
     })();
     return () => {
       cancelled = true;
