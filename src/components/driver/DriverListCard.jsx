@@ -14,6 +14,10 @@ import { useUserTransponders } from "@/app/providers/UserTranspondersProvider";
 import { persistDriverClassTransponder } from "@/app/lib/userTransponders";
 import ManufacturerSelect from "@/components/ui/ManufacturerSelect";
 import { MANUFACTURERS } from "@/data/manufacturers";
+import {
+  driverAccessRestrictionBlockReason,
+  isDriverAccessRestrictionActive,
+} from "@/app/lib/driverAccessRestriction";
 
 export default function DriverListCard({
   driver,
@@ -28,6 +32,10 @@ export default function DriverListCard({
     useUserTransponders();
   const brand = brandProp || palette?.primary || "#0A66C2";
   if (!driver) return null;
+
+  const accessRestrictionMessage = isDriverAccessRestrictionActive(driver)
+    ? driverAccessRestrictionBlockReason(driver, {}, t)
+    : null;
 
   const isJunior = !!driver.is_junior;
   const number =
@@ -317,6 +325,9 @@ export default function DriverListCard({
                 {t("driverUi.numberLabel")} <span className="font-semibold">{number}</span>
               </div>
             )}
+            {accessRestrictionMessage ? (
+              <p className="text-xs text-amber-800 m-0 mt-1">{accessRestrictionMessage}</p>
+            ) : null}
           </div>
         </div>
 

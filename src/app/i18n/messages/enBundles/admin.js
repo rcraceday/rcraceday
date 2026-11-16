@@ -299,6 +299,10 @@ export default {
       noMatch: "No drivers match.",
       editDriver: "Edit Driver",
       addDriver: "Add driver",
+      accessBadgeEventCap: "Event cap: {{limit}}",
+      accessBadgeNoEvents: "No events",
+      accessBadgeNoAppDriver: "App blocked (driver)",
+      accessBadgeNoAppHousehold: "App blocked (household)",
     },
     membership: {
       title: "Membership",

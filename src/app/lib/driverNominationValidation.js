@@ -2,9 +2,19 @@ import {
   evaluateDriverProfileReadiness,
   resolveDriverNumberRules,
 } from "@/app/lib/driverClubSettings";
+import { driverAccessRestrictionBlockReason } from "@/app/lib/driverAccessRestriction";
 
-export function driverNominationBlockReason(club, driver, driverClasses = [], t) {
+export function driverNominationBlockReason(
+  club,
+  driver,
+  driverClasses = [],
+  t,
+  accessContext = null
+) {
   const tr = t || ((key) => key);
+  const accessBlock = driverAccessRestrictionBlockReason(driver, accessContext || {}, tr);
+  if (accessBlock) return accessBlock;
+
   const numberRules = resolveDriverNumberRules(club);
 
   if (

@@ -24,6 +24,11 @@ import { cmsLayout } from "@cms/layout";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { findDuplicateDriverNameInClub } from "@/app/lib/driverNameUniqueness";
 import { unassignDriverNumber } from "@/app/lib/driverNumberAdmin";
+import {
+  DRIVER_ACCESS_RESTRICTIONS,
+  DRIVER_ACCESS_SITE_SCOPES,
+  syncHouseholdAppAccessSuspend,
+} from "@/app/lib/driverAccessRestriction";
 
 const GENDER_OPTIONS = [
   { value: "Male", label: "Male" },
@@ -47,7 +52,24 @@ const emptyDriver = {
   country: "",
   occupation: "",
   avatar_url: "",
+  access_restriction: DRIVER_ACCESS_RESTRICTIONS.none,
+  access_site_scope: DRIVER_ACCESS_SITE_SCOPES.driver,
+  event_entry_limit: "",
+  access_restriction_note: "",
+  access_restriction_until: "",
 };
+
+const ACCESS_RESTRICTION_OPTIONS = [
+  { value: DRIVER_ACCESS_RESTRICTIONS.none, label: "No restriction" },
+  { value: DRIVER_ACCESS_RESTRICTIONS.eventCap, label: "Limit event entries" },
+  { value: DRIVER_ACCESS_RESTRICTIONS.noEvents, label: "Block event entry" },
+  { value: DRIVER_ACCESS_RESTRICTIONS.noApp, label: "Block member app access" },
+];
+
+const ACCESS_SCOPE_OPTIONS = [
+  { value: DRIVER_ACCESS_SITE_SCOPES.driver, label: "This driver only" },
+  { value: DRIVER_ACCESS_SITE_SCOPES.household, label: "Entire household" },
+];
 
 function toIntOrNull(value) {
   if (value === "" || value === null || value === undefined) return null;
@@ -130,6 +152,14 @@ export default function AdminDriverEdit() {
       avatar_url: data.avatar_url || "",
       primary_color: data.primary_color || "#000000",
       secondary_color: data.secondary_color || "#ffffff",
+      access_restriction: data.access_restriction || DRIVER_ACCESS_RESTRICTIONS.none,
+      access_site_scope: data.access_site_scope || DRIVER_ACCESS_SITE_SCOPES.driver,
+      event_entry_limit:
+        data.event_entry_limit == null ? "" : String(data.event_entry_limit),
+      access_restriction_note: data.access_restriction_note || "",
+      access_restriction_until: data.access_restriction_until
+        ? data.access_restriction_until.slice(0, 16)
+        : "",
     });
     setOriginalMembershipId(data.membership_id || null);
     setOriginalNumber(data.permanent_number == null ? "" : String(data.permanent_number));
@@ -241,6 +271,12 @@ export default function AdminDriverEdit() {
           ? null
           : driver.membership_id;
 
+      const restriction = driver.access_restriction || DRIVER_ACCESS_RESTRICTIONS.none;
+      const restrictionUntilRaw = (driver.access_restriction_until || "").trim();
+      const restrictionUntil = restrictionUntilRaw
+        ? new Date(restrictionUntilRaw).toISOString()
+        : null;
+
       const payload = {
         club_id: club.id,
         first_name: firstName,
@@ -255,6 +291,17 @@ export default function AdminDriverEdit() {
         gender: driver.gender || null,
         country: (driver.country || "").trim() || null,
         occupation: (driver.occupation || "").trim() || null,
+        access_restriction: restriction,
+        access_site_scope:
+          restriction === DRIVER_ACCESS_RESTRICTIONS.noApp
+            ? driver.access_site_scope || DRIVER_ACCESS_SITE_SCOPES.driver
+            : DRIVER_ACCESS_SITE_SCOPES.driver,
+        event_entry_limit:
+          restriction === DRIVER_ACCESS_RESTRICTIONS.eventCap
+            ? toIntOrNull(driver.event_entry_limit)
+            : null,
+        access_restriction_note: (driver.access_restriction_note || "").trim() || null,
+        access_restriction_until: restriction === DRIVER_ACCESS_RESTRICTIONS.none ? null : restrictionUntil,
       };
 
       let driverId = id;
@@ -339,6 +386,19 @@ export default function AdminDriverEdit() {
         is_junior: !!driver.is_junior,
       });
 
+      const membershipIdsToSync = new Set();
+      if (membershipId) membershipIdsToSync.add(membershipId);
+      if (originalMembershipId) membershipIdsToSync.add(originalMembershipId);
+      for (const membershipRowId of membershipIdsToSync) {
+        const { error: suspendError } = await syncHouseholdAppAccessSuspend(supabase, {
+          membershipId: membershipRowId,
+          clubId: club.id,
+        });
+        if (suspendError) {
+          console.warn("[AdminDriverEdit] household app suspend sync", suspendError.message);
+        }
+      }
+
       if (isNew) {
         navigate(`/${clubSlug}/app/admin/drivers/${driverId}`, { replace: true });
         return;
@@ -386,6 +446,12 @@ export default function AdminDriverEdit() {
     if (deleteError) {
       setError(deleteError.message || "Could not delete driver.");
       return;
+    }
+    if (originalMembershipId) {
+      await syncHouseholdAppAccessSuspend(supabase, {
+        membershipId: originalMembershipId,
+        clubId: club.id,
+      });
     }
     navigate(`/${clubSlug}/app/admin/drivers`);
   }
@@ -619,18 +685,76 @@ export default function AdminDriverEdit() {
               onChange={(value) => update("occupation", value)}
             />
 
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <CMSButton type="button" disabled={saving} onClick={handleSave}>
-                {saving ? "Saving…" : isNew ? "Create driver" : "Save driver"}
-              </CMSButton>
-              {!isNew && (
-                <CMSButton type="button" variant="secondary" onClick={handleDelete}>
-                  Delete driver
+            {isNew && (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <CMSButton type="button" disabled={saving} onClick={handleSave}>
+                  {saving ? "Saving…" : "Create driver"}
                 </CMSButton>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </CMSCard>
+
+        {!isNew && (
+          <CMSCard title="Access limits">
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
+              <p style={cmsLayout.muted}>
+                Control nominations and member app access for this driver. Event limits count
+                distinct events already nominated.
+              </p>
+              <CMSSelect
+                label="Restriction"
+                value={driver.access_restriction || DRIVER_ACCESS_RESTRICTIONS.none}
+                onChange={(value) => update("access_restriction", value)}
+                options={ACCESS_RESTRICTION_OPTIONS}
+                sortOptions={false}
+              />
+              {driver.access_restriction === DRIVER_ACCESS_RESTRICTIONS.eventCap && (
+                <CMSInput
+                  label="Max distinct events"
+                  type="number"
+                  value={driver.event_entry_limit ?? ""}
+                  onChange={(value) => update("event_entry_limit", value)}
+                />
+              )}
+              {driver.access_restriction === DRIVER_ACCESS_RESTRICTIONS.noApp && (
+                <CMSSelect
+                  label="App access scope"
+                  value={driver.access_site_scope || DRIVER_ACCESS_SITE_SCOPES.driver}
+                  onChange={(value) => update("access_site_scope", value)}
+                  options={ACCESS_SCOPE_OPTIONS}
+                  sortOptions={false}
+                />
+              )}
+              {driver.access_restriction !== DRIVER_ACCESS_RESTRICTIONS.none && (
+                <>
+                  <CMSInput
+                    label="Message to member (optional)"
+                    value={driver.access_restriction_note || ""}
+                    onChange={(value) => update("access_restriction_note", value)}
+                  />
+                  <CMSInput
+                    label="Until (optional)"
+                    type="datetime-local"
+                    value={driver.access_restriction_until || ""}
+                    onChange={(value) => update("access_restriction_until", value)}
+                  />
+                </>
+              )}
+            </div>
+          </CMSCard>
+        )}
+
+        {!isNew && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <CMSButton type="button" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save driver"}
+            </CMSButton>
+            <CMSButton type="button" variant="secondary" onClick={handleDelete}>
+              Delete driver
+            </CMSButton>
+          </div>
+        )}
       </div>
     </div>
   );

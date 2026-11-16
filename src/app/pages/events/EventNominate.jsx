@@ -31,6 +31,7 @@ import { persistDriverClassTransponder, sanitizeTransponderNumber } from "@/app/
 import EventNominateDriverGate from "@/app/pages/events/EventNominateDriverGate";
 import { normalizeMembershipProductType } from "@/app/pages/profile/householdDriverLimits";
 import { driverNominationBlockReason } from "@/app/lib/driverNominationValidation";
+import { loadDriverNominationStatsForClub } from "@/app/lib/driverAccessRestriction";
 import { juniorTagInParens, resolveDriverProfilePolicy } from "@/app/lib/driverClubSettings";
 import useTheme from "@app/providers/useTheme";
 import { calculateUserPricing } from "@app/pages/events/events-sections/calculatePricing";
@@ -738,7 +739,15 @@ export default function EventNominate() {
   const paidSnapshotCapturedRef = useRef(false);
   const [clubMessageNote, setClubMessageNote] = useState("");
   const [nominationReloadToken, setNominationReloadToken] = useState(0);
+  const [driverNominationStats, setDriverNominationStats] = useState({});
   const { user } = useAuth();
+
+  function accessContextForDriver(driverId) {
+    return {
+      eventId: event?.id,
+      nominationStats: driverNominationStats[driverId],
+    };
+  }
 
   const logoSrc = event?.logourl
     ? event.logourl.startsWith("http")
@@ -764,6 +773,25 @@ export default function EventNominate() {
     const target = focusEl || checkoutErrorRef.current;
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [error, errorPlacement, focusSection]);
+
+  useEffect(() => {
+    if (!club?.id || !drivers?.length) {
+      setDriverNominationStats({});
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      const stats = await loadDriverNominationStatsForClub(
+        supabase,
+        club.id,
+        drivers.map((row) => row.id)
+      );
+      if (!cancelled) setDriverNominationStats(stats);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [club?.id, drivers, nominationReloadToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2150,7 +2178,13 @@ export default function EventNominate() {
       return;
     }
     for (const { driver } of active) {
-      const block = driverNominationBlockReason(club, driver, [], t);
+      const block = driverNominationBlockReason(
+        club,
+        driver,
+        [],
+        t,
+        accessContextForDriver(driver.id)
+      );
       if (block) {
         showCheckoutError(block);
         return;
@@ -2217,7 +2251,13 @@ export default function EventNominate() {
           .eq("driver_id", driver.id);
         driverClasses = classRows || [];
       }
-      const block = driverNominationBlockReason(club, driver, driverClasses, t);
+      const block = driverNominationBlockReason(
+        club,
+        driver,
+        driverClasses,
+        t,
+        accessContextForDriver(driver.id)
+      );
       if (block) return showCheckoutError(block);
     }
 

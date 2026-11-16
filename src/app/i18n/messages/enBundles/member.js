@@ -350,6 +350,10 @@ export default {
     noMembershipFound: "No membership found.",
     expiredBanner: "Your membership has expired.",
     expiresSoonBanner: "Your membership expires soon.",
+    appAccessSuspendedTitle: "Member app access paused",
+    appAccessSuspendedBody:
+      "Your household cannot use the member area at this club. You can still view public pages.",
+    appAccessSuspendedPublicLink: "Back to public club pages",
     renewedSuccess: "Membership renewed successfully",
     summaryTitle: "Membership Summary",
     typeJunior: "Junior Membership",
@@ -433,6 +437,12 @@ export default {
       "Complete required driver profile fields before your next event nomination.",
     nameLocked:
       "Legal name cannot be changed after this driver has event nominations. Contact the club admin.",
+    accessNoEvents: "{{name}} cannot enter events at this club right now. Contact the club admin.",
+    accessNoEventsWithNote: "{{name}} cannot enter events: {{note}}",
+    accessEventCapReached:
+      "{{name}} has reached the club limit of {{limit}} events.{{note}}",
+    accessEventCapMisconfigured:
+      "{{name}} has an event entry limit that is not configured correctly. Contact the club admin.",
     cannotDeleteDriver: "Driver deletion is disabled by your club.",
     numberChoiceDisabled: "Your club assigns race numbers. Contact an admin if you need a change.",
     numberChangeDisabled: "Your club does not allow changing your race number after it is assigned.",

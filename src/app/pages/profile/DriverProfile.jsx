@@ -17,6 +17,11 @@ import { isOwnClubDriver } from "@/app/lib/driverClubSettings";
 import { canAccessExtendedDriverProfile } from "@/app/lib/membershipClubLimits";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import {
+  driverAccessRestrictionBlockReason,
+  driverBlocksMemberAppForDriverScope,
+  isDriverAccessRestrictionActive,
+} from "@/app/lib/driverAccessRestriction";
 
 export default function DriverProfile() {
   const { id, clubSlug } = useParams();
@@ -57,6 +62,16 @@ export default function DriverProfile() {
     );
   }
 
+  const accessRestrictionMessage =
+    driver && isDriverAccessRestrictionActive(driver)
+      ? driverAccessRestrictionBlockReason(driver, {}, t)
+      : null;
+  const profileLocked =
+    driver &&
+    isOwnClubDriver(driver, membership, user?.id) &&
+    (driverBlocksMemberAppForDriverScope(driver) ||
+      driver.access_restriction === "no_events");
+
   if (!driver) {
     return (
       <div className="p-4 w-full">
@@ -83,14 +98,21 @@ export default function DriverProfile() {
       />
 
       {/* MAIN CONTENT */}
-      <main className="app-page-main flex flex-col items-center">
-        <DriverProfileCard
-          driver={driver}
-          club={club}
-          navigate={navigate}
-          isOwnDriver={isOwnClubDriver(driver, membership, user?.id)}
-          canViewExtendedProfile={canViewExtendedProfile}
-        />
+      <main className="app-page-main flex flex-col items-center gap-4">
+        {accessRestrictionMessage ? (
+          <Card className="p-4 w-full max-w-3xl border-amber-200 bg-amber-50 text-amber-900 text-sm">
+            {accessRestrictionMessage}
+          </Card>
+        ) : null}
+        <div className={profileLocked ? "w-full max-w-3xl opacity-60 pointer-events-none" : "w-full max-w-3xl"}>
+          <DriverProfileCard
+            driver={driver}
+            club={club}
+            navigate={navigate}
+            isOwnDriver={isOwnClubDriver(driver, membership, user?.id)}
+            canViewExtendedProfile={canViewExtendedProfile}
+          />
+        </div>
       </main>
     </div>
   );

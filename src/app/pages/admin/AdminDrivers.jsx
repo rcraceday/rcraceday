@@ -12,6 +12,10 @@ import CMSInput from "@cms/CMSInput";
 import { EditButton } from "@cms/CMSButtonSet";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { cmsStyles } from "@cms/styles";
+import {
+  adminAccessRestrictionLabel,
+  isDriverAccessRestrictionActive,
+} from "@/app/lib/driverAccessRestriction";
 
 const FILTER_IDS = ["all", "adults", "juniors", "unlinked"];
 
@@ -243,6 +247,17 @@ export default function AdminDrivers() {
                           {household?.status ? (
                             <span style={{ fontSize: 12, color: "#6B7280" }}>
                               {household.status}
+                            </span>
+                          ) : null}
+                          {isDriverAccessRestrictionActive(row) ? (
+                            <span
+                              style={{
+                                ...cmsStyles.badgeDraft,
+                                backgroundColor: "#FEF3C7",
+                                color: "#92400E",
+                              }}
+                            >
+                              {adminAccessRestrictionLabel(row, t)}
                             </span>
                           ) : null}
                         </div>

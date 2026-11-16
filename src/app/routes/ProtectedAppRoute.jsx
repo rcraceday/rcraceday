@@ -13,6 +13,8 @@ import {
   publicClaimMembershipPath,
 } from "@/app/lib/publicAuthRedirect";
 import { clearClubScopedClientState } from "@/app/lib/clubClientCache";
+import { isMembershipAppAccessSuspended } from "@/app/lib/driverAccessRestriction";
+import AppAccessRestricted from "@/app/pages/app/AppAccessRestricted";
 
 export default function ProtectedAppRoute({ children, admin = false }) {
   const { session, loadingUser } = useAuth();
@@ -119,6 +121,10 @@ export default function ProtectedAppRoute({ children, admin = false }) {
 
   if (admin && !hasAnyAdminAccess) {
     return <Navigate to={`/${clubSlug}/app`} replace state={{ adminDenied: true }} />;
+  }
+
+  if (!admin && isMembershipAppAccessSuspended(membership)) {
+    return <AppAccessRestricted />;
   }
 
   return children;
