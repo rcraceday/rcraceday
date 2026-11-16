@@ -616,6 +616,74 @@ a:hover {
   padding-right: 0.75rem;
 }
 
+.driver-manager-page .page-title-inner {
+  padding-bottom: 8px;
+}
+
+/* Driver Manager + nominate: class / chassis / transponder controls */
+.driver-class-assignment-row {
+  display: grid;
+  gap: 0.375rem;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 6.75rem;
+  grid-template-areas:
+    "class class"
+    "chassis transponder";
+}
+
+.driver-class-assignment-row--with-remove {
+  grid-template-columns: minmax(0, 1fr) 6.75rem auto;
+  grid-template-areas:
+    "class class class"
+    "chassis transponder remove";
+}
+
+.driver-class-assignment-row__class {
+  grid-area: class;
+  min-width: 0;
+}
+
+.driver-class-assignment-row__chassis {
+  grid-area: chassis;
+  min-width: 0;
+}
+
+.driver-class-assignment-row__transponder {
+  grid-area: transponder;
+  min-width: 0;
+}
+
+.driver-class-assignment-row__remove {
+  grid-area: remove;
+  justify-self: end;
+  align-self: center;
+}
+
+.driver-class-assignment-row__transponder .filter-dropdown {
+  width: 100%;
+  max-width: 6.75rem;
+  min-width: 6.75rem;
+}
+
+@media (min-width: 640px) {
+  .driver-class-assignment-row {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto;
+    grid-template-areas: "class chassis transponder";
+  }
+
+  .driver-class-assignment-row--with-remove {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto auto;
+    grid-template-areas: "class chassis transponder remove";
+  }
+
+  .driver-class-assignment-row__transponder .filter-dropdown {
+    max-width: none;
+    min-width: 0;
+  }
+}
+
 /* FilterDropdown: layout + hover/focus via theme variable from component */
 .filter-dropdown-trigger:focus-visible {
   outline: 2px solid var(--dropdown-primary, #00438a);
@@ -1105,4 +1173,98 @@ a:hover {
     padding-left: 12px !important;
     padding-right: 12px !important;
   }
+}
+
+/*
+ * Results tables: use ResultsDataTable (my-results-data-table) and
+ * resultsTableRowClass / my-results-row-you for household drivers.
+ */
+
+.my-results-row-you {
+  background-color: color-mix(in srgb, var(--theme-primary, #2563eb) 13%, white);
+}
+
+.my-results-row-compare {
+  background-color: color-mix(in srgb, #d97706 10%, white);
+  color: #78350f;
+}
+
+.my-results-data-table .my-results-row-you > td:first-child {
+  position: relative;
+  padding-left: 0.65rem;
+}
+
+.my-results-data-table .my-results-row-you > td:first-child::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--theme-primary, #2563eb);
+  border-radius: 0 3px 3px 0;
+}
+
+.my-results-driver-card {
+  border-color: var(--theme-primary, #2563eb) !important;
+  background-color: color-mix(in srgb, var(--theme-primary, #2563eb) 7%, white);
+}
+
+.my-results-data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.my-results-data-table tbody tr {
+  border-top: 1px solid color-mix(in srgb, var(--border, #e5e7eb) 70%, transparent);
+}
+
+.my-results-th {
+  text-align: left;
+  padding: 0.35rem 0.5rem 0.5rem 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #6b7280);
+  white-space: nowrap;
+}
+
+.my-results-pos-badge {
+  display: inline-flex;
+  min-width: 1.75rem;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.125rem 0.35rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--border, #e5e7eb) 50%, white);
+}
+
+.my-results-pos-p1 {
+  background: color-mix(in srgb, #eab308 35%, white);
+  color: #713f12;
+}
+
+.my-results-pos-p2 {
+  background: color-mix(in srgb, #94a3b8 45%, white);
+  color: #334155;
+}
+
+.my-results-pos-p3 {
+  background: color-mix(in srgb, #d97706 28%, white);
+  color: #7c2d12;
+}
+
+.event-list-card {
+  border: 1px solid color-mix(in srgb, var(--border, #e5e7eb) 90%, transparent);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.event-month-section {
+  background: #fff;
 }

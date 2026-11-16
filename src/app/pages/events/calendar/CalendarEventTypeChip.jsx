@@ -1,6 +1,7 @@
-import { EVENT_TYPE_COLORS } from "./calendarHelpers";
+import useTheme from "@/app/providers/useTheme";
 import { TYPE_LABELS } from "../events-sections/helpers";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import { eventTypeChipClassName, eventTypeUsesClubPrimary } from "./eventTypeChipStyles";
 
 const typeLabelKeys = {
   racing: "events.typeRacing",
@@ -13,6 +14,7 @@ const typeLabelKeys = {
 
 export default function CalendarEventTypeChip({ eventType }) {
   const { t } = useTranslation();
+  const { palette } = useTheme();
   const type = (eventType || "").toLowerCase();
   if (!type) return null;
 
@@ -20,16 +22,22 @@ export default function CalendarEventTypeChip({ eventType }) {
     ? t(typeLabelKeys[type])
     : TYPE_LABELS[type] || type.replace(/_/g, " ");
 
-  const color = EVENT_TYPE_COLORS[type] || "#374151";
+  const primaryColor = palette?.primary || "#2563eb";
+  const usePrimary = eventTypeUsesClubPrimary(type);
+  const toneClass = eventTypeChipClassName(type);
 
   return (
     <span
-      className="inline-block text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full"
-      style={{
-        color,
-        backgroundColor: `${color}14`,
-        border: `1px solid ${color}33`,
-      }}
+      className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${toneClass}`}
+      style={
+        usePrimary
+          ? {
+              color: primaryColor,
+              backgroundColor: `color-mix(in srgb, ${primaryColor} 12%, white)`,
+              borderColor: `color-mix(in srgb, ${primaryColor} 35%, white)`,
+            }
+          : undefined
+      }
     >
       {label}
     </span>

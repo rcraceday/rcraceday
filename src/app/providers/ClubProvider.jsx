@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo } 
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { normalizeClubAssetUrl } from "@/app/lib/clubAssetStorage";
 
 const ClubContext = createContext({
   club: null,
@@ -135,7 +136,8 @@ export default function ClubProvider({ children }) {
         setClub({
           ...data,
           theme,
-          member_badge_url: data.member_badge_url || null,
+          member_badge_url: normalizeClubAssetUrl(supabase, data.member_badge_url) || null,
+          logo_url: normalizeClubAssetUrl(supabase, data.logo_url) || data.logo_url || null,
           membership_type_configs,
         });
         setLoadingClub(false);

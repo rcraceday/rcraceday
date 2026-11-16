@@ -6,7 +6,6 @@ import {
   IdentificationIcon,
   UserPlusIcon,
   UsersIcon,
-  UserGroupIcon,
   Cog6ToothIcon,
   ShieldCheckIcon,
   ArrowRightOnRectangleIcon,
@@ -26,9 +25,19 @@ export function buildMenuItems({ clubSlug, isAdmin, user, t }) {
       to: `/${clubSlug}/app`,
     },
     {
-      label: tr("nav.events"),
+      label: tr("home.allEvents"),
       icon: CalendarDaysIcon,
-      to: `/${clubSlug}/app/events`,
+      to: `/${clubSlug}/app/events?category=all`,
+    },
+    {
+      label: tr("home.clubMeets"),
+      icon: CalendarIcon,
+      to: `/${clubSlug}/app/events?category=club`,
+    },
+    {
+      label: tr("home.majorEvents"),
+      icon: CalendarDaysIcon,
+      to: `/${clubSlug}/app/events?category=major`,
     },
     {
       label: tr("nav.calendar"),
@@ -36,7 +45,7 @@ export function buildMenuItems({ clubSlug, isAdmin, user, t }) {
       to: `/${clubSlug}/app/calendar`,
     },
     {
-      label: tr("nav.news"),
+      label: tr("news.title"),
       icon: NewspaperIcon,
       to: `/${clubSlug}/app/news`,
     },
@@ -55,11 +64,6 @@ export function buildMenuItems({ clubSlug, isAdmin, user, t }) {
       icon: ChatBubbleLeftRightIcon,
       to: `/${clubSlug}/app/messages`,
       messagesMenu: true,
-    },
-    {
-      label: tr("nav.myDrivers"),
-      icon: UserGroupIcon,
-      to: `/${clubSlug}/app/settings/my-drivers`,
     },
     {
       label: tr("nav.driverManager"),

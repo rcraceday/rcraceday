@@ -1,105 +1,130 @@
 import { useEffect, useMemo, useRef } from "react";
 import EventCard from "../EventCard";
-import CalendarEventTypeChip from "../calendar/CalendarEventTypeChip";
+import useTheme from "@/app/providers/useTheme";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import {
   eventInMonth,
   isEventPast,
   monthsWithEvents,
   sortKeyInMonth,
+  yearMonthSections,
 } from "../calendar/calendarHelpers";
 
 export default function EventsYearList({
-  year,
+  year = null,
   events,
   clubSlug,
   trackNames,
   eventsWithResults,
   nominatedEventIds,
+  householdResultEventIds,
+  nominationSummaries,
   eventsWithNominations,
 }) {
   const { t, locale } = useTranslation();
+  const { palette } = useTheme();
+  const primaryColor = palette?.primary || "#2563eb";
   const scrollTargetRef = useRef(null);
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
 
-  const activeMonths = useMemo(
-    () => monthsWithEvents(events, year),
-    [events, year]
-  );
+  const sections = useMemo(() => {
+    if (year != null) {
+      return monthsWithEvents(events, year).map((monthIndex) => ({
+        year,
+        monthIndex,
+      }));
+    }
+    return yearMonthSections(events);
+  }, [events, year]);
 
   useEffect(() => {
-    if (year !== currentYear) return;
-    if (!activeMonths.includes(currentMonth)) return;
+    const scrollSection = sections.find(
+      (section) => section.year === currentYear && section.monthIndex === currentMonth
+    );
+    if (!scrollSection) return;
     const el = scrollTargetRef.current;
     if (!el) return;
     const timer = window.setTimeout(() => {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
     return () => window.clearTimeout(timer);
-  }, [year, activeMonths, currentYear, currentMonth]);
+  }, [sections, currentYear, currentMonth]);
 
-  if (activeMonths.length === 0) {
+  if (sections.length === 0) {
     return (
       <p className="text-center text-sm text-text-muted py-8 m-0">
-        {t("calendarUi.noEventsYear", { year })}
+        {year != null
+          ? t("calendarUi.noEventsYear", { year })
+          : t("events.noUpcoming")}
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-10 max-w-3xl mx-auto w-full">
-      {activeMonths.map((monthIndex) => {
+    <div className="flex flex-col gap-8 max-w-3xl mx-auto w-full">
+      {sections.map(({ year: sectionYear, monthIndex }) => {
         const monthEvents = events
-          .filter((event) => eventInMonth(event, year, monthIndex))
+          .filter((event) => eventInMonth(event, sectionYear, monthIndex))
           .sort(
             (a, b) =>
-              sortKeyInMonth(a, year, monthIndex) -
-              sortKeyInMonth(b, year, monthIndex)
+              sortKeyInMonth(a, sectionYear, monthIndex) -
+              sortKeyInMonth(b, sectionYear, monthIndex)
           );
 
-        const monthLabel = new Date(year, monthIndex, 1).toLocaleDateString(locale, {
+        const monthLabel = new Date(sectionYear, monthIndex, 1).toLocaleDateString(locale, {
           month: "long",
+          ...(year == null ? { year: "numeric" } : {}),
         });
 
-        const isCurrentMonth = year === currentYear && monthIndex === currentMonth;
+        const isCurrentMonth =
+          sectionYear === currentYear && monthIndex === currentMonth;
+        const sectionKey = `${sectionYear}-${monthIndex}`;
 
         return (
           <section
-            key={monthIndex}
-            id={`events-month-${monthIndex}`}
+            key={sectionKey}
+            id={`events-month-${sectionKey}`}
             ref={isCurrentMonth ? scrollTargetRef : undefined}
-            className="scroll-mt-24"
+            className="scroll-mt-24 event-month-section overflow-hidden rounded-2xl border border-border/80 shadow-sm"
           >
-            <div className="flex items-center gap-3 mb-4 pb-2 border-b border-surfaceBorder">
-              <h2 className="text-base font-semibold text-text-base m-0">{monthLabel}</h2>
+            <div
+              className="px-4 py-3 flex flex-wrap items-center gap-2 border-b border-border/60"
+              style={{
+                background: `linear-gradient(135deg, ${primaryColor}14 0%, transparent 55%)`,
+              }}
+            >
+              <h2 className="text-lg font-bold text-text-base m-0 tracking-tight">{monthLabel}</h2>
               {isCurrentMonth && (
-                <span className="text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md text-white"
+                  style={{ backgroundColor: primaryColor }}
+                >
                   {t("calendarUi.today")}
                 </span>
               )}
-              <span className="text-xs text-text-muted ml-auto">
+              <span className="text-xs text-text-muted ml-auto tabular-nums">
                 {monthEvents.length === 1
                   ? t("calendarUi.eventCountOne")
                   : t("calendarUi.eventCount", { count: monthEvents.length })}
               </span>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="p-3 flex flex-col gap-3 bg-gradient-to-b from-surface-alt/20 to-transparent">
               {monthEvents.map((event) => (
-                <div key={`${event.id}-${monthIndex}`} className="flex flex-col gap-1.5">
-                  <CalendarEventTypeChip eventType={event.event_type} />
-                  <EventCard
-                    event={event}
-                    clubSlug={clubSlug}
-                    trackNames={trackNames}
-                    showResults={eventsWithResults?.has(event.id)}
-                    hasNomination={nominatedEventIds?.has(event.id)}
-                    hasReceivedNominations={eventsWithNominations?.has(event.id)}
-                    isPast={isEventPast(event)}
-                  />
-                </div>
+                <EventCard
+                  key={`${event.id}-${monthIndex}`}
+                  event={event}
+                  clubSlug={clubSlug}
+                  trackNames={trackNames}
+                  showResults={eventsWithResults?.has(event.id)}
+                  hasNomination={nominatedEventIds?.has(event.id)}
+                  hasHouseholdInResults={householdResultEventIds?.has(event.id)}
+                  nominationSummary={nominationSummaries?.get(event.id) || null}
+                  hasReceivedNominations={eventsWithNominations?.has(event.id)}
+                  isPast={isEventPast(event)}
+                />
               ))}
             </div>
           </section>

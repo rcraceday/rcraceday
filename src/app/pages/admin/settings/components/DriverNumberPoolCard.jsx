@@ -14,6 +14,7 @@ import {
   unassignDriverNumber,
   updateNumberPoolFlags,
 } from "@/app/lib/driverNumberAdmin";
+import { releaseLapsedNumbersForClub } from "@/app/lib/driverNumberLapsedRelease";
 
 export default function DriverNumberPoolCard({ club }) {
   const { t } = useTranslation();
@@ -31,6 +32,7 @@ export default function DriverNumberPoolCard({ club }) {
   async function reload() {
     if (!club?.id) return;
     setLoading(true);
+    await releaseLapsedNumbersForClub(supabase, club);
     const [{ data: numberRows, error: numbersError }, { data: driverRows }] =
       await Promise.all([
         supabase
@@ -62,6 +64,7 @@ export default function DriverNumberPoolCard({ club }) {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      await releaseLapsedNumbersForClub(supabase, club);
       const [{ data: numberRows, error: numbersError }, { data: driverRows }] =
         await Promise.all([
           supabase

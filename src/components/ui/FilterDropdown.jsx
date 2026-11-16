@@ -8,6 +8,7 @@ import {
   getDropdownMenuStyle,
   getDropdownOptionStyle,
   getDropdownTriggerStyle,
+  getInlineDropdownMenuStyle,
 } from "@/components/ui/dropdownFieldStyles";
 
 function sortOptionsAlphabetically(options) {
@@ -34,6 +35,8 @@ export default function FilterDropdown({
   onMenuToggle,
   onClose,
   variant = "public",
+  /** In-flow menu — avoids clipping inside overflow-hidden ancestors. */
+  menuInline = false,
 }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -128,9 +131,13 @@ export default function FilterDropdown({
           role="listbox"
           aria-label={ariaLabel}
           style={
-            isCms
-              ? getCmsSelectMenuStyle(palette, { boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)" })
-              : getDropdownMenuStyle(palette)
+            menuInline
+              ? getInlineDropdownMenuStyle(palette, {
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+                })
+              : isCms
+                ? getCmsSelectMenuStyle(palette, { boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)" })
+                : getDropdownMenuStyle(palette)
           }
         >
           {menuOptions.map((option) => (

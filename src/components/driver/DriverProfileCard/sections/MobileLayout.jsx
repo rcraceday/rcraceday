@@ -16,8 +16,7 @@ import SicCarProfileSection from "./SicCarProfileSection";
 import DirtCarProfileSection from "./DirtCarProfileSection";
 import ExperienceSection from "./ExperienceSection";
 import TriviaSection from "./TriviaSection";
-
-export default function MobileLayout({ driver, country, brand: brandProp, chassis }) {
+export default function MobileLayout({ driver, country, brand: brandProp }) {
   const { t } = useTranslation();
   const { palette } = useTheme();
   const brand = brandProp || palette?.primary || "#0A66C2";
@@ -34,7 +33,7 @@ export default function MobileLayout({ driver, country, brand: brandProp, chassi
 
       {/* TEAM / CHASSIS / TRACK / SPONSORS */}
       <div className="space-y-4">
-        <TeamChassisTrackSection driver={driver} chassis={chassis} />
+        <TeamChassisTrackSection driver={driver} />
         <SponsorsSection driver={driver} brand={brand} />
       </div>
 
@@ -54,7 +53,7 @@ export default function MobileLayout({ driver, country, brand: brandProp, chassi
       >
         <h3 className="text-sm font-semibold">{t("driverProfile.racingInformation")}</h3>
       </div>
-      <RacingInformationSection driver={driver} chassis={chassis} update={driver.update} />
+      <RacingInformationSection driver={driver} update={driver.update} />
 
       {/* SIC CAR PROFILE */}
       <div

@@ -42,7 +42,7 @@ export const DEFAULT_MEMBERSHIP_TYPE_SEEDS = [
     display_name: "Non-member",
     enabled: true,
     max_household_adults: 2,
-    max_household_juniors: 2,
+    max_household_juniors: 3,
     max_drivers: null,
     access_driver_profiles: true,
     access_championship_points: false,
@@ -96,6 +96,11 @@ export function isPayingClubMember(membership) {
   return Boolean(
     membership?.membership_type && membership.membership_type !== "non_member"
   );
+}
+
+/** Club permanent race number — members only; not copied from other clubs. */
+export function canUseClubPermanentNumber(membership) {
+  return isPayingClubMember(membership);
 }
 
 /** Extended driver profile sections + viewing other members’ profiles (not LiveTime essentials). */

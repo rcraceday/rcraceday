@@ -1,25 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import { useDrivers } from "@/app/providers/DriverProvider";
+import { useProfile } from "@/app/providers/ProfileProvider";
+import { buildHouseholdResultNameKeys } from "@/app/lib/results/resultsRowHighlight";
+import { loadHouseholdResultEventIds } from "@/app/lib/results/loadHouseholdResultEventIds";
 import useTheme from "@/app/providers/useTheme";
-import EventCard from "./EventCard";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import FilterDropdown from "@/components/ui/FilterDropdown";
 import { CalendarDaysIcon } from "@heroicons/react/24/solid";
-import { extractYearsFromEvents } from "./events-sections/helpers";
+import { extractYearsFromEvents, matchesEventsCategoryFilter } from "./events-sections/helpers";
 import { loadPublishedResultEventIds } from "@/app/lib/results/loadEventResults";
 import { eventTouchesYear } from "./calendar/calendarHelpers";
 import EventsYearList from "./events-sections/EventsYearList";
-
-function getEventStartDate(event) {
-  if (event.is_multi_day && Array.isArray(event.days) && event.days.length > 0) {
-    return new Date(event.days[0].date);
-  }
-  return new Date(event.event_date);
-}
+import { loadHouseholdNominationSummaries } from "@/app/lib/householdNominationSummaries";
 
 function getEventEndDate(event) {
   if (event.is_multi_day && Array.isArray(event.days) && event.days.length > 0) {
@@ -33,8 +30,11 @@ export default function Events() {
   const { t } = useTranslation();
   const brand = palette.primary;
   const { clubSlug } = useParams();
+  const [searchParams] = useSearchParams();
   const { club } = useClub();
   const { membership } = useMembership();
+  const { drivers } = useDrivers();
+  const { profile } = useProfile();
 
   const currentYear = new Date().getFullYear();
   const [view, setView] = useState("upcoming");
@@ -44,10 +44,31 @@ export default function Events() {
   const [trackNames, setTrackNames] = useState({});
   const [tracks, setTracks] = useState([]);
   const [trackFilter, setTrackFilter] = useState("all");
+  const categoryFromUrl = searchParams.get("category");
+  const initialCategory =
+    categoryFromUrl === "major" || categoryFromUrl === "club" || categoryFromUrl === "all"
+      ? categoryFromUrl
+      : "all";
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
   const [loading, setLoading] = useState(true);
   const [nominatedEventIds, setNominatedEventIds] = useState(() => new Set());
+  const [nominationSummaries, setNominationSummaries] = useState(() => new Map());
   const [eventsWithNominations, setEventsWithNominations] = useState(() => new Set());
   const [eventsWithResults, setEventsWithResults] = useState(() => new Set());
+  const [householdResultEventIds, setHouseholdResultEventIds] = useState(() => new Set());
+
+  const householdResultMatch = useMemo(() => {
+    const driverIds = new Set((drivers || []).map((d) => d.id).filter(Boolean));
+    const driverNameKeys = buildHouseholdResultNameKeys(drivers, { membership, profile });
+    return { driverIds, driverNameKeys };
+  }, [drivers, membership, profile]);
+
+  useEffect(() => {
+    const next = searchParams.get("category");
+    if (next === "major" || next === "club" || next === "all") {
+      setCategoryFilter(next);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadEvents() {
@@ -120,24 +141,53 @@ export default function Events() {
   }, [club?.id]);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadHouseholdNominations() {
+      const eventIds = events.map((event) => event.id).filter(Boolean);
       if (!membership?.id) {
         setNominatedEventIds(new Set());
+        setNominationSummaries(new Map());
         return;
       }
 
-      const { data } = await supabase
-        .from("nominations")
-        .select("event_id")
-        .eq("group_id", membership.id);
+      const { nominatedEventIds: ids, summariesByEventId } =
+        await loadHouseholdNominationSummaries(membership.id, eventIds);
 
-      setNominatedEventIds(
-        new Set((data || []).map((row) => row.event_id).filter(Boolean))
-      );
+      if (cancelled) return;
+      setNominatedEventIds(ids);
+      setNominationSummaries(summariesByEventId);
     }
 
     loadHouseholdNominations();
-  }, [membership?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [membership?.id, events]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadHouseholdResults() {
+      const eventIds = events.map((event) => event.id).filter(Boolean);
+      const { driverIds, driverNameKeys } = householdResultMatch;
+      if (
+        !eventIds.length ||
+        (!driverIds.size && !driverNameKeys.size)
+      ) {
+        setHouseholdResultEventIds(new Set());
+        return;
+      }
+
+      const ids = await loadHouseholdResultEventIds(eventIds, driverIds, driverNameKeys);
+      if (!cancelled) setHouseholdResultEventIds(ids);
+    }
+
+    loadHouseholdResults();
+    return () => {
+      cancelled = true;
+    };
+  }, [events, householdResultMatch]);
 
   const yearOptions = useMemo(() => {
     const fromEvents = extractYearsFromEvents(events);
@@ -146,27 +196,36 @@ export default function Events() {
     return [...set].sort((a, b) => b - a);
   }, [events, currentYear]);
 
-  const activeYear = yearOptions.includes(selectedYear)
+  const previousYearOptions = useMemo(
+    () => yearOptions.filter((y) => y < currentYear),
+    [yearOptions, currentYear]
+  );
+
+  const activePreviousYear = previousYearOptions.includes(selectedYear)
     ? selectedYear
-    : yearOptions[0] || currentYear;
+    : previousYearOptions[0] ?? currentYear - 1;
 
   const now = new Date();
 
   const displayedEvents = useMemo(() => {
     const trackMatch = (event) =>
       trackFilter === "all" || event.track === trackFilter;
+    const categoryMatch = (event) => matchesEventsCategoryFilter(event, categoryFilter);
 
+    let list = events;
     if (view === "year") {
-      return events
-        .filter((event) => eventTouchesYear(event, activeYear))
-        .filter(trackMatch);
+      list = events.filter((event) => eventTouchesYear(event, activePreviousYear));
+    } else if (view === "fullYear") {
+      list = events.filter((event) => eventTouchesYear(event, currentYear));
+    } else {
+      list = events.filter((event) => getEventEndDate(event) >= now);
     }
 
-    return events
-      .filter((event) => getEventEndDate(event) >= now)
-      .filter(trackMatch)
-      .sort((a, b) => getEventStartDate(a) - getEventStartDate(b));
-  }, [events, view, activeYear, trackFilter, now]);
+    return list.filter(trackMatch).filter(categoryMatch);
+  }, [events, view, activePreviousYear, currentYear, trackFilter, categoryFilter, now]);
+
+  const listYear =
+    view === "fullYear" ? currentYear : view === "year" ? activePreviousYear : null;
 
   return (
     <>
@@ -177,14 +236,28 @@ export default function Events() {
       />
 
       <main className="app-page-main">
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-6 px-1">
+        <div
+          className="events-filter-bar flex flex-wrap items-center justify-center gap-3 mb-6 px-3 py-3 rounded-2xl border border-border/80 shadow-sm"
+          style={{ background: `linear-gradient(135deg, ${brand}0c 0%, transparent 65%)` }}
+        >
           <FilterDropdown
             value={view}
             onChange={setView}
             ariaLabel={t("events.viewModeLabel")}
             options={[
+              { value: "fullYear", label: t("events.viewFullYear") },
               { value: "upcoming", label: t("events.viewUpcoming") },
-              { value: "year", label: t("events.viewByYear") },
+              { value: "year", label: t("events.viewPreviousYears") },
+            ]}
+          />
+          <FilterDropdown
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            ariaLabel={t("events.categoryFilterLabel")}
+            options={[
+              { value: "all", label: t("events.filterShowAll") },
+              { value: "club", label: t("events.filterClubMeets") },
+              { value: "major", label: t("events.filterMajorEvents") },
             ]}
           />
           {tracks.length > 1 && (
@@ -198,12 +271,12 @@ export default function Events() {
               ]}
             />
           )}
-          {view === "year" && (
+          {view === "year" && previousYearOptions.length > 0 && (
             <FilterDropdown
-              value={activeYear}
+              value={activePreviousYear}
               onChange={(y) => setSelectedYear(Number(y))}
               ariaLabel={t("calendarUi.filterYear")}
-              options={yearOptions.map((y) => ({ value: y, label: String(y) }))}
+              options={previousYearOptions.map((y) => ({ value: y, label: String(y) }))}
             />
           )}
         </div>
@@ -212,38 +285,27 @@ export default function Events() {
 
         {!loading && displayedEvents.length === 0 && (
           <p className="text-text-muted text-center">
-            {view === "upcoming"
-              ? t("events.noUpcoming")
-              : t("calendarUi.noEventsYear", { year: activeYear })}
+            {view === "upcoming" && t("events.noUpcoming")}
+            {view === "fullYear" && t("calendarUi.noEventsYear", { year: currentYear })}
+            {view === "year" &&
+              (previousYearOptions.length === 0
+                ? t("calendarUi.noEventsYear", { year: currentYear - 1 })
+                : t("calendarUi.noEventsYear", { year: activePreviousYear }))}
           </p>
         )}
 
-        {!loading && view === "year" && displayedEvents.length > 0 && (
+        {!loading && displayedEvents.length > 0 && (
           <EventsYearList
-            year={activeYear}
+            year={listYear}
             events={displayedEvents}
             clubSlug={clubSlug}
             trackNames={trackNames}
             eventsWithResults={eventsWithResults}
             nominatedEventIds={nominatedEventIds}
+            householdResultEventIds={householdResultEventIds}
+            nominationSummaries={nominationSummaries}
             eventsWithNominations={eventsWithNominations}
           />
-        )}
-
-        {!loading && view === "upcoming" && displayedEvents.length > 0 && (
-          <section className="space-y-2 max-w-3xl mx-auto w-full">
-            {displayedEvents.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                clubSlug={clubSlug}
-                trackNames={trackNames}
-                showResults={eventsWithResults.has(event.id)}
-                hasNomination={nominatedEventIds.has(event.id)}
-                hasReceivedNominations={eventsWithNominations.has(event.id)}
-              />
-            ))}
-          </section>
         )}
       </main>
     </>

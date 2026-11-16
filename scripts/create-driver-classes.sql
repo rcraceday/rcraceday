@@ -8,6 +8,7 @@ create table if not exists public.driver_classes (
   class_id uuid not null references public.club_classes (id) on delete cascade,
   track_id uuid references public.club_tracks (id) on delete set null,
   transponder_number text not null default '',
+  chassis_manufacturer text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint driver_classes_driver_class_unique unique (driver_id, class_id)

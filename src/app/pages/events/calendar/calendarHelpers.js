@@ -1,13 +1,6 @@
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
 
-export const EVENT_TYPE_COLORS = {
-  racing: "#00438A",
-  practice: "#008A2E",
-  club_meet: "#8A0043",
-  championship_round: "#7B3F00",
-  state_titles: "#9C27B0",
-  national_titles: "#B71C1C",
-};
+export { EVENT_TYPE_COLORS } from "./eventTypeChipStyles";
 
 export function parseCalendarLocalDate(value) {
   if (value == null || value === "") return null;
@@ -19,12 +12,13 @@ export function parseCalendarLocalDate(value) {
   return d && !Number.isNaN(d.getTime()) ? d : null;
 }
 
-/** All calendar dates for an event that fall in the given year. */
-export function calendarDatesForEvent(event, year) {
+function collectEventCalendarDates(event, yearFilter) {
   const dates = [];
   const push = (raw) => {
     const d = parseCalendarLocalDate(raw);
-    if (d && d.getFullYear() === year) dates.push(d);
+    if (!d) return;
+    if (yearFilter != null && d.getFullYear() !== yearFilter) return;
+    dates.push(d);
   };
 
   if (event.is_multi_day && Array.isArray(event.days)) {
@@ -44,6 +38,32 @@ export function calendarDatesForEvent(event, year) {
       return true;
     })
     .sort((a, b) => a - b);
+}
+
+/** All calendar dates for an event that fall in the given year. */
+export function calendarDatesForEvent(event, year) {
+  return collectEventCalendarDates(event, year);
+}
+
+/** All calendar dates for an event (every year). */
+export function allCalendarDatesForEvent(event) {
+  return collectEventCalendarDates(event, null);
+}
+
+/** Sorted year/month buckets that contain at least one event date. */
+export function yearMonthSections(events) {
+  const keys = new Set();
+  (events || []).forEach((event) => {
+    allCalendarDatesForEvent(event).forEach((d) => {
+      keys.add(`${d.getFullYear()}-${d.getMonth()}`);
+    });
+  });
+  return [...keys]
+    .map((key) => {
+      const [y, m] = key.split("-").map(Number);
+      return { year: y, monthIndex: m };
+    })
+    .sort((a, b) => a.year - b.year || a.monthIndex - b.monthIndex);
 }
 
 export function eventTouchesYear(event, year) {

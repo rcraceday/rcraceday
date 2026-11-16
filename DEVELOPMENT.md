@@ -77,9 +77,38 @@ In Supabase **Authentication → URL configuration**:
 - `supabase functions deploy process-nominations-open --no-verify-jwt`
 - `supabase functions deploy send-web-push`
 - `supabase functions deploy import-liverc-results` (requires a logged-in user; JWT is sent by the app). After changing the function, redeploy — v1 returned full HTML and can trigger **Failed to fetch** in the browser; current versions return parsed JSON only.
-- `supabase functions deploy send-recovery-email --no-verify-jwt` — contact form, forgot-email, and confirmation-help mail. Set Supabase Edge secrets `RESEND_API_KEY` and optionally `SUPPORT_MAIL_FROM` (e.g. `RCRaceday <noreply@rcraceday.com>`). Verify the from-domain is allowed in Resend.
+- `supabase functions deploy send-recovery-email --no-verify-jwt` — contact form, forgot-email, and confirmation-help mail. Set Supabase Edge secrets:
+  - **SMTP** (on Edge, ports **25 and 587 are blocked** — use **465** or your provider’s alternate port such as **2525** / **2587**): `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, optional `SMTP_PORT` (default `465`), `SMTP_SECURE`
+  - **Resend (HTTPS)** fallback: `RESEND_API_KEY` (already used when `EMAIL_TRANSPORT=auto` and SMTP port is 587, or when SMTP send fails)
+  - `EMAIL_TRANSPORT` — `auto` (default), `smtp`, or `resend`
+  - `SUPPORT_MAIL_FROM` (must be allowed by your mail provider)
+
+### Resend (recommended on Supabase Edge)
+
+Supabase blocks outbound SMTP on ports **25** and **587**, so **Resend over HTTPS** is the simplest path for contact / forgot-email / confirmation-help mail.
+
+1. **Resend account** — sign up at [resend.com](https://resend.com).
+2. **Add domain** — Resend → **Domains** → add `rcraceday.com` (or your sending domain). Publish the **DNS records** (SPF, DKIM, optional DMARC) at your DNS host until Resend shows **Verified**.
+3. **API key** — Resend → **API Keys** → create a key with **Sending** access (no need to store it in the frontend; Edge secrets only).
+4. **Supabase secrets** (project `mvcttnmclrvaatdgzhpb` or your linked project):
+
+   ```bash
+   supabase secrets set RESEND_API_KEY=re_xxxxxxxx
+   supabase secrets set SUPPORT_MAIL_FROM="RCRaceday <noreply@rcraceday.com>"
+   supabase secrets set EMAIL_TRANSPORT=resend
+   supabase functions deploy send-recovery-email --no-verify-jwt
+   ```
+
+   - **`SUPPORT_MAIL_FROM`** must use an address on the **verified** domain (e.g. `noreply@rcraceday.com`, `info@rcraceday.com`). The app still **delivers to** `info@rcraceday.com` (`supportEmail` in the function body); Resend only restricts who you send **from**.
+   - Use `EMAIL_TRANSPORT=auto` if you also use SMTP on port **465** later; use `resend` to always send via Resend.
+5. **Test** — submit `/contact` locally or on production; in DevTools → Network, `send-recovery-email` should return **200** with `"success": true`. Check **Resend → Emails** and the `info@rcraceday.com` inbox.
+6. **Common 503 errors** — unverified domain, wrong `SUPPORT_MAIL_FROM`, or invalid/expired API key (Resend response text appears in the contact form error when the API returns JSON).
+
+Inbound mail to `info@rcraceday.com` stays on your normal mailbox (Microsoft, Google, etc.); Resend is only for **outbound** support notifications from the app.
 
 If the admin UI shows **Failed to send a request to the Edge Function**, confirm `VITE_SUPABASE_URL` matches the project where functions were deployed, check the browser Network tab for `/functions/v1/<function-name>`, and redeploy. For `process-nominations-open`, use `--no-verify-jwt` (auth is enforced inside the function). For **LiveRC import**, deploy `import-liverc-results` — the UI cannot fetch LiveRC directly from the browser.
+
+Public support mail (`send-recovery-email`) is called via **raw `fetch`** (not `supabase.functions.invoke`) because the shared Supabase client sets a global `Prefer: count=exact` header that can break Edge Function CORS preflight.
 
 ▶️ Running the App Locally
 Start the Vite dev server:

@@ -93,7 +93,7 @@ export default function TransponderCombobox({
   return (
     <div
       ref={dropdownRef}
-      className={`filter-dropdown w-[6.75rem] sm:w-[7.25rem] shrink-0 max-w-[42%] ${open ? "is-open" : ""}`}
+      className={`filter-dropdown min-w-0 w-full sm:w-[7.25rem] sm:shrink-0 sm:max-w-[42%] ${open ? "is-open" : ""}`}
       style={{ "--dropdown-primary": primary }}
     >
       <div

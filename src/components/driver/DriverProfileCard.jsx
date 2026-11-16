@@ -6,8 +6,8 @@ import useTheme from "@/app/providers/useTheme";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 
-import { MANUFACTURERS } from "@/data/manufacturers";
 import { COUNTRIES } from "@/data/countries";
+import DriverClassAssignmentsSection from "./DriverProfileCard/sections/DriverClassAssignmentsSection";
 
 import AvatarSection from "./DriverProfileCard/sections/AvatarSection";
 import IdentitySection from "./DriverProfileCard/sections/IdentitySection";
@@ -39,7 +39,6 @@ export default function DriverProfileCard({
 
   const brand = palette?.primary || "#0A66C2";
   const country = COUNTRIES.find((c) => c.name === driver.country);
-  const chassis = MANUFACTURERS.find((m) => m.name === driver.manufacturer);
 
   const blockOtherProfile = !isOwnDriver && !canViewExtendedProfile;
   const greyExtendedOnly = isOwnDriver && !canViewExtendedProfile;
@@ -72,10 +71,12 @@ export default function DriverProfileCard({
               <NumberNicknameSection driver={driver} brand={brand} />
               <div className="col-span-6 space-y-4">
                 <IdentitySection driver={driver} />
-                <TeamChassisTrackSection driver={driver} chassis={chassis} />
+                <TeamChassisTrackSection driver={driver} />
                 <SponsorsSection driver={driver} brand={brand} />
               </div>
             </div>
+
+            <DriverClassAssignmentsSection driverId={driver.id} clubId={club.id} />
 
             {/* MOBILE HEADER AREA */}
             <div className="md:hidden">
@@ -83,7 +84,6 @@ export default function DriverProfileCard({
                 driver={driver}
                 country={country}
                 brand={brand}
-                chassis={chassis}
               />
             </div>
 
@@ -94,7 +94,7 @@ export default function DriverProfileCard({
               className={`md:hidden space-y-10 ${greyExtendedOnly ? "opacity-50 pointer-events-none" : ""}`}
             >
               <PersonalDetailsSection driver={driver} />
-              <RacingInformationSection driver={driver} chassis={chassis} />
+              <RacingInformationSection driver={driver} />
               <SicCarProfileSection driver={driver} />
               <DirtCarProfileSection driver={driver} />
               <ExperienceSection driver={driver} />
@@ -113,7 +113,7 @@ export default function DriverProfileCard({
 
               <div className="col-span-6">
                 <SectionWrapper title={t("driverProfile.racingInformation")} brand={brand}>
-                  <RacingInformationSection driver={driver} chassis={chassis} />
+                  <RacingInformationSection driver={driver} />
                 </SectionWrapper>
               </div>
 

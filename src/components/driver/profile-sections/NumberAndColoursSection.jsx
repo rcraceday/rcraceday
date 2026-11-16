@@ -13,6 +13,7 @@ export default function NumberAndColoursSection({
   previewNumber,
   canChooseNumber = true,
   canChangeNumber = true,
+  canUsePermanentNumber = true,
 }) {
   const { t } = useTranslation();
   const { palette } = useTheme();
@@ -23,31 +24,37 @@ export default function NumberAndColoursSection({
       {/* ------------------------------------------------------------
           PERMANENT NUMBER
       ------------------------------------------------------------ */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold">{t("driverProfile.permanentNumber")}</h3>
+      {canUsePermanentNumber ? (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold">{t("driverProfile.permanentNumber")}</h3>
 
-        <div className="flex items-center justify-between flex-wrap gap-3 p-3 border border-gray-300 rounded-lg">
-          <span className="text-3xl font-semibold">
-            {previewNumber || "None"}
-          </span>
+          <div className="flex items-center justify-between flex-wrap gap-3 p-3 border border-gray-300 rounded-lg">
+            <span className="text-3xl font-semibold">
+              {previewNumber || "None"}
+            </span>
 
-          {canChooseNumber &&
-            (canChangeNumber || !previewNumber) && (
-              <button
-                type="button"
-                onClick={() =>
-                  navigate(
-                    `/${club.slug}/app/profile/drivers/${driver.id}/choose-number`
-                  )
-                }
-                className="px-4 py-2 rounded text-white text-sm font-medium"
-                style={{ background: brand }}
-              >
-                {previewNumber ? "Change Number" : "Choose Number"}
-              </button>
-            )}
+            {canChooseNumber &&
+              (canChangeNumber || !previewNumber) && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      `/${club.slug}/app/profile/drivers/${driver.id}/choose-number`
+                    )
+                  }
+                  className="px-4 py-2 rounded text-white text-sm font-medium"
+                  style={{ background: brand }}
+                >
+                  {previewNumber ? "Change Number" : "Choose Number"}
+                </button>
+              )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <p className="text-xs text-text-muted m-0 leading-relaxed">
+          {t("driverProfile.permanentNumberMembersOnly")}
+        </p>
+      )}
 
       <hr className="border-surfaceBorder" />
 
@@ -105,7 +112,7 @@ export default function NumberAndColoursSection({
                   lineHeight: 1,
                 }}
               >
-                {previewNumber}
+                {canUsePermanentNumber ? previewNumber : "—"}
               </span>
             </div>
           </div>

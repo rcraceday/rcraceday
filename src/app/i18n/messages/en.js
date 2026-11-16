@@ -10,14 +10,14 @@ export default {
     home: "Home",
     events: "Events",
     calendar: "Calendar",
-    news: "News",
-    myNoms: "My Noms",
+    news: "Club News",
+    myNoms: "My Nominations",
     messages: "Messages",
     myDrivers: "My Drivers",
     driverManager: "Driver Manager",
     membership: "Membership",
     settings: "Settings",
-    results: "Results",
+    results: "My Results",
     championships: "Championships",
     adminPortal: "Admin Portal",
     switchClub: "Change club",
@@ -75,7 +75,7 @@ export default {
       pageLead3:
         "Each club can also maintain a club-specific driver name for the same driver. This allows you to use a different display name where required, such as matching an existing LiveTime profile, while still keeping a single driver record in your RCRaceday account.",
       pageLead4:
-        "For this club, open Driver Manager from the menu to complete LiveTime details (number, sponsors, colours), classes, and transponder assignments. Nothing on this page changes club-only data.",
+        "Open Driver Manager from the menu to manage drivers, classes, transponders, and LiveTime names for this club.",
     },
     transponders: {
       title: "Transponders",

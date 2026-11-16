@@ -3,17 +3,11 @@ import { useTranslation } from "@/app/i18n/I18nContext";
 
 
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import useTheme from "@/app/providers/useTheme";
 
 import Input from "@/components/ui/Input";
-
-import FilterDropdown from "@/components/ui/FilterDropdown";
-
-import { MANUFACTURERS } from "@/data/manufacturers";
-
-
 
 function SponsorsEditSection({ driver, update }) {
   const { t } = useTranslation();
@@ -23,28 +17,6 @@ function SponsorsEditSection({ driver, update }) {
     (driver.sponsors || []).join(", ")
 
   );
-
-
-
-  const manufacturerOptions = useMemo(
-
-    () => [
-
-      { value: "", label: "Select manufacturer..." },
-
-      ...MANUFACTURERS.map((m) => ({ value: m.name, label: m.name })),
-
-    ],
-
-    []
-
-  );
-
-
-
-  const selected = MANUFACTURERS.find((m) => m.name === driver.manufacturer);
-
-
 
   return (
 
@@ -63,51 +35,6 @@ function SponsorsEditSection({ driver, update }) {
         onChange={(e) => update("team_name", e.target.value)}
 
       />
-
-
-
-      {selected && (
-
-        <div className="flex items-center gap-2 mt-1">
-
-          {selected.logo && (
-
-            <img
-
-              src={selected.logo}
-
-              alt={selected.name}
-
-              className="h-10 w-10 object-contain"
-
-            />
-
-          )}
-
-          <span className="text-sm text-gray-700">{selected.name}</span>
-
-        </div>
-
-      )}
-
-
-
-      <div>
-
-        <label className="block text-sm font-medium text-gray-700 mb-1">{t("driverProfile.manufacturer")}</label>
-
-        <FilterDropdown
-          variant="cms"
-          value={driver.manufacturer || ""}
-          onChange={(value) => update("manufacturer", value)}
-          options={manufacturerOptions}
-          ariaLabel="Manufacturer"
-          triggerStyleOverrides={{ fontSize: "0.875rem" }}
-        />
-
-      </div>
-
-
 
       <Input
 

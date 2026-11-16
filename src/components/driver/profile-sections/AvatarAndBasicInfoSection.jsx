@@ -91,11 +91,13 @@ export default function AvatarAndBasicInfoSection({
 
       <hr className="border-surfaceBorder" />
 
-      {/* ------------------------------------------------------------
-          BASIC INFO
-      ------------------------------------------------------------ */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold">{t("driverProfile.basicInfo")}</h3>
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold">{t("driverProfile.livetimeInfo")}</h3>
+          <p className="text-xs text-text-muted m-0 leading-relaxed">
+            {t("driverProfile.livetimeInfoIntro")}
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input

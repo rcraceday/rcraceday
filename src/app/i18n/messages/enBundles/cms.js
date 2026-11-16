@@ -5,6 +5,11 @@ export default {
     saving: "Saving…",
     saveEvent: "Save Event",
     deleteEvent: "Delete Event",
+    deleteEventConfirm:
+      "Are you sure you want to delete this event? This cannot be undone.",
+    deleteEventFailed: "Failed to delete event.",
+    deleteEventNoPermission:
+      "You may not have permission, or the database needs the events delete policy (scripts/add-events-delete-admin.sql).",
     add: "Add",
     remove: "Remove",
     search: "Search",

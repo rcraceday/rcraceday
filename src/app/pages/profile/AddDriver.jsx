@@ -202,15 +202,6 @@ export default function AddDriver() {
       });
 
       await applyNewDriverProfileDefaults(supabase, guestDriver?.id, club);
-      const numberRules = resolveDriverNumberRules(club);
-      if (numberRules.auto_reconcile_on_create && guestDriver?.id) {
-        await supabase.rpc("reconcile_driver_number", {
-          p_club_id: club.id,
-          p_driver_id: guestDriver.id,
-          p_first_name: trimmedFirst,
-          p_last_name: trimmedLast,
-        });
-      }
 
       await refreshDrivers();
       navigate(`/${clubSlug}/app/profile/drivers`);

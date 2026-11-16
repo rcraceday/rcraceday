@@ -185,6 +185,10 @@ export default {
     noUpcomingEvents: "No upcoming events scheduled.",
     openForNominations: "Open for Nominations",
     quickActions: "Quick Actions",
+    allEvents: "All Events",
+    clubMeets: "Club Meets",
+    majorEvents: "Major Events",
+    myResults: "My Results",
     results: "Results",
     liveRc: "LiveRC",
     myNominations: "My Nominations",
@@ -194,6 +198,12 @@ export default {
     viewModeLabel: "Event list",
     viewUpcoming: "Upcoming",
     viewByYear: "By year",
+    viewFullYear: "Full Year",
+    viewPreviousYears: "Previous Years",
+    categoryFilterLabel: "Meetings",
+    filterShowAll: "Show All",
+    filterClubMeets: "Club Meets",
+    filterMajorEvents: "Major Events",
     yearOverviewLink: "Year overview calendar",
     loading: "Loading events…",
     noUpcoming: "No upcoming events scheduled.",
@@ -281,7 +291,10 @@ export default {
   },
   nominations: {
     myTitle: "My Nominations",
-    viewTitle: "Nominations",
+    viewTitle: "View Nominations",
+    dashboardTitle: "Nominations dashboard",
+    totalNominationsLabel: "Total nominations",
+    totalDriversLabel: "Total drivers",
     none: "You have no nominations yet.",
     driverLabel: "Driver",
     classHeading: "Class",
@@ -311,6 +324,10 @@ export default {
   },
   drivers: {
     managerTitle: "Driver Manager",
+    managerPageHint:
+      "Manage each racer at this club: edit the driver name and profile, then open Manage Classes & Transponders to set classes and transponder numbers for nominations and timing.",
+    singleMembershipMultipleDrivers:
+      "Single and Junior memberships include one driver at this club. To keep one driver on this account, remove extra drivers here, or choose a single driver when you change membership. Anyone else will need their own RCRaceday signup to race.",
     addTitle: "Add Driver",
     editTitle: "Edit Driver Profile",
     chooseNumberTitle: "Choose Race Number",
@@ -321,7 +338,7 @@ export default {
     welcomeIntroPara1:
       "Drivers are used by the club for memberships, race nominations, driver numbering and event management. The driver may be different from the person who owns or manages the account, such as a parent or guardian.",
     welcomeIntroPara2:
-      "All drivers are stored in your RCRaceday account under My Drivers and can be used across participating clubs.",
+      "Drivers you add here are managed in Driver Manager for each club. Account transponders can be reused across clubs.",
     welcomeIntroPara3:
       "This step creates a driver profile at {{club}} for the person who will actually be racing.",
     welcomeLiveTimeTitle: "LiveTime Names",
@@ -329,9 +346,9 @@ export default {
       "To ensure race history, rankings and seeding remain linked correctly, the driver's name must match their LiveTime profile exactly, including spelling, spacing and capitalisation.",
     welcomeLiveTimeVariation:
       "Any variation, no matter how minor, will create a separate driver record in the timing system. Previous results, rankings and seeding will not transfer to the new record.",
-    welcomeRosterTitle: "From My Drivers",
+    welcomeRosterTitle: "Racers on your account",
     welcomeRosterHint:
-      "Choose someone from My Drivers to race at {{club}}. Use Driver Manager to adjust the name for LiveTime at this club if needed.",
+      "Choose who will race at {{club}}. Use Driver Manager later to adjust the club name for LiveTime if needed.",
     welcomeRosterAddSelected: "Add selected to this club",
     setupTitle: "Set up classes at this club",
     setupLead: "Map your classes for {{club}}",
@@ -366,7 +383,7 @@ export default {
     welcomeManualHint:
       "Enter the details of the person who will be racing.",
     welcomeManualSaveHint:
-      "When you save, the driver will be added to My Drivers and a driver profile will be created for this club. Club-specific driver details can be updated later through Driver Manager.",
+      "When you save, a driver profile is created for this club. Update names, classes, and transponders anytime in Driver Manager.",
     welcomeManualPrefillNote:
       "We've pre-filled these fields using your account details. If someone else will be racing, please update the information to match the driver's details before continuing.",
     importSectionTitle: "Bring a driver from another club",
@@ -406,9 +423,9 @@ export default {
     visitorDriverTitle: "Who is racing?",
     visitorDriverHint:
       "Add who is racing at this club — not the name on your RCRaceday login. Use the racer’s legal name if your club exports to timing software (e.g. LiveTime).",
-    driverGateRosterTitle: "From My Drivers",
+    driverGateRosterTitle: "Racers on your account",
     driverGateRosterHint:
-      "These people are on your account under Settings → My Drivers. Add them to this club before you nominate.",
+      "Add them at this club in Driver Manager before you nominate.",
     driverGateRosterAdd: "Add selected & continue",
     driverGateRosterNoneSelected: "Select at least one racer, or add a name below.",
     driverGateOpenWelcome: "Set up drivers (recommended)",
@@ -429,6 +446,7 @@ export default {
     selectDriver: "Select Driver",
     selectDriverAria: "Select driver",
     manageDriversAtClub: "Wrong person or name? Open Driver Manager to add or edit racers.",
+    editDriver: "Edit driver",
     householdNominations: "Household nominations",
     addNomination: "Add nomination",
     addAnotherNomination: "Add another driver",
@@ -463,6 +481,10 @@ export default {
     noClassSelected: "No class selected",
     classPreferenceNth: "{{n}} Class preference",
     transponderAria: "Transponder number",
+    chassisManufacturer: "Chassis manufacturer",
+    chassisManufacturerSelect: "Chassis manufacturer…",
+    noChassisManufacturer: "No manufacturer",
+    chassisManufacturerShort: "Chassis…",
     noImage: "No Image",
     includedInEntry: "Included in Entry",
     compulsoryItem: "Compulsory Item",

@@ -2,11 +2,23 @@ import {
   countEntriesByClass,
   shouldIncludeClassInLiveTime,
 } from "@app/pages/nominations/classMinimumEntries";
+import {
+  buildDriverClassChassisMap,
+  buildDriverClassTransponderMap,
+  chassisFromNominationSnapshot,
+  LIVETIME_CSV_HEADERS,
+} from "@/app/lib/livetimeDriverProfileFields";
 
-export const LIVETIME_HEADERS = ["FirstName", "LastName", "NickName", "PhoneticName", "ClassName", "IsPaid", "PermanentNumber", "PrimaryColor", "SecondaryColor", "Manufacturer", "ChassisManufacturer", "TransponderNumber", "SponsorName", "Gender", "Country", "ClubName", "LocalMembershipType", "LocalMembershipCode", "LocalMembershipExpirationDate"];
+export const LIVETIME_HEADERS = LIVETIME_CSV_HEADERS;
+export { buildDriverClassChassisMap, buildDriverClassTransponderMap };
 
 function csvValue(value) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function membershipRowIsPaying(membership) {
+  const type = membership?.membership_type;
+  return Boolean(type && type !== "non_member");
 }
 
 function isPracticeLiveTimeEntry(nomination, entry) {
@@ -17,6 +29,24 @@ function isPracticeLiveTimeEntry(nomination, entry) {
   return Array.isArray(practiceIds) && practiceIds.includes(entry.class_id);
 }
 
+function transponderForClassEntry(driver, classId, driverClassTransponders) {
+  if (!driver?.id || !classId) {
+    return driver?.transponder_number || "";
+  }
+  const fromClass = driverClassTransponders?.get(`${driver.id}:${classId}`);
+  const trimmed = String(fromClass ?? "").trim();
+  if (trimmed) return trimmed;
+  return driver.transponder_number || "";
+}
+
+function chassisForClassEntry(driver, classId, nomination, driverClassChassis) {
+  const fromSnapshot = chassisFromNominationSnapshot(nomination, classId);
+  if (fromSnapshot) return fromSnapshot;
+  if (!driver?.id || !classId) return "";
+  const fromClass = driverClassChassis?.get(`${driver.id}:${classId}`);
+  return String(fromClass ?? "").trim();
+}
+
 export function buildLiveTimeRows({
   nominations,
   entries,
@@ -25,6 +55,8 @@ export function buildLiveTimeRows({
   memberships,
   clubName,
   event = null,
+  driverClassTransponders = null,
+  driverClassChassis = null,
 }) {
   const driverMap = new Map(drivers.map((driver) => [driver.id, driver]));
   const classMap = new Map(classes.map((item) => [item.id, item.name || item.class_name || ""]));
@@ -52,16 +84,27 @@ export function buildLiveTimeRows({
         rows.push({
           FirstName: driver.first_name,
           LastName: driver.last_name,
-          NickName: "",
-          PhoneticName: driver.phonetic_name,
+          NickName: driver.nickname || "",
+          PhoneticName: "",
           ClassName: classMap.get(entry.class_id),
           IsPaid: nomination.paid === true ? "TRUE" : "FALSE",
-          PermanentNumber: driver.permanent_number,
+          PermanentNumber: membershipRowIsPaying(membership)
+            ? driver.permanent_number
+            : "",
           PrimaryColor: driver.primary_color,
           SecondaryColor: driver.secondary_color,
-          Manufacturer: driver.manufacturer,
-          ChassisManufacturer: "",
-          TransponderNumber: driver.transponder_number || driver.transponders?.[0],
+          Manufacturer: "",
+          ChassisManufacturer: chassisForClassEntry(
+            driver,
+            entry.class_id,
+            nomination,
+            driverClassChassis
+          ),
+          TransponderNumber: transponderForClassEntry(
+            driver,
+            entry.class_id,
+            driverClassTransponders
+          ),
           SponsorName: Array.isArray(driver.sponsors) ? driver.sponsors.join(", ") : driver.sponsors,
           Gender: driver.gender,
           Country: driver.country,

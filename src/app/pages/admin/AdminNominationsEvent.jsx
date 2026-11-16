@@ -14,7 +14,12 @@ import {
   racingEntriesOf,
 } from "@/app/lib/adminNominations";
 import { eventClassMinimumEntries } from "@app/pages/nominations/classMinimumEntries";
-import { buildLiveTimeCsv, buildLiveTimeRows } from "@app/pages/nominations/LiveTimeExport";
+import {
+  buildDriverClassChassisMap,
+  buildDriverClassTransponderMap,
+  buildLiveTimeCsv,
+  buildLiveTimeRows,
+} from "@app/pages/nominations/LiveTimeExport";
 import { liveTimeClubName } from "@/app/lib/driverClubSettings";
 import CMSCard from "@cms/CMSCard";
 import CMSButton from "@cms/CMSButton";
@@ -71,6 +76,7 @@ export default function AdminNominationsEvent() {
   const [clubDrivers, setClubDrivers] = useState([]);
   const [classMap, setClassMap] = useState({});
   const [memberships, setMemberships] = useState([]);
+  const [driverClassRows, setDriverClassRows] = useState([]);
   const [availableClassIds, setAvailableClassIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -105,7 +111,7 @@ export default function AdminNominationsEvent() {
         supabase.from("nominations").select("*").eq("event_id", eventId),
         supabase
           .from("drivers")
-          .select("id, first_name, last_name, membership_id, club_id, permanent_number, is_junior, nickname, primary_color, secondary_color, gender, country, sponsors")
+          .select("*")
           .eq("club_id", club.id)
           .order("last_name", { ascending: true })
           .order("first_name", { ascending: true }),
@@ -153,6 +159,14 @@ export default function AdminNominationsEvent() {
           .in("id", membershipIds)
       : { data: [] };
 
+    const nominatedDriverIds = [...new Set(noms.map((row) => row.driver_id).filter(Boolean))];
+    const { data: driverClassRowsData } = nominatedDriverIds.length
+      ? await supabase
+          .from("driver_classes")
+          .select("driver_id, class_id, transponder_number, chassis_manufacturer")
+          .in("driver_id", nominatedDriverIds)
+      : { data: [] };
+
     setEvent(eventRow);
     setNominations(noms);
     setEntries(entryRows || []);
@@ -160,6 +174,7 @@ export default function AdminNominationsEvent() {
     setClassMap(Object.fromEntries((classRows || []).map((row) => [row.id, row.name])));
     setAvailableClassIds(Array.from(classIds));
     setMemberships(membershipRows || []);
+    setDriverClassRows(driverClassRowsData || []);
     setLoading(false);
   }
 
@@ -429,6 +444,8 @@ export default function AdminNominationsEvent() {
         memberships,
         clubName: liveTimeClubName(club) || club?.name || "",
         event,
+        driverClassTransponders: buildDriverClassTransponderMap(driverClassRows),
+        driverClassChassis: buildDriverClassChassisMap(driverClassRows),
       })
     );
     const link = document.createElement("a");

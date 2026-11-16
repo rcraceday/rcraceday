@@ -240,6 +240,26 @@ export default function DriverSettingsCard({ club }) {
             checked={form.numbers.auto_reconcile_on_create !== false}
             onChange={(checked) => patch("numbers", "auto_reconcile_on_create", checked)}
           />
+          <CMSInput
+            label={t("admin.driverSettings.lapsedReleaseMonths")}
+            value={String(form.numbers.lapsed_release_months ?? 12)}
+            onChange={(value) => {
+              const n = Number(value);
+              patch(
+                "numbers",
+                "lapsed_release_months",
+                Number.isFinite(n) && n >= 0 ? n : 12
+              );
+            }}
+            type="number"
+          />
+          <CMSToggle
+            label={t("admin.driverSettings.autoReleaseLapsedNumbers")}
+            checked={form.numbers.auto_release_lapsed_numbers !== false}
+            onChange={(checked) =>
+              patch("numbers", "auto_release_lapsed_numbers", checked)
+            }
+          />
         </div>
       </CMSCard>
 

@@ -3,6 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useClub } from "@/app/providers/ClubProvider";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import { useDrivers } from "@/app/providers/DriverProvider";
+import { useProfile } from "@/app/providers/ProfileProvider";
+import { buildHouseholdResultNameKeys } from "@/app/lib/results/resultsRowHighlight";
+import { loadHouseholdResultEventIds } from "@/app/lib/results/loadHouseholdResultEventIds";
 import useTheme from "@/app/providers/useTheme";
 
 import { supabase } from "@/supabaseClient";
@@ -15,6 +19,7 @@ import PageTitle from "@/components/ui/PageTitle";
 import { isNominationsOpen } from "@/app/pages/events/events-sections/helpers";
 import EventCard from "@/app/pages/events/EventCard";
 import { loadPublishedResultEventIds } from "@/app/lib/results/loadEventResults";
+import { loadHouseholdNominationSummaries } from "@/app/lib/householdNominationSummaries";
 import { isClubNewsVisible } from "@/app/lib/clubNews";
 
 import { useTranslation } from "@/app/i18n/I18nContext";
@@ -22,7 +27,6 @@ import {
   CalendarDaysIcon,
   CalendarIcon,
   UserPlusIcon,
-  IdentificationIcon,
   TrophyIcon,
   BoltIcon,
   HomeIcon,
@@ -45,6 +49,8 @@ function getEventEndDate(event) {
 export default function Home() {
   const { club } = useClub();
   const { membership, loadingMembership } = useMembership();
+  const { drivers } = useDrivers();
+  const { profile } = useProfile();
   const { palette } = useTheme();
   const { t } = useTranslation();
 
@@ -57,9 +63,17 @@ export default function Home() {
   const [trackNames, setTrackNames] = useState({});
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [nominatedEventIds, setNominatedEventIds] = useState(() => new Set());
+  const [nominationSummaries, setNominationSummaries] = useState(() => new Map());
   const [eventsWithNominations, setEventsWithNominations] = useState(() => new Set());
   const [eventsWithResults, setEventsWithResults] = useState(() => new Set());
+  const [householdResultEventIds, setHouseholdResultEventIds] = useState(() => new Set());
   const [newsItems, setNewsItems] = useState([]);
+
+  const householdResultMatch = useMemo(() => {
+    const driverIds = new Set((drivers || []).map((d) => d.id).filter(Boolean));
+    const driverNameKeys = buildHouseholdResultNameKeys(drivers, { membership, profile });
+    return { driverIds, driverNameKeys };
+  }, [drivers, membership, profile]);
 
   useEffect(() => {
     if (!club?.id) return;
@@ -143,24 +157,50 @@ export default function Home() {
   }, [club?.id]);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadHouseholdNominations() {
+      const eventIds = events.map((event) => event.id).filter(Boolean);
       if (!membership?.id) {
         setNominatedEventIds(new Set());
+        setNominationSummaries(new Map());
         return;
       }
 
-      const { data } = await supabase
-        .from("nominations")
-        .select("event_id")
-        .eq("group_id", membership.id);
+      const { nominatedEventIds: ids, summariesByEventId } =
+        await loadHouseholdNominationSummaries(membership.id, eventIds);
 
-      setNominatedEventIds(
-        new Set((data || []).map((row) => row.event_id).filter(Boolean))
-      );
+      if (cancelled) return;
+      setNominatedEventIds(ids);
+      setNominationSummaries(summariesByEventId);
     }
 
     loadHouseholdNominations();
-  }, [membership?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [membership?.id, events]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadHouseholdResults() {
+      const eventIds = events.map((event) => event.id).filter(Boolean);
+      const { driverIds, driverNameKeys } = householdResultMatch;
+      if (!eventIds.length || (!driverIds.size && !driverNameKeys.size)) {
+        setHouseholdResultEventIds(new Set());
+        return;
+      }
+
+      const ids = await loadHouseholdResultEventIds(eventIds, driverIds, driverNameKeys);
+      if (!cancelled) setHouseholdResultEventIds(ids);
+    }
+
+    loadHouseholdResults();
+    return () => {
+      cancelled = true;
+    };
+  }, [events, householdResultMatch]);
 
   const { nextEvent, nextEventCard, openNominationEvents } = useMemo(() => {
     const now = new Date();
@@ -192,6 +232,8 @@ export default function Home() {
         trackNames={trackNames}
         showResults={eventsWithResults.has(event.id)}
         hasNomination={nominatedEventIds.has(event.id)}
+        hasHouseholdInResults={householdResultEventIds.has(event.id)}
+        nominationSummary={nominationSummaries.get(event.id) || null}
         hasReceivedNominations={eventsWithNominations.has(event.id)}
       />
     );
@@ -260,7 +302,7 @@ export default function Home() {
           </h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <Link to={`/${clubSlug}/app/events`} className="no-underline">
+            <Link to={`/${clubSlug}/app/events?category=all`} className="no-underline">
               <Button
                 className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
                 style={{
@@ -269,11 +311,11 @@ export default function Home() {
                 }}
               >
                 <CalendarDaysIcon className="h-7 w-7" />
-                <span className="text-sm font-medium">{t("nav.events")}</span>
+                <span className="text-sm font-medium">{t("home.allEvents")}</span>
               </Button>
             </Link>
 
-            <Link to={`/${clubSlug}/app/calendar`} className="no-underline">
+            <Link to={`/${clubSlug}/app/events?category=club`} className="no-underline">
               <Button
                 className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
                 style={{
@@ -282,7 +324,20 @@ export default function Home() {
                 }}
               >
                 <CalendarIcon className="h-7 w-7" />
-                <span className="text-sm font-medium">{t("nav.calendar")}</span>
+                <span className="text-sm font-medium">{t("home.clubMeets")}</span>
+              </Button>
+            </Link>
+
+            <Link to={`/${clubSlug}/app/events?category=major`} className="no-underline">
+              <Button
+                className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
+                style={{
+                  backgroundColor: palette.button,
+                  color: palette.buttonText,
+                }}
+              >
+                <CalendarDaysIcon className="h-7 w-7" />
+                <span className="text-sm font-medium">{t("home.majorEvents")}</span>
               </Button>
             </Link>
 
@@ -308,20 +363,7 @@ export default function Home() {
                 }}
               >
                 <TrophyIcon className="h-7 w-7" />
-                <span className="text-sm font-medium">{t("home.results")}</span>
-              </Button>
-            </Link>
-
-            <Link to={`/${clubSlug}/app/membership`} className="no-underline">
-              <Button
-                className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
-                style={{
-                  backgroundColor: palette.button,
-                  color: palette.buttonText,
-                }}
-              >
-                <IdentificationIcon className="h-7 w-7" />
-                <span className="text-sm font-medium">{t("nav.membership")}</span>
+                <span className="text-sm font-medium">{t("home.myResults")}</span>
               </Button>
             </Link>
 
@@ -334,8 +376,9 @@ export default function Home() {
               <Button
                 className="!rounded-lg !p-4 !w-full flex flex-col items-center justify-center gap-2"
                 style={{
-                  backgroundColor: palette.button,
-                  color: palette.buttonText,
+                  backgroundColor: "#dc2626",
+                  color: "#ffffff",
+                  border: "1px solid #000000",
                 }}
               >
                 <BoltIcon className="h-7 w-7" />

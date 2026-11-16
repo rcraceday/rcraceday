@@ -12,6 +12,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/supabaseClient";
 import { useUserTransponders } from "@/app/providers/UserTranspondersProvider";
 import { persistDriverClassTransponder } from "@/app/lib/userTransponders";
+import ManufacturerSelect from "@/components/ui/ManufacturerSelect";
+import { MANUFACTURERS } from "@/data/manufacturers";
 
 export default function DriverListCard({
   driver,
@@ -181,6 +183,33 @@ export default function DriverListCard({
     );
   };
 
+  const chassisManufacturerOptions = useMemo(
+    () => [
+      { value: "", label: t("nominate.noChassisManufacturer") },
+      ...MANUFACTURERS.map((item) => ({ value: item.name, label: item.name })),
+    ],
+    [t]
+  );
+
+  const handleChassisManufacturerChange = async (driverClassId, value) => {
+    if (!driverClassId) return;
+    const chassis = String(value ?? "").trim();
+    setClassActionError("");
+    const { data, error } = await supabase
+      .from("driver_classes")
+      .update({ chassis_manufacturer: chassis })
+      .eq("id", driverClassId)
+      .select("*, club_classes(name)")
+      .single();
+
+    if (error) {
+      console.error("Error updating chassis manufacturer:", error);
+      setClassActionError(error.message || t("driverUi.errChangeChassis"));
+      return;
+    }
+    setAssignedClasses((prev) => prev.map((dc) => (dc.id === driverClassId ? data : dc)));
+  };
+
   const savedTransponders = useMemo(() => {
     const local = [];
     assignedClasses.forEach((row) => {
@@ -337,9 +366,12 @@ export default function DriverListCard({
                       data.assigned.map((dc) => (
                         <div
                           key={dc.id}
-                          className="flex w-full min-w-0 items-center gap-1.5 sm:gap-2"
+                          className="driver-class-assignment-row driver-class-assignment-row--with-remove"
                         >
-                          <div style={{ "--dropdown-primary": brand }} className="min-w-0 flex-1">
+                          <div
+                            style={{ "--dropdown-primary": brand }}
+                            className="driver-class-assignment-row__class"
+                          >
                             <FilterDropdown
                               variant="cms"
                               compact
@@ -357,19 +389,36 @@ export default function DriverListCard({
                               }))}
                             />
                           </div>
-                          <TransponderCombobox
-                            variant="cms"
-                            menuScroll={false}
-                            onMenuToggle={handleMenuToggle}
-                            value={dc.transponder_number || ""}
-                            suggestions={savedTransponders}
-                            onChange={(value) => handleTransponderChange(dc.id, value)}
-                            ariaLabel={t("driverUi.transponderForClassAria", { name: dc.club_classes?.name || t("nominate.class") })}
-                          />
+                          <div className="driver-class-assignment-row__chassis">
+                            <ManufacturerSelect
+                              variant="cms"
+                              compact
+                              rowSlot
+                              menuScroll
+                              onMenuToggle={handleMenuToggle}
+                              value={dc.chassis_manufacturer || ""}
+                              options={chassisManufacturerOptions}
+                              onChange={(value) => handleChassisManufacturerChange(dc.id, value)}
+                              ariaLabel={t("driverProfile.chassisManufacturer")}
+                            />
+                          </div>
+                          <div className="driver-class-assignment-row__transponder">
+                            <TransponderCombobox
+                              variant="cms"
+                              menuScroll={false}
+                              onMenuToggle={handleMenuToggle}
+                              value={dc.transponder_number || ""}
+                              suggestions={savedTransponders}
+                              onChange={(value) => handleTransponderChange(dc.id, value)}
+                              ariaLabel={t("driverUi.transponderForClassAria", {
+                                name: dc.club_classes?.name || t("nominate.class"),
+                              })}
+                            />
+                          </div>
                           <Button
                             variant="danger"
                             size="sm"
-                            className="!p-0 !w-7 !h-7 !min-w-7 shrink-0"
+                            className="driver-class-assignment-row__remove !p-0 !w-7 !h-7 !min-w-7 shrink-0"
                             aria-label={t("driverUi.removeClassAria")}
                             onClick={() => handleRemoveClass(dc.id)}
                           >

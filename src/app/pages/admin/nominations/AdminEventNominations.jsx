@@ -4,7 +4,12 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTitle from "@/components/ui/PageTitle";
 import useTheme from "@app/providers/useTheme";
-import { buildLiveTimeCsv, buildLiveTimeRows } from "@app/pages/nominations/LiveTimeExport";
+import {
+  buildDriverClassTransponderMap,
+  buildLiveTimeCsv,
+  buildLiveTimeRows,
+  buildDriverClassChassisMap,
+} from "@app/pages/nominations/LiveTimeExport";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { liveTimeClubName } from "@/app/lib/driverClubSettings";
 
@@ -24,6 +29,7 @@ export default function AdminEventNominations() {
   const [drivers, setDrivers] = useState([]);
   const [classes, setClasses] = useState([]);
   const [memberships, setMemberships] = useState([]);
+  const [driverClasses, setDriverClasses] = useState([]);
   const [clubName, setClubName] = useState("");
   const [tab, setTab] = useState("drivers");
   const [sort, setSort] = useState("name");
@@ -53,7 +59,16 @@ export default function AdminEventNominations() {
       const nominationIds = (nominationRows || []).map((item) => item.id);
       const driverIds = (nominationRows || []).map((item) => item.driver_id);
       const { data: entryRows } = nominationIds.length ? await supabase.from("nomination_entries").select("*").in("nomination_id", nominationIds) : { data: [] };
-      const { data: driverRows } = driverIds.length ? await supabase.from("drivers").select("*").in("id", driverIds) : { data: [] };
+      const uniqueDriverIds = [...new Set(driverIds.filter(Boolean))];
+      const { data: driverRows } = uniqueDriverIds.length
+        ? await supabase.from("drivers").select("*").in("id", uniqueDriverIds)
+        : { data: [] };
+      const { data: driverClassRows } = uniqueDriverIds.length
+        ? await supabase
+            .from("driver_classes")
+            .select("driver_id, class_id, transponder_number, chassis_manufacturer")
+            .in("driver_id", uniqueDriverIds)
+        : { data: [] };
       const classIds = (entryRows || []).map((item) => item.class_id);
       const { data: classRows } = classIds.length ? await supabase.from("club_classes").select("id, name").in("id", classIds) : { data: [] };
       const membershipIds = (driverRows || []).map((item) => item.membership_id).filter(Boolean);
@@ -67,6 +82,7 @@ export default function AdminEventNominations() {
       setDrivers(driverRows || []);
       setClasses(classRows || []);
       setMemberships(membershipRows || []);
+      setDriverClasses(driverClassRows || []);
       setClubName(liveTimeClubName(clubRow) || clubRow?.name || "");
       setLoading(false);
     }
@@ -85,6 +101,15 @@ export default function AdminEventNominations() {
     if (driver) groups[name] = [...(groups[name] || []), driver];
     return groups;
   }, {});
+  const driverClassTransponders = useMemo(
+    () => buildDriverClassTransponderMap(driverClasses),
+    [driverClasses]
+  );
+  const driverClassChassis = useMemo(
+    () => buildDriverClassChassisMap(driverClasses),
+    [driverClasses]
+  );
+
   const csv = buildLiveTimeCsv(
     buildLiveTimeRows({
       nominations,
@@ -94,6 +119,8 @@ export default function AdminEventNominations() {
       memberships,
       clubName,
       event,
+      driverClassTransponders,
+      driverClassChassis,
     })
   );
 

@@ -1,5 +1,6 @@
 import { IdentificationIcon } from "@heroicons/react/24/solid";
 import Card from "@/components/ui/Card";
+import ClubMemberBadgeImage from "@/components/ClubMemberBadgeImage";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
 export default function MembershipSummaryCard({
@@ -11,8 +12,6 @@ export default function MembershipSummaryCard({
 }) {
   const { t } = useTranslation();
   if (!membership) return null;
-
-  const clubLogo = club?.member_badge_url || null;
 
   /* ------------------------------------------------------------
      MERGE DRIVERS + MEMBERS (your UI stays the same)
@@ -106,24 +105,22 @@ export default function MembershipSummaryCard({
       }}
     >
       {/* ⭐ FIXED BADGE — NO MORE OVERFLOW */}
-      {clubLogo && (
-        <img
-          src={clubLogo}
-          alt={t("membershipUi.clubLogoAlt", { name: club?.name || "Club" })}
-          className="member-badge"
-          style={{
-            position: "absolute",
-            right: "16px",
-            bottom: "16px",
-            maxWidth: "96px",
-            maxHeight: "96px",
-            height: "auto",
-            objectFit: "contain",
-            opacity: 0.9,
-            pointerEvents: "none",
-          }}
-        />
-      )}
+      <ClubMemberBadgeImage
+        club={club}
+        alt={t("membershipUi.clubLogoAlt", { name: club?.name || "Club" })}
+        className="member-badge"
+        style={{
+          position: "absolute",
+          right: "16px",
+          bottom: "16px",
+          maxWidth: "96px",
+          maxHeight: "96px",
+          height: "auto",
+          objectFit: "contain",
+          opacity: 0.9,
+          pointerEvents: "none",
+        }}
+      />
 
       <h2
         style={{

@@ -50,10 +50,12 @@ export default function ContactRCRaceday() {
 
     if (error) {
       const detail = String(error.message || "").trim();
+      const isApiDetail =
+        detail &&
+        !detail.includes("DevTools") &&
+        !detail.includes("Failed to send a request");
       setErrorMsg(
-        detail && !import.meta.env.PROD
-          ? `${t("contactPage.sendFailed")} (${detail})`
-          : t("contactPage.sendFailed")
+        isApiDetail ? `${t("contactPage.sendFailed")} ${detail}` : t("contactPage.sendFailed")
       );
       return;
     }

@@ -635,9 +635,13 @@ export default {
       requireNumberNominate: "Require permanent number before event nomination",
       membersChangeNumber: "Members can change number after assignment",
       autoReconcile: "Auto-reconcile number on driver create",
+      lapsedReleaseMonths:
+        "Months after membership ends before an unrenewed member's number returns to the pool",
+      autoReleaseLapsedNumbers:
+        "Automatically return numbers to the pool after that grace period",
       poolTitle: "Number pick list",
       poolHint:
-        "This is the same list members see when choosing a number on their driver profile. Add ranges to offer numbers; remove a number from the list to stop offering it. Use Assign to set or change a driver's number when they ask.",
+        "This is the same list members see when choosing a number on their driver profile. Add ranges to offer numbers; remove a number from the list to stop offering it. Unrenewed members keep their number until the grace period in Driver settings elapses (default 12 months). Use Assign to set or change a driver's number when they ask.",
       poolDriverNumbersTitle: "Current driver numbers",
       poolNoDriverNumbers: "No drivers have a permanent number yet.",
       poolPickListTitle: "Numbers offered to members",

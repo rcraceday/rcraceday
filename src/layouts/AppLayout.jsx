@@ -53,7 +53,8 @@ export default function AppLayout() {
       path.startsWith(`${driverOnboardingPrefix}/setup`) ||
       path.startsWith(`${driverOnboardingPrefix}/add`) ||
       path === `/${slug}/app/settings/account` ||
-      path === `/${slug}/app/settings/my-drivers`;
+      path === `/${slug}/app/settings/my-drivers` ||
+      path === `/${slug}/app/profile/drivers`;
 
     if (allowWithoutDrivers) {
       driverWelcomeRedirectRef.current = "";

@@ -475,45 +475,74 @@ const normalizedDays = Array.isArray(data.days)
     });
   };
 
+  const formatDeleteError = (error) => {
+    const message = String(error?.message || "").trim();
+    const code = String(error?.code || "").trim();
+    if (!message) return t("cms.deleteEventFailed");
+    if (code === "42501") {
+      return `${t("cms.deleteEventFailed")} ${t("cms.deleteEventNoPermission")}`;
+    }
+    return `${t("cms.deleteEventFailed")} ${message}`;
+  };
+
   // DELETE HANDLER
   const handleDelete = async () => {
     if (isNew) return;
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this event? This cannot be undone."
-    );
+    const confirmed = window.confirm(t("cms.deleteEventConfirm"));
     if (!confirmed) return;
 
     setSaving(true);
     setError(null);
 
-    try {
-      const childDeletes = [
-        supabase.from("event_classes").delete().eq("event_id", id),
-        supabase.from("nomination_classes").delete().eq("event_id", id),
-      ];
+    const clubId = eventData?.club_id;
 
-      for (const p of childDeletes) {
-        const { error } = await p;
-        if (error) {
-          setError("Failed to delete related records.");
-          setSaving(false);
-          return;
-        }
+    try {
+      const { error: nominationsError } = await supabase
+        .from("nominations")
+        .delete()
+        .eq("event_id", id);
+
+      if (nominationsError) {
+        setError(formatDeleteError(nominationsError));
+        setSaving(false);
+        return;
       }
 
-      const { error } = await supabase.from("events").delete().eq("id", id);
+      const { error: resultsError } = await supabase
+        .from("event_results")
+        .delete()
+        .eq("event_id", id);
 
-      if (error) {
-        setError("Failed to delete event.");
+      if (resultsError) {
+        setError(formatDeleteError(resultsError));
+        setSaving(false);
+        return;
+      }
+
+      let eventDelete = supabase.from("events").delete().eq("id", id);
+      if (clubId) {
+        eventDelete = eventDelete.eq("club_id", clubId);
+      }
+
+      const { data: deletedRows, error: eventError } = await eventDelete.select("id");
+
+      if (eventError) {
+        setError(formatDeleteError(eventError));
+        setSaving(false);
+        return;
+      }
+
+      if (!Array.isArray(deletedRows) || deletedRows.length === 0) {
+        setError(formatDeleteError({ message: t("cms.deleteEventNoPermission"), code: "42501" }));
         setSaving(false);
         return;
       }
 
       setSaving(false);
       navigate(`/${clubSlug}/app/admin/events`);
-    } catch {
-      setError("Failed to delete event.");
+    } catch (err) {
+      setError(formatDeleteError(err));
       setSaving(false);
     }
   };

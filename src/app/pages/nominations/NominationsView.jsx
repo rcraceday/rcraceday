@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ClipboardDocumentListIcon } from "@heroicons/react/24/solid";
+import { useParams } from "react-router-dom";
+import { ChevronDownIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
-import Card from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
+import FilterDropdown from "@/components/ui/FilterDropdown";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import useTheme from "@app/providers/useTheme";
@@ -13,6 +12,12 @@ import {
   eventClassMinimumEntries,
 } from "@app/pages/nominations/classMinimumEntries";
 import { richTextToPlainText } from "@/app/lib/richText";
+import NominationDriverExportMeta, {
+  DriverCountryFlag,
+  DriverPermanentNumber,
+} from "@/app/pages/nominations/components/NominationDriverExportMeta";
+import { chassisForDriverClass } from "@/app/pages/nominations/nominationChassis";
+import BackNavButton from "@/components/ui/BackNavButton";
 
 function driverName(driver) {
   return [driver?.first_name, driver?.last_name].filter(Boolean).join(" ").trim();
@@ -53,36 +58,37 @@ function collectEventClassIds(event, trackClassIds) {
   return ids;
 }
 
-function ClassCountDisplay({ count, max, minimum, contentText, size = "md" }) {
+function ClassCountDisplay({ count, max, minimum, size = "md" }) {
   const belowMin =
     minimum != null && !classMeetsMinimumEntryCount(count, minimum);
-  const countClass = size === "sm" ? "text-base font-semibold leading-tight" : "text-lg font-semibold leading-tight";
+  const countClass =
+    size === "sm" ? "text-sm font-semibold tabular-nums" : "text-base font-semibold tabular-nums";
 
   if (belowMin) {
     return (
-      <div>
-        <p className={countClass} style={{ color: "#dc2626" }}>{count}</p>
-        <p className="text-[11px] font-medium mt-0.5" style={{ color: "#dc2626" }}>
-          Min entries {minimum}
-        </p>
-      </div>
+      <p
+        className={`flex flex-wrap items-baseline justify-center gap-x-1.5 leading-snug text-red-600 ${countClass}`}
+      >
+        <span>{count}</span>
+        <span className="font-medium">· Min entries {minimum}</span>
+      </p>
     );
   }
 
   return (
-    <p className={countClass} style={{ color: contentText }}>
+    <p className={`${countClass} leading-snug text-center text-text-base`}>
       {max != null ? `${count} / ${max}` : count}
     </p>
   );
 }
 
-function classNominationTally(group, classMinimum, contentText) {
+function classNominationTally(group, classMinimum) {
   const belowMin =
     classMinimum != null && !classMeetsMinimumEntryCount(group.count, classMinimum);
 
   if (belowMin) {
     return (
-      <p className="text-sm font-medium" style={{ color: "#dc2626" }}>
+      <p className="text-sm font-medium text-red-600">
         {group.count} · Min entries {classMinimum}
       </p>
     );
@@ -90,26 +96,24 @@ function classNominationTally(group, classMinimum, contentText) {
 
   if (group.max != null) {
     return (
-      <p className="text-sm font-medium" style={{ color: contentText }}>
+      <p className="text-sm font-medium text-text-base">
         {group.count} / {group.max} nominations
       </p>
     );
   }
 
   return (
-    <p className="text-sm font-medium" style={{ color: contentText }}>
+    <p className="text-sm font-medium text-text-base">
       {group.count} nomination{group.count === 1 ? "" : "s"}
     </p>
   );
 }
 
 export default function NominationsView() {
-  const { clubSlug, eventId } = useParams();
+  const { eventId } = useParams();
   const { palette } = useTheme();
   const { t } = useTranslation();
   const brand = palette?.primary || "#00438a";
-  const contentText = palette?.text || "#1f2937";
-  const buttonText = palette?.buttonText || "#ffffff";
 
   const [event, setEvent] = useState(null);
   const [nominations, setNominations] = useState([]);
@@ -117,7 +121,10 @@ export default function NominationsView() {
   const [drivers, setDrivers] = useState([]);
   const [classMap, setClassMap] = useState({});
   const [trackClassIds, setTrackClassIds] = useState([]);
+  const [nominationByDriverId, setNominationByDriverId] = useState(() => new Map());
+  const [driverClassChassisMap, setDriverClassChassisMap] = useState(() => new Map());
   const [activeClassId, setActiveClassId] = useState(null);
+  const [dashboardOpen, setDashboardOpen] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -134,7 +141,7 @@ export default function NominationsView() {
 
       const { data: nominationRows } = await supabase
         .from("nominations")
-        .select("id, driver_id")
+        .select("id, driver_id, merchandise")
         .eq("event_id", eventId);
 
       const nominationIds = (nominationRows || []).map((row) => row.id);
@@ -148,7 +155,17 @@ export default function NominationsView() {
         : { data: [] };
 
       const { data: driverRows } = driverIds.length
-        ? await supabase.from("drivers").select("id, first_name, last_name").in("id", driverIds)
+        ? await supabase
+            .from("drivers")
+            .select("id, first_name, last_name, country, permanent_number")
+            .in("id", driverIds)
+        : { data: [] };
+
+      const { data: driverClassRows } = driverIds.length
+        ? await supabase
+            .from("driver_classes")
+            .select("driver_id, class_id, chassis_manufacturer")
+            .in("driver_id", driverIds)
         : { data: [] };
 
       const ids = new Set();
@@ -180,6 +197,17 @@ export default function NominationsView() {
       setDrivers(driverRows || []);
       setClassMap(Object.fromEntries((classRows || []).map((row) => [row.id, row.name])));
       setTrackClassIds(trackIds);
+      setNominationByDriverId(
+        new Map((nominationRows || []).map((row) => [row.driver_id, row]))
+      );
+      setDriverClassChassisMap(
+        new Map(
+          (driverClassRows || []).map((row) => [
+            `${row.driver_id}:${row.class_id}`,
+            row.chassis_manufacturer || "",
+          ])
+        )
+      );
       setLoading(false);
     }
 
@@ -233,9 +261,21 @@ export default function NominationsView() {
 
   const classMinimum = eventClassMinimumEntries(event);
 
+  const totalDrivers = nominations.length;
+  const totalNominations = racingEntries.length;
+
   const activeGroup = useMemo(
     () => classGroups.find((group) => group.classId === activeClassId) || null,
     [classGroups, activeClassId]
+  );
+
+  const classDropdownOptions = useMemo(
+    () =>
+      classGroups.map((group) => ({
+        value: group.classId,
+        label: `${group.name} (${group.count})`,
+      })),
+    [classGroups]
   );
 
   useEffect(() => {
@@ -262,116 +302,151 @@ export default function NominationsView() {
         icon={ClipboardDocumentListIcon}
         title={t("nominations.viewTitle")}
         style={{ color: brand }}
-        actions={
-          <Link to={`/${clubSlug}/app/events/${eventId}`} className="no-underline">
-            <Button variant="primary" size="sm" className="!py-1 !px-3 !text-xs !rounded-sm">
-              Back to event
-            </Button>
-          </Link>
-        }
+        actions={<BackNavButton />}
       />
 
-      <main className="app-page-main gap-5">
-        <h2
-          className="text-center text-lg font-semibold leading-tight px-2"
-          style={{ color: contentText }}
-        >
-          {richTextToPlainText(event?.name).replace(/\s+/g, " ") || "Event"}
-        </h2>
-
-        <Card className="p-3 space-y-3 !text-text-base">
-          <h2 className="font-semibold text-sm" style={{ color: contentText }}>
-            Nominations dashboard
-          </h2>
-          <div
-            className="rounded-md px-2 py-1.5"
-            style={{
-              background: palette?.surfaceAlt || "#f9fafb",
-              border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}`,
-            }}
-          >
-            <p className="text-[10px] uppercase tracking-wide text-text-muted">Total nominations</p>
-            <p className="text-lg font-semibold leading-tight mt-0.5" style={{ color: brand }}>
-              {nominations.length}
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {classGroups.map((group) => (
-              <div
-                key={group.classId}
-                className="rounded-md px-2 py-1.5 min-w-0"
-                style={{
-                  background: palette?.surfaceAlt || "#f9fafb",
-                  border: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}`,
-                }}
-              >
-                <p className="text-[10px] uppercase tracking-wide text-text-muted truncate">
-                  {group.name}
-                </p>
-                <div className="mt-0.5">
-                  <ClassCountDisplay
-                    count={group.count}
-                    max={group.max}
-                    minimum={classMinimum}
-                    contentText={contentText}
-                  />
+      <main className="app-page-main gap-5 max-w-3xl mx-auto w-full">
+        {classGroups.length === 0 ? (
+          <article className="event-list-card p-4">
+            <p className="text-sm text-text-muted m-0">No classes are configured for this event.</p>
+          </article>
+        ) : (
+          <article className="event-list-card text-text-base !overflow-visible">
+            <div
+              className="event-list-card-header px-3 py-2.5 flex items-start justify-between gap-2 border-b border-border/60"
+              style={{
+                background: `linear-gradient(135deg, ${brand}12 0%, transparent 70%)`,
+              }}
+            >
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base sm:text-lg font-bold leading-tight m-0 text-text-base">
+                  {richTextToPlainText(event?.name).replace(/\s+/g, " ") || "Event"}
+                </h2>
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mt-1.5 text-sm text-text-muted">
+                  <span>
+                    <span
+                      className="text-base font-bold tabular-nums"
+                      style={{ color: brand }}
+                    >
+                      {totalNominations}
+                    </span>{" "}
+                    {t("nominations.totalNominationsLabel")}
+                  </span>
+                  <span>
+                    <span
+                      className="text-base font-bold tabular-nums"
+                      style={{ color: brand }}
+                    >
+                      {totalDrivers}
+                    </span>{" "}
+                    {t("nominations.totalDriversLabel")}
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
-        </Card>
-
-        {classGroups.length === 0 ? (
-          <Card className="p-4">
-            <p className="text-sm text-text-muted">No classes are configured for this event.</p>
-          </Card>
-        ) : (
-          <Card className="p-3 !text-text-base">
-            <div
-              className="flex flex-wrap gap-1.5 pb-2 mb-3"
-              role="tablist"
-              aria-label="Classes"
-              style={{ borderBottom: `1px solid ${palette?.surfaceBorder || "#e5e7eb"}` }}
-            >
-              {classGroups.map((group) => {
-                const selected = activeClassId === group.classId;
-                return (
-                  <button
-                    key={group.classId}
-                    type="button"
-                    role="tab"
-                    aria-selected={selected}
-                    className="rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors text-center leading-tight"
-                    style={{
-                      backgroundColor: selected ? brand : palette?.surfaceAlt || "#f9fafb",
-                      color: selected ? buttonText : brand,
-                      border: `1px solid ${brand}`,
-                    }}
-                    onClick={() => setActiveClassId(group.classId)}
-                  >
-                    {group.name}
-                  </button>
-                );
-              })}
+              <button
+                type="button"
+                className="shrink-0 p-1.5 rounded-lg border border-transparent text-text-muted hover:bg-white/60 hover:border-border/50 transition-colors"
+                aria-expanded={dashboardOpen}
+                aria-label={t("nominations.dashboardTitle")}
+                title={t("nominations.dashboardTitle")}
+                onClick={() => setDashboardOpen((open) => !open)}
+              >
+                <ChevronDownIcon
+                  className={`h-5 w-5 transition-transform ${dashboardOpen ? "rotate-180" : ""}`}
+                  style={{ color: brand }}
+                  aria-hidden
+                />
+              </button>
             </div>
 
-            {activeGroup && (
-              <div role="tabpanel" className="space-y-3">
-                <div className="space-y-1">
-                  {activeGroup.drivers.length === 0 ? (
-                    <p className="text-sm text-text-muted">No drivers nominated in this class.</p>
-                  ) : (
-                    activeGroup.drivers.map((driver) => (
-                      <p key={driver.id} className="text-sm" style={{ color: contentText }}>
-                        {driverName(driver) || "Unnamed driver"}
-                      </p>
-                    ))
-                  )}
+            <div className="p-3 sm:p-4 space-y-3 bg-gradient-to-b from-surface-alt/15 to-transparent">
+              {dashboardOpen ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {classGroups.map((group) => (
+                    <div
+                      key={group.classId}
+                      className="rounded-lg border border-border/80 bg-white px-2 py-1.5 min-w-0 text-center shadow-sm"
+                    >
+                      <p className="text-xs text-text-muted leading-snug line-clamp-2 m-0">{group.name}</p>
+                      <div className="mt-0.5">
+                        <ClassCountDisplay
+                          count={group.count}
+                          max={group.max}
+                          minimum={classMinimum}
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {classNominationTally(activeGroup, classMinimum, contentText)}
-              </div>
-            )}
-          </Card>
+              ) : null}
+
+              <hr className="border-0 border-t border-border/60 m-0" />
+
+              <h3 className="text-sm font-bold text-center text-text-base m-0 uppercase tracking-wide">
+                {t("eventCard.viewNominations")}
+              </h3>
+
+              <FilterDropdown
+                value={activeClassId ?? ""}
+                onChange={setActiveClassId}
+                ariaLabel="Class"
+                options={classDropdownOptions}
+                compact
+                menuInline
+                variant="cms"
+              />
+
+              {activeGroup && (
+                <section aria-labelledby="nominations-class-drivers-heading">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h4
+                      id="nominations-class-drivers-heading"
+                      className="text-sm font-semibold text-text-muted m-0"
+                    >
+                      {activeGroup.name}
+                    </h4>
+                    <div className="text-right">{classNominationTally(activeGroup, classMinimum)}</div>
+                  </div>
+
+                  {activeGroup.drivers.length === 0 ? (
+                    <p className="text-sm text-text-muted m-0">No drivers nominated in this class.</p>
+                  ) : (
+                    <ul className="m-0 list-none p-0 flex flex-col gap-1">
+                      {activeGroup.drivers.map((driver) => {
+                        const nomination = nominationByDriverId.get(driver.id);
+                        const chassis = chassisForDriverClass(
+                          nomination,
+                          driver.id,
+                          activeGroup.classId,
+                          driverClassChassisMap
+                        );
+                        return (
+                          <li
+                            key={driver.id}
+                            className="rounded-lg border border-border/70 bg-white px-2.5 py-1.5 shadow-sm flex items-center flex-nowrap gap-x-2 min-h-0"
+                          >
+                            <DriverCountryFlag driver={driver} />
+                            <DriverPermanentNumber driver={driver} accentColor={brand} />
+                            <span className="flex-1 min-w-0 text-sm font-semibold text-text-base leading-tight truncate pr-1">
+                              {driverName(driver) || "Unnamed driver"}
+                            </span>
+                            <NominationDriverExportMeta
+                              driver={driver}
+                              chassisName={chassis}
+                              row
+                              hideCountry
+                              hideNumber
+                            />
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+              )}
+            </div>
+          </article>
         )}
       </main>
     </div>

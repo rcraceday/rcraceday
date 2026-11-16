@@ -1,5 +1,10 @@
 import { normalizeEventDefaults } from "@/app/pages/admin/events/eventDefaults";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
+import {
+  isEventPast,
+  parseCalendarLocalDate,
+  startOfLocalDay,
+} from "@/app/pages/events/calendar/calendarHelpers";
 
 export const TYPE_LABELS = {
   racing: "Racing",
@@ -10,8 +15,36 @@ export const TYPE_LABELS = {
   national_titles: "National Titles",
 };
 
+const MAJOR_EVENT_TYPES = new Set(["state_titles", "national_titles"]);
+
+export function isMajorEventType(event) {
+  const type = (event?.event_type || "").toLowerCase();
+  return MAJOR_EVENT_TYPES.has(type);
+}
+
+/** `all` | `club` (club-run meets, incl. championship rounds) | `major` (state + national titles). */
+export function matchesEventsCategoryFilter(event, categoryFilter) {
+  if (!categoryFilter || categoryFilter === "all") return true;
+  if (categoryFilter === "major") return isMajorEventType(event);
+  if (categoryFilter === "club") return !isMajorEventType(event);
+  return true;
+}
+
 function parseEventDate(value) {
   return parseStoredTimestamp(value);
+}
+
+/** Event day has ended (for Completed badge); tolerant of date-only vs timestamptz. */
+export function isEventCompleted(event, now = new Date()) {
+  if (!event) return false;
+  if (isEventPast(event, now)) return true;
+  const raw = event.event_date;
+  if (raw == null || raw === "") return false;
+  const dateOnly = String(raw).trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) return false;
+  const end = parseCalendarLocalDate(dateOnly);
+  if (!end) return false;
+  return startOfLocalDay(end) < startOfLocalDay(now);
 }
 
 /** True when drivers may nominate (standard window or late-entry window). */

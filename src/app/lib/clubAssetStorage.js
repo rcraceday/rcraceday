@@ -46,6 +46,65 @@ export function getClubAssetPublicUrl(supabase, path) {
   return data?.publicUrl ?? null;
 }
 
+/** Resolve a stored path or public URL to the current Supabase public URL (drops stale query params). */
+export function normalizeClubAssetUrl(supabase, urlOrPath) {
+  if (!urlOrPath || typeof urlOrPath !== "string") return null;
+  const trimmed = urlOrPath.trim();
+  if (!trimmed) return null;
+
+  const objectPath = getClubAssetPathFromUrl(trimmed) || (!trimmed.startsWith("http") ? trimmed.split("?")[0] : null);
+  if (objectPath) {
+    return getClubAssetPublicUrl(supabase, objectPath) || trimmed.split("?")[0];
+  }
+
+  return trimmed.split("?")[0];
+}
+
+function legacyMemberBadgeFileName(clubSlug) {
+  if (!clubSlug) return null;
+  const base = String(clubSlug)
+    .replace(/-rc$/i, "")
+    .replace(/-club$/i, "");
+  return `${base}-member-badge-01.png`;
+}
+
+/** Ordered public URLs to try when showing the membership page badge (DB value, then known storage layouts). */
+export function memberBadgeImageCandidates(supabase, club) {
+  const slug = club?.slug;
+  if (!slug) return [];
+
+  const seen = new Set();
+  const candidates = [];
+
+  const push = (value) => {
+    const url = normalizeClubAssetUrl(supabase, value);
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    candidates.push(url);
+  };
+
+  push(club?.member_badge_url);
+
+  const root = clubStorageFolder(slug);
+  for (const name of [
+    "member-badge.png",
+    "member-badge.jpg",
+    "member-badge.webp",
+    "member-badge-01.png",
+  ]) {
+    push(getClubAssetPublicUrl(supabase, `${root}/member-badges/${name}`));
+  }
+
+  const legacyName = legacyMemberBadgeFileName(slug);
+  if (legacyName) {
+    push(getClubAssetPublicUrl(supabase, clubMemberBadgePath(slug, legacyName)));
+  }
+
+  push(club?.logo_url);
+
+  return candidates;
+}
+
 export async function removeClubAssetPath(supabase, urlOrPath) {
   const path = getClubAssetPathFromUrl(urlOrPath);
   if (!path) return { error: null };

@@ -24,6 +24,7 @@ import {
 } from "@/app/lib/driverClubSettings";
 import {
   canAccessExtendedDriverProfile,
+  canUseClubPermanentNumber,
   isPayingClubMember,
 } from "@/app/lib/membershipClubLimits";
 
@@ -256,6 +257,10 @@ export default function EditProfile() {
 
       const updatePayload = buildDriverUpdatePayload(driver);
 
+      if (!canUseClubPermanentNumber(membership)) {
+        delete updatePayload.permanent_number;
+      }
+
       const juniorRules = resolveDriverJuniorRules(club);
       if (juniorRules.mode === "auto_by_birth_year" && updatePayload.year_of_birth != null) {
         const suggested = suggestJuniorFromBirthYear(
@@ -398,7 +403,9 @@ export default function EditProfile() {
   const numberRules = resolveDriverNumberRules(club);
   const livetimeRules = resolveLiveTimeDriverRules(club);
   const canDeleteDriver = householdRules.allow_member_delete_drivers !== false;
-  const canChooseNumber = numberRules.members_can_choose !== false;
+  const canUsePermanentNumber = canUseClubPermanentNumber(membership);
+  const canChooseNumber =
+    canUsePermanentNumber && numberRules.members_can_choose !== false;
   const canChangeNumber = numberRules.members_can_change_after_assign !== false;
   const livetimeNoticeBody =
     (namingRules.name_change_notice_body || "").trim() ||
@@ -435,11 +442,11 @@ export default function EditProfile() {
           deleteDriver={deleteDriver}
           showLivetimeNameNotice={showLivetimeNameNotice}
           livetimeNoticeBody={livetimeNoticeBody}
-          showLivetimeHints={livetimeRules.show_profile_field_hints !== false}
           lockNameFields={lockNameFields}
           canDeleteDriver={canDeleteDriver}
           canChooseNumber={canChooseNumber}
           canChangeNumber={canChangeNumber}
+          canUsePermanentNumber={canUsePermanentNumber}
         />
       </main>
 

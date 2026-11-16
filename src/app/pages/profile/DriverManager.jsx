@@ -19,6 +19,7 @@ import { UserPlusIcon, TrashIcon } from "@heroicons/react/24/solid";
 import {
   canShowAddDriverButton,
   countHouseholdSlots,
+  normalizeMembershipProductType,
 } from "@/app/pages/profile/householdDriverLimits";
 import { resolveHouseholdLimits } from "@/app/lib/membershipClubLimits";
 import {
@@ -111,6 +112,12 @@ export default function DriverManager() {
 
   const showClubMembers = membershipType === "family";
 
+  const normalizedMembershipType = normalizeMembershipProductType(membershipType);
+  const singleDriverMembership =
+    normalizedMembershipType === "adult" || normalizedMembershipType === "junior";
+  const showSingleMembershipWarning =
+    singleDriverMembership && driverList.length > 1;
+
   const driversNeedingProfile = useMemo(
     () =>
       driverList.filter((driver) => !evaluateDriverProfileReadiness(club, driver).ready),
@@ -199,7 +206,7 @@ export default function DriverManager() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-background text-text-base">
+    <div className="min-h-screen w-full bg-background text-text-base driver-manager-page">
 
       <PageTitle
         icon={UserPlusIcon}
@@ -209,7 +216,17 @@ export default function DriverManager() {
 
       {/* CENTERED CONTENT */}
       <div className="w-full flex justify-center">
-        <main className="app-page-main flex flex-col gap-10">
+        <main className="app-page-main flex flex-col !gap-3 !pt-2 !pb-6">
+
+          <p className="text-sm text-text-muted leading-snug m-0 max-w-3xl">
+            {t("drivers.managerPageHint")}
+          </p>
+
+          {showSingleMembershipWarning && (
+            <Card className="p-4 text-sm bg-red-50 border border-red-200 text-red-900">
+              {t("drivers.singleMembershipMultipleDrivers")}
+            </Card>
+          )}
 
           {driversNeedingProfile.length > 0 && (
             <Card className="p-4 text-sm bg-amber-50 border border-amber-200 text-amber-900">
@@ -218,8 +235,8 @@ export default function DriverManager() {
           )}
 
           {/* DRIVERS */}
-          <section className="space-y-4">
-            <h2 className="text-base font-semibold">Drivers</h2>
+          <section className="space-y-3">
+            <h2 className="text-base font-semibold text-text-base m-0">Drivers</h2>
 
             {loadingDrivers && (
               <p className="text-sm text-text-muted">Loading drivers…</p>
@@ -263,7 +280,7 @@ export default function DriverManager() {
                 }
                 className="w-full !py-2.5 !text-sm"
               >
-                Add Driver
+                {t("drivers.addDriver")}
               </Button>
             )}
 

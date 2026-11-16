@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
-import Card from "@/components/ui/Card";
+import useTheme from "@/app/providers/useTheme";
 import Button from "@/components/ui/Button";
-import { formatDate, isNominationsOpen } from "./events-sections/helpers";
+import { formatDate, isEventCompleted, isNominationsOpen } from "./events-sections/helpers";
 import { sanitizeRichTextHtml } from "@/app/lib/richText";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import CalendarEventTypeChip from "./calendar/CalendarEventTypeChip";
 
 export default function EventCard({
   event,
@@ -11,16 +12,22 @@ export default function EventCard({
   trackNames,
   showResults,
   hasNomination = false,
+  hasHouseholdInResults = false,
+  nominationSummary = null,
   hasReceivedNominations = false,
   isPast = false,
 }) {
   const { t, locale } = useTranslation();
+  const { palette } = useTheme();
+  const primaryColor = palette?.primary || "#2563eb";
+
   const track =
     trackNames?.[event.track] ||
     event.track_type ||
     event.track ||
     t("eventCard.trackNotSet");
-  const logoSrc = event.logo_preview_url ||
+  const logoSrc =
+    event.logo_preview_url ||
     (event.logourl?.startsWith("http")
       ? event.logourl
       : event.logourl
@@ -44,114 +51,153 @@ export default function EventCard({
       : ["th", "st", "nd", "rd"][day % 10] || "th";
     const weekday = localDate.toLocaleDateString(locale, { weekday: "short" });
     const month = localDate.toLocaleDateString(locale, { month: "short" });
-
     return `${weekday} ${month} ${day}${suffix}`;
   };
-  const eventDateLabel = event.is_multi_day && eventDate
-    ? eventDate === eventEndDate
-      ? formatRangeDate(eventDate)
-      : `${formatRangeDate(eventDate)} - ${formatRangeDate(eventEndDate)}`
-    : eventDate
-      ? formatDate(eventDate)
-      : t("eventCard.dateTbd");
+  const eventDateLabel =
+    event.is_multi_day && eventDate
+      ? eventDate === eventEndDate
+        ? formatRangeDate(eventDate)
+        : `${formatRangeDate(eventDate)} – ${formatRangeDate(eventEndDate)}`
+      : eventDate
+        ? formatDate(eventDate)
+        : t("eventCard.dateTbd");
   const nominationsOpen = isNominationsOpen(event);
+  const isCompleted = isEventCompleted(event) || Boolean(isPast);
+  const showNominatedBadge = hasNomination || hasHouseholdInResults;
   const nominationStatusLabel = hasNomination
-    ? t("eventCard.nominated")
+    ? nominationSummary || t("eventCard.nominated")
     : event.nominations_open
       ? t("eventCard.nominationsOpenOn", {
           date: formatDate(event.nominations_open),
         })
       : null;
-  const nominationStatusHighlight = hasNomination || nominationsOpen;
 
   return (
-    <Card
-      className={`!p-0 overflow-hidden ${isPast ? "opacity-55 saturate-[0.65]" : ""}`}
-    >
-      <div className="flex flex-col md:flex-row md:items-stretch">
-        <Link
-          to={`/${clubSlug}/app/events/${event.id}`}
-          className="block min-w-0 flex-1 no-underline"
-        >
-          <div className="flex flex-col items-center text-center md:min-h-[76px] md:flex-row md:items-stretch md:text-left">
-            <div className="my-[3px] mx-[3px] w-24 shrink-0 overflow-hidden rounded-[14px] bg-white p-[6px_14px] flex items-center justify-center md:ml-[3px] md:mr-0">
-              {logoSrc ? (
-                <img
-                  src={logoSrc}
-                  alt=""
-                  className="max-h-full max-w-full rounded-[10px] object-contain"
-                />
-              ) : (
-                <span className="text-xs text-text-muted">{t("eventCard.event")}</span>
-              )}
-            </div>
-
-            <div className="min-w-0 w-full flex-1 px-4 py-2 md:pl-5 md:pr-4">
-              <h3 className="min-w-0 break-words font-semibold leading-tight text-text-base">
-                <div
-                  className="tiptap !min-h-0 [&_p]:my-0 [&_p+p]:mt-0.5 [&_strong]:font-bold"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeRichTextHtml(event.name),
-                  }}
-                />
-              </h3>
-              <p className="flex min-w-0 flex-col items-center gap-y-0.5 text-sm font-semibold leading-tight text-text-muted md:items-start sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1.5 sm:gap-y-1 md:flex-col md:gap-x-0">
-                <span className="min-w-0 max-w-full truncate sm:w-auto">{track}</span>
-                <span className="min-w-0 max-w-full break-words sm:w-auto">{eventDateLabel}</span>
-                {nominationStatusLabel && (
-                  <span
-                    className={`min-w-0 max-w-full break-words font-bold sm:w-auto ${
-                      nominationStatusHighlight ? "text-green-600" : ""
-                    }`}
-                  >
-                    {nominationStatusLabel}
-                  </span>
-                )}
-              </p>
-            </div>
+    <article className="event-list-card text-text-base">
+      <div
+        className="event-list-card-header px-3 py-2 flex items-start justify-between gap-3 border-b border-border/60"
+        style={{
+          background: `linear-gradient(135deg, ${primaryColor}12 0%, transparent 70%)`,
+        }}
+      >
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <CalendarEventTypeChip eventType={event.event_type} />
+          <span className="text-[11px] font-semibold tabular-nums text-text-muted">
+            {eventDateLabel}
+          </span>
+          {showResults ? (
+            <span
+              className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border text-white"
+              style={{
+                backgroundColor: primaryColor,
+                borderColor: primaryColor,
+              }}
+            >
+              {t("eventCard.results")}
+            </span>
+          ) : null}
+        </div>
+        {isCompleted || showNominatedBadge ? (
+          <div className="flex flex-col items-end gap-1 shrink-0 md:flex-row md:items-center md:gap-2">
+            {isCompleted ? (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-red-600 text-white">
+                {t("eventCard.completedBadge")}
+              </span>
+            ) : null}
+            {showNominatedBadge ? (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-emerald-600 text-white">
+                {t("eventCard.nominatedBadge")}
+              </span>
+            ) : null}
           </div>
-        </Link>
+        ) : null}
+      </div>
 
-        <div className="box-border grid w-full grid-cols-1 justify-items-center gap-2 px-0 py-3 md:flex md:w-auto md:flex-col md:items-stretch md:justify-start md:p-3 md:pl-0">
-          <Link
-            to={`/${clubSlug}/app/events/${event.id}`}
-            className="block w-[120px] justify-self-center no-underline"
-          >
-            <Button className="!py-1.5 !text-xs w-full">{t("eventCard.viewEvent")}</Button>
-          </Link>
-          {nominationsOpen && (
-            <Link
-              to={`/${clubSlug}/app/events/${event.id}/nominate`}
-              className="block w-[120px] justify-self-center no-underline"
-            >
-              <Button
-                variant={hasNomination ? "secondary" : "success"}
-                className="!py-1.5 !text-xs w-full"
-              >
-                {hasNomination ? t("eventCard.updateNominations") : t("eventCard.nominate")}
-              </Button>
-            </Link>
-          )}
-          {hasReceivedNominations && (
-            <Link
-              to={`/${clubSlug}/app/events/${event.id}/nominations`}
-              className="block w-[120px] justify-self-center no-underline"
-            >
-              <Button variant="secondary" className="!py-1.5 !text-xs w-full">
-                {t("eventCard.viewNominations")}
-              </Button>
-            </Link>
-          )}
-          {showResults && (
-            <Link
-              to={`/${clubSlug}/app/events/${event.id}/results`}
-              className="block w-[120px] justify-self-center no-underline"
-            >
-              <Button className="!py-1.5 !text-xs w-full">{t("eventCard.viewResults")}</Button>
-            </Link>
+      <Link
+        to={`/${clubSlug}/app/events/${event.id}`}
+        className="flex min-w-0 gap-3 p-3 no-underline items-start md:items-center"
+      >
+        <div className="shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl border border-border/80 bg-white flex items-center justify-center overflow-hidden p-1">
+          {logoSrc ? (
+            <img src={logoSrc} alt="" className="max-h-full max-w-full object-contain" />
+          ) : (
+            <span className="text-[10px] text-text-muted text-center px-1">
+              {t("eventCard.event")}
+            </span>
           )}
         </div>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h3 className="m-0 text-base font-bold leading-snug text-text-base">
+            <div
+              className="tiptap !min-h-0 [&_p]:my-0 [&_p+p]:mt-0.5 [&_strong]:font-bold"
+              dangerouslySetInnerHTML={{
+                __html: sanitizeRichTextHtml(event.name),
+              }}
+            />
+          </h3>
+          <p className="m-0 mt-1 text-sm text-text-muted font-medium">{track}</p>
+          {nominationStatusLabel && !hasNomination ? (
+            <p className="m-0 mt-1.5 text-xs font-medium text-emerald-700 leading-snug">
+              {nominationStatusLabel}
+            </p>
+          ) : null}
+          {hasNomination && nominationSummary ? (
+            <p
+              className="m-0 mt-1.5 text-xs font-semibold leading-snug rounded-lg px-2 py-1"
+              style={{
+                backgroundColor: `${primaryColor}0f`,
+                color: primaryColor,
+              }}
+            >
+              {nominationSummary}
+            </p>
+          ) : null}
+        </div>
+      </Link>
+
+      <div className="event-list-card-actions flex flex-wrap gap-2 justify-center md:justify-end px-3 py-2.5 border-t border-border/60 bg-surface-alt/25">
+        <Link to={`/${clubSlug}/app/events/${event.id}`} className="inline-block no-underline">
+          <Button className="!py-1.5 !text-xs !text-[12px] whitespace-nowrap min-w-[7.5rem] px-3">
+            {t("eventCard.viewEvent")}
+          </Button>
+        </Link>
+        {nominationsOpen && (
+          <Link
+            to={`/${clubSlug}/app/events/${event.id}/nominate`}
+            className="inline-block no-underline"
+          >
+            <Button
+              variant={hasNomination ? "secondary" : "success"}
+              className="!py-1.5 !text-xs !text-[12px] whitespace-nowrap min-w-[7.5rem] px-3"
+            >
+              {hasNomination ? t("eventCard.updateNominations") : t("eventCard.nominate")}
+            </Button>
+          </Link>
+        )}
+        {hasReceivedNominations && (
+          <Link
+            to={`/${clubSlug}/app/events/${event.id}/nominations`}
+            className="inline-block no-underline"
+          >
+            <Button
+              variant="secondary"
+              className="!py-1.5 !text-xs !text-[12px] whitespace-nowrap min-w-[7.5rem] px-3"
+            >
+              {t("eventCard.viewNominations")}
+            </Button>
+          </Link>
+        )}
+        {showResults && (
+          <Link
+            to={`/${clubSlug}/app/events/${event.id}/results`}
+            className="inline-block no-underline"
+          >
+            <Button className="!py-1.5 !text-xs !text-[12px] whitespace-nowrap min-w-[7.5rem] px-3">
+              {t("eventCard.viewResults")}
+            </Button>
+          </Link>
+        )}
       </div>
-    </Card>
+    </article>
   );
 }

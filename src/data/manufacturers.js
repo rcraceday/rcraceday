@@ -110,3 +110,12 @@ export const MANUFACTURERS = [
   { name: "Xtreme Racing", logo: "/manufacturers/xtreme.png" },
   { name: "Yokomo", logo: "/manufacturers/yokomo.png" }
 ];
+
+export function findManufacturerBrand(name) {
+  const trimmed = String(name ?? "").trim();
+  if (!trimmed) return null;
+  return (
+    MANUFACTURERS.find((item) => item.name.localeCompare(trimmed, undefined, { sensitivity: "accent" }) === 0) ||
+    null
+  );
+}

@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
+import useTheme from "@/app/providers/useTheme";
 import { richTextToPlainText } from "@/app/lib/richText";
 import {
   EVENT_TYPE_COLORS,
   eventsForDay,
   isCalendarDayPast,
 } from "./calendarHelpers";
+import { eventTypeUsesClubPrimary } from "./eventTypeChipStyles";
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -15,6 +17,8 @@ export default function MiniMonthGrid({
   clubSlug,
   today,
 }) {
+  const { palette } = useTheme();
+  const clubPrimary = palette?.primary || "#2563eb";
   const first = new Date(year, monthIndex, 1);
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const startPad = first.getDay();
@@ -52,7 +56,9 @@ export default function MiniMonthGrid({
 
           const dayEvents = eventsForDay(events, year, monthIndex, cell.day);
           const primaryType = (dayEvents[0]?.event_type || "").toLowerCase();
-          const dotColor = EVENT_TYPE_COLORS[primaryType] || "#6B7280";
+          const dotColor = eventTypeUsesClubPrimary(primaryType)
+            ? clubPrimary
+            : EVENT_TYPE_COLORS[primaryType] || "#6B7280";
           const hasEvents = dayEvents.length > 0;
           const target = dayEvents.length === 1 ? dayEvents[0] : null;
           const isPast = isCalendarDayPast(year, monthIndex, cell.day, today);

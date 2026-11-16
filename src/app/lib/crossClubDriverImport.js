@@ -6,6 +6,7 @@ import {
 } from "@/app/lib/driverClubSettings";
 import { canAddHouseholdDriver } from "@/app/pages/profile/householdDriverLimits";
 import { linkDriverToPlatformPerson } from "@/app/lib/platformPeople";
+import { pickLiveTimeProfileFields } from "@/app/lib/livetimeDriverProfileFields";
 
 export function normalizeClassNameForMatch(name) {
   return String(name || "")
@@ -263,6 +264,17 @@ export async function importDriverFromOtherClub({
   }
 
   await applyNewDriverProfileDefaults(supabase, newDriverId, club);
+
+  const { data: sourceProfile } = await supabase
+    .from("drivers")
+    .select("*")
+    .eq("id", sourceDriver.id)
+    .maybeSingle();
+
+  const livetimeFields = pickLiveTimeProfileFields(sourceProfile || sourceDriver);
+  if (Object.keys(livetimeFields).length > 0) {
+    await supabase.from("drivers").update(livetimeFields).eq("id", newDriverId);
+  }
 
   const numberRules = resolveDriverNumberRules(club);
   if (numberRules.auto_reconcile_on_create) {

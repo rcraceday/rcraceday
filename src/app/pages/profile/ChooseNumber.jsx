@@ -13,11 +13,15 @@ import PageTitle from "@/components/ui/PageTitle";
 import BackNavButton from "@/components/ui/BackNavButton";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { resolveDriverNumberRules } from "@/app/lib/driverClubSettings";
+import { useMembership } from "@/app/providers/MembershipProvider";
+import { canUseClubPermanentNumber } from "@/app/lib/membershipClubLimits";
+import { releaseLapsedNumbersForClub } from "@/app/lib/driverNumberLapsedRelease";
 
 export default function ChooseNumber() {
   const navigate = useNavigate();
   const { id: driverId, clubSlug } = useParams();
   const { club } = useOutletContext();
+  const { membership } = useMembership();
   const { palette } = useTheme();
   const { t } = useTranslation();
   const brand = palette?.primary || "#0A66C2";
@@ -69,6 +73,8 @@ export default function ChooseNumber() {
   // LOAD NUMBERS
   useEffect(() => {
     async function loadNumbers() {
+      await releaseLapsedNumbersForClub(supabase, club);
+
       const { data } = await supabase
         .from("numbers")
         .select("*")
@@ -126,6 +132,14 @@ export default function ChooseNumber() {
 
   if (loading || !driver) {
     return <div className="p-6 text-center text-gray-600">Loading…</div>;
+  }
+
+  if (!canUseClubPermanentNumber(membership)) {
+    return (
+      <div className="p-6 text-center text-sm text-text-muted max-w-md mx-auto">
+        {t("driverProfile.permanentNumberMembersOnly")}
+      </div>
+    );
   }
 
   if (numberRules.members_can_choose === false) {

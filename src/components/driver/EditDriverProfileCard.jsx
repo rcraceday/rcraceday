@@ -6,7 +6,6 @@ import useTheme from "@/app/providers/useTheme";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-
 import AvatarAndBasicInfoSection from "@/components/driver/profile-sections/AvatarAndBasicInfoSection";
 import NumberAndColoursSection from "@/components/driver/profile-sections/NumberAndColoursSection";
 import SponsorsSection from "@/components/driver/DriverProfileCard/sections/SponsorsSection";
@@ -36,11 +35,11 @@ export default function EditDriverProfileCard({
   deleteDriver,
   showLivetimeNameNotice,
   livetimeNoticeBody,
-  showLivetimeHints = true,
   lockNameFields = false,
   canDeleteDriver = true,
   canChooseNumber = true,
   canChangeNumber = true,
+  canUsePermanentNumber = true,
 }) {
   const { t } = useTranslation();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -77,47 +76,46 @@ export default function EditDriverProfileCard({
         </div>
 
         <div className="p-6 space-y-10">
-          {isProfileSectionEnabled(club, "basic") && (
-            <AvatarAndBasicInfoSection
-              driver={driver}
-              update={update}
-              isMember={isMember}
-              brand={brand}
-              handleAvatarSelect={handleAvatarSelect}
-              handleRemoveAvatar={handleRemoveAvatar}
-              showLivetimeNameNotice={showLivetimeNameNotice}
-              livetimeNoticeBody={livetimeNoticeBody}
-              lockNameFields={lockNameFields}
-            />
-          )}
+          {(isProfileSectionEnabled(club, "basic") ||
+            isProfileSectionEnabled(club, "colors_number") ||
+            isProfileSectionEnabled(club, "trivia_sponsors")) && (
+            <section className="space-y-8 rounded-lg border border-border bg-surface-alt/40 p-4 sm:p-5">
+              {isProfileSectionEnabled(club, "basic") && (
+                <AvatarAndBasicInfoSection
+                  driver={driver}
+                  update={update}
+                  isMember={isMember}
+                  brand={brand}
+                  handleAvatarSelect={handleAvatarSelect}
+                  handleRemoveAvatar={handleRemoveAvatar}
+                  showLivetimeNameNotice={showLivetimeNameNotice}
+                  livetimeNoticeBody={livetimeNoticeBody}
+                  lockNameFields={lockNameFields}
+                />
+              )}
 
-          {showLivetimeHints ? (
-            <p className="text-xs text-gray-600">{t("driverProfile.livetimeFieldsHint")}</p>
-          ) : null}
+              {isProfileSectionEnabled(club, "colors_number") && (
+                <NumberAndColoursSection
+                  driver={driver}
+                  update={update}
+                  brand={brand}
+                  club={club}
+                  navigate={navigate}
+                  previewNumber={previewNumber}
+                  canChooseNumber={canChooseNumber}
+                  canChangeNumber={canChangeNumber}
+                  canUsePermanentNumber={canUsePermanentNumber}
+                />
+              )}
 
-          <hr className="border-surfaceBorder" />
+              {isProfileSectionEnabled(club, "trivia_sponsors") && (
+                <SponsorsSection driver={driver} update={update} />
+              )}
 
-          {isProfileSectionEnabled(club, "colors_number") && (
-            <>
-              <NumberAndColoursSection
-                driver={driver}
-                update={update}
-                brand={brand}
-                club={club}
-                navigate={navigate}
-                previewNumber={previewNumber}
-                canChooseNumber={canChooseNumber}
-                canChangeNumber={canChangeNumber}
-              />
-              <hr className="border-surfaceBorder" />
-            </>
-          )}
-
-          {isProfileSectionEnabled(club, "trivia_sponsors") && (
-            <>
-              <SponsorsSection driver={driver} update={update} />
-              <hr className="border-surfaceBorder" />
-            </>
+              <p className="text-xs text-text-muted m-0 leading-relaxed">
+                {t("driverProfile.livetimeTransponderHint")}
+              </p>
+            </section>
           )}
 
           {canEditExtendedProfile ? (

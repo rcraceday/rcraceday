@@ -38,6 +38,9 @@ export const DEFAULT_DRIVER_SETTINGS = {
     require_before_nominate: false,
     members_can_change_after_assign: true,
     auto_reconcile_on_create: true,
+    /** Months after membership end_date before the race number returns to the pool (default 12). */
+    lapsed_release_months: 12,
+    auto_release_lapsed_numbers: true,
   },
   profile: {
     enabled_sections: PROFILE_SECTION_KEYS.reduce((acc, key) => {

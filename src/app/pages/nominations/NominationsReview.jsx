@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ClipboardDocumentCheckIcon } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import BackNavButton from "@/components/ui/BackNavButton";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import useTheme from "@app/providers/useTheme";
 import { richTextToPlainText } from "@/app/lib/richText";
 import { useMembership } from "@/app/providers/MembershipProvider";
+import NominationDriverExportMeta from "@/app/pages/nominations/components/NominationDriverExportMeta";
 
 function driverName(driver) {
   return [driver?.first_name, driver?.last_name].filter(Boolean).join(" ").trim();
@@ -179,7 +180,10 @@ export default function NominationsReview() {
         : { data: [] };
 
       const { data: driverRows } = driverIds.length
-        ? await supabase.from("drivers").select("id, first_name, last_name").in("id", driverIds)
+        ? await supabase
+            .from("drivers")
+            .select("id, first_name, last_name, country, permanent_number")
+            .in("id", driverIds)
         : { data: [] };
 
       const classIds = [...new Set((entryRows || []).map((entry) => entry.class_id).filter(Boolean))];
@@ -204,7 +208,6 @@ export default function NominationsReview() {
           row.transponder_number || "",
         ])
       );
-
       const cards = visibleEvents
         .map((event) => {
           const eventNominations = nominations.filter((row) => row.event_id === event.id);
@@ -267,41 +270,42 @@ export default function NominationsReview() {
         icon={ClipboardDocumentCheckIcon}
         title={t("nominations.myTitle")}
         style={{ color: brand }}
-        actions={
-          <Link to={`/${clubSlug}/app/events`} className="no-underline">
-            <Button variant="primary" size="sm" className="!py-1 !px-3 !text-xs !rounded-sm">
-              Back to events
-            </Button>
-          </Link>
-        }
+        actions={<BackNavButton />}
       />
 
-      <main className="app-page-main gap-4">
+      <main className="app-page-main gap-4 max-w-3xl mx-auto w-full">
         {!hasCards ? (
-          <Card className="p-4">
-            <p className="text-sm text-text-muted">
+          <article className="event-list-card p-4">
+            <p className="text-sm text-text-muted m-0">
               You have no household nominations for upcoming events.
             </p>
-          </Card>
+          </article>
         ) : (
           eventCards.map(({ event, drivers }) => (
-            <Card
-              key={event.id}
-              className="p-5 sm:p-6"
-              style={{ borderWidth: 1, boxShadow: "none" }}
-            >
-              <h2 className="text-lg font-bold leading-tight" style={{ color: contentText }}>
-                {richTextToPlainText(event.name)}
-              </h2>
+            <article key={event.id} className="event-list-card text-text-base">
+              <div
+                className="event-list-card-header px-3 py-2.5 border-b border-border/60"
+                style={{
+                  background: `linear-gradient(135deg, ${brand}12 0%, transparent 70%)`,
+                }}
+              >
+                <h2 className="text-base sm:text-lg font-bold leading-tight m-0" style={{ color: contentText }}>
+                  {richTextToPlainText(event.name)}
+                </h2>
+              </div>
 
-              <div className="mt-4 space-y-4">
+              <div className="p-3 sm:p-4 space-y-4 bg-gradient-to-b from-surface-alt/15 to-transparent">
                 {drivers.map(({ driver, classes }) => (
-                  <div key={driver.id}>
-                    <p className="text-[15px] font-semibold leading-tight" style={{ color: contentText }}>
-                      {t("nominations.driverLabel")}: {driverName(driver) || "Unnamed driver"}
+                  <div
+                    key={driver.id}
+                    className="rounded-xl border border-border/70 bg-white/80 px-3 py-2.5 shadow-sm"
+                  >
+                    <p className="text-[15px] font-semibold leading-tight m-0" style={{ color: contentText }}>
+                      {driverName(driver) || "Unnamed driver"}
                     </p>
+                    <NominationDriverExportMeta driver={driver} />
                     {classes.length === 0 ? (
-                      <p className="mt-2 text-sm text-text-muted">No classes nominated.</p>
+                      <p className="mt-2 text-sm text-text-muted mb-0">No classes nominated.</p>
                     ) : (
                       <DriverClassTable classes={classes} brand={brand} t={t} />
                     )}
@@ -309,16 +313,16 @@ export default function NominationsReview() {
                 ))}
               </div>
 
-              <div
-                className="mt-5 flex flex-wrap gap-2 pt-4"
-                style={{ borderTop: "1px solid #E5E7EB" }}
-              >
+              <div className="event-list-card-actions flex flex-wrap gap-2 justify-center md:justify-end px-3 py-2.5">
                 <Link
                   to={`/${clubSlug}/app/events/${event.id}/nominate`}
                   state={{ reloadSavedNominations: true }}
                   className="no-underline"
                 >
-                  <Button variant="secondary" size="sm" className="!px-3.5 !py-1.5 !rounded-[6px]">
+                  <Button
+                    variant="secondary"
+                    className="!py-1.5 !text-xs whitespace-nowrap min-w-[7.5rem] px-3"
+                  >
                     Update Nominations
                   </Button>
                 </Link>
@@ -326,12 +330,12 @@ export default function NominationsReview() {
                   to={`/${clubSlug}/app/events/${event.id}/nominations`}
                   className="no-underline"
                 >
-                  <Button size="sm" className="!px-3.5 !py-1.5 !rounded-[6px]">
-                    View Nominations
+                  <Button className="!py-1.5 !text-xs whitespace-nowrap min-w-[7.5rem] px-3">
+                    {t("eventCard.viewNominations")}
                   </Button>
                 </Link>
               </div>
-            </Card>
+            </article>
           ))
         )}
       </main>

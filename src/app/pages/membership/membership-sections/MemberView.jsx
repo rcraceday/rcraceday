@@ -6,6 +6,7 @@ import { supabase } from "@/supabaseClient";
 import { canUpgradeMembershipToFamily } from "@/app/pages/profile/householdDriverLimits";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import ClubMemberBadgeImage from "@/components/ClubMemberBadgeImage";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
 function membershipTypeLabel(membership, t) {
@@ -79,15 +80,14 @@ export default function MemberView({ brand, club, membership }) {
   return (
     <main className="app-page-main flex flex-col gap-6 !py-6 max-w-lg mx-auto w-full">
       <Card className="p-6 sm:p-8 flex flex-col items-center text-center gap-5">
-        {club?.member_badge_url ? (
-          <img
-            src={club.member_badge_url}
-            alt={t("membershipUi.clubLogoAlt", { name: club?.name })}
-            className="h-40 w-40 sm:h-48 sm:w-48 object-contain"
-          />
-        ) : (
-          <p className="text-sm text-text-muted m-0">{t("membershipUi.badgeNotConfigured")}</p>
-        )}
+        <ClubMemberBadgeImage
+          club={club}
+          alt={t("membershipUi.clubLogoAlt", { name: club?.name })}
+          className="h-40 w-40 sm:h-48 sm:w-48 object-contain"
+          fallback={
+            <p className="text-sm text-text-muted m-0">{t("membershipUi.badgeNotConfigured")}</p>
+          }
+        />
 
         {isLifeMember && (
           <p

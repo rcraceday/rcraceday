@@ -61,6 +61,12 @@ import {
   countMultiDaySelectionsForEventLimit,
   validateDriverClassSelections,
 } from "@/app/lib/eventClassLimit";
+import { MANUFACTURERS } from "@/data/manufacturers";
+import ManufacturerSelect from "@/components/ui/ManufacturerSelect";
+import {
+  DriverCountryFlag,
+  DriverPermanentNumber,
+} from "@/app/pages/nominations/components/NominationDriverExportMeta";
 
 const money = (value) => Number(value || 0).toLocaleString("en-AU", { style: "currency", currency: "AUD" });
 const moneyAmount = (value) => Math.round(Number(value || 0) * 100) / 100;
@@ -98,6 +104,7 @@ const emptySelection = () => ({
   merch: {},
   addons: {},
   transponders: {},
+  chassisManufacturers: {},
   visibleClassSlotsByDay: {},
   visibleClassSlots: 1,
 });
@@ -147,6 +154,7 @@ function nominationSelectionSnapshot(selection) {
     merch: selection.merch,
     addons: selection.addons,
     transponders: selection.transponders,
+    chassisManufacturers: selection.chassisManufacturers,
     visibleClassSlotsByDay: selection.visibleClassSlotsByDay,
     visibleClassSlots: selection.visibleClassSlots,
   };
@@ -250,6 +258,7 @@ function padDriverSelectionsForEvent(current, event, drivers, classLimit) {
       return;
     }
     if (!existing.transponders) existing.transponders = {};
+    if (!existing.chassisManufacturers) existing.chassisManufacturers = {};
     if (!existing.racingDays) existing.racingDays = {};
     if (!existing.visibleClassSlotsByDay) existing.visibleClassSlotsByDay = {};
     if (event?.is_multi_day) {
@@ -686,6 +695,14 @@ export default function EventNominate() {
   const juniorParens = juniorTagInParens(club);
   const { clubs: rcraClubs } = useRcraClubs();
 
+  const chassisManufacturerOptions = useMemo(
+    () => [
+      { value: "", label: t("nominate.noChassisManufacturer") },
+      ...MANUFACTURERS.map((item) => ({ value: item.name, label: item.name })),
+    ],
+    [t]
+  );
+
   const [event, setEvent] = useState(null);
   const [trackName, setTrackName] = useState("");
   const [clubClasses, setClubClasses] = useState([]);
@@ -814,7 +831,7 @@ export default function EventNominate() {
       const driverIds = drivers.map((d) => d.id);
       const { data, error: dcError } = await supabase
         .from("driver_classes")
-        .select("id, driver_id, class_id, transponder_number")
+        .select("id, driver_id, class_id, transponder_number, chassis_manufacturer")
         .in("driver_id", driverIds);
       if (dcError) {
         console.error("Error fetching assigned driver classes:", dcError);
@@ -828,6 +845,10 @@ export default function EventNominate() {
           next[dc.driver_id].transponders = {
             ...next[dc.driver_id].transponders,
             [dc.class_id]: dc.transponder_number || "",
+          };
+          next[dc.driver_id].chassisManufacturers = {
+            ...next[dc.driver_id].chassisManufacturers,
+            [dc.class_id]: dc.chassis_manufacturer || "",
           };
         });
         return next;
@@ -957,6 +978,63 @@ export default function EventNominate() {
     if (fromSelection) return fromSelection;
     const assigned = assignedDriverClasses.find((dc) => dc.driver_id === driverId && dc.class_id === classId);
     return assigned?.transponder_number || "";
+  }
+
+  function chassisFor(driverId, classId) {
+    const fromSelection = selections[driverId]?.chassisManufacturers?.[classId];
+    if (fromSelection != null) return fromSelection;
+    const assigned = assignedDriverClasses.find((dc) => dc.driver_id === driverId && dc.class_id === classId);
+    return assigned?.chassis_manufacturer || "";
+  }
+
+  function updateChassisManufacturer(driverId, classId, value) {
+    const chassis = String(value ?? "").trim();
+    updateSelection(driverId, (current) => ({
+      chassisManufacturers: { ...current.chassisManufacturers, [classId]: value },
+    }));
+    const rowClubId = event?.club_id ?? club?.id;
+    if (!rowClubId || !driverId || !classId) return;
+    const assigned = assignedDriverClasses.find(
+      (dc) => dc.driver_id === driverId && dc.class_id === classId
+    );
+    const transponder =
+      selections[driverId]?.transponders?.[classId] ?? assigned?.transponder_number ?? "";
+    supabase
+      .from("driver_classes")
+      .upsert(
+        {
+          driver_id: driverId,
+          club_id: rowClubId,
+          class_id: classId,
+          chassis_manufacturer: chassis,
+          transponder_number: transponder || "",
+        },
+        { onConflict: "driver_id,class_id" }
+      )
+      .then(({ error }) => {
+        if (error) {
+          console.error("Error saving chassis manufacturer:", error);
+          return;
+        }
+        setAssignedDriverClasses((prev) => {
+          const idx = prev.findIndex((dc) => dc.driver_id === driverId && dc.class_id === classId);
+          if (idx >= 0) {
+            const next = prev.slice();
+            next[idx] = { ...next[idx], chassis_manufacturer: chassis };
+            return next;
+          }
+          return [
+            ...prev,
+            {
+              driver_id: driverId,
+              class_id: classId,
+              club_id: rowClubId,
+              chassis_manufacturer: chassis,
+              transponder_number: transponder || "",
+            },
+          ];
+        });
+      });
   }
 
   function savedTranspondersFor(driverId) {
@@ -1180,6 +1258,14 @@ export default function EventNominate() {
     return next;
   }
 
+  function fillChassisManufacturer(driverId, classId, currentChassis) {
+    const next = { ...currentChassis };
+    if (!classId || next[classId]) return next;
+    const existingDc = assignedDriverClasses.find((dc) => dc.class_id === classId && dc.driver_id === driverId);
+    next[classId] = existingDc?.chassis_manufacturer || "";
+    return next;
+  }
+
   function setDayRacing(driverId, dayIndex, racing) {
     const current = selections[driverId] || emptySelection();
     const racingDays = { ...current.racingDays, [dayIndex]: racing };
@@ -1242,12 +1328,14 @@ export default function EventNominate() {
       preferencesByDay[dayIndex] = "";
     }
     const newTransponders = fillTransponder(driverId, classId, current.transponders);
+    const newChassis = fillChassisManufacturer(driverId, classId, current.chassisManufacturers);
     updateSelection(driverId, {
       classesByDay: nextByDay,
       racingDays: { ...current.racingDays, [dayIndex]: true },
       preference: stillSelected ? current.preference : "",
       preferencesByDay,
       transponders: newTransponders,
+      chassisManufacturers: newChassis,
       visibleClassSlotsByDay,
     });
   }
@@ -1314,11 +1402,13 @@ export default function EventNominate() {
     }
     const stillSelected = slots.includes(current.preference);
     const newTransponders = fillTransponder(driverId, classId, current.transponders);
+    const newChassis = fillChassisManufacturer(driverId, classId, current.chassisManufacturers);
     updateSelection(driverId, {
       classSlots: slots.slice(0, classLimit),
       visibleClassSlots: Math.min(visibleClassSlots, classLimit),
       preference: stillSelected ? current.preference : "",
       transponders: newTransponders,
+      chassisManufacturers: newChassis,
     });
   }
 
@@ -2267,12 +2357,18 @@ export default function EventNominate() {
     active.forEach(({ driver, selection }) => {
       const rowClubId = hostClubId ?? driver.club_id;
       if (!rowClubId) return;
-      for (const classId in selection.transponders) {
+      const classIdSet = new Set([
+        ...Object.keys(selection.transponders || {}),
+        ...Object.keys(selection.chassisManufacturers || {}),
+      ]);
+      for (const classId of classIdSet) {
+        if (!classId) continue;
         driverClassesToUpdate.push({
           driver_id: driver.id,
           club_id: rowClubId,
           class_id: classId,
-          transponder_number: selection.transponders[classId],
+          transponder_number: selection.transponders?.[classId] ?? "",
+          chassis_manufacturer: String(selection.chassisManufacturers?.[classId] ?? "").trim(),
         });
       }
     });
@@ -2453,6 +2549,14 @@ export default function EventNominate() {
   }
 
   const availableAddOns = selectedDriver ? addonsFor(selection) : [];
+  const driverPickerDrivers = selectedDriver
+    ? isFamily
+      ? drivers.filter(
+          (driver) =>
+            !driverHasSavedNomination(driver.id) || driver.id === selectedDriver.id
+        )
+      : drivers
+  : [];
 
   return (
     <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
@@ -2669,48 +2773,56 @@ export default function EventNominate() {
                 <Section title={t("nominate.driver")} icon={UserIcon} brand={brand}>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">{t("nominate.selectDriver")}</label>
-                      <FilterDropdown
-                        variant="cms"
-                        value={selectedDriver.id}
-                        onChange={(value) => {
-                          if (isFamily) {
-                            familyEditorBaselineRef.current = JSON.stringify(
-                              selections[value] || emptySelection()
-                            );
-                            setFamilyEditorDriverId(value);
-                          } else {
-                            setSelectedDriverId(value);
-                          }
-                        }}
-                        options={(isFamily
-                          ? drivers.filter(
-                              (driver) =>
-                                !driverHasSavedNomination(driver.id) ||
-                                driver.id === selectedDriver.id
-                            )
-                          : drivers
-                        ).map((driver) => ({
-                          value: driver.id,
-                          label: `${driver.first_name} ${driver.last_name}${driver.is_junior ? juniorParens : ""}`,
-                        }))}
-                        ariaLabel={t("nominate.selectDriverAria")}
-                        triggerStyleOverrides={{ fontSize: "0.875rem" }}
-                      />
-                      <p className="text-sm text-text-muted mt-2 mb-0">
+                      {driverPickerDrivers.length > 1 ? (
+                        <>
+                          <label className="block text-sm font-medium mb-1">
+                            {t("nominate.selectDriver")}
+                          </label>
+                          <FilterDropdown
+                            variant="cms"
+                            value={selectedDriver.id}
+                            onChange={(value) => {
+                              if (isFamily) {
+                                familyEditorBaselineRef.current = JSON.stringify(
+                                  selections[value] || emptySelection()
+                                );
+                                setFamilyEditorDriverId(value);
+                              } else {
+                                setSelectedDriverId(value);
+                              }
+                            }}
+                            options={driverPickerDrivers.map((driver) => ({
+                              value: driver.id,
+                              label: `${driver.first_name} ${driver.last_name}${driver.is_junior ? juniorParens : ""}`,
+                            }))}
+                            ariaLabel={t("nominate.selectDriverAria")}
+                            triggerStyleOverrides={{ fontSize: "0.875rem" }}
+                          />
+                        </>
+                      ) : (
+                        <div className="rounded-lg border border-border/70 bg-surface-alt/40 px-2.5 py-1.5 flex items-center flex-nowrap gap-x-2 min-h-[2.5rem] max-w-lg">
+                          <DriverCountryFlag driver={selectedDriver} />
+                          <DriverPermanentNumber driver={selectedDriver} accentColor={brand} />
+                          <span className="flex-1 min-w-0 text-sm font-semibold text-text-base leading-tight truncate">
+                            {selectedDriver.first_name} {selectedDriver.last_name}
+                            {selectedDriver.is_junior ? juniorParens : ""}
+                          </span>
+                        </div>
+                      )}
+                      <p className="text-sm mt-2 mb-0">
                         <button
                           type="button"
-                          className="underline"
+                          className="underline font-medium"
                           style={{ color: brand, background: "none", border: "none", padding: 0, cursor: "pointer" }}
                           onClick={() =>
-                            navigate(`/${clubSlug}/app/profile/drivers`, {
+                            navigate(`/${clubSlug}/app/profile/drivers/${selectedDriver.id}/edit`, {
                               state: {
                                 returnTo: `${location.pathname}${location.search || ""}`,
                               },
                             })
                           }
                         >
-                          {t("nominate.manageDriversAtClub")}
+                          {t("nominate.editDriver")}
                         </button>
                       </p>
                     </div>
@@ -2837,8 +2949,8 @@ export default function EventNominate() {
                                           <div className="text-sm font-medium">
                                             {visibleSlotCount > 1 ? t("nominate.classN", { n: slotIndex + 1 }) : t("nominate.class")}
                                           </div>
-                                          <div className="flex w-full min-w-0 items-center gap-2">
-                                            <div className="min-w-0 flex-1">
+                                          <div className="driver-class-assignment-row">
+                                            <div className="driver-class-assignment-row__class">
                                               <FilterDropdown
                                                 variant="cms"
                                                 value={currentValue}
@@ -2864,17 +2976,38 @@ export default function EventNominate() {
                                                 triggerStyleOverrides={{ fontSize: "0.875rem" }}
                                               />
                                             </div>
-                                            {currentValue && (
-                                              <TransponderCombobox
-                                                variant="cms"
-                                                value={transponderFor(selectedDriver.id, currentValue)}
-                                                suggestions={savedTranspondersFor(selectedDriver.id)}
-                                                onChange={(value) =>
-                                                  updateTransponder(selectedDriver.id, currentValue, value)
-                                                }
-                                                ariaLabel={t("nominate.transponderAria")}
-                                              />
-                                            )}
+                                            {currentValue ? (
+                                              <div className="driver-class-assignment-row__chassis">
+                                                <ManufacturerSelect
+                                                  variant="cms"
+                                                  compact
+                                                  rowSlot
+                                                  value={chassisFor(selectedDriver.id, currentValue)}
+                                                  options={chassisManufacturerOptions}
+                                                  onChange={(value) =>
+                                                    updateChassisManufacturer(
+                                                      selectedDriver.id,
+                                                      currentValue,
+                                                      value
+                                                    )
+                                                  }
+                                                  ariaLabel={t("nominate.chassisManufacturer")}
+                                                />
+                                              </div>
+                                            ) : null}
+                                            {currentValue ? (
+                                              <div className="driver-class-assignment-row__transponder">
+                                                <TransponderCombobox
+                                                  variant="cms"
+                                                  value={transponderFor(selectedDriver.id, currentValue)}
+                                                  suggestions={savedTranspondersFor(selectedDriver.id)}
+                                                  onChange={(value) =>
+                                                    updateTransponder(selectedDriver.id, currentValue, value)
+                                                  }
+                                                  ariaLabel={t("nominate.transponderAria")}
+                                                />
+                                              </div>
+                                            ) : null}
                                           </div>
                                         </div>
                                       );
@@ -2965,8 +3098,8 @@ export default function EventNominate() {
                                 <div className="text-sm font-medium">
                                   {visibleSlotCount > 1 ? t("nominate.classN", { n: slotIndex + 1 }) : t("nominate.class")}
                                 </div>
-                                <div className="flex w-full min-w-0 items-center gap-2">
-                                  <div className="min-w-0 flex-1">
+                                <div className="driver-class-assignment-row">
+                                  <div className="driver-class-assignment-row__class">
                                     <FilterDropdown
                                       variant="cms"
                                       value={currentValue}
@@ -2991,17 +3124,38 @@ export default function EventNominate() {
                                       triggerStyleOverrides={{ fontSize: "0.875rem" }}
                                     />
                                   </div>
-                                  {currentValue && (
-                                    <TransponderCombobox
-                                      variant="cms"
-                                      value={transponderFor(selectedDriver.id, currentValue)}
-                                      suggestions={savedTranspondersFor(selectedDriver.id)}
-                                      onChange={(value) =>
-                                        updateTransponder(selectedDriver.id, currentValue, value)
-                                      }
-                                      ariaLabel={t("nominate.transponderAria")}
-                                    />
-                                  )}
+                                  {currentValue ? (
+                                    <div className="driver-class-assignment-row__chassis">
+                                      <ManufacturerSelect
+                                        variant="cms"
+                                        compact
+                                        rowSlot
+                                        value={chassisFor(selectedDriver.id, currentValue)}
+                                        options={chassisManufacturerOptions}
+                                        onChange={(value) =>
+                                          updateChassisManufacturer(
+                                            selectedDriver.id,
+                                            currentValue,
+                                            value
+                                          )
+                                        }
+                                        ariaLabel={t("nominate.chassisManufacturer")}
+                                      />
+                                    </div>
+                                  ) : null}
+                                  {currentValue ? (
+                                    <div className="driver-class-assignment-row__transponder">
+                                      <TransponderCombobox
+                                        variant="cms"
+                                        value={transponderFor(selectedDriver.id, currentValue)}
+                                        suggestions={savedTranspondersFor(selectedDriver.id)}
+                                        onChange={(value) =>
+                                          updateTransponder(selectedDriver.id, currentValue, value)
+                                        }
+                                        ariaLabel={t("nominate.transponderAria")}
+                                      />
+                                    </div>
+                                  ) : null}
                                 </div>
                               </div>
                             );
