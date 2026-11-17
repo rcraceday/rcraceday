@@ -338,7 +338,7 @@ export default function MyResultsYearDashboard({
 
   return (
     <Card className="p-0 overflow-hidden border-border shadow-sm">
-      <details className="group">
+      <details className="group" open>
         <summary
           className="list-none [&::-webkit-details-marker]:hidden cursor-pointer px-4 py-3 border-b border-border"
           style={{ background: `linear-gradient(135deg, ${primaryColor}14 0%, transparent 55%)` }}
@@ -397,6 +397,7 @@ export default function MyResultsYearDashboard({
                 value={compareDriver || ""}
                 onChange={(value) => onCompareDriverChange?.(value || "")}
                 ariaLabel={t("results.mainCompetitors")}
+                emptyTriggerLabel={t("results.compareDriverPlaceholder")}
                 options={rivalCompareOptions}
                 hideSelectedOption={false}
                 preserveOptionOrder

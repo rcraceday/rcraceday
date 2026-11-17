@@ -38,6 +38,8 @@ export default function FilterDropdown({
   /** In-flow menu — avoids clipping inside overflow-hidden ancestors. */
   menuInline = false,
   preserveOptionOrder = false,
+  /** Closed trigger text when value is empty; menu options unchanged. */
+  emptyTriggerLabel,
 }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -49,6 +51,9 @@ export default function FilterDropdown({
     return sorted.filter((option) => option.value === "" || option.value !== value);
   }, [options, value, hideSelectedOption, preserveOptionOrder]);
   const selectedOption = options.find((option) => option.value === value) || options[0];
+  const isEmptyValue = value === "" || value == null;
+  const triggerLabel =
+    isEmptyValue && emptyTriggerLabel ? emptyTriggerLabel : selectedOption?.label;
   const primary = palette?.primary || "#00438a";
   const isCms = variant === "cms" || variant === "public";
   const chevronColor = primary;
@@ -116,7 +121,7 @@ export default function FilterDropdown({
         onClick={() => setOpen((isOpen) => !isOpen)}
       >
         <span className="min-w-0 flex-1 truncate text-left whitespace-nowrap">
-          {selectedOption?.label}
+          {triggerLabel}
         </span>
         <ChevronDownIcon
           aria-hidden="true"

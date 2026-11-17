@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { TrophyIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
+import BackNavButton from "@/components/ui/BackNavButton";
 import FilterDropdown from "@/components/ui/FilterDropdown";
 import PageFilterBar from "@/components/ui/PageFilterBar";
 import { filterSummaryFromParts, readPageFilterPrefs } from "@/app/lib/pageFilterPrefs";
@@ -38,6 +39,7 @@ function eventYear(event) {
 }
 
 export default function ResultsIndex() {
+  const navigate = useNavigate();
   const { clubSlug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { club } = useClub();
@@ -204,16 +206,29 @@ export default function ResultsIndex() {
     setSearchParams(next, { replace: true });
   }, [activeYear, trackFilter, typeFilter, activeEventId, compareDriver, dashboardClass, setSearchParams]);
 
-  const promoChampionships = useMemo(() => {
-    if (typeFilter !== CHAMPIONSHIP_TYPE) return [];
-    const seasonKey = String(activeYear);
-    const fromSeason = championships.filter((row) => String(row.season) === seasonKey);
-    if (fromSeason.length) return fromSeason;
-    const ids = new Set(
+  const appHomePath = clubSlug ? `/${clubSlug}/app` : null;
+
+  /** Championship with rounds in the current year + track filter (from event links). */
+  const trackChampionship = useMemo(() => {
+    const champIds = new Set(
       filteredEvents.map((event) => event.championship_id).filter(Boolean)
     );
-    return championships.filter((row) => ids.has(row.id));
-  }, [typeFilter, activeYear, championships, filteredEvents]);
+    if (!champIds.size) return null;
+
+    const matches = championships.filter(
+      (row) => champIds.has(row.id) && String(row.season) === String(activeYear)
+    );
+    if (!matches.length) return null;
+
+    if (trackFilter !== "all") {
+      return matches[0] || null;
+    }
+
+    if (matches.length === 1) return matches[0];
+    const seasonOnly = championships.filter((row) => String(row.season) === String(activeYear));
+    if (seasonOnly.length === 1 && champIds.has(seasonOnly[0].id)) return seasonOnly[0];
+    return null;
+  }, [filteredEvents, championships, activeYear, trackFilter]);
 
   const typeOptions = useMemo(() => {
     const options = [{ value: "all", label: t("results.filterAllTypes") }];
@@ -283,37 +298,12 @@ export default function ResultsIndex() {
 
   return (
     <div className="flex flex-col gap-6 pb-8">
-      <PageTitle icon={TrophyIcon} title={t("results.title")} style={{ color: palette.primary }} />
-
-      {!loading && (() => {
-        const seasonChamps = championships.filter(
-          (row) => String(row.season) === String(activeYear)
-        );
-        if (!seasonChamps.length) return null;
-        const standingsHref =
-          seasonChamps.length === 1
-            ? `/${clubSlug}/app/championships/${seasonChamps[0].id}`
-            : `/${clubSlug}/app/results?${new URLSearchParams({
-                type: CHAMPIONSHIP_TYPE,
-                year: String(activeYear),
-              }).toString()}`;
-        return (
-          <p className="text-sm m-0 -mt-2 text-center sm:text-left">
-            <Link
-              to={standingsHref}
-              className="font-medium text-primary underline-offset-2 hover:underline"
-              onClick={() => {
-                if (seasonChamps.length > 1) {
-                  setTypeFilter(CHAMPIONSHIP_TYPE);
-                  setSelectedYear(activeYear);
-                }
-              }}
-            >
-              {t("results.championshipStandingsLink")}
-            </Link>
-          </p>
-        );
-      })()}
+      <PageTitle
+        icon={TrophyIcon}
+        title={t("results.title")}
+        style={{ color: palette.primary }}
+        actions={<BackNavButton to={appHomePath} />}
+      />
 
       <PageFilterBar
         brand={palette.primary}
@@ -322,6 +312,37 @@ export default function ResultsIndex() {
         mobileFilters={renderResultsFilters({ fullWidth: true })}
         desktopFilters={renderResultsFilters({ fullWidth: false })}
       />
+
+      {!loading && trackChampionship && clubSlug ? (
+        <div className="flex justify-center w-full">
+          <button
+            type="button"
+            className="inline-flex w-auto max-w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-center shadow-sm transition-[box-shadow,filter] hover:shadow-md hover:brightness-[0.98] cursor-pointer"
+            style={{
+              backgroundColor: `${palette.primary}12`,
+              border: `1px solid ${palette.primary}`,
+              color: palette.primary,
+            }}
+            onClick={() =>
+              navigate(`/${clubSlug}/app/championships/${trackChampionship.id}`)
+            }
+          >
+            {trackChampionship.logo_url ? (
+              <img
+                src={trackChampionship.logo_url}
+                alt=""
+                className="h-8 w-8 shrink-0 rounded-md object-contain p-0.5"
+                style={{ border: `1px solid color-mix(in srgb, ${palette.primary} 35%, transparent)` }}
+              />
+            ) : (
+              <TrophyIcon className="h-5 w-5 shrink-0" style={{ color: palette.primary }} aria-hidden />
+            )}
+            <span className="text-sm font-semibold leading-snug whitespace-nowrap">
+              {t("results.viewChampionshipPoints")}
+            </span>
+          </button>
+        </div>
+      ) : null}
 
       {!loading && dashboardEvents.length > 0 && (
         <MyResultsYearDashboard
