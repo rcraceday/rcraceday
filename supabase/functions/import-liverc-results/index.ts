@@ -3,15 +3,17 @@
 
 import { parseLiveRcPages } from "./parseLiveRcHtml.js";
 
-const CORS = {
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, prefer",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, prefer",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 function json(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
@@ -89,7 +91,9 @@ async function mapPool<T, R>(items: T[], limit: number, mapper: (item: T, index:
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+    if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
   if (req.method !== "POST") return json({ error: "POST required" }, 405);
 
   const auth = req.headers.get("Authorization") || "";
@@ -103,8 +107,13 @@ Deno.serve(async (req) => {
     const childUrls = extractLinks(indexHtml, sourceUrl)
       .map(classify)
       .filter((item) => ["race", "multi", "overall", "qualifying"].includes(item.kind));
-    const unique: ReturnType<typeof classify>[] = [];
-    const seen = new Set<string>();
+
+  const byKind: Record<string, ReturnType<typeof classify>[]> = {
+      overall: [],
+      multi: [],
+      qualifying: [],
+      race: [],
+    };
     for (const item of childUrls) {
       let fetchUrl = item.url;
       if (item.kind === "qualifying") {
@@ -116,10 +125,27 @@ Deno.serve(async (req) => {
           // keep original url
         }
       }
-      if (seen.has(fetchUrl)) continue;
-      seen.add(fetchUrl);
-      unique.push({ ...item, url: fetchUrl });
-      if (unique.length >= 80) break;
+      byKind[item.kind]?.push({ ...item, url: fetchUrl });
+    }
+
+    const unique: ReturnType<typeof classify>[] = [];
+    const seen = new Set<string>();
+    const addUnique = (item: ReturnType<typeof classify>) => {
+      if (seen.has(item.url)) return;
+      seen.add(item.url);
+      unique.push(item);
+    };
+
+    const MAX_PAGES = 280;
+    for (const item of byKind.overall) addUnique(item);
+    for (const item of byKind.multi) addUnique(item);
+    for (const item of byKind.qualifying) {
+      addUnique(item);
+      if (unique.length >= MAX_PAGES) break;
+    }
+    for (const item of byKind.race) {
+      addUnique(item);
+      if (unique.length >= MAX_PAGES) break;
     }
 
     const pages: { url: string; html: string }[] = [{ url: sourceUrl, html: indexHtml }];

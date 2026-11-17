@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/supabaseClient";
+import { readPageFilterPrefs } from "@/app/lib/pageFilterPrefs";
+import { usePageFilterPrefs } from "@/app/lib/usePageFilterPrefs";
 
 import CMSCard from "../cms/CMSCard";
 import CMSButton from "../cms/CMSButton";
@@ -10,6 +12,22 @@ import { normalizeDayRecord } from "@app/pages/admin/events/eventDefaults";
 import { richTextToPlainText } from "@/app/lib/richText";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { loadEventResultSummariesForEvents } from "@/app/lib/results/summarizeEventResultStats";
+
+const ADMIN_EVENTS_FILTER_PAGE = "admin-events";
+
+function initAdminEventsFilters(saved) {
+  const dateFilter = saved?.dateFilter;
+  return {
+    query: typeof saved?.query === "string" ? saved.query : "",
+    trackFilter: typeof saved?.trackFilter === "string" ? saved.trackFilter : "all",
+    typeFilter: typeof saved?.typeFilter === "string" ? saved.typeFilter : "all",
+    sortOrder: saved?.sortOrder === "desc" ? "desc" : "asc",
+    dateFilter:
+      dateFilter === "all" || dateFilter === "upcoming" || dateFilter === "past"
+        ? dateFilter
+        : "upcoming",
+  };
+}
 
 export default function AdminEvents() {
   const { t } = useTranslation();
@@ -27,12 +45,32 @@ export default function AdminEvents() {
 
   const [expanded, setExpanded] = useState({});
 
-  // Filters
-  const [query, setQuery] = useState("");
-  const [trackFilter, setTrackFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [dateFilter, setDateFilter] = useState("upcoming");
+  const savedAdminEventsFilters = useMemo(
+    () => readPageFilterPrefs(clubSlug, ADMIN_EVENTS_FILTER_PAGE),
+    [clubSlug]
+  );
+  const initialAdminFilters = useMemo(
+    () => initAdminEventsFilters(savedAdminEventsFilters),
+    [savedAdminEventsFilters]
+  );
+
+  const [query, setQuery] = useState(() => initialAdminFilters.query);
+  const [trackFilter, setTrackFilter] = useState(() => initialAdminFilters.trackFilter);
+  const [typeFilter, setTypeFilter] = useState(() => initialAdminFilters.typeFilter);
+  const [sortOrder, setSortOrder] = useState(() => initialAdminFilters.sortOrder);
+  const [dateFilter, setDateFilter] = useState(() => initialAdminFilters.dateFilter);
+
+  const adminEventsFilterPrefs = useMemo(
+    () => ({
+      query,
+      trackFilter,
+      typeFilter,
+      sortOrder,
+      dateFilter,
+    }),
+    [query, trackFilter, typeFilter, sortOrder, dateFilter]
+  );
+  usePageFilterPrefs(clubSlug, ADMIN_EVENTS_FILTER_PAGE, adminEventsFilterPrefs);
 
   useEffect(() => {
     loadEvents();

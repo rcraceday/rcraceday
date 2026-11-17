@@ -25,7 +25,7 @@ export default function ChampionshipStandings() {
   const { club } = useClub();
   const { palette } = useTheme();
   const { t } = useTranslation();
-  const { isMyRow, rowClass } = useHouseholdResultHighlight();
+  const { rowClass } = useHouseholdResultHighlight();
   const primaryColor = palette?.primary || "#2563eb";
 
   const [championship, setChampionship] = useState(null);
@@ -266,16 +266,8 @@ export default function ChampionshipStandings() {
                         <PositionCell value={row.rank} />
                         <td className="py-2 pr-2 font-medium max-w-[9rem] sm:max-w-none">
                           <span className="inline-flex items-center gap-1.5 flex-wrap">
-                            {row.driverName}
-                            {isMyRow(row) ? (
-                              <span
-                                className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded text-white"
-                                style={{ backgroundColor: primaryColor }}
-                              >
-                                {t("results.youBadge")}
-                              </span>
-                            ) : null}
-                            {seasonComplete ? <ChampionshipPlaceTrophy rank={row.rank} /> : null}
+                          {row.driverName}
+                          {seasonComplete ? <ChampionshipPlaceTrophy rank={row.rank} /> : null}
                           </span>
                         </td>
                         <td className="py-2 pl-2 tabular-nums font-semibold text-right whitespace-nowrap">

@@ -7,6 +7,7 @@ create table if not exists public.championships (
   name text not null,
   season text not null default '',
   members_only boolean not null default true,
+  results_members_only boolean not null default false,
   total_rounds integer not null default 0,
   drop_rounds integer not null default 0,
   classes text[] not null default '{}',

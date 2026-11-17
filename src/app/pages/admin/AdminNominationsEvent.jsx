@@ -30,6 +30,10 @@ import { DeleteButton, EditButton } from "@cms/CMSButtonSet";
 import { cmsStyles } from "@cms/styles";
 import { cmsLayout } from "@cms/layout";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import {
+  eventDaySelectLabel,
+  getEventDayRecords,
+} from "@/app/lib/results/eventResultDays";
 
 function windowBadgeStyle(statusId) {
   if (statusId === "open") return cmsStyles.badgePublished;
@@ -88,6 +92,19 @@ export default function AdminNominationsEvent() {
   const [editDraft, setEditDraft] = useState(emptyDraft);
   const [addDraft, setAddDraft] = useState(emptyDraft);
   const [showAdd, setShowAdd] = useState(false);
+  const [livetimeExportDay, setLivetimeExportDay] = useState("all");
+
+  const livetimeDayOptions = useMemo(() => {
+    if (!event?.is_multi_day) return [];
+    const days = getEventDayRecords(event);
+    return [
+      { value: "all", label: t("admin.nominations.livetimeExportAll") },
+      ...days.map((day, index) => ({
+        value: String(index),
+        label: eventDaySelectLabel(day, index, formatEventDate),
+      })),
+    ];
+  }, [event, t]);
 
   async function load() {
     if (!eventId || !club?.id) return;
@@ -446,11 +463,14 @@ export default function AdminNominationsEvent() {
         event,
         driverClassTransponders: buildDriverClassTransponderMap(driverClassRows),
         driverClassChassis: buildDriverClassChassisMap(driverClassRows),
+        exportDayIndex: livetimeExportDay,
       })
     );
+    const daySuffix =
+      event?.is_multi_day && livetimeExportDay !== "all" ? `-day-${Number(livetimeExportDay) + 1}` : "";
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    link.download = `${richTextToPlainText(event?.name) || "event"}-livetime.csv`;
+    link.download = `${richTextToPlainText(event?.name) || "event"}-livetime${daySuffix}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
   }
@@ -550,6 +570,15 @@ export default function AdminNominationsEvent() {
             >
               ← Back
             </CMSButton>
+            {livetimeDayOptions.length > 0 ? (
+              <CMSSelect
+                label=""
+                value={livetimeExportDay}
+                onChange={setLivetimeExportDay}
+                options={livetimeDayOptions}
+                sortOptions={false}
+              />
+            ) : null}
             <CMSButton type="button" onClick={downloadCsv}>
               LiveTime CSV
             </CMSButton>

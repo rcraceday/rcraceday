@@ -15,15 +15,19 @@ export async function saveEventResults({
   rosterIndex,
   userId,
   published = true,
+  resultDayIndex = null,
+  resultDayDate = null,
 }) {
   const races = parsed.races || [];
   const overall = assignOverallPositions(parsed.overall || []);
 
-  const { data: existing } = await supabase
-    .from("event_results")
-    .select("id")
-    .eq("event_id", eventId)
-    .maybeSingle();
+  let existingQuery = supabase.from("event_results").select("id").eq("event_id", eventId);
+  if (resultDayIndex === null || resultDayIndex === undefined) {
+    existingQuery = existingQuery.is("result_day_index", null);
+  } else {
+    existingQuery = existingQuery.eq("result_day_index", resultDayIndex);
+  }
+  const { data: existing } = await existingQuery.maybeSingle();
 
   if (existing?.id) {
     const { error: deleteError } = await supabase.from("event_results").delete().eq("id", existing.id);
@@ -41,6 +45,8 @@ export async function saveEventResults({
       liverc_event_id: parsed.livercEventId,
       published,
       imported_by: userId || null,
+      result_day_index: resultDayIndex ?? null,
+      result_day_date: resultDayDate || null,
     })
     .select("id")
     .single();
@@ -128,6 +134,17 @@ export async function saveEventResults({
   }
 
   return resultRow.id;
+}
+
+export async function deleteEventResults({ supabase, eventId, resultDayIndex = null }) {
+  let query = supabase.from("event_results").delete().eq("event_id", eventId);
+  if (resultDayIndex === null || resultDayIndex === undefined) {
+    query = query.is("result_day_index", null);
+  } else {
+    query = query.eq("result_day_index", resultDayIndex);
+  }
+  const { error } = await query;
+  if (error) throw error;
 }
 
 export function unmatchedNames(parsed, rosterIndex) {

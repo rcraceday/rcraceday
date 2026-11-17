@@ -6,10 +6,31 @@ export const LIVE_RC_QUAL_ORDERS = [
   "laps_time",
   "fastest_lap",
   "top_3_consecutive",
-  "top_2_consecutive",
 ];
 
 export const DEFAULT_LIVE_RC_QUAL_ORDER = "top_5_average";
+
+/** LiveRC `view_round_ranking` `o=` query values (internal keys differ for top 5). */
+const LIVE_RC_QUAL_PARAM = {
+  top_5_average: "avg_top_5",
+  laps_time: "laps_time",
+  fastest_lap: "fastest_lap",
+  top_3_consecutive: "top_3_consecutive",
+};
+
+const LIVE_RC_PARAM_TO_ORDER = {
+  avg_top_5: "top_5_average",
+};
+
+export function toLiveRcQualifyingParam(order = DEFAULT_LIVE_RC_QUAL_ORDER) {
+  return LIVE_RC_QUAL_PARAM[order] || order;
+}
+
+export function fromLiveRcQualifyingParam(param) {
+  if (!param) return null;
+  if (LIVE_RC_QUAL_ORDERS.includes(param)) return param;
+  return LIVE_RC_PARAM_TO_ORDER[param] || null;
+}
 
 export function qualifyingOrderLabel(order, t) {
   const key = `results.qualOrder.${order}`;
@@ -28,7 +49,8 @@ export function qualifyingOrderLabel(order, t) {
 export function qualifyingOrderFromUrl(url) {
   try {
     const value = new URL(url).searchParams.get("o");
-    if (value && LIVE_RC_QUAL_ORDERS.includes(value)) return value;
+    const mapped = fromLiveRcQualifyingParam(value);
+    if (mapped) return mapped;
   } catch {
     // ignore
   }
@@ -39,11 +61,25 @@ export function withQualifyingOrder(url, order = DEFAULT_LIVE_RC_QUAL_ORDER) {
   try {
     const parsed = new URL(url);
     if (parsed.searchParams.get("p") !== "view_round_ranking") return url;
-    parsed.searchParams.set("o", order);
+    parsed.searchParams.set("o", toLiveRcQualifyingParam(order));
     return parsed.toString();
   } catch {
     return url;
   }
+}
+
+/** Re-rank stored qualifying races (e.g. after changing the admin dropdown). */
+export function reapplyQualifyingOrderToRaces(races, order = DEFAULT_LIVE_RC_QUAL_ORDER) {
+  if (!Array.isArray(races)) return races;
+  return races.map((race) => {
+    if (race.raceKind !== "qualifying" || !race.qualifyingRankMethod) return race;
+    return {
+      ...race,
+      qualifyingRankMethod: order,
+      qualifyingRankLabel: qualifyingOrderLabel(order),
+      entries: sortQualifyingEntries(race.entries, order),
+    };
+  });
 }
 
 /** LiveRC cells often prefix values, e.g. "0022.702 22.702" or combined lap rows. */
@@ -80,4 +116,33 @@ export function primaryQualifyingMetric(entry, order) {
     default:
       return entry.totalTimeMs;
   }
+}
+
+/** Lower is better for lap-time metrics; laps/time uses more laps then less total time. */
+export function compareQualifyingEntries(a, b, order = "laps_time") {
+  if (order === "laps_time") {
+    const lapsA = Number(a?.laps) || 0;
+    const lapsB = Number(b?.laps) || 0;
+    if (lapsB !== lapsA) return lapsB - lapsA;
+    const timeA = a?.totalTimeMs ?? Number.POSITIVE_INFINITY;
+    const timeB = b?.totalTimeMs ?? Number.POSITIVE_INFINITY;
+    return timeA - timeB;
+  }
+
+  const metricA = primaryQualifyingMetric(a, order);
+  const metricB = primaryQualifyingMetric(b, order);
+  if (metricA == null && metricB == null) return 0;
+  if (metricA == null) return 1;
+  if (metricB == null) return -1;
+  return metricA - metricB;
+}
+
+export function sortQualifyingEntries(entries, order = DEFAULT_LIVE_RC_QUAL_ORDER) {
+  if (!Array.isArray(entries) || entries.length < 2) return entries || [];
+  const sorted = [...entries].sort((a, b) => compareQualifyingEntries(a, b, order));
+  return sorted.map((entry, index) => ({
+    ...entry,
+    position: index + 1,
+    seed: index + 1,
+  }));
 }

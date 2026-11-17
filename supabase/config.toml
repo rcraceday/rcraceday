@@ -27,3 +27,9 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/send-web-push/deno.json"
 entrypoint = "./functions/send-web-push/index.ts"
+
+[functions.import-liverc-results]
+enabled = true
+# JWT checked inside the function; avoids CORS preflight failures on OPTIONS.
+verify_jwt = false
+entrypoint = "./functions/import-liverc-results/index.ts"

@@ -46,6 +46,7 @@ export default function AdminChampionshipManage() {
   const [name, setName] = useState("");
   const [season, setSeason] = useState("");
   const [membersOnly, setMembersOnly] = useState(true);
+  const [resultsMembersOnly, setResultsMembersOnly] = useState(false);
   const [totalRounds, setTotalRounds] = useState(0);
   const [dropRounds, setDropRounds] = useState(0);
   const [selectedClasses, setSelectedClasses] = useState([]);
@@ -69,6 +70,7 @@ export default function AdminChampionshipManage() {
       name,
       season,
       members_only: membersOnly,
+      results_members_only: resultsMembersOnly,
       total_rounds: totalRounds,
       drop_rounds: dropRounds,
       classes: selectedClasses,
@@ -80,6 +82,7 @@ export default function AdminChampionshipManage() {
     name,
     season,
     membersOnly,
+    resultsMembersOnly,
     totalRounds,
     dropRounds,
     selectedClasses,
@@ -115,6 +118,7 @@ export default function AdminChampionshipManage() {
     setName(champ.name || "");
     setSeason(champ.season || "");
     setMembersOnly(champ.members_only !== false);
+    setResultsMembersOnly(champ.results_members_only === true);
     setTotalRounds(Number(champ.total_rounds) || 0);
     setDropRounds(Number(champ.drop_rounds) || 0);
     setSelectedClasses(Array.isArray(champ.classes) ? [...champ.classes] : []);
@@ -178,6 +182,7 @@ export default function AdminChampionshipManage() {
         name: name.trim(),
         season: season.trim(),
         members_only: membersOnly,
+        results_members_only: resultsMembersOnly,
         total_rounds: Number(totalRounds) || 0,
         drop_rounds: Number(dropRounds) || 0,
         classes: selectedClasses,
@@ -292,6 +297,14 @@ export default function AdminChampionshipManage() {
                     checked={membersOnly}
                     onChange={setMembersOnly}
                   />
+                  <CMSToggle
+                    label={t("admin.championships.resultsMembersOnly")}
+                    checked={resultsMembersOnly}
+                    onChange={setResultsMembersOnly}
+                  />
+                  <p className="text-sm text-slate-500 m-0">
+                    {t("admin.championships.resultsMembersOnlyHelp")}
+                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <CMSInput
                       label={t("admin.championships.totalRounds")}

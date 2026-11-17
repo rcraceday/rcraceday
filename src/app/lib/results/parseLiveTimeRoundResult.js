@@ -7,9 +7,10 @@ import {
   parseTimeToMs,
 } from "./resultTime.js";
 import { assignOverallPositions } from "./overallOrder.js";
+import { enrichOverallRowsFromRaces } from "./aggregateDriverStats.js";
 import { readSpreadsheetGrid } from "./readXlsGrid.js";
 
-const RACE_TITLE = /^(.+?)\s*\(([ABC])(\d+)\s*Main\)/i;
+const RACE_TITLE = /^(.+?)\s*\(([A-Z])(\d+)\s*Main\)/i;
 const LAPS_TIME = /^\d+\s*\/\s*\d+:\d+/;
 
 function cell(row, col) {
@@ -190,6 +191,7 @@ export function parseLiveTimeRoundResultGrid(rows, meta = {}) {
     if (!prev || row.sourceIndex >= prev.sourceIndex) latest.set(key, row);
   });
 
+  const overallSorted = assignOverallPositions([...latest.values()]);
   return {
     source: "livetime_xls",
     sourceLabel: meta.sourceLabel || "LiveTime Round Result",
@@ -197,7 +199,7 @@ export function parseLiveTimeRoundResultGrid(rows, meta = {}) {
     livercEventId: null,
     title: meta.title || "Main Results",
     races,
-    overall: assignOverallPositions([...latest.values()]),
+    overall: enrichOverallRowsFromRaces(overallSorted, races),
   };
 }
 

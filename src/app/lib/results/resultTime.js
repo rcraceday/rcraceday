@@ -56,6 +56,25 @@ export function parseResultLabel(value) {
   };
 }
 
+/** LiveRC overall "Result" cells: `[2] [4] 8/5:32` or `5th (16/5:14)`. */
+export function parseOverallResultFinishes(value) {
+  const text = String(value || "").trim();
+  if (!text) return [];
+  const bracketed = [...text.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1]));
+  if (bracketed.length) return bracketed;
+  const ordinal = text.match(/^(\d+)(?:st|nd|rd|th)\b/i);
+  return ordinal ? [Number(ordinal[1])] : [];
+}
+
+export function looksLikeOverallResultCell(value) {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  if (/^\[\d+\]/.test(text)) return true;
+  if (/^\d+(?:st|nd|rd|th)\b/i.test(text)) return true;
+  if (/^\d+\s*\/\s*\d+:\d+/.test(text)) return true;
+  return false;
+}
+
 export function formatMs(ms) {
   if (ms == null || Number.isNaN(Number(ms))) return "—";
   const total = Number(ms) / 1000;
@@ -89,6 +108,27 @@ export function compareRacesForDisplay(a, b) {
   return (a?.mainNumber || 0) - (b?.mainNumber || 0);
 }
 
+/** Short tab label: Q1, A1, B2, D1, … */
+export function raceTabLabel(race) {
+  if (!race) return "";
+  if (race.raceKind === "qualifying") return race.roundLabel || "Q1";
+  const letter = String(race.mainLetter || "").toUpperCase();
+  const segment = race.mainNumber ?? 1;
+  return letter ? `${letter}${segment}` : "Main";
+}
+
+/** Stable key for per-race result tabs. */
+export function raceTabKey(race, index = 0) {
+  if (!race) return `race:${index}`;
+  if (race.id) return `id:${race.id}`;
+  if (race.raceKind === "qualifying") {
+    return `qual:${race.roundLabel || "Q"}:${index}`;
+  }
+  const letter = String(race.mainLetter || "?").toUpperCase();
+  const segment = race.mainNumber ?? 1;
+  return `main:${letter}:${segment}:${index}`;
+}
+
 export function raceTitle(race) {
   if (!race) return "";
   if (race.raceKind === "qualifying") {
@@ -98,8 +138,9 @@ export function raceTitle(race) {
       ? `${race.className} · ${round} (${method})`.trim()
       : `${race.className} · ${round}`.trim();
   }
-  if (race.mainLetter && race.mainNumber) {
-    return `${race.className} (${race.mainLetter}${race.mainNumber} Main)`;
+  if (race.mainLetter) {
+    const segment = race.mainNumber ?? 1;
+    return `${race.className} (${String(race.mainLetter).toUpperCase()}${segment} Main)`;
   }
   return race.className || "";
 }

@@ -56,6 +56,25 @@ export function parseResultLabel(value) {
   };
 }
 
+/** LiveRC overall "Result" cells: `[2] [4] 8/5:32` or `5th (16/5:14)`. */
+export function parseOverallResultFinishes(value) {
+  const text = String(value || "").trim();
+  if (!text) return [];
+  const bracketed = [...text.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1]));
+  if (bracketed.length) return bracketed;
+  const ordinal = text.match(/^(\d+)(?:st|nd|rd|th)\b/i);
+  return ordinal ? [Number(ordinal[1])] : [];
+}
+
+export function looksLikeOverallResultCell(value) {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  if (/^\[\d+\]/.test(text)) return true;
+  if (/^\d+(?:st|nd|rd|th)\b/i.test(text)) return true;
+  if (/^\d+\s*\/\s*\d+:\d+/.test(text)) return true;
+  return false;
+}
+
 export function formatMs(ms) {
   if (ms == null || Number.isNaN(Number(ms))) return "—";
   const total = Number(ms) / 1000;
@@ -72,6 +91,44 @@ export function positionsGained(seed, finish) {
   return Number(seed) - Number(finish);
 }
 
+function mainLetterRank(letter) {
+  const normalized = String(letter || "A").toUpperCase();
+  const code = normalized.charCodeAt(0);
+  if (code >= 65 && code <= 90) return code - 64;
+  return 99;
+}
+
+/** Qualifying before mains; A-main before B-main; then by main number. */
+export function compareRacesForDisplay(a, b) {
+  const aQual = a?.raceKind === "qualifying" ? 0 : 1;
+  const bQual = b?.raceKind === "qualifying" ? 0 : 1;
+  if (aQual !== bQual) return aQual - bQual;
+  const letterCmp = mainLetterRank(a?.mainLetter) - mainLetterRank(b?.mainLetter);
+  if (letterCmp !== 0) return letterCmp;
+  return (a?.mainNumber || 0) - (b?.mainNumber || 0);
+}
+
+/** Short tab label: Q1, A1, B2, D1, … */
+export function raceTabLabel(race) {
+  if (!race) return "";
+  if (race.raceKind === "qualifying") return race.roundLabel || "Q1";
+  const letter = String(race.mainLetter || "").toUpperCase();
+  const segment = race.mainNumber ?? 1;
+  return letter ? `${letter}${segment}` : "Main";
+}
+
+/** Stable key for per-race result tabs. */
+export function raceTabKey(race, index = 0) {
+  if (!race) return `race:${index}`;
+  if (race.id) return `id:${race.id}`;
+  if (race.raceKind === "qualifying") {
+    return `qual:${race.roundLabel || "Q"}:${index}`;
+  }
+  const letter = String(race.mainLetter || "?").toUpperCase();
+  const segment = race.mainNumber ?? 1;
+  return `main:${letter}:${segment}:${index}`;
+}
+
 export function raceTitle(race) {
   if (!race) return "";
   if (race.raceKind === "qualifying") {
@@ -81,8 +138,9 @@ export function raceTitle(race) {
       ? `${race.className} · ${round} (${method})`.trim()
       : `${race.className} · ${round}`.trim();
   }
-  if (race.mainLetter && race.mainNumber) {
-    return `${race.className} (${race.mainLetter}${race.mainNumber} Main)`;
+  if (race.mainLetter) {
+    const segment = race.mainNumber ?? 1;
+    return `${race.className} (${String(race.mainLetter).toUpperCase()}${segment} Main)`;
   }
   return race.className || "";
 }

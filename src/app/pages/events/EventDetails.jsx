@@ -295,13 +295,13 @@ export default function EventDetails() {
 
       setEvent(data || null);
       if (data?.id) {
-        const { data: resultRow } = await supabase
+        const { data: resultRows } = await supabase
           .from("event_results")
           .select("id")
           .eq("event_id", data.id)
           .eq("published", true)
-          .maybeSingle();
-        setHasResults(!!resultRow);
+          .limit(1);
+        setHasResults(!!resultRows?.length);
       } else {
         setHasResults(false);
       }

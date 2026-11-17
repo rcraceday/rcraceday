@@ -2,12 +2,15 @@ import { normalizeDriverName, parseDriverName } from "./driverName.js";
 import {
   parseConsistencyPct,
   parseLapsTime,
+  parseOverallResultFinishes,
   parseResultLabel,
   parseStatusFromLabel,
   parseTimeToMs,
+  looksLikeOverallResultCell,
 } from "./resultTime.js";
 import { assignOverallPositions } from "./overallOrder.js";
 import { compareRacesForDisplay } from "./resultTime.js";
+import { enrichOverallRowsFromRaces } from "./aggregateDriverStats.js";
 import {
   DEFAULT_LIVE_RC_QUAL_ORDER,
   parseLiveRcMetricCell,
@@ -99,10 +102,11 @@ function uniqueRows(rows) {
   });
 }
 
-const RACE_TITLE = /(.+?)\s*\(([ABC])(\d+)-Main\)/i;
-const RACE_TITLE_LIVERC = /Race\s+\d+:\s*(.+?)\s+([ABC])(\d+)-Main/i;
+const RACE_TITLE = /(.+?)\s*\(([A-Z])(\d+)-Main\)/i;
+const RACE_TITLE_LIVERC = /Race\s+\d+:\s*(.+?)\s+([A-Z])(\d+)-Main/i;
+const RACE_TITLE_LETTER_MAIN = /(.+?)\s*\(([A-Z])\s*-?\s*Main\)/i;
 const RACE_HEAT = /(.+?)\s*\(Heat\s+(\d+)\/(\d+)\)/i;
-const MULTI_TITLE = /(.+?)\s+Triple\s+([ABC])-Main\s+Results/i;
+const MULTI_TITLE = /(.+?)\s+(?:Triple|Double|Single)?\s*([A-Z])-Main\s+Results/i;
 
 function shortClassName(name) {
   return normalizeResultClassName(name) || "";
@@ -117,28 +121,55 @@ function pageTitleTag(html) {
   return stripTags((String(html || "").match(/<title[\s\S]*?<\/title>/i) || [""])[0]);
 }
 
+function parseMultiMainHeading(text) {
+  const source = String(text || "").trim();
+  if (!source) return null;
+  const patterns = [
+    /^(.+?)\s+(?:Triple|Double|Single)\s+([A-Z])-Main\s+Results/i,
+    /^(.+?)\s+([A-Z])-Main\s+Results/i,
+    MULTI_TITLE,
+  ];
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (match) {
+      return {
+        className: shortClassName(match[1].trim()),
+        mainLetter: match[2].toUpperCase(),
+      };
+    }
+  }
+  return null;
+}
+
 function parseMultiMainMeta(html) {
   const title = pageTitleTag(html);
-  const scoped = title.match(/::\s*(.+?)\s+Triple\s+([ABC])-Main\s+Results/i);
-  if (scoped) {
-    return { className: scoped[1].trim(), mainLetter: scoped[2].toUpperCase() };
+  const h1 = stripTags((String(html || "").match(/<h1[\s\S]*?<\/h1>/i) || ["", ""])[1] || "");
+  const titleParts = title.split("::").map((part) => part.trim()).filter(Boolean);
+  const candidates = [
+    h1,
+    ...titleParts.filter((part) => /main\s+results/i.test(part)),
+    title,
+  ];
+  for (const candidate of candidates) {
+    const parsed = parseMultiMainHeading(candidate);
+    if (parsed?.mainLetter) return parsed;
   }
-  const loose = title.match(MULTI_TITLE);
-  if (loose) {
-    return { className: shortClassName(loose[1].trim()), mainLetter: loose[2].toUpperCase() };
+  const th = parseRaceMainFromHtml(html);
+  if (th?.mainLetter) {
+    return { className: shortClassName(th.className), mainLetter: th.mainLetter };
   }
-  return { className: "", mainLetter: "A" };
+  return { className: "", mainLetter: "" };
 }
 
 function parseRaceMainFromHtml(html) {
   const th = String(html || "").match(/<th[^>]*colspan[^>]*>([\s\S]*?)<\/th>/i);
   const text = stripTags(th?.[1] || "");
-  const match = text.match(/(?:\d+\s+)?(.+?)\s+([ABC])(\d+)-Main/i);
+  const match = text.match(/(?:\d+\s+)?(.+?)\s+([A-Z])(\d+)?\s*-?\s*Main/i);
   if (!match) return null;
   return {
     className: match[1].trim(),
     mainLetter: match[2].toUpperCase(),
-    mainNumber: Number(match[3]),
+    mainNumber: match[3] ? Number(match[3]) : 1,
   };
 }
 
@@ -176,7 +207,19 @@ function parseRaceTables(url, html) {
     className = shortClassName(mainMatch[1].replace(/Results.*$/i, "").trim());
     mainLetter = mainMatch[2].toUpperCase();
     mainNumber = Number(mainMatch[3]);
-  } else if (heatMatch) {
+  } else {
+    const letterMain =
+      titleText.match(RACE_TITLE_LETTER_MAIN) ||
+      html.match(RACE_TITLE_LETTER_MAIN) ||
+      titleText.match(/Race\s+\d+:\s*(.+?)\s+([A-Z])\s*-?\s*Main/i) ||
+      html.match(/Race\s+\d+:\s*(.+?)\s+([A-Z])\s*-?\s*Main/i);
+    if (letterMain) {
+      className = shortClassName(letterMain[1].replace(/Results.*$/i, "").trim());
+      mainLetter = letterMain[2].toUpperCase();
+      mainNumber = 1;
+    }
+  }
+  if (!mainLetter && !mainNumber && heatMatch) {
     className = heatMatch[1].replace(/Results.*$/i, "").trim();
     raceKind = "qualifying";
   }
@@ -218,6 +261,9 @@ function parseRaceTables(url, html) {
   });
 
   if (!entries.length) return null;
+  if (raceKind === "main" && mainLetter && (mainNumber == null || !Number.isFinite(mainNumber))) {
+    mainNumber = 1;
+  }
   return {
     className: className || "Unknown",
     mainLetter,
@@ -234,18 +280,23 @@ function segmentColumnsForMain(header, mainLetter) {
   const letterCols = header
     .map((cell, index) => {
       const key = String(cell).trim().replace(/\s+/g, "");
-      const match = /^([ABC])(\d+)$/i.exec(key);
+      const match = /^([A-Z])(\d+)$/i.exec(key);
       return match && match[1].toUpperCase() === letter ? index : -1;
     })
     .filter((index) => index >= 0);
   if (letterCols.length) return letterCols;
+  const letterLower = letter.toLowerCase();
   return header
-    .map((cell, index) => (/^a\d+$/i.test(String(cell).trim()) ? index : -1))
+    .map((cell, index) => {
+      const trimmed = String(cell).trim();
+      return new RegExp(`^${letterLower}\\d+$`, "i").test(trimmed) ? index : -1;
+    })
     .filter((index) => index >= 0);
 }
 
 function parseMultiMainTables(html) {
   const { className, mainLetter } = parseMultiMainMeta(html);
+  if (!mainLetter) return [];
   const tables = extractTables(html).map(uniqueRows);
   const rowsOut = [];
   tables.forEach((rows) => {
@@ -267,6 +318,7 @@ function parseMultiMainTables(html) {
           label.replace(/^\d+(?:st|nd|rd|th)\s*\([^)]*\)\s*:\s*/i, "")
         );
         return {
+          letter: mainLetter,
           mainNumber: index + 1,
           resultLabel: label,
           ...lapsPart,
@@ -278,7 +330,10 @@ function parseMultiMainTables(html) {
         mainLetter,
         position,
         ...parsedName,
-        ifmarPoints: pointsCol >= 0 ? Number(row[pointsCol]) : null,
+        ifmarPoints:
+          pointsCol >= 0 && /^\d+(\.\d+)?$/.test(String(row[pointsCol] || "").trim())
+            ? Number(row[pointsCol])
+            : null,
         tieBreaker: null,
         mains,
       });
@@ -287,42 +342,119 @@ function parseMultiMainTables(html) {
   return rowsOut;
 }
 
+export function parseMainLetterFromOverallLabel(raceLabel) {
+  const text = String(raceLabel || "").trim();
+  if (!text) return null;
+  const patterns = [
+    /\b([A-Z])\s*\d+\s*-?\s*Main\b/i,
+    /\b([A-Z])\s*-?\s*Main\b/i,
+    /\b([A-Z])\s*\d+\s*Main\b/i,
+    /^([A-Z])\d+\b/i,
+    /^([A-Z])\s+Main$/i,
+    /\b([A-Z])\s*Main\b/i,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[1].toUpperCase();
+  }
+  return null;
+}
+
+function overallRowRaceLabel(row) {
+  const mainCell = row.findIndex((cell) =>
+    /\bmain\b|[A-Z]\s*\d+\s*-?\s*Main|^[A-Z]\d+$/i.test(String(cell))
+  );
+  if (mainCell >= 0) return String(row[mainCell] || "").trim();
+  return String(row[row.length - 1] || "").trim();
+}
+
+function parseMainNumberFromOverallLabel(raceLabel) {
+  const text = String(raceLabel || "").trim();
+  const numbered = text.match(/\b([A-Z])\s*(\d+)\s*-?\s*Main\b/i) || text.match(/^([A-Z])(\d+)\b/i);
+  if (numbered) return Number(numbered[2]);
+  return 1;
+}
+
+function fallbackDriverCell(row) {
+  const index = row.findIndex(
+    (cell, cellIndex) =>
+      cellIndex > 0 &&
+      /[a-z]/i.test(cell) &&
+      !/\bmain\b/i.test(cell) &&
+      !looksLikeOverallResultCell(cell) &&
+      !/^[A-Z]\d+$/i.test(String(cell).trim())
+  );
+  return index >= 0 ? row[index] : row[3] || row[1] || "";
+}
+
+function mainsFromOverallResult(resultText, letter, mainNumber) {
+  const finishes = parseOverallResultFinishes(resultText);
+  if (!finishes.length) return [];
+  const countingSum = finishes.slice(1).reduce((sum, value) => sum + value, 0);
+  const positions =
+    finishes.length >= 2 && finishes[0] === countingSum ? finishes.slice(1) : finishes;
+  const start = positions.length === 1 ? mainNumber || 1 : 1;
+  return positions.map((finish, index) => ({
+    letter,
+    mainNumber: start + index,
+    finish,
+  }));
+}
+
 function parseOverallRanking(html) {
   const tables = extractTables(html).map(uniqueRows);
   const results = [];
   let currentClass = "";
   tables.forEach((rows) => {
+    let header = null;
     rows.forEach((row) => {
       if (row.length === 1 && row[0] && !/pos/i.test(row[0])) {
         currentClass = tryAssignClassLabel(currentClass, row[0]);
         return;
       }
       if (headerIndex(row, "pos") >= 0 && headerIndex(row, "driver") >= 0) {
-        currentClass = currentClass || row[0];
+        header = row;
+        currentClass = currentClass || tryAssignClassLabel("", row[0]);
         return;
       }
-      const position = Number(row[0]);
+      const posCol = header ? headerIndex(header, "pos") : 0;
+      const position = Number(row[posCol] ?? row[0]);
       if (!Number.isFinite(position)) {
         if (row[0] && !/pos|brand|country/i.test(row[0])) {
           currentClass = tryAssignClassLabel(currentClass, row[0]);
         }
         return;
       }
-      const driverCol = row.findIndex((cell, index) => index > 0 && /[a-z]/i.test(cell) && !/main/i.test(cell));
-      const raceCol = row.findIndex((cell) => /main/i.test(cell));
-      const driverName = driverCol >= 0 ? row[driverCol] : row[3] || row[1];
-      const raceLabel = raceCol >= 0 ? row[raceCol] : "";
-      const mainLetterMatch = String(raceLabel).match(/\b([ABC])\s*main/i);
-      const mainLetter = mainLetterMatch ? mainLetterMatch[1].toUpperCase() : "A";
+      const driverCol = header ? headerIndex(header, "driver") : -1;
+      const pointsCol = header ? headerIndex(header, "points") : -1;
+      const resultCol = header ? headerIndex(header, "result") : -1;
+      const raceCol = header ? headerIndex(header, "race") : -1;
+      const driverName =
+        driverCol >= 0 && row[driverCol] && !looksLikeOverallResultCell(row[driverCol])
+          ? row[driverCol]
+          : fallbackDriverCell(row);
+      const raceLabel = raceCol >= 0 ? String(row[raceCol] || "").trim() : overallRowRaceLabel(row);
+      const parsedLetter = parseMainLetterFromOverallLabel(raceLabel);
+      const mainLetter = parsedLetter || "A";
+      const mainNumber = parseMainNumberFromOverallLabel(raceLabel);
+      const pointsValue = pointsCol >= 0 ? Number(row[pointsCol]) : NaN;
+      const resultText =
+        resultCol >= 0
+          ? row[resultCol]
+          : pointsCol < 0
+            ? row[raceCol > 0 ? raceCol - 1 : row.length - 2]
+            : "";
+      const mains = mainsFromOverallResult(resultText, mainLetter, mainNumber);
       results.push({
         className: shortClassName(currentClass),
         mainLetter,
         position,
         overallPosition: position,
         ...parseDriverName(driverName),
-        ifmarPoints: null,
-        tieBreaker: row[raceCol >= 0 ? raceCol - 1 : row.length - 2] || null,
-        mains: [],
+        ifmarPoints: Number.isFinite(pointsValue) ? pointsValue : null,
+        tieBreaker: resultText || null,
+        resultLabel: resultText || null,
+        mains,
       });
     });
   });
@@ -471,16 +603,22 @@ export function detectLiveRcRaceFormat(races, pages = []) {
   const hasRoundQual = races.some(isRoundQualifyingRace);
   const hasQualHeats = races.some(isQualifyingHeatRace);
   const mainNumbers = races
-    .filter((race) => race.raceKind !== "qualifying" && race.mainNumber != null)
-    .map((race) => race.mainNumber);
+    .filter((race) => race.raceKind !== "qualifying")
+    .map((race) => race.mainNumber ?? 1);
   const maxMain = mainNumbers.length ? Math.max(...mainNumbers) : 0;
   const hasTriple = [1, 2, 3].every((n) => mainNumbers.includes(n));
   const hasMulti = (pages || []).some((page) => classifyLiveRcUrl(page.url).kind === "multi");
+  const mainLetters = new Set(
+    races
+      .filter((race) => race.raceKind !== "qualifying" && race.mainLetter)
+      .map((race) => String(race.mainLetter).toUpperCase())
+  );
+  const clubStyleLadder = mainLetters.size > 1;
 
-  if (hasRoundQual && hasTriple) return "triple_heads_up";
-  if (hasRoundQual && maxMain <= 1) return "single_main";
+  if (hasRoundQual && hasTriple && !clubStyleLadder) return "triple_heads_up";
+  if (hasRoundQual && maxMain <= 1 && !clubStyleLadder) return "single_main";
   if (!hasRoundQual && hasQualHeats) return "qual_heats";
-  if (hasMulti && hasTriple) return "triple_heads_up";
+  if (hasMulti && hasTriple && !clubStyleLadder) return "triple_heads_up";
   return "club_mains";
 }
 
@@ -494,14 +632,16 @@ function normalizeLiveRcRaceList(races, raceFormat = "auto", pages = []) {
   }
 
   if (resolved === "triple_heads_up") {
-    list = list.filter(
-      (race) =>
-        race.raceKind === "qualifying" ||
-        (race.mainNumber != null && race.mainNumber >= 1 && race.mainNumber <= 3)
-    );
+    list = list.filter((race) => {
+      if (race.raceKind === "qualifying") return true;
+      const letter = String(race.mainLetter || "A").toUpperCase();
+      const segment = race.mainNumber ?? 1;
+      if (letter !== "A") return true;
+      return segment >= 1 && segment <= 3;
+    });
   } else if (resolved === "single_main") {
     list = list.filter(
-      (race) => race.raceKind === "qualifying" || race.mainNumber === 1
+      (race) => race.raceKind === "qualifying" || (race.mainNumber ?? 1) === 1
     );
   }
 
@@ -565,40 +705,39 @@ export function parseLiveRcPages(pages, meta = {}) {
     const multiRows = [...overall];
     const multiMainKey = (row) =>
       `${normalize(shortClassName(row.className))}::${normalize(row.mainLetter || "A")}::${normalize(row.driverNameRaw)}`;
-    const driverKey = (row) =>
-      `${normalize(shortClassName(row.className))}::${normalize(row.driverNameRaw)}`;
-
+    const letterNameKey = (row) =>
+      `${normalize(row.mainLetter || "A")}::${normalize(row.driverNameRaw)}`;
     const byKey = new Map();
+    const byLetterName = new Map();
     multiRows.forEach((row) => {
       const key = multiMainKey(row);
       const prev = byKey.get(key);
       if (!prev || (row.sourceIndex || 0) >= (prev.sourceIndex || 0)) {
         byKey.set(key, row);
       }
+      const letterKey = letterNameKey(row);
+      const prevLetter = byLetterName.get(letterKey);
+      if (!prevLetter || (row.sourceIndex || 0) >= (prevLetter.sourceIndex || 0)) {
+        byLetterName.set(letterKey, row);
+      }
     });
 
-    const rankingKeys = new Set(rankingOverall.map((row) => driverKey(row)));
     const mergedRanking = rankingOverall.map((row) => {
-      const match = byKey.get(multiMainKey(row));
+      const match = byKey.get(multiMainKey(row)) || byLetterName.get(letterNameKey(row));
+      const sameLetter =
+        match && String(match.mainLetter || "A").toUpperCase() === String(row.mainLetter || "A").toUpperCase();
+      const mains = sameLetter && match?.mains?.length ? match.mains : row.mains;
       return {
         ...row,
         className: shortClassName(row.className),
-        mains: match?.mains?.length ? match.mains : row.mains,
-        ifmarPoints: match?.ifmarPoints ?? row.ifmarPoints,
+        mains: mains?.length ? mains : row.mains,
+        ifmarPoints: row.ifmarPoints ?? (sameLetter ? match?.ifmarPoints : null) ?? null,
         position: row.position ?? match?.position,
         overallPosition: row.overallPosition ?? row.position,
       };
     });
 
-    const supplemental = multiRows
-      .filter((row) => !rankingKeys.has(driverKey(row)))
-      .map((row) => ({
-        ...row,
-        className: shortClassName(row.className),
-        overallPosition: row.overallPosition ?? row.position,
-      }));
-
-    overall = assignOverallPositions([...mergedRanking, ...supplemental]);
+    overall = assignOverallPositions(mergedRanking);
   } else {
     const latest = new Map();
     overall.forEach((row) => {
@@ -620,6 +759,8 @@ export function parseLiveRcPages(pages, meta = {}) {
     raceFormat: meta.raceFormat || "auto",
     pages,
   });
+
+  overall = enrichOverallRowsFromRaces(overall, races);
 
   const raceFormat =
     meta.raceFormat && meta.raceFormat !== "auto"

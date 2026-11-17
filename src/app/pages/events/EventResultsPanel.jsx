@@ -3,16 +3,34 @@ import Card from "@/components/ui/Card";
 import ClassFolderTabs from "@/components/ui/ClassFolderTabs";
 import FilterDropdown from "@/components/ui/FilterDropdown";
 import useTheme from "@/app/providers/useTheme";
+import { useClub } from "@/app/providers/ClubProvider";
+import { loadResultMatchContext } from "@/app/lib/results/resultMemberMatch";
+import { filterResultsBundleForClubMembers } from "@/app/lib/results/filterResultsBundle";
 import { useHouseholdResultHighlight } from "@/app/hooks/useHouseholdResultHighlight";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { supabase } from "@/supabaseClient";
 import { richTextToPlainText } from "@/app/lib/richText";
-import { loadEventResultBundle } from "@/app/lib/results/loadEventResults";
+import {
+  listEventResultImports,
+  loadEventResultBundle,
+} from "@/app/lib/results/loadEventResults";
+import {
+  eventDaySelectLabel,
+  getEventDayRecords,
+} from "@/app/lib/results/eventResultDays";
 import { pickInitialResultClass, uniqueClassNames } from "@/app/lib/results/overallOrder";
 import { normalizeDriverName } from "@/app/lib/results/driverName";
-import { compareRacesForDisplay, formatMs, positionsGained, raceTitle } from "@/app/lib/results/resultTime";
+import {
+  compareRacesForDisplay,
+  formatMs,
+  positionsGained,
+  raceTabKey,
+  raceTabLabel,
+  raceTitle,
+} from "@/app/lib/results/resultTime";
 import {
   aggregateDriverMainStats,
+  displayOverallDriverName,
   formatOverallMainsColumn,
   latestMainEntry,
 } from "@/app/lib/results/aggregateDriverStats";
@@ -70,8 +88,12 @@ export default function EventResultsPanel({
   embedded = false,
   eventOptions = null,
   onEventChange,
+  resultSelectionKey = null,
+  initialResultDayIndex = null,
+  hideResultDayPicker = false,
 }) {
   const { t } = useTranslation();
+  const { club } = useClub();
   const { palette } = useTheme();
   const primaryColor = palette?.primary || "#2563eb";
   const { driverIds, driverNameKeys, isMyRow } = useHouseholdResultHighlight();
@@ -81,54 +103,143 @@ export default function EventResultsPanel({
   const [className, setClassName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [mainsScope, setMainsScope] = useState("mine");
+  const [raceViewTab, setRaceViewTab] = useState("mine");
+  const [resultDayIndex, setResultDayIndex] = useState(0);
+  const [resultsMembersOnly, setResultsMembersOnly] = useState(false);
+  const [memberFilterContext, setMemberFilterContext] = useState(null);
+
+  const eventDays = useMemo(() => getEventDayRecords(eventRow), [eventRow]);
+  const showDayPicker = Boolean(
+    !hideResultDayPicker && eventRow?.is_multi_day && eventDays.length > 1
+  );
+
+  const dayTabOptions = useMemo(() => {
+    if (!showDayPicker) return [];
+    return eventDays.map((day, index) => {
+      return {
+        value: String(index),
+        label: eventDaySelectLabel(day, index, formatEventDate),
+      };
+    });
+  }, [showDayPicker, eventDays]);
+
+  const displayBundle = useMemo(() => {
+    if (!bundle) return null;
+    if (previewUnpublished || !resultsMembersOnly) return bundle;
+    return filterResultsBundleForClubMembers(bundle, memberFilterContext);
+  }, [bundle, previewUnpublished, resultsMembersOnly, memberFilterContext]);
 
   useEffect(() => {
-    async function load() {
+    if (initialResultDayIndex != null && !Number.isNaN(initialResultDayIndex)) {
+      setResultDayIndex(initialResultDayIndex);
+    }
+  }, [eventId, initialResultDayIndex]);
+
+  useEffect(() => {
+    async function loadMeta() {
+      if (!eventId) return;
+      setError("");
+      setResultsMembersOnly(false);
+      setMemberFilterContext(null);
+      try {
+        const { data: eventData } = await supabase
+          .from("events")
+          .select(
+            "id, name, event_date, is_multi_day, days, classes_by_day, championship_id, club_id"
+          )
+          .eq("id", eventId)
+          .single();
+        setEventRow(eventData);
+        let hideNonMembers = false;
+        if (eventData?.championship_id) {
+          const { data: champ } = await supabase
+            .from("championships")
+            .select("results_members_only")
+            .eq("id", eventData.championship_id)
+            .maybeSingle();
+          hideNonMembers = champ?.results_members_only === true;
+        }
+        setResultsMembersOnly(hideNonMembers);
+        const clubId = eventData?.club_id || club?.id;
+        if (hideNonMembers && !previewUnpublished && clubId) {
+          const roster = await loadResultMatchContext(supabase, clubId);
+          if (!roster.loadError) {
+            setMemberFilterContext({
+              rosterIndex: roster.rosterIndex,
+              drivers: roster.drivers,
+              households: roster.households,
+            });
+          }
+        }
+        const imports = await listEventResultImports(eventId, {
+          includeUnpublished: previewUnpublished,
+        });
+        const dayIndexes = imports
+          .map((row) => row.result_day_index)
+          .filter((value) => value != null);
+        const preferred =
+          initialResultDayIndex != null &&
+          imports.some((row) => row.result_day_index === initialResultDayIndex)
+            ? initialResultDayIndex
+            : initialResultDayIndex != null
+              ? initialResultDayIndex
+              : dayIndexes.length
+                ? Math.min(...dayIndexes)
+                : 0;
+        setResultDayIndex(preferred);
+      } catch (err) {
+        setError(err.message || t("results.loadFailed"));
+      }
+    }
+    loadMeta();
+  }, [eventId, previewUnpublished, initialResultDayIndex, club?.id, t]);
+
+  useEffect(() => {
+    async function loadBundle() {
       if (!eventId) return;
       setLoading(true);
       setError("");
       try {
-        const { data: eventData } = await supabase
-          .from("events")
-          .select("id, name, event_date")
-          .eq("id", eventId)
-          .single();
-        setEventRow(eventData);
-        const next = await loadEventResultBundle(eventId, {
+        const loadOptions = {
           includeUnpublished: previewUnpublished,
-        });
+        };
+        if (eventRow?.is_multi_day) {
+          loadOptions.resultDayIndex = resultDayIndex;
+        }
+        const next = await loadEventResultBundle(eventId, loadOptions);
         setBundle(next);
       } catch (err) {
         setError(err.message || t("results.loadFailed"));
+        setBundle(null);
       } finally {
         setLoading(false);
       }
     }
-    load();
-  }, [eventId, previewUnpublished, t]);
+    if (!eventRow) return;
+    loadBundle();
+  }, [eventId, eventRow, resultDayIndex, previewUnpublished, t]);
 
   useEffect(() => {
-    if (!bundle) return;
-    const classes = uniqueClassNames(bundle);
+    if (!displayBundle) return;
+    const classes = uniqueClassNames(displayBundle);
     setClassName((current) => {
       if (current && classes.includes(current)) return current;
       if (preferredClass && classes.includes(preferredClass)) return preferredClass;
-      return pickInitialResultClass(bundle, driverIds, (name) =>
+      return pickInitialResultClass(displayBundle, driverIds, (name) =>
         driverNameKeys.has(normalizeDriverName(name))
       );
     });
-  }, [bundle, driverIds, driverNameKeys, preferredClass]);
+  }, [displayBundle, driverIds, driverNameKeys, preferredClass]);
 
   const classOptions = useMemo(() => {
-    if (!bundle) return [];
-    return uniqueClassNames(bundle).map((name) => ({ value: name, label: name }));
-  }, [bundle]);
+    if (!displayBundle) return [];
+    return uniqueClassNames(displayBundle).map((name) => ({ value: name, label: name }));
+  }, [displayBundle]);
 
-  const overall = (bundle?.overall || [])
+  const overall = (displayBundle?.overall || [])
     .filter((row) => row.className === className)
     .sort((a, b) => (a.overallPosition || a.position || 0) - (b.overallPosition || b.position || 0));
-  const races = (bundle?.races || []).filter((race) => race.className === className);
+  const races = (displayBundle?.races || []).filter((race) => race.className === className);
 
   const sortedClassRaces = useMemo(
     () => [...races].sort(compareRacesForDisplay),
@@ -143,30 +254,41 @@ export default function EventResultsPanel({
     [driverIds, driverNameKeys]
   );
 
-  const hasMyMains = useMemo(
-    () =>
-      sortedClassRaces.some(
+  const showRaceTabs = sortedClassRaces.length > 0;
+
+  const raceTabOptions = useMemo(() => {
+    if (!sortedClassRaces.length) return [];
+    const options = [{ value: "mine", label: t("results.mainsTabMine") }];
+    sortedClassRaces.forEach((race, index) => {
+      options.push({
+        value: raceTabKey(race, index),
+        label: raceTabLabel(race),
+      });
+    });
+    return options;
+  }, [sortedClassRaces, t]);
+
+  const visibleRacesForTab = useMemo(() => {
+    if (raceViewTab === "mine") {
+      return sortedClassRaces.filter(
         (race) => race.raceKind !== "qualifying" && raceHasHouseholdDriver(race)
-      ),
-    [sortedClassRaces, raceHasHouseholdDriver]
-  );
-
-  const qualifyingRaces = useMemo(
-    () => sortedClassRaces.filter((race) => race.raceKind === "qualifying"),
-    [sortedClassRaces]
-  );
-
-  const mainRaces = useMemo(() => {
-    const mains = sortedClassRaces.filter((race) => race.raceKind !== "qualifying");
-    if (mainsScope === "mine" && hasMyMains) {
-      return mains.filter(raceHasHouseholdDriver);
+      );
     }
-    return mains;
-  }, [sortedClassRaces, mainsScope, hasMyMains, raceHasHouseholdDriver]);
+    const index = raceTabOptions.findIndex((opt) => opt.value === raceViewTab);
+    if (index < 0) return [];
+    const raceIndex = index - 1;
+    if (raceIndex < 0 || raceIndex >= sortedClassRaces.length) return [];
+    return [sortedClassRaces[raceIndex]];
+  }, [raceViewTab, raceTabOptions, sortedClassRaces, raceHasHouseholdDriver]);
 
   useEffect(() => {
-    setMainsScope(hasMyMains ? "mine" : "all");
-  }, [className, hasMyMains]);
+    setRaceViewTab("mine");
+  }, [className]);
+
+  useEffect(() => {
+    if (raceTabOptions.some((opt) => opt.value === raceViewTab)) return;
+    setRaceViewTab("mine");
+  }, [raceTabOptions, raceViewTab]);
   const myRows = useMemo(() => {
     const rows = overall.filter((row) => isHouseholdResultRow(row, driverIds, driverNameKeys));
     const seen = new Map();
@@ -210,20 +332,21 @@ export default function EventResultsPanel({
     return items;
   }, [overall, onCompareDriverChange, compareExcludeDriver, driverIds, driverNameKeys, t]);
 
+  const hasCompareChoices = compareOptions.some((o) => o.value);
+
+  const resolvedCompareValue = useMemo(() => {
+    if (!compareDriver) return "";
+    const key = normalizeDriverName(compareDriver);
+    const match = compareOptions.find(
+      (o) => o.value && normalizeDriverName(o.value) === key
+    );
+    return match?.value || "";
+  }, [compareDriver, compareOptions]);
+
   useEffect(() => {
     if (!compareDriver || !onCompareDriverChange) return;
-    const allowed = new Set(compareOptions.map((o) => o.value).filter(Boolean));
-    if (!allowed.has(compareDriver)) onCompareDriverChange("");
-  }, [compareOptions, compareDriver, onCompareDriverChange]);
-
-  const mainsTabOptions = useMemo(() => {
-    const all = { value: "all", label: t("results.mainsTabAll") };
-    if (!hasMyMains) return [all];
-    return [
-      { value: "mine", label: t("results.mainsTabMine") },
-      all,
-    ];
-  }, [hasMyMains, t]);
+    if (!resolvedCompareValue) onCompareDriverChange("");
+  }, [compareDriver, resolvedCompareValue, onCompareDriverChange]);
 
   const rivalRow = useMemo(
     () => (compareDriver ? overall.find((row) => isCompareDriver(row, compareDriver)) : null),
@@ -240,7 +363,13 @@ export default function EventResultsPanel({
 
   const heading =
     eventName != null ? eventName : eventRow?.name ? richTextToPlainText(eventRow.name) : null;
-  const eventDateLabel = eventRow?.event_date ? formatEventDate(eventRow.event_date) : "";
+  const eventDateLabel = useMemo(() => {
+    if (bundle?.result?.result_day_date) return formatEventDate(bundle.result.result_day_date);
+    if (showDayPicker && eventDays[resultDayIndex]?.date) {
+      return formatEventDate(eventDays[resultDayIndex].date);
+    }
+    return eventRow?.event_date ? formatEventDate(eventRow.event_date) : "";
+  }, [bundle, showDayPicker, eventDays, resultDayIndex, eventRow]);
 
   const body = (
     <>
@@ -252,26 +381,46 @@ export default function EventResultsPanel({
 
       {loading && <p className="text-text-muted m-0 text-sm px-4 py-3">{t("loading.loading")}</p>}
       {error && <p className="text-red-600 m-0 text-sm px-4 py-3">{error}</p>}
-      {!loading && !bundle && (
+      {resultsMembersOnly && displayBundle && !previewUnpublished && (
+        <p className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 m-4 mb-0">
+          {t("results.championshipMembersOnlyResults")}
+        </p>
+      )}
+
+      {!loading && !displayBundle && !showDayPicker && (
         <p className="text-text-muted m-0 text-sm px-4 py-3">{t("results.notAvailable")}</p>
       )}
 
-      {bundle && (
+      {(showDayPicker || displayBundle) && (
         <div className="p-4 space-y-4">
+          {showDayPicker && dayTabOptions.length > 0 && (
+            <ClassFolderTabs
+              value={String(resultDayIndex)}
+              onChange={(value) => setResultDayIndex(Number(value) || 0)}
+              options={dayTabOptions}
+              brand={primaryColor}
+            />
+          )}
+          {!loading && !displayBundle && showDayPicker && (
+            <p className="text-text-muted m-0 text-sm">{t("results.notAvailableForDay")}</p>
+          )}
+          {displayBundle ? (
+          <>
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               {embedded && eventOptions?.length && onEventChange ? (
                 <FilterDropdown
-                  value={eventId}
+                  value={resultSelectionKey ?? eventId}
                   onChange={onEventChange}
                   ariaLabel={t("results.filterEvent")}
                   options={eventOptions}
                   hideSelectedOption={false}
+                  preserveOptionOrder
                   compact
                   className="flex-1 min-w-[12rem]"
                 />
               ) : null}
-              {classOptions.length > 0 && (
+              {displayBundle && classOptions.length > 0 && (
                 <FilterDropdown
                   value={className}
                   onChange={setClassName}
@@ -283,13 +432,15 @@ export default function EventResultsPanel({
                 />
               )}
             </div>
-            {onCompareDriverChange && compareOptions.length > 0 && (
+            {onCompareDriverChange && hasCompareChoices && (
               <FilterDropdown
-                value={compareDriver || ""}
+                value={resolvedCompareValue}
                 onChange={(value) => onCompareDriverChange(value || "")}
                 ariaLabel={t("results.compareDriver")}
+                emptyTriggerLabel={t("results.compareDriverPlaceholder")}
                 options={compareOptions}
                 hideSelectedOption={false}
+                preserveOptionOrder
                 compact
                 menuInline
                 className="w-full min-w-0"
@@ -429,12 +580,18 @@ export default function EventResultsPanel({
                     >
                       <PositionCell value={pos} />
                       <td className="py-2 pr-2 font-medium">
-                        {row.driverNameRaw}
+                        {displayOverallDriverName(row, races)}
                         {row.isTq ? (
                           <span className="text-[10px] uppercase text-primary ml-1">TQ</span>
                         ) : null}
                       </td>
-                      <td className="py-2 pr-2 tabular-nums">{row.ifmarPoints ?? "—"}</td>
+                      <td className="py-2 pr-2 tabular-nums">
+                        {row.ifmarPoints != null && row.ifmarPoints !== ""
+                          ? row.ifmarPoints
+                          : /^\d+(\.\d+)?$/.test(String(row.tieBreaker || "").trim())
+                            ? row.tieBreaker
+                            : "—"}
+                      </td>
                       <td className="py-2 text-xs text-text-muted">
                         {formatOverallMainsColumn(row, races)}
                       </td>
@@ -445,46 +602,48 @@ export default function EventResultsPanel({
             </ResultsDataTable>
           </ResultsTableSection>
 
-          {(qualifyingRaces.length > 0 || mainRaces.length > 0) && (
+          {showRaceTabs && (
             <div className="space-y-3">
-              {mainsTabOptions.length > 1 ? (
-                <ClassFolderTabs
-                  options={mainsTabOptions}
-                  value={mainsScope}
-                  onChange={setMainsScope}
-                  brand={primaryColor}
-                />
-              ) : null}
+              <h4 className="m-0 text-[11px] font-semibold uppercase tracking-wider text-text-muted px-1">
+                {t("results.qualifyingAndMains")}
+              </h4>
+              <ClassFolderTabs
+                options={raceTabOptions}
+                value={raceViewTab}
+                onChange={setRaceViewTab}
+                brand={primaryColor}
+                wrapWhenOverflow
+              />
 
-              {qualifyingRaces.map((race) => (
-                <ResultsTableSection key={race.id || raceTitle(race)} title={raceTitle(race)}>
-                  <QualifyingResultsTable
-                    race={race}
-                    driverIds={driverIds}
-                    driverNameKeys={driverNameKeys}
-                    compareDriver={compareDriver}
-                    t={t}
-                  />
+              {visibleRacesForTab.map((race) => (
+                <ResultsTableSection key={race.id || raceTabKey(race)} title={raceTitle(race)}>
+                  {race.raceKind === "qualifying" ? (
+                    <QualifyingResultsTable
+                      race={race}
+                      driverIds={driverIds}
+                      driverNameKeys={driverNameKeys}
+                      compareDriver={compareDriver}
+                      t={t}
+                    />
+                  ) : (
+                    <MainResultsTable
+                      race={race}
+                      driverIds={driverIds}
+                      driverNameKeys={driverNameKeys}
+                      compareDriver={compareDriver}
+                      t={t}
+                    />
+                  )}
                 </ResultsTableSection>
               ))}
 
-              {mainRaces.map((race) => (
-                <ResultsTableSection key={race.id || raceTitle(race)} title={raceTitle(race)}>
-                  <MainResultsTable
-                    race={race}
-                    driverIds={driverIds}
-                    driverNameKeys={driverNameKeys}
-                    compareDriver={compareDriver}
-                    t={t}
-                  />
-                </ResultsTableSection>
-              ))}
-
-              {mainsScope === "mine" && mainRaces.length === 0 && (
+              {raceViewTab === "mine" && visibleRacesForTab.length === 0 && (
                 <p className="text-sm text-text-muted m-0 px-1">{t("results.mainsTabNone")}</p>
               )}
             </div>
           )}
+          </>
+          ) : null}
         </div>
       )}
     </>

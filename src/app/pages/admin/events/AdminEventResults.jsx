@@ -18,7 +18,8 @@ import {
   reprocessLiveRcImport,
 } from "@/app/lib/results/liveRcImport";
 import { raceFormatLabel } from "@/app/lib/results/raceFormatLabel";
-import { saveEventResults, unmatchedNames } from "@/app/lib/results/saveEventResults";
+import { DeleteButton } from "@cms/CMSButtonSet";
+import { deleteEventResults, saveEventResults, unmatchedNames } from "@/app/lib/results/saveEventResults";
 import { loadResultMatchContext } from "@/app/lib/results/resultMemberMatch";
 import { uniqueClassNames } from "@/app/lib/results/overallOrder";
 import {
@@ -27,11 +28,31 @@ import {
   qualifyingOrderLabel,
 } from "@/app/lib/results/qualifyingRank";
 import { richTextToPlainText } from "@/app/lib/richText";
+import {
+  eventDaySelectLabel,
+  getEventDayRecords,
+  resultDayIndexFromEvent,
+} from "@/app/lib/results/eventResultDays";
+import { listEventResultImports } from "@/app/lib/results/loadEventResults";
 
 function isMissingSchemaError(error) {
-  return /does not exist|schema cache|championship_id|qualifying_rank|top5_avg|qual_heat/i.test(
+  return /does not exist|schema cache|championship_id|qualifying_rank|top5_avg|qual_heat|result_day/i.test(
     error?.message || ""
   );
+}
+
+function formatDayDate(date) {
+  if (!date) return "";
+  try {
+    return new Date(date).toLocaleDateString(undefined, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return date;
+  }
 }
 
 export default function AdminEventResults() {
@@ -45,7 +66,8 @@ export default function AdminEventResults() {
   const [championships, setChampionships] = useState([]);
   const [matchContext, setMatchContext] = useState(null);
   const [drivers, setDrivers] = useState([]);
-  const [existing, setExisting] = useState(null);
+  const [resultImports, setResultImports] = useState([]);
+  const [importDayIndex, setImportDayIndex] = useState(0);
   const [parsed, setParsed] = useState(null);
   const [livercUrl, setLivercUrl] = useState("");
   const [qualifyingOrder, setQualifyingOrder] = useState(DEFAULT_LIVE_RC_QUAL_ORDER);
@@ -81,26 +103,33 @@ export default function AdminEventResults() {
   async function load() {
     setLoading(true);
     setError("");
-    const [{ data: eventData, error: eventError }, { data: champs }, resultQuery, roster] =
-      await Promise.all([
-        supabase.from("events").select("*").eq("id", id).single(),
-        supabase.from("championships").select("id, name, season").eq("club_id", club.id).order("created_at", { ascending: false }),
-        supabase.from("event_results").select("*").eq("event_id", id).maybeSingle(),
-        loadResultMatchContext(supabase, club.id),
-      ]);
+    const [{ data: eventData, error: eventError }, { data: champs }, roster] = await Promise.all([
+      supabase.from("events").select("*").eq("id", id).single(),
+      supabase.from("championships").select("id, name, season").eq("club_id", club.id).order("created_at", { ascending: false }),
+      loadResultMatchContext(supabase, club.id),
+    ]);
+    let imports = [];
+    try {
+      imports = await listEventResultImports(id, { includeUnpublished: true });
+    } catch (importError) {
+      if (isMissingSchemaError(importError)) setError(t("results.setupRequired"));
+      else setError(importError.message);
+    }
     if (eventError) setError(eventError.message);
     else if (roster.loadError) setError(roster.loadError.message);
-    else if (isMissingSchemaError(resultQuery.error)) setError(t("results.setupRequired"));
-    else if (resultQuery.error) setError(resultQuery.error.message);
-    const resultRow = resultQuery.data || null;
     setEventRow(eventData || null);
     setChampionships(champs || []);
     setMatchContext(roster);
     setDrivers(roster?.drivers || []);
-    setExisting(resultRow);
+    setResultImports(imports);
     setChampionshipId(eventData?.championship_id || "");
-    setPublished(resultRow?.published !== false);
-    if (resultRow?.source_url) setLivercUrl(resultRow.source_url);
+    const dayIdx = eventData?.is_multi_day ? importDayIndex : 0;
+    const existingForDay =
+      eventData?.is_multi_day
+        ? imports.find((row) => row.result_day_index === dayIdx)
+        : imports.find((row) => row.result_day_index == null);
+    setPublished(existingForDay?.published !== false);
+    if (existingForDay?.source_url) setLivercUrl(existingForDay.source_url);
     setLoading(false);
   }
 
@@ -146,6 +175,7 @@ export default function AdminEventResults() {
     setBusyAction("save");
     setError("");
     try {
+      const { resultDayIndex, resultDayDate } = resultDayIndexFromEvent(eventRow, importDayIndex);
       await saveEventResults({
         supabase,
         clubId: club.id,
@@ -155,6 +185,8 @@ export default function AdminEventResults() {
         rosterIndex: matchContext?.rosterIndex,
         userId: user?.id,
         published,
+        resultDayIndex,
+        resultDayDate,
       });
       if (championshipId !== (eventRow?.championship_id || "")) {
         await supabase.from("events").update({ championship_id: championshipId || null }).eq("id", id);
@@ -170,6 +202,29 @@ export default function AdminEventResults() {
     }
   }
 
+  async function handleRemove() {
+    if (!window.confirm(t("results.removeResultsConfirm"))) return;
+    setBusy(true);
+    setBusyAction("remove");
+    setError("");
+    try {
+      const { resultDayIndex } = resultDayIndexFromEvent(eventRow, importDayIndex);
+      await deleteEventResults({
+        supabase,
+        eventId: id,
+        resultDayIndex,
+      });
+      await load();
+      setParsed(null);
+      setLiveRcPayload(null);
+    } catch (err) {
+      setError(err.message || t("results.removeResultsFailed"));
+    } finally {
+      setBusy(false);
+      setBusyAction(null);
+    }
+  }
+
   const busyMessage =
     busyAction === "liverc"
       ? t("results.importingLiveRc")
@@ -177,10 +232,24 @@ export default function AdminEventResults() {
         ? t("results.importingFile")
         : busyAction === "save"
           ? t("results.savingResults")
-          : "";
+          : busyAction === "remove"
+            ? t("results.removingResults")
+            : "";
 
   const eventName = richTextToPlainText(eventRow?.name) || t("admin.nominations.eventFallback");
   const classes = parsed ? uniqueClassNames(parsed) : [];
+  const eventDays = getEventDayRecords(eventRow);
+  const existing =
+    eventRow?.is_multi_day
+      ? resultImports.find((row) => row.result_day_index === importDayIndex)
+      : resultImports.find((row) => row.result_day_index == null);
+  const dayOptions =
+    eventRow?.is_multi_day && eventDays.length > 0
+      ? eventDays.map((day, index) => ({
+          value: String(index),
+          label: eventDaySelectLabel(day, index, formatDayDate),
+        }))
+      : [];
 
   return (
     <div style={cmsStyles.pageContainer}>
@@ -190,9 +259,15 @@ export default function AdminEventResults() {
           {t("results.adminTitle")}: {eventName}
         </h1>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {existing && (
+          {resultImports.length > 0 && (
             <CMSButton
-              onClick={() => navigate(`/${clubSlug}/app/admin/events/${id}/results/preview`)}
+              onClick={() =>
+                navigate(
+                  `/${clubSlug}/app/admin/events/${id}/results/preview${
+                    eventRow?.is_multi_day ? `?day=${importDayIndex}` : ""
+                  }`
+                )
+              }
             >
               {t("results.viewResults")}
             </CMSButton>
@@ -210,6 +285,24 @@ export default function AdminEventResults() {
 
       <CMSCard title={t("results.importCard")}>
         <p className="text-sm text-slate-600">{t("results.importHelp")}</p>
+        {dayOptions.length > 0 && (
+          <CMSSelect
+            label={t("results.resultDay")}
+            value={String(importDayIndex)}
+            onChange={(value) => {
+              const next = Number(value) || 0;
+              setImportDayIndex(next);
+              const row = resultImports.find((item) => item.result_day_index === next);
+              setPublished(row?.published !== false);
+              if (row?.source_url) setLivercUrl(row.source_url);
+            }}
+            options={dayOptions}
+            sortOptions={false}
+          />
+        )}
+        {dayOptions.length > 0 && (
+          <p className="text-sm text-slate-500">{t("results.resultDayHelp")}</p>
+        )}
         {busyMessage && (
           <div
             className="p-3 rounded bg-sky-50 text-sky-900 border border-sky-200 text-sm"
@@ -276,9 +369,22 @@ export default function AdminEventResults() {
         />
         <CMSToggle label={t("results.published")} checked={published} onChange={setPublished} />
         {existing && (
-          <div className="text-sm text-slate-600">
-            {t("results.existingImport")}: {existing.source_label || existing.source} ·{" "}
-            {new Date(existing.imported_at).toLocaleString()}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="text-sm text-slate-600">
+              {t("results.existingImport")}: {existing.source_label || existing.source} ·{" "}
+              {new Date(existing.imported_at).toLocaleString()}
+            </div>
+            <DeleteButton onClick={handleRemove} disabled={busy}>
+              {busyAction === "remove" ? t("results.removingResults") : t("results.removeResults")}
+            </DeleteButton>
+          </div>
+        )}
+        {eventRow?.is_multi_day && resultImports.length > 0 && (
+          <div className="text-sm text-slate-500">
+            {t("results.importedDaysCount", {
+              count: resultImports.filter((row) => row.result_day_index != null).length,
+              total: eventDays.length,
+            })}
           </div>
         )}
       </CMSCard>

@@ -1,15 +1,17 @@
 // Deploy from supabase/functions/import-liverc-results (not this file).
 // supabase functions deploy import-liverc-results
 
-const CORS = {
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, prefer",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
@@ -112,7 +114,9 @@ async function mapPool(items, limit, mapper) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
   if (req.method !== "POST") return json({ error: "POST required" }, 405);
 
   const auth = req.headers.get("Authorization") || "";
@@ -130,17 +134,31 @@ Deno.serve(async (req) => {
     const childUrls = extractLinks(indexHtml, sourceUrl)
       .map(classify)
       .filter((item) => ["race", "multi", "overall", "qualifying"].includes(item.kind));
-    const unique = [];
-    const seen = new Set();
+    const byKind = { overall: [], multi: [], qualifying: [], race: [] };
     for (const item of childUrls) {
       let fetchUrl = item.url;
       if (item.kind === "qualifying") {
         fetchUrl = withQualifyingOrder(item.url, qualifyingOrder);
       }
-      if (seen.has(fetchUrl)) continue;
-      seen.add(fetchUrl);
-      unique.push({ ...item, url: fetchUrl });
-      if (unique.length >= 80) break;
+      if (byKind[item.kind]) byKind[item.kind].push({ ...item, url: fetchUrl });
+    }
+    const unique = [];
+    const seen = new Set();
+    const addUnique = (item) => {
+      if (seen.has(item.url)) return;
+      seen.add(item.url);
+      unique.push(item);
+    };
+    const MAX_PAGES = 280;
+    for (const item of byKind.overall) addUnique(item);
+    for (const item of byKind.multi) addUnique(item);
+    for (const item of byKind.qualifying) {
+      addUnique(item);
+      if (unique.length >= MAX_PAGES) break;
+    }
+    for (const item of byKind.race) {
+      addUnique(item);
+      if (unique.length >= MAX_PAGES) break;
     }
 
     const pages = [{ url: sourceUrl, html: indexHtml }];

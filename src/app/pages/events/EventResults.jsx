@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { FlagIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
 import BackNavButton from "@/components/ui/BackNavButton";
@@ -8,6 +8,10 @@ import EventResultsPanel from "@/app/pages/events/EventResultsPanel";
 
 export default function EventResults({ previewUnpublished = false, adminBack = false }) {
   const { clubSlug, id } = useParams();
+  const [searchParams] = useSearchParams();
+  const dayParam = searchParams.get("day");
+  const initialResultDayIndex =
+    dayParam != null && dayParam !== "" && !Number.isNaN(Number(dayParam)) ? Number(dayParam) : null;
   const { palette } = useTheme();
   const { t } = useTranslation();
 
@@ -33,6 +37,7 @@ export default function EventResults({ previewUnpublished = false, adminBack = f
         eventId={id}
         previewUnpublished={previewUnpublished}
         eventName={undefined}
+        initialResultDayIndex={initialResultDayIndex}
       />
     </div>
   );

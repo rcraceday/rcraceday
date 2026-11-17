@@ -8,6 +8,7 @@ import {
   chassisFromNominationSnapshot,
   LIVETIME_CSV_HEADERS,
 } from "@/app/lib/livetimeDriverProfileFields";
+import { entryMatchesExportDay } from "@/app/lib/nominations/multiDayNominationDays";
 
 export const LIVETIME_HEADERS = LIVETIME_CSV_HEADERS;
 export { buildDriverClassChassisMap, buildDriverClassTransponderMap };
@@ -57,6 +58,7 @@ export function buildLiveTimeRows({
   event = null,
   driverClassTransponders = null,
   driverClassChassis = null,
+  exportDayIndex = "all",
 }) {
   const driverMap = new Map(drivers.map((driver) => [driver.id, driver]));
   const classMap = new Map(classes.map((item) => [item.id, item.name || item.class_name || ""]));
@@ -74,7 +76,8 @@ export function buildLiveTimeRows({
         (entry) =>
           entry.nomination_id === nomination.id &&
           !entry.is_preference &&
-          !isPracticeLiveTimeEntry(nomination, entry)
+          !isPracticeLiveTimeEntry(nomination, entry) &&
+          entryMatchesExportDay(event, nomination, entry, exportDayIndex)
       )
       .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
       .forEach((entry) => {

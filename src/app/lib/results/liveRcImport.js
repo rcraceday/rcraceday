@@ -1,4 +1,5 @@
 import { finalizeLiveRcRaces, parseLiveRcPages } from "./parseLiveRcHtml.js";
+import { enrichOverallRowsFromRaces } from "./aggregateDriverStats.js";
 import { DEFAULT_LIVE_RC_QUAL_ORDER, reapplyQualifyingOrderToRaces } from "./qualifyingRank.js";
 
 export const LIVE_RC_RACE_FORMATS = [
@@ -32,9 +33,11 @@ export function buildParsedFromLiveRcResponse(data, options = {}) {
       raceFormat,
       pages: data.pages || [],
     });
+    const overall = enrichOverallRowsFromRaces(data.parsed.overall || [], races);
     return {
       ...data.parsed,
       races,
+      overall,
       raceFormat,
       qualifyingOrder,
     };

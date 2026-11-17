@@ -76,7 +76,7 @@ In Supabase **Authentication → URL configuration**:
 
 - `supabase functions deploy process-nominations-open --no-verify-jwt`
 - `supabase functions deploy send-web-push`
-- `supabase functions deploy import-liverc-results` (requires a logged-in user; JWT is sent by the app). After changing the function, redeploy — v1 returned full HTML and can trigger **Failed to fetch** in the browser; current versions return parsed JSON only.
+- `supabase functions deploy import-liverc-results` (requires a logged-in user; JWT is sent by the app). `supabase/config.toml` sets `verify_jwt = false` for this function (auth is enforced in the handler) so browser **OPTIONS** preflight from `localhost` is not blocked. After changing the function, redeploy — v1 returned full HTML and can trigger **Failed to fetch** in the browser; current versions return parsed JSON only.
 - `supabase functions deploy send-recovery-email --no-verify-jwt` — contact form, forgot-email, and confirmation-help mail. Set Supabase Edge secrets:
   - **SMTP** (on Edge, ports **25 and 587 are blocked** — use **465** or your provider’s alternate port such as **2525** / **2587**): `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, optional `SMTP_PORT` (default `465`), `SMTP_SECURE`
   - **Resend (HTTPS)** fallback: `RESEND_API_KEY` (already used when `EMAIL_TRANSPORT=auto` and SMTP port is 587, or when SMTP send fails)
@@ -106,7 +106,7 @@ Supabase blocks outbound SMTP on ports **25** and **587**, so **Resend over HTTP
 
 Inbound mail to `info@rcraceday.com` stays on your normal mailbox (Microsoft, Google, etc.); Resend is only for **outbound** support notifications from the app.
 
-If the admin UI shows **Failed to send a request to the Edge Function**, confirm `VITE_SUPABASE_URL` matches the project where functions were deployed, check the browser Network tab for `/functions/v1/<function-name>`, and redeploy. For `process-nominations-open`, use `--no-verify-jwt` (auth is enforced inside the function). For **LiveRC import**, deploy `import-liverc-results` — the UI cannot fetch LiveRC directly from the browser.
+If the admin UI shows **Failed to send a request to the Edge Function**, confirm `VITE_SUPABASE_URL` matches the project where functions were deployed, check the browser Network tab for `/functions/v1/<function-name>`, and redeploy. For `process-nominations-open`, use `--no-verify-jwt` (auth is enforced inside the function). For **LiveRC import**, deploy `import-liverc-results` — the UI cannot fetch LiveRC directly from the browser. If the browser reports a **CORS** error on preflight, redeploy this function (stale/missing deploy or `verify_jwt` at the gateway often returns non-200 on `OPTIONS`).
 
 Public support mail (`send-recovery-email`) is called via **raw `fetch`** (not `supabase.functions.invoke`) because the shared Supabase client sets a global `Prefer: count=exact` header that can break Edge Function CORS preflight.
 

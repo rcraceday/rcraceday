@@ -25,14 +25,23 @@ create table if not exists public.event_results (
   imported_by uuid references auth.users (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint event_results_event_unique unique (event_id)
+  result_day_index integer,
+  result_day_date date
 );
 
 create index if not exists event_results_club_published_idx
   on public.event_results (club_id, published, imported_at desc);
 
+create unique index if not exists event_results_event_single_day_idx
+  on public.event_results (event_id)
+  where result_day_index is null;
+
+create unique index if not exists event_results_event_multi_day_idx
+  on public.event_results (event_id, result_day_index)
+  where result_day_index is not null;
+
 comment on table public.event_results is
-  'One imported result set per event, from a LiveTime workbook or LiveRC URL.';
+  'Imported result sets per event (single-day) or per event day (multi-day).';
 
 create table if not exists public.event_result_races (
   id uuid primary key default gen_random_uuid(),

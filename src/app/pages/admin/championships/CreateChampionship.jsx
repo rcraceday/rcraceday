@@ -35,6 +35,7 @@ export default function CreateChampionship() {
   const [name, setName] = useState("");
   const [season, setSeason] = useState(new Date().getFullYear().toString());
   const [membersOnly, setMembersOnly] = useState(true);
+  const [resultsMembersOnly, setResultsMembersOnly] = useState(false);
   const [totalRounds, setTotalRounds] = useState(0);
   const [dropRounds, setDropRounds] = useState(0);
   const [selectedClasses, setSelectedClasses] = useState([]);
@@ -156,6 +157,7 @@ export default function CreateChampionship() {
         name,
         season,
         members_only: membersOnly,
+        results_members_only: resultsMembersOnly,
         total_rounds: totalRounds,
         drop_rounds: dropRounds,
         classes: selectedClasses,
@@ -283,10 +285,16 @@ export default function CreateChampionship() {
 
       <CMSCard title="Rules">
         <CMSToggle
-          label="Only members earn championship points"
+          label={t("admin.championships.membersOnly")}
           checked={membersOnly}
           onChange={setMembersOnly}
         />
+        <CMSToggle
+          label={t("admin.championships.resultsMembersOnly")}
+          checked={resultsMembersOnly}
+          onChange={setResultsMembersOnly}
+        />
+        <p className="text-sm text-slate-500 m-0">{t("admin.championships.resultsMembersOnlyHelp")}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CMSInput
             label="Total Rounds"

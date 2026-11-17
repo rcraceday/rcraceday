@@ -32,14 +32,33 @@ export function latestOverallByClassLetter(overallRows) {
   return [...latest.values()];
 }
 
+import { isDisplayableClassName, normalizeResultClassName } from "./classNames.js";
+
 export function uniqueClassNames({ races = [], overall = [] }) {
   const names = [];
   const seen = new Set();
   [...races, ...overall].forEach((row) => {
-    const name = row.className;
-    if (!name || seen.has(name)) return;
+    const name = normalizeResultClassName(row.className);
+    if (!name || seen.has(name) || !isDisplayableClassName(name)) return;
     seen.add(name);
     names.push(name);
   });
   return names;
+}
+
+export function pickInitialResultClass(bundle, driverIds, normalizeName) {
+  const classes = uniqueClassNames(bundle || { races: [], overall: [] });
+  if (!classes.length) return "";
+  const overall = bundle?.overall || [];
+  const hasDriver = (row) => {
+    if (row.driverId && driverIds?.has(row.driverId)) return true;
+    if (normalizeName && row.driverNameRaw) {
+      return normalizeName(row.driverNameRaw);
+    }
+    return false;
+  };
+  const mine = classes.find((className) =>
+    overall.some((row) => row.className === className && hasDriver(row))
+  );
+  return mine || classes[0];
 }

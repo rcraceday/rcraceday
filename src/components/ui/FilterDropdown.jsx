@@ -120,7 +120,17 @@ export default function FilterDropdown({
         aria-haspopup="listbox"
         onClick={() => setOpen((isOpen) => !isOpen)}
       >
-        <span className="min-w-0 flex-1 truncate text-left whitespace-nowrap">
+        <span
+          className="min-w-0 flex-1 truncate text-left whitespace-nowrap"
+          style={
+            selectedOption?.optionStyle?.borderLeft
+              ? {
+                  borderLeft: selectedOption.optionStyle.borderLeft,
+                  paddingLeft: "0.375rem",
+                }
+              : undefined
+          }
+        >
           {triggerLabel}
         </span>
         <ChevronDownIcon
@@ -153,13 +163,19 @@ export default function FilterDropdown({
               role="option"
               aria-selected={option.value === value}
               className="filter-dropdown-option"
-              style={getDropdownOptionStyle(palette, compact ? { padding: "0.375rem 0.5rem", fontSize: "0.75rem" } : undefined)}
+              style={{
+                ...getDropdownOptionStyle(
+                  palette,
+                  compact ? { padding: "0.375rem 0.5rem", fontSize: "0.75rem" } : undefined
+                ),
+                ...(option.optionStyle || {}),
+              }}
               onClick={() => {
                 onChange(option.value);
                 setOpen(false);
               }}
             >
-              {option.label}
+              {option.menuLabel ?? option.label}
             </button>
           ))}
         </div>

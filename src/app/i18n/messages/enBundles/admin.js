@@ -281,6 +281,8 @@ export default {
       paidFalse: "FALSE",
       exportHint:
         "Preferences and practice-day class entries are excluded from this LiveTime export.",
+      livetimeExportScope: "Export scope",
+      livetimeExportAll: "All nominations",
       downloadLivetime: "Download LiveTime CSV",
       eventCopySuffix: " (Copy)",
       eventFallback: "Event",
@@ -591,6 +593,9 @@ export default {
       seasonLabel: "Season",
       logo: "Logo",
       membersOnly: "Only members earn championship points",
+      resultsMembersOnly: "Hide non-members from championship round results",
+      resultsMembersOnlyHelp:
+        "When enabled, published results for events linked to this championship only show drivers who are club members. Non-member events are unchanged.",
       totalRounds: "Total rounds",
       dropRounds: "Drop rounds",
       classes: "Classes",

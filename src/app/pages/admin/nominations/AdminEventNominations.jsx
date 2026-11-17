@@ -12,6 +12,10 @@ import {
 } from "@app/pages/nominations/LiveTimeExport";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { liveTimeClubName } from "@/app/lib/driverClubSettings";
+import {
+  eventDaySelectLabel,
+  getEventDayRecords,
+} from "@/app/lib/results/eventResultDays";
 
 function affiliatedRcraClubName(nomination) {
   const name = nomination?.merchandise?.affiliated_club_name;
@@ -34,6 +38,7 @@ export default function AdminEventNominations() {
   const [tab, setTab] = useState("drivers");
   const [sort, setSort] = useState("name");
   const [loading, setLoading] = useState(false);
+  const [livetimeExportDay, setLivetimeExportDay] = useState("all");
 
   const tabLabels = {
     drivers: t("admin.nominations.tabDrivers"),
@@ -110,8 +115,41 @@ export default function AdminEventNominations() {
     [driverClasses]
   );
 
-  const csv = buildLiveTimeCsv(
-    buildLiveTimeRows({
+  const livetimeDayOptions = useMemo(() => {
+    if (!event?.is_multi_day) return [];
+    const days = getEventDayRecords(event);
+    return [
+      { value: "all", label: t("admin.nominations.livetimeExportAll") },
+      ...days.map((day, index) => ({
+        value: String(index),
+        label: eventDaySelectLabel(day, index, (date) =>
+          new Date(date).toLocaleDateString(undefined, {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })
+        ),
+      })),
+    ];
+  }, [event, t]);
+
+  const csv = useMemo(
+    () =>
+      buildLiveTimeCsv(
+        buildLiveTimeRows({
+          nominations,
+          entries,
+          drivers,
+          classes,
+          memberships,
+          clubName,
+          event,
+          driverClassTransponders,
+          driverClassChassis,
+          exportDayIndex: livetimeExportDay,
+        })
+      ),
+    [
       nominations,
       entries,
       drivers,
@@ -121,7 +159,8 @@ export default function AdminEventNominations() {
       event,
       driverClassTransponders,
       driverClassChassis,
-    })
+      livetimeExportDay,
+    ]
   );
 
   const flatRequirements = useMemo(() => {
@@ -183,9 +222,11 @@ export default function AdminEventNominations() {
   }, [nominations]);
 
   function downloadCsv() {
+    const daySuffix =
+      event?.is_multi_day && livetimeExportDay !== "all" ? `-day-${Number(livetimeExportDay) + 1}` : "";
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    link.download = `${event?.name || "event"}-livetime.csv`;
+    link.download = `${event?.name || "event"}-livetime${daySuffix}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
   }
@@ -359,7 +400,25 @@ export default function AdminEventNominations() {
         {tab === "export" && (
           <Card className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-text-muted">{t("admin.nominations.exportHint")}</p>
+              <div className="space-y-2 min-w-[12rem]">
+                <p className="text-sm text-text-muted m-0">{t("admin.nominations.exportHint")}</p>
+                {livetimeDayOptions.length > 0 && (
+                  <label className="text-sm font-medium text-text-base block">
+                    {t("admin.nominations.livetimeExportScope")}
+                    <select
+                      className="mt-1 block w-full rounded-md border border-surfaceBorder px-2 py-1.5 text-sm"
+                      value={livetimeExportDay}
+                      onChange={(e) => setLivetimeExportDay(e.target.value)}
+                    >
+                      {livetimeDayOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
               <Button onClick={downloadCsv}>{t("admin.nominations.downloadLivetime")}</Button>
             </div>
             <pre className="max-h-[480px] overflow-auto rounded-md bg-surfaceAlt p-3 text-xs whitespace-pre-wrap">{csv}</pre>

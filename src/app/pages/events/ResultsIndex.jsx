@@ -12,8 +12,19 @@ import { useClub } from "@/app/providers/ClubProvider";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import { supabase } from "@/supabaseClient";
 import { richTextToPlainText } from "@/app/lib/richText";
-import { loadPublishedResultEventIds } from "@/app/lib/results/loadEventResults";
-import { extractYearsFromEvents, TYPE_LABELS } from "./events-sections/helpers";
+import { loadPublishedResultImportsForEvents } from "@/app/lib/results/loadEventResults";
+import {
+  eventDaySelectLabel,
+  getEventDayRecords,
+} from "@/app/lib/results/eventResultDays";
+import {
+  formatResultSelectionKey,
+  parseResultSelectionKey,
+} from "@/app/lib/results/resultSelectionKey";
+import {
+  extractYearsFromEvents,
+  isMajorEventType,
+} from "./events-sections/helpers";
 import MyResultsYearDashboard from "./MyResultsYearDashboard";
 import EventResultsPanel from "./EventResultsPanel";
 
@@ -32,10 +43,18 @@ function formatEventDateLabel(date) {
   }
 }
 
-function eventYear(event) {
-  if (!event?.event_date) return null;
-  const y = new Date(event.event_date).getFullYear();
+function yearFromDateString(date) {
+  if (!date) return null;
+  const y = new Date(date).getFullYear();
   return Number.isFinite(y) ? y : null;
+}
+
+function eventYear(event) {
+  return yearFromDateString(event?.event_date);
+}
+
+function resultEntryYear(event, importRow) {
+  return yearFromDateString(importRow?.result_day_date || event?.event_date);
 }
 
 export default function ResultsIndex() {
@@ -55,14 +74,12 @@ export default function ResultsIndex() {
   const initialResultsFilters = useMemo(() => {
     const urlYear = searchParams.get("year");
     const urlTrack = searchParams.get("track");
-    const urlType = searchParams.get("type");
     const urlEvent = searchParams.get("event");
     const urlCompare = searchParams.get("compare");
     const urlClass = searchParams.get("class");
     return {
       year: urlYear ? Number(urlYear) : savedResultsFilters?.year ?? currentYear,
       track: urlTrack || savedResultsFilters?.track || "all",
-      type: urlType || savedResultsFilters?.type || "all",
       event: urlEvent || savedResultsFilters?.event || "",
       compare: urlCompare || savedResultsFilters?.compare || "",
       class: urlClass || savedResultsFilters?.class || "",
@@ -70,14 +87,13 @@ export default function ResultsIndex() {
   }, [clubSlug, currentYear, savedResultsFilters, searchParams]);
 
   const [events, setEvents] = useState([]);
+  const [publishedImports, setPublishedImports] = useState([]);
   const [championships, setChampionships] = useState([]);
   const [tracks, setTracks] = useState([]);
-  const [trackNames, setTrackNames] = useState({});
   const [loading, setLoading] = useState(true);
 
   const [selectedYear, setSelectedYear] = useState(() => initialResultsFilters.year);
   const [trackFilter, setTrackFilter] = useState(() => initialResultsFilters.track);
-  const [typeFilter, setTypeFilter] = useState(() => initialResultsFilters.type);
   const [selectedEventId, setSelectedEventId] = useState(() => initialResultsFilters.event);
   const [compareDriver, setCompareDriver] = useState(() => initialResultsFilters.compare);
   const [dashboardClass, setDashboardClass] = useState(() => initialResultsFilters.class);
@@ -87,12 +103,11 @@ export default function ResultsIndex() {
     () => ({
       year: selectedYear,
       track: trackFilter,
-      type: typeFilter,
       event: selectedEventId,
       compare: compareDriver,
       class: dashboardClass,
     }),
-    [selectedYear, trackFilter, typeFilter, selectedEventId, compareDriver, dashboardClass]
+    [selectedYear, trackFilter, selectedEventId, compareDriver, dashboardClass]
   );
   usePageFilterPrefs(clubSlug, "results", resultsFilterPrefs);
 
@@ -105,7 +120,9 @@ export default function ResultsIndex() {
         await Promise.all([
           supabase
             .from("events")
-            .select("id, name, event_date, track, event_type, championship_id")
+            .select(
+              "id, name, event_date, track, event_type, championship_id, is_multi_day, days, classes_by_day"
+            )
             .eq("club_id", club.id)
             .eq("is_published", true)
             .order("event_date", { ascending: false }),
@@ -121,71 +138,151 @@ export default function ResultsIndex() {
             .order("season", { ascending: false }),
         ]);
 
-      const withResults = await loadPublishedResultEventIds(
-        eventRows.map((event) => event.id)
-      );
-      const published = eventRows.filter((event) => withResults.has(event.id));
+      const eventIds = eventRows.map((event) => event.id);
+      const importRows = await loadPublishedResultImportsForEvents(eventIds);
+      const eventIdsWithResults = new Set(importRows.map((row) => row.event_id).filter(Boolean));
+      const published = eventRows.filter((event) => eventIdsWithResults.has(event.id));
 
       setEvents(published);
+      setPublishedImports(importRows);
       setTracks(trackRows || []);
-      setTrackNames(
-        (trackRows || []).reduce((acc, row) => {
-          acc[row.id] = row.name;
-          return acc;
-        }, {})
-      );
       setChampionships(champRows || []);
       setLoading(false);
     }
     load();
   }, [club?.id]);
 
-  const years = useMemo(() => extractYearsFromEvents(events), [events]);
+  const eventById = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
+
+  const resultEntries = useMemo(() => {
+    return publishedImports
+      .map((importRow) => {
+        const event = eventById.get(importRow.event_id);
+        if (!event) return null;
+        const isMulti = Boolean(event.is_multi_day);
+        const dayIndex =
+          importRow.result_day_index != null
+            ? importRow.result_day_index
+            : isMulti
+              ? null
+              : null;
+        const showAsDay = isMulti && importRow.result_day_index != null;
+        const key = formatResultSelectionKey(
+          event.id,
+          showAsDay ? importRow.result_day_index : null
+        );
+        const sortDate =
+          importRow.result_day_date ||
+          (showAsDay
+            ? getEventDayRecords(event)[importRow.result_day_index]?.date
+            : null) ||
+          event.event_date;
+        return {
+          key,
+          eventId: event.id,
+          dayIndex: showAsDay ? importRow.result_day_index : null,
+          event,
+          importRow,
+          sortDate,
+          entryYear: resultEntryYear(event, importRow),
+        };
+      })
+      .filter(Boolean);
+  }, [publishedImports, eventById]);
+
+  const years = useMemo(() => {
+    const yearSet = new Set();
+    resultEntries.forEach((entry) => {
+      if (entry.entryYear != null) yearSet.add(entry.entryYear);
+    });
+    if (!yearSet.size) extractYearsFromEvents(events).forEach((y) => yearSet.add(y));
+    return Array.from(yearSet).sort((a, b) => b - a);
+  }, [resultEntries, events]);
+
   const activeYear = years.includes(selectedYear) ? selectedYear : years[0] || currentYear;
 
-  const eventTypesInData = useMemo(() => {
-    const keys = new Set();
-    events.forEach((event) => {
-      const type = (event.event_type || "").toLowerCase();
-      if (type) keys.add(type);
-    });
-    return Array.from(keys).sort();
-  }, [events]);
+  const filteredResultEntries = useMemo(() => {
+    return resultEntries
+      .filter((entry) => {
+        if (entry.entryYear !== activeYear) return false;
+        if (trackFilter !== "all" && entry.event.track !== trackFilter) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
+  }, [resultEntries, activeYear, trackFilter]);
 
   const filteredEvents = useMemo(() => {
-    return events
-      .filter((event) => {
-        const year = eventYear(event);
-        if (year !== activeYear) return false;
-        if (trackFilter !== "all" && event.track !== trackFilter) return false;
-        const type = (event.event_type || "").toLowerCase();
-        if (typeFilter === "all") return true;
-        return type === typeFilter.toLowerCase();
-      })
-      .sort((a, b) => new Date(b.event_date) - new Date(a.event_date));
-  }, [events, activeYear, trackFilter, typeFilter]);
+    const seen = new Set();
+    const out = [];
+    filteredResultEntries.forEach((entry) => {
+      if (seen.has(entry.eventId)) return;
+      seen.add(entry.eventId);
+      out.push(entry.event);
+    });
+    return out.sort((a, b) => new Date(b.event_date) - new Date(a.event_date));
+  }, [filteredResultEntries]);
 
   const eventOptions = useMemo(() => {
-    return filteredEvents.map((event) => {
-      const name = richTextToPlainText(event.name) || t("eventCard.event");
-      const date = formatEventDateLabel(event.event_date);
-      const track = event.track && trackNames[event.track] ? ` · ${trackNames[event.track]}` : "";
+    const brand = palette?.primary || "#2563eb";
+    const accent = {
+      club: brand,
+      championship: "#CA8A04",
+      major: "#DC2626",
+    };
+    return filteredResultEntries.map((entry) => {
+      const event = entry.event;
+      const baseName = richTextToPlainText(event.name) || t("eventCard.event");
+      let menuLabel = baseName;
+      if (entry.dayIndex != null) {
+        const days = getEventDayRecords(event);
+        const dayLabel = eventDaySelectLabel(
+          days[entry.dayIndex] || { date: entry.importRow.result_day_date },
+          entry.dayIndex,
+          formatEventDateLabel
+        );
+        menuLabel = `${baseName} — ${dayLabel}`;
+      }
+      const date = formatEventDateLabel(entry.sortDate || event.event_date);
+      const type = (event.event_type || "").toLowerCase();
+      const isChampionshipRound =
+        type === CHAMPIONSHIP_TYPE || Boolean(event.championship_id);
+      const barColor = isMajorEventType(event)
+        ? accent.major
+        : isChampionshipRound
+          ? accent.championship
+          : accent.club;
       return {
-        value: event.id,
-        label: `${name} (${date})${track}`,
+        value: entry.key,
+        label: `${menuLabel} (${date})`,
+        menuLabel,
+        optionStyle: {
+          borderLeft: `3px solid ${barColor}`,
+          paddingLeft: "0.5rem",
+        },
       };
     });
-  }, [filteredEvents, trackNames, t]);
+  }, [filteredResultEntries, palette?.primary, t]);
 
-  const activeEventId = useMemo(() => {
-    if (!filteredEvents.length) return "";
-    if (selectedEventId && filteredEvents.some((e) => e.id === selectedEventId)) {
-      return selectedEventId;
-    }
+  const activeResultKey = useMemo(() => {
+    if (!filteredResultEntries.length) return "";
+    const keys = new Set(filteredResultEntries.map((entry) => entry.key));
+    if (selectedEventId && keys.has(selectedEventId)) return selectedEventId;
     const fromUrl = searchParams.get("event");
-    if (fromUrl && filteredEvents.some((e) => e.id === fromUrl)) return fromUrl;
-    return filteredEvents[0].id;
-  }, [filteredEvents, selectedEventId, searchParams]);
+    if (fromUrl) {
+      if (keys.has(fromUrl)) return fromUrl;
+      const { eventId, dayIndex } = parseResultSelectionKey(fromUrl);
+      if (eventId && dayIndex == null) {
+        const match = filteredResultEntries.find((entry) => entry.eventId === eventId);
+        if (match) return match.key;
+      }
+    }
+    return filteredResultEntries[filteredResultEntries.length - 1]?.key || "";
+  }, [filteredResultEntries, selectedEventId, searchParams]);
+
+  const activeSelection = useMemo(
+    () => parseResultSelectionKey(activeResultKey),
+    [activeResultKey]
+  );
 
   const dashboardEvents = useMemo(
     () =>
@@ -196,15 +293,22 @@ export default function ResultsIndex() {
   );
 
   useEffect(() => {
+    if (!activeResultKey) return;
+    const keys = new Set(filteredResultEntries.map((entry) => entry.key));
+    if (selectedEventId && !keys.has(selectedEventId)) {
+      setSelectedEventId(activeResultKey);
+    }
+  }, [activeResultKey, filteredResultEntries, selectedEventId]);
+
+  useEffect(() => {
     const next = new URLSearchParams();
     if (activeYear) next.set("year", String(activeYear));
     if (trackFilter && trackFilter !== "all") next.set("track", trackFilter);
-    if (typeFilter && typeFilter !== "all") next.set("type", typeFilter);
-    if (activeEventId) next.set("event", activeEventId);
+    if (activeResultKey) next.set("event", activeResultKey);
     if (compareDriver) next.set("compare", compareDriver);
     if (dashboardClass) next.set("class", dashboardClass);
     setSearchParams(next, { replace: true });
-  }, [activeYear, trackFilter, typeFilter, activeEventId, compareDriver, dashboardClass, setSearchParams]);
+  }, [activeYear, trackFilter, activeResultKey, compareDriver, dashboardClass, setSearchParams]);
 
   const appHomePath = clubSlug ? `/${clubSlug}/app` : null;
 
@@ -229,23 +333,6 @@ export default function ResultsIndex() {
     if (seasonOnly.length === 1 && champIds.has(seasonOnly[0].id)) return seasonOnly[0];
     return null;
   }, [filteredEvents, championships, activeYear, trackFilter]);
-
-  const typeOptions = useMemo(() => {
-    const options = [{ value: "all", label: t("results.filterAllTypes") }];
-    eventTypesInData.forEach((key) => {
-      options.push({
-        value: key,
-        label: TYPE_LABELS[key] || key.replace(/_/g, " "),
-      });
-    });
-    if (!eventTypesInData.includes(CHAMPIONSHIP_TYPE)) {
-      options.push({
-        value: CHAMPIONSHIP_TYPE,
-        label: TYPE_LABELS.championship_round || "Championship",
-      });
-    }
-    return options;
-  }, [eventTypesInData, t]);
 
   const trackFilterOptions = useMemo(
     () => [
@@ -365,20 +452,23 @@ export default function ResultsIndex() {
       <div className="flex flex-col gap-4">
         {loading && <p className="text-text-muted m-0">{t("loading.loading")}</p>}
 
-        {!loading && filteredEvents.length === 0 && (
+        {!loading && filteredResultEntries.length === 0 && (
           <p className="text-text-muted m-0">{t("results.noneYet")}</p>
         )}
 
-        {!loading && filteredEvents.length > 0 && activeEventId ? (
+        {!loading && filteredResultEntries.length > 0 && activeResultKey ? (
           <EventResultsPanel
             embedded
-            eventId={activeEventId}
+            eventId={activeSelection.eventId}
+            initialResultDayIndex={activeSelection.dayIndex}
+            hideResultDayPicker
             showDraftBanner={false}
             compareDriver={compareDriver}
             onCompareDriverChange={setCompareDriver}
             preferredClass={dashboardClass}
             compareExcludeDriver={activeHouseholdDriver}
             eventOptions={eventOptions}
+            resultSelectionKey={activeResultKey}
             onEventChange={setSelectedEventId}
           />
         ) : null}

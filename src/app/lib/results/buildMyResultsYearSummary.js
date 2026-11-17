@@ -1,4 +1,4 @@
-import { loadEventResultBundle } from "@/app/lib/results/loadEventResults";
+import { loadAllEventResultBundles } from "@/app/lib/results/loadEventResults";
 import { driverFullName, normalizeDriverName } from "@/app/lib/results/driverName";
 import { aggregateDriverMainStats } from "@/app/lib/results/aggregateDriverStats";
 import {
@@ -101,9 +101,11 @@ export async function buildMyResultsYearSummary(
   }
 
   for (const event of sortedEvents) {
-    const bundle = await loadEventResultBundle(event.id);
-    if (!bundle) continue;
+    const bundles = await loadAllEventResultBundles(event.id);
+    if (!bundles.length) continue;
     eventsWithResults += 1;
+
+    bundles.forEach((bundle) => {
     const races = bundle.races || [];
 
     (bundle.overall || []).forEach((row) => {
@@ -126,7 +128,7 @@ export async function buildMyResultsYearSummary(
       const bucket = classMap.get(className);
       rememberDriverName(bucket, row, nameLookup);
 
-      const snapKey = `${event.id}|${className}`;
+      const snapKey = `${event.id}|${bundle.result?.result_day_index ?? "single"}|${className}`;
       if (!competitorSnapshotKeys.has(snapKey)) {
         competitorSnapshotKeys.add(snapKey);
         const classRacesSnap = races.filter((race) => race.className === className);
@@ -201,6 +203,7 @@ export async function buildMyResultsYearSummary(
           });
         }
       });
+    });
     });
   }
 
