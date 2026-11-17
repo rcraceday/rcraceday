@@ -5,9 +5,9 @@ import {
   COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
   getCmsSelectMenuStyle,
   getCmsSelectTriggerStyle,
-  getDropdownMenuStyle,
   getDropdownOptionStyle,
-  getDropdownTriggerStyle,
+  getPremiumDropdownMenuStyle,
+  getPremiumDropdownTriggerStyle,
 } from "@/components/ui/dropdownFieldStyles";
 
 const TRANSPONDER_MAX_LENGTH = 8;
@@ -26,7 +26,7 @@ export default function TransponderCombobox({
   placeholder = "Transponder",
   menuScroll = true,
   onMenuToggle,
-  variant = "public",
+  variant = "premium",
 }) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -35,7 +35,8 @@ export default function TransponderCombobox({
   const { palette } = useTheme();
   const primary = palette?.primary || "#00438a";
   const currentValue = sanitizeTransponder(value);
-  const isCms = variant === "cms" || variant === "public";
+  const isCms = variant === "cms";
+  const isPremium = !isCms;
   const chevronColor = primary;
 
   useEffect(() => {
@@ -93,15 +94,25 @@ export default function TransponderCombobox({
   return (
     <div
       ref={dropdownRef}
-      className={`filter-dropdown min-w-0 w-full sm:w-[7.25rem] sm:shrink-0 sm:max-w-[42%] ${open ? "is-open" : ""}`}
+      className={`filter-dropdown ${isPremium ? "filter-dropdown--premium" : ""} min-w-0 w-full sm:w-[7.25rem] sm:shrink-0 sm:max-w-[42%] ${open ? "is-open" : ""}`}
       style={{ "--dropdown-primary": primary }}
     >
       <div
         className="filter-dropdown-trigger flex w-full max-w-full items-center"
-        style={(isCms ? getCmsSelectTriggerStyle : getDropdownTriggerStyle)(palette, {
-          ...COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
-          cursor: "text",
-        })}
+        style={
+          isPremium
+            ? getPremiumDropdownTriggerStyle(palette, {
+                ...COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
+                minHeight: "2.25rem",
+                fontSize: "0.75rem",
+                padding: "0.4rem 0.75rem",
+                cursor: "text",
+              })
+            : getCmsSelectTriggerStyle(palette, {
+                ...COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
+                cursor: "text",
+              })
+        }
       >
         <input
           type="text"
@@ -151,13 +162,13 @@ export default function TransponderCombobox({
       {open && (
         <div
           ref={menuRef}
-          className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-[min(20rem,70vh)] overflow-y-auto overscroll-contain" : ""}`}
+          className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${isPremium ? "filter-dropdown-menu--premium" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-[min(20rem,70vh)] overflow-y-auto overscroll-contain" : ""}`}
           role="listbox"
           aria-label={ariaLabel}
           style={
-            isCms
-              ? getCmsSelectMenuStyle(palette, { minWidth: "100%" })
-              : getDropdownMenuStyle(palette, { minWidth: "100%" })
+            isPremium
+              ? { ...getPremiumDropdownMenuStyle(palette, { minWidth: "100%" }), overflowX: "hidden", overflowY: "auto" }
+              : getCmsSelectMenuStyle(palette, { minWidth: "100%" })
           }
         >
           {filteredSuggestions.length === 0 ? (

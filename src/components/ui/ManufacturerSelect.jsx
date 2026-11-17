@@ -6,6 +6,8 @@ import {
   getCmsSelectMenuStyle,
   getCmsSelectTriggerStyle,
   getDropdownOptionStyle,
+  getPremiumDropdownMenuStyle,
+  getPremiumDropdownTriggerStyle,
 } from "@/components/ui/dropdownFieldStyles";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
@@ -16,12 +18,12 @@ export default function ManufacturerSelect({
   ariaLabel,
   placeholder,
   fullWidth = true,
-  compact = false,
+  compact = true,
   /** When true, sized for a flex row beside class + transponder (Driver Manager / nominate). */
   rowSlot = false,
   menuScroll = true,
   onMenuToggle,
-  variant = "cms",
+  variant = "premium",
   allowEmpty = true,
 }) {
   const { t } = useTranslation();
@@ -33,7 +35,8 @@ export default function ManufacturerSelect({
   const menuRef = useRef(null);
   const { palette } = useTheme();
   const primary = palette?.primary || "#00438a";
-  const isCms = variant === "cms" || variant === "public";
+  const isCms = variant === "cms";
+  const isPremium = !isCms;
   const trimmedValue = String(value ?? "").trim();
   const emptyLabel =
     placeholder ?? (rowSlot ? t("nominate.chassisManufacturerShort") : t("nominate.chassisManufacturerSelect"));
@@ -109,8 +112,8 @@ export default function ManufacturerSelect({
   };
 
   const wrapClass = rowSlot
-    ? `filter-dropdown ${open ? "is-open" : ""} min-w-0 w-full sm:min-w-[8.5rem] sm:max-w-[11rem] sm:flex-1`
-    : `filter-dropdown ${open ? "is-open" : ""} ${fullWidth ? "min-w-0 w-full" : ""}`;
+    ? `filter-dropdown ${isPremium ? "filter-dropdown--premium" : ""} ${open ? "is-open" : ""} min-w-0 w-full sm:min-w-[8.5rem] sm:max-w-[11rem] sm:flex-1`
+    : `filter-dropdown ${isPremium ? "filter-dropdown--premium" : ""} ${open ? "is-open" : ""} ${fullWidth ? "min-w-0 w-full" : ""}`;
 
   return (
     <div
@@ -121,13 +124,24 @@ export default function ManufacturerSelect({
       <div
         className="filter-dropdown-trigger relative flex w-full max-w-full items-center"
         style={
-          isCms
-            ? getCmsSelectTriggerStyle(palette, {
+          isPremium
+            ? getPremiumDropdownTriggerStyle(palette, {
+                width: "100%",
+                cursor: "text",
+                ...(compact
+                  ? {
+                      ...COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
+                      minHeight: "2.25rem",
+                      fontSize: "0.75rem",
+                      padding: "0.4rem 0.75rem",
+                    }
+                  : {}),
+              })
+            : getCmsSelectTriggerStyle(palette, {
                 width: "100%",
                 cursor: "text",
                 ...(compact ? COMPACT_DROPDOWN_TRIGGER_OVERRIDES : {}),
               })
-            : undefined
         }
       >
         <input
@@ -169,10 +183,14 @@ export default function ManufacturerSelect({
       {open && (
         <div
           ref={menuRef}
-          className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-[min(20rem,70vh)] overflow-y-auto overscroll-contain" : ""}`}
+          className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${isPremium ? "filter-dropdown-menu--premium" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-[min(20rem,70vh)] overflow-y-auto overscroll-contain" : ""}`}
           role="listbox"
           aria-label={ariaLabel}
-          style={isCms ? getCmsSelectMenuStyle(palette, { minWidth: "100%" }) : undefined}
+          style={
+            isPremium
+              ? { ...getPremiumDropdownMenuStyle(palette, { minWidth: "100%" }), overflowX: "hidden", overflowY: "auto" }
+              : getCmsSelectMenuStyle(palette, { minWidth: "100%" })
+          }
         >
           {filtered.length === 0 ? (
             <div className="px-2 py-1.5 text-xs text-text-muted">{t("cms.noResults")}</div>

@@ -365,6 +365,68 @@ export default function DriverSettingsCard({ club }) {
         </div>
       </CMSCard>
 
+      <CMSCard titleKey="admin.driverSettings.cancellationTitle">
+        <div style={cmsLayout.stack}>
+          <p style={{ fontSize: 13, color: "#6B7280", margin: 0 }}>
+            {t("admin.driverSettings.cancellationHint")}
+          </p>
+          <CMSToggle
+            label={t("admin.driverSettings.cancellationRefundToggle")}
+            checked={!!form.cancellation.refund_request_until_next_meeting}
+            onChange={(checked) =>
+              patch("cancellation", "refund_request_until_next_meeting", checked)
+            }
+          />
+          <CMSInput
+            label={t("admin.driverSettings.cancellationRefundHour")}
+            value={form.cancellation.refund_deadline_hour ?? 6}
+            onChange={(value) =>
+              patch(
+                "cancellation",
+                "refund_deadline_hour",
+                value === "" ? 6 : Number(value)
+              )
+            }
+            type="number"
+          />
+          <CMSInput
+            label={t("admin.driverSettings.cancellationExpiryMonths")}
+            value={form.cancellation.credit_expiry_months ?? 0}
+            onChange={(value) =>
+              patch(
+                "cancellation",
+                "credit_expiry_months",
+                value === "" ? 0 : Number(value)
+              )
+            }
+            type="number"
+          />
+          <CMSInput
+            label={t("admin.driverSettings.cancellationTimezone")}
+            value={form.cancellation.timezone || "Australia/Brisbane"}
+            onChange={(value) => patch("cancellation", "timezone", value)}
+          />
+        </div>
+      </CMSCard>
+
+      <CMSCard titleKey="admin.driverSettings.nominationTitle">
+        <div style={cmsLayout.stack}>
+          <p style={{ fontSize: 13, color: "#6B7280", margin: 0 }}>
+            {t("admin.driverSettings.nominationHint")}
+          </p>
+          <CMSToggle
+            label={t("admin.driverSettings.nominationRequireConduct")}
+            checked={form.nomination?.require_code_of_conduct !== false}
+            onChange={(checked) => patch("nomination", "require_code_of_conduct", checked)}
+          />
+          <CMSInput
+            label={t("admin.driverSettings.nominationConductUrl")}
+            value={form.nomination?.code_of_conduct_url || ""}
+            onChange={(value) => patch("nomination", "code_of_conduct_url", value)}
+          />
+        </div>
+      </CMSCard>
+
       <CMSCard titleKey="admin.driverSettings.livetimeTitle">
         <div style={cmsLayout.stack}>
           <CMSInput

@@ -9,6 +9,8 @@ import {
   getDropdownOptionStyle,
   getDropdownTriggerStyle,
   getInlineDropdownMenuStyle,
+  getPremiumDropdownMenuStyle,
+  getPremiumDropdownTriggerStyle,
 } from "@/components/ui/dropdownFieldStyles";
 
 function sortOptionsAlphabetically(options) {
@@ -26,7 +28,7 @@ export default function FilterDropdown({
   onChange,
   options,
   ariaLabel,
-  compact = false,
+  compact = true,
   fullWidth = true,
   className = "",
   triggerStyleOverrides = {},
@@ -34,7 +36,8 @@ export default function FilterDropdown({
   menuScroll = true,
   onMenuToggle,
   onClose,
-  variant = "public",
+  /** Member app: default premium compact. Admin-only: `variant="cms"`. */
+  variant = "premium",
   /** In-flow menu — avoids clipping inside overflow-hidden ancestors. */
   menuInline = false,
   preserveOptionOrder = false,
@@ -55,8 +58,27 @@ export default function FilterDropdown({
   const triggerLabel =
     isEmptyValue && emptyTriggerLabel ? emptyTriggerLabel : selectedOption?.label;
   const primary = palette?.primary || "#00438a";
-  const isCms = variant === "cms" || variant === "public";
+  const isCms = variant === "cms";
+  const isPremium = !isCms;
   const chevronColor = primary;
+
+  const menuPanelStyle = useMemo(() => {
+    if (menuInline) {
+      return getInlineDropdownMenuStyle(palette, {
+        boxShadow: isPremium
+          ? "0 10px 28px rgba(10, 26, 47, 0.12)"
+          : "0 4px 12px rgba(0, 0, 0, 0.08)",
+        borderRadius: isPremium ? 10 : undefined,
+      });
+    }
+    const base = isPremium
+      ? getPremiumDropdownMenuStyle(palette)
+      : isCms
+        ? getCmsSelectMenuStyle(palette, { boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)" })
+        : getDropdownMenuStyle(palette);
+    if (!menuScroll) return base;
+    return { ...base, overflowX: "hidden", overflowY: "auto" };
+  }, [menuInline, isPremium, isCms, palette, menuScroll]);
 
   useEffect(() => {
     function closeOnOutsideClick(event) {
@@ -100,16 +122,23 @@ export default function FilterDropdown({
   return (
     <div
       ref={dropdownRef}
-      className={`filter-dropdown ${open ? "is-open" : ""} ${fullWidth ? "min-w-0" : ""} ${className}`.trim()}
+      className={`filter-dropdown ${isPremium ? "filter-dropdown--premium" : ""} ${open ? "is-open" : ""} ${fullWidth ? "min-w-0" : ""} ${className}`.trim()}
       style={{ "--dropdown-primary": primary, width: compact && fullWidth ? "100%" : undefined }}
     >
       <button
         type="button"
         className={`filter-dropdown-trigger max-w-full ${fullWidth ? "w-full" : "w-auto"}`}
-        style={(isCms ? getCmsSelectTriggerStyle : getDropdownTriggerStyle)(palette, {
+        style={(isPremium
+          ? getPremiumDropdownTriggerStyle
+          : isCms
+            ? getCmsSelectTriggerStyle
+            : getDropdownTriggerStyle)(palette, {
           ...(compact
             ? {
                 ...COMPACT_DROPDOWN_TRIGGER_OVERRIDES,
+                ...(isPremium
+                  ? { minHeight: "2.25rem", fontSize: "0.75rem", padding: "0.4rem 0.75rem" }
+                  : {}),
                 ...(fullWidth ? {} : { width: "auto", minWidth: "9rem" }),
               }
             : {}),
@@ -143,18 +172,10 @@ export default function FilterDropdown({
       {open && (
         <div
           ref={menuRef}
-          className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-[min(20rem,70vh)] overflow-y-auto overscroll-contain" : ""}`}
+          className={`filter-dropdown-menu ${isCms ? "filter-dropdown-menu--cms" : ""} ${isPremium ? "filter-dropdown-menu--premium" : ""} ${menuScroll ? "filter-dropdown-menu-scroll max-h-[min(20rem,70vh)] overflow-y-auto overscroll-contain" : ""}`}
           role="listbox"
           aria-label={ariaLabel}
-          style={
-            menuInline
-              ? getInlineDropdownMenuStyle(palette, {
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-                })
-              : isCms
-                ? getCmsSelectMenuStyle(palette, { boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)" })
-                : getDropdownMenuStyle(palette)
-          }
+          style={menuPanelStyle}
         >
           {menuOptions.map((option) => (
             <button
@@ -168,6 +189,12 @@ export default function FilterDropdown({
                   palette,
                   compact ? { padding: "0.375rem 0.5rem", fontSize: "0.75rem" } : undefined
                 ),
+                ...(isPremium && option.value === value
+                  ? {
+                      background: `color-mix(in srgb, ${primary} 12%, #ffffff)`,
+                      fontWeight: 600,
+                    }
+                  : {}),
                 ...(option.optionStyle || {}),
               }}
               onClick={() => {

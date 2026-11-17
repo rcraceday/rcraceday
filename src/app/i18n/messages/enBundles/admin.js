@@ -191,6 +191,7 @@ export default {
       editEvent: "Edit Event",
       noEvents: "No events yet.",
       draft: "Draft",
+      cancelled: "Cancelled",
       duplicate: "Duplicate",
       results: "Results",
       eventPreview: "Event Preview",
@@ -705,6 +706,19 @@ export default {
       juniorDisplayTagHint:
         "Shown in parentheses next to junior drivers (for example Under 16). Each club can set its own wording.",
       juniorCutoffYear: "Born in this year or later counts as junior",
+      cancellationTitle: "Event cancellation",
+      cancellationHint:
+        "When an admin cancels a meeting, nominated drivers are credited their entry fee. Enable the refund window for clubs that allow a cash refund until 6am on the morning of the next meeting.",
+      cancellationRefundToggle:
+        "Allow refund requests until 6am the morning of the next meeting",
+      cancellationRefundHour: "Refund deadline hour (24h, club timezone)",
+      cancellationExpiryMonths: "Unused credit expires after (months, 0 = never)",
+      cancellationTimezone: "Club timezone for refund deadline",
+      nominationTitle: "Nominations",
+      nominationHint:
+        "Drivers must tick this on the nomination form before they can pay or confirm. Leave the URL blank to hide the checkbox.",
+      nominationRequireConduct: "Require Code of Conduct acceptance on nomination",
+      nominationConductUrl: "Code of Conduct PDF URL",
       livetimeTitle: "LiveTime export",
       livetimeClubName: "Club name override for LiveTime export",
       livetimeHints: "Show LiveTime field hints on driver profile",

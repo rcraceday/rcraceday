@@ -701,6 +701,17 @@ a:hover {
   outline: none;
 }
 
+.filter-dropdown--premium .filter-dropdown-trigger:hover {
+  border-color: color-mix(in srgb, var(--dropdown-primary, #00438a) 55%, #d1d5db);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 8px rgba(10, 26, 47, 0.08);
+}
+
+.filter-dropdown--premium .filter-dropdown-option:hover,
+.filter-dropdown--premium .filter-dropdown-option:focus-visible {
+  background: color-mix(in srgb, var(--dropdown-primary, #00438a) 10%, #ffffff);
+  color: var(--text, #0a1a2f);
+}
+
 /* ===========================
    LOGO
    =========================== */

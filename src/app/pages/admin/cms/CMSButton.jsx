@@ -11,7 +11,7 @@ export default function CMSButton({
   const [state, setState] = useState("base");
 
   const baseStyle = {
-    backgroundColor: "#ececec",
+    background: "linear-gradient(180deg, #f6f6f6 0%, #ececec 100%)",
     border: "1px solid #aeb1b4",
     color: "#374151",
     fontSize: "12px",
@@ -29,16 +29,16 @@ export default function CMSButton({
     cursor: "pointer",
     transition:
       "background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease, border-color 0.15s ease",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), 0 1px 2px rgba(0,0,0,0.06)",
   };
 
   const hoverStyle = {
-    backgroundColor: "#f8f3f3",
+    background: "linear-gradient(180deg, #ffffff 0%, #f8f3f3 100%)",
     border: "1px solid #991B1B",
   };
 
   const activeStyle = {
-    backgroundColor: "#E5E7EB",
+    background: "linear-gradient(180deg, #ececec 0%, #e5e7eb 100%)",
     transform: "scale(0.98)",
   };
 

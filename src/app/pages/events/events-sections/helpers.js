@@ -34,9 +34,14 @@ function parseEventDate(value) {
   return parseStoredTimestamp(value);
 }
 
+export function isEventCancelled(event) {
+  return !!(event?.is_cancelled || event?.cancelled);
+}
+
 /** Event day has ended (for Completed badge); tolerant of date-only vs timestamptz. */
 export function isEventCompleted(event, now = new Date()) {
   if (!event) return false;
+  if (isEventCancelled(event)) return false;
   if (isEventPast(event, now)) return true;
   const raw = event.event_date;
   if (raw == null || raw === "") return false;
@@ -49,7 +54,7 @@ export function isEventCompleted(event, now = new Date()) {
 
 /** True when drivers may nominate (standard window or late-entry window). */
 export function isNominationsOpen(event, now = new Date()) {
-  if (!event) return false;
+  if (!event || isEventCancelled(event)) return false;
 
   const open = parseEventDate(event.nominations_open);
   const close = parseEventDate(event.nominations_close);

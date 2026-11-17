@@ -12,6 +12,7 @@ import {
   sortKeyInMonth,
 } from "./calendarHelpers";
 import { eventLogoSrc } from "../events-sections/eventLogo";
+import { isEventCancelled } from "../events-sections/helpers";
 
 export default function YearOverview({ year, events, clubSlug }) {
   const { t, locale } = useTranslation();
@@ -64,6 +65,7 @@ export default function YearOverview({ year, events, clubSlug }) {
                   return dayEvents.map((event) => {
                     const logo = eventLogoSrc(event);
                     const past = dayPast || isEventPast(event, today);
+                    const cancelled = isEventCancelled(event);
                     const dateLabel = new Date(year, monthIndex, day).toLocaleDateString(
                       locale,
                       { weekday: "short", day: "numeric" }
@@ -98,10 +100,12 @@ export default function YearOverview({ year, events, clubSlug }) {
                             <CalendarEventTypeChip eventType={event.event_type} />
                             <span
                               className={`text-xs font-medium truncate ${
-                                past ? "text-slate-500" : "text-text-base group-hover:underline"
+                                past || cancelled ? "text-slate-500" : "text-text-base group-hover:underline"
                               }`}
                             >
-                              {richTextToPlainText(event.name)}
+                              {cancelled
+                                ? `${richTextToPlainText(event.name)} (${t("eventCard.cancelledBadge")})`
+                                : richTextToPlainText(event.name)}
                             </span>
                           </div>
                         </Link>

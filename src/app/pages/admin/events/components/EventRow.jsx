@@ -51,7 +51,18 @@ export default function EventRow({ event, clubSlug }) {
 
       {/* STATUS BADGE */}
       <td style={{ ...styles.td, whiteSpace: "normal" }}>
-        {event.is_published ? (
+        {event.is_cancelled || event.cancelled ? (
+          <span
+            style={{
+              ...styles.badgeDraft,
+              fontSize: "13px",
+              background: "#F59E0B",
+              color: "#fff",
+            }}
+          >
+            {t("admin.events.cancelled")}
+          </span>
+        ) : event.is_published ? (
           <span
             style={{
               ...styles.badgePublished,

@@ -128,3 +128,79 @@ export async function triggerNominationsOpenProcessing(supabase, eventId = null,
     };
   }
 }
+
+/**
+ * Send a Web Push to specific users via the send-web-push Edge Function.
+ */
+export async function sendWebPushToUsers(supabase, {
+  userIds,
+  title,
+  body,
+  url = null,
+  clubId = null,
+}) {
+  const ids = (userIds || []).filter(Boolean);
+  if (!ids.length || !title) {
+    return { data: null, error: { message: "Missing push recipients" } };
+  }
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl) {
+    return {
+      data: null,
+      error: { message: "VITE_SUPABASE_URL is not set in the app environment." },
+    };
+  }
+
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session?.access_token) {
+    return {
+      data: null,
+      error: { message: "Sign in again, then retry sending notifications." },
+    };
+  }
+
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const payload = {
+    userIds: ids,
+    user_ids: ids,
+    title,
+    body: body ?? "",
+    message: body ?? "",
+    url,
+    link: url,
+    clubId,
+    club_id: clubId,
+  };
+
+  try {
+    const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/functions/v1/send-web-push`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        data: null,
+        error: { message: data?.error || `Edge Function returned ${response.status}` },
+      };
+    }
+    return { data, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: {
+        message: err instanceof Error ? err.message : "Failed to reach Edge Function",
+      },
+    };
+  }
+}

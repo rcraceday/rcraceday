@@ -272,6 +272,12 @@ export default {
     statusNotOpen: "Not Open",
     statusOpen: "Open",
     statusClosed: "Closed",
+    cancelledTitle: "Event cancelled",
+    cancelledBody:
+      "This meeting has been cancelled. Nominated drivers have been credited their entry fee for a future event.",
+    cancelledRefundBody:
+      "Refunds are available until 6am the morning of the next meeting. Contact the club by then if you would like a refund. If you do not, the funds will be kept as a credit for {{months}} months.",
+    nominateCancelled: "Nominations are closed — this event was cancelled.",
     statusLateEntry: "Late Entry Window",
     lateFeeAppliesNote: "Late fee applies to new nominations.",
     nominationsNotOpen: "Nominations Not Open",
@@ -322,6 +328,12 @@ export default {
     noThanks: "No thanks",
     dismissBackdrop: "Close membership info",
     memberOnlyHint: "Full membership is required for this.",
+  },
+  clubCredit: {
+    label: "Club credit",
+    expires: "Expires {{date}}",
+    expiresWithIndefinite: "Earliest expiry {{date}} (some credit does not expire)",
+    noExpiry: "Does not expire",
   },
   drivers: {
     managerTitle: "Driver Manager",
@@ -437,6 +449,7 @@ export default {
     visitorDriverNameRequired: "First and last name are required.",
     visitorDriverSaveFailed: "Could not save your driver profile. Please try again.",
     eventNotFound: "Event not found.",
+    eventCancelled: "This event has been cancelled. Nominations are closed and paid entry fees have been credited.",
     eventType: "Event Type:",
     when: "When:",
     track: "Track:",
@@ -499,9 +512,13 @@ export default {
     qtyOne: "Qty: 1",
     compulsoryAddOn: "Compulsory Add‑On",
     appliesTo: "Applies to:",
-    rcraAffiliation: "RCRA Club Affiliation",
-    rcraConfirm: "I confirm that I am affiliated with an RCRA club.",
-    clubLabel: "Club",
+    rcraAffiliation: "RCRA club affiliation",
+    rcraClubPrompt:
+      "Select the RCRA club you are a member of, or indicate if you are not a member of an RCRA club.",
+    rcraNotMember: "I am not a member of an RCRA club",
+    rcraIndemnity:
+      "I understand that I participate at my own risk, accept responsibility for my involvement, and that I am not covered by RCRA club insurance as a non-member.",
+    clubLabel: "RCRA club",
     messageHint:
       "Optional. Sent with your nomination. You can continue the conversation anytime from Messages in the menu.",
     noteForClub: "Note for the club",
@@ -516,7 +533,7 @@ export default {
     householdTotal: "Household total",
     accountCredited: "Account credited {{amount}}",
     creditFutureNote:
-      "This credit will be applied to future events or nominations. If you want a refund, please contact the club.",
+      "Refunds are available until 6am the morning of the next meeting. Contact the club by then if you would like a refund. If you do not, the funds will be kept as a credit for 6 months.",
     noAdditionalPayment: "No additional payment required for this change.",
     payWithStripe: "Pay with Stripe",
     payBalanceStripe: "Pay balance with Stripe",
@@ -538,8 +555,13 @@ export default {
     errMembershipUnavailable: "Membership information is not available.",
     errPayBalanceFirst: "Pay the balance due ({{amount}}) before confirming.",
     errSelectClassOrPractice: "Select at least one class or a practice day for a driver.",
-    errConfirmRcra: "You must confirm your RCRA club affiliation.",
-    errSelectRcraClub: "Select your RCRA club.",
+    errRcraClubOrDeclare: "Select your RCRA club, or indicate that you are not an RCRA club member.",
+    errRcraIndemnity: "Please accept the non-member indemnity to continue.",
+    errCodeOfConduct:
+      "Please confirm that you have read the club Code of Conduct and that all nominated drivers will abide by it.",
+    codeOfConductPrefix: "I confirm that I/we have read and understand the club’s",
+    codeOfConductLink: "Code of Conduct (PDF)",
+    codeOfConductSuffix: ", and that all nominated drivers agree to abide by it.",
     errClassFull: "{{className}} is full. Please choose another class.",
     errClassFallback: "A class",
     errSaveNominations: "Unable to save nominations.",

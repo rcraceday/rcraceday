@@ -35,10 +35,24 @@ import {
   loadDriverNominationEventIds,
   loadUpcomingClubEventIds,
 } from "@/app/lib/driverAccessRestriction";
-import { juniorTagInParens, resolveDriverProfilePolicy } from "@/app/lib/driverClubSettings";
+import {
+  juniorTagInParens,
+  resolveDriverProfilePolicy,
+  resolveNominationCodeOfConduct,
+} from "@/app/lib/driverClubSettings";
 import useTheme from "@app/providers/useTheme";
 import { calculateUserPricing } from "@app/pages/events/events-sections/calculatePricing";
-import { resolveEventPricing } from "@app/pages/events/events-sections/helpers";
+import {
+  isEventCancelled,
+  isMajorEventType,
+  resolveEventPricing,
+} from "@app/pages/events/events-sections/helpers";
+import {
+  fetchCreditRefundSchedule,
+  fetchNominationCreditBalance,
+  notifyNominationCredit,
+  refundWindowCopy,
+} from "@/app/lib/eventCancellation";
 import useRcraClubs from "@app/providers/useRcraClubs";
 import SearchableClubSelect from "@components/SearchableClubSelect";
 import {
@@ -75,29 +89,28 @@ import {
 const money = (value) => Number(value || 0).toLocaleString("en-AU", { style: "currency", currency: "AUD" });
 const moneyAmount = (value) => Math.round(Number(value || 0) * 100) / 100;
 
-async function fetchNominationCreditBalance(groupId, clubId) {
-  if (!groupId || !clubId) return 0;
-  const { data, error } = await supabase.from("nomination_credits").select("amount").eq("group_id", groupId).eq("club_id", clubId);
-  if (error) {
-    console.error("Error loading nomination credits:", error);
-    return 0;
-  }
-  return moneyAmount((data || []).reduce((sum, row) => sum + Number(row.amount || 0), 0));
-}
-
 async function insertNominationCredit(row) {
   const amount = moneyAmount(row.amount);
   if (!row.group_id || !row.club_id || !amount) return "";
-  const { error } = await supabase.from("nomination_credits").insert({
+  const payload = {
     group_id: row.group_id,
     club_id: row.club_id,
     amount,
     source_event_id: row.source_event_id || null,
     applied_event_id: row.applied_event_id || null,
     notes: row.notes || null,
-  });
-  if (error) return error.message || "Unable to update nomination credit.";
-  return "";
+    refund_deadline: row.refund_deadline || null,
+    expires_at: row.expires_at || null,
+  };
+  const { error } = await supabase.from("nomination_credits").insert(payload);
+  if (!error) return "";
+  if (/refund_deadline|expires_at/i.test(error.message || "")) {
+    const { refund_deadline: _deadline, expires_at: _expires, ...rest } = payload;
+    const retry = await supabase.from("nomination_credits").insert(rest);
+    if (!retry.error) return "";
+    return retry.error.message || "Unable to update nomination credit.";
+  }
+  return error.message || "Unable to update nomination credit.";
 }
 const emptySelection = () => ({
   classSlots: [],
@@ -697,6 +710,7 @@ export default function EventNominate() {
   const brand = palette?.primary || "#00438a";
   const contentText = palette?.text || "#1f2937";
   const juniorParens = juniorTagInParens(club);
+  const codeOfConduct = useMemo(() => resolveNominationCodeOfConduct(club), [club]);
   const { clubs: rcraClubs } = useRcraClubs();
 
   const chassisManufacturerOptions = useMemo(
@@ -726,8 +740,10 @@ export default function EventNominate() {
   const [otherEntryCounts, setOtherEntryCounts] = useState({});
   const [externalMerchEntryCounts, setExternalMerchEntryCounts] = useState({});
   const [requirementSelections, setRequirementSelections] = useState({});
-  const [clubAffiliationConfirmed, setClubAffiliationConfirmed] = useState(false);
+  const [codeOfConductAccepted, setCodeOfConductAccepted] = useState(false);
   const [affiliatedClubId, setAffiliatedClubId] = useState("");
+  const [rcraNonMember, setRcraNonMember] = useState(false);
+  const [nonRcraIndemnityAccepted, setNonRcraIndemnityAccepted] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [familyEditorOpen, setFamilyEditorOpen] = useState(false);
   const [familyEditorDriverId, setFamilyEditorDriverId] = useState("");
@@ -744,6 +760,7 @@ export default function EventNominate() {
   const [nominationReloadToken, setNominationReloadToken] = useState(0);
   const [upcomingClubEventIds, setUpcomingClubEventIds] = useState([]);
   const [driverNominatedEventIds, setDriverNominatedEventIds] = useState({});
+  const [creditRefundSchedule, setCreditRefundSchedule] = useState(null);
   const { user } = useAuth();
 
   function accessContextForDriver(driverId) {
@@ -793,6 +810,21 @@ export default function EventNominate() {
       cancelled = true;
     };
   }, [club?.id, nominationReloadToken]);
+
+  useEffect(() => {
+    if (!club?.id) {
+      setCreditRefundSchedule(null);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      const schedule = await fetchCreditRefundSchedule(supabase, club);
+      if (!cancelled) setCreditRefundSchedule(schedule);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [club?.id]);
 
   useEffect(() => {
     if (!club?.id || !drivers?.length) {
@@ -957,7 +989,11 @@ export default function EventNominate() {
   const classLimit = getClassLimitNumber(event);
   const classLimitPerDay = getDayClassLimit(event);
   const preferenceEnabled = !!event?.preference_enabled;
-  const requiresRcraClub = !!event?.requires_rcra_club;
+  const requireRcraForAll = !!event?.requires_rcra_club;
+  const isClubEvent = event ? !isMajorEventType(event) : true;
+  const isHostClubMember = membership?.isMember === true;
+  const showRcraAffiliationSection =
+    isClubEvent && (requireRcraForAll || !isHostClubMember);
   const merchandise = Array.isArray(event?.merchandise) ? event.merchandise : [];
   const addOns = Array.isArray(event?.class_add_ons) ? event.class_add_ons : [];
 
@@ -1183,15 +1219,19 @@ export default function EventNominate() {
         if (firstMerch.requirements && typeof firstMerch.requirements === "object") {
           setRequirementSelections(firstMerch.requirements);
         }
-        const rcraId =
-          typeof firstMerch.affiliated_rcra_club_id === "string" ? firstMerch.affiliated_rcra_club_id : "";
-        if (rcraId) {
-          setAffiliatedClubId(rcraId);
-          setClubAffiliationConfirmed(true);
-        } else if (typeof firstMerch.affiliated_club_name === "string" && firstMerch.affiliated_club_name.trim()) {
-          const match = rcraClubs.find((item) => item.name === firstMerch.affiliated_club_name.trim());
-          if (match?.id) setAffiliatedClubId(match.id);
-          setClubAffiliationConfirmed(true);
+        if (firstMerch.rcra_non_member === true) {
+          setRcraNonMember(true);
+          setAffiliatedClubId("");
+          setNonRcraIndemnityAccepted(firstMerch.rcra_non_member_indemnity_accepted === true);
+        } else {
+          const rcraId =
+            typeof firstMerch.affiliated_rcra_club_id === "string" ? firstMerch.affiliated_rcra_club_id : "";
+          if (rcraId) {
+            setAffiliatedClubId(rcraId);
+          } else if (typeof firstMerch.affiliated_club_name === "string" && firstMerch.affiliated_club_name.trim()) {
+            const match = rcraClubs.find((item) => item.name === firstMerch.affiliated_club_name.trim());
+            if (match?.id) setAffiliatedClubId(match.id);
+          }
         }
         if (typeof firstMerch.payment_method === "string" && firstMerch.payment_method) {
           setPaymentMethod(firstMerch.payment_method);
@@ -1203,6 +1243,7 @@ export default function EventNominate() {
         } else {
           setPaidBreakdownSnapshot([]);
         }
+        setCodeOfConductAccepted(firstMerch.code_of_conduct_accepted === true);
         setDraftScope(scope);
         setHydrationReady(true);
         return;
@@ -1219,10 +1260,14 @@ export default function EventNominate() {
       if (draft?.requirementSelections && typeof draft.requirementSelections === "object") {
         setRequirementSelections(draft.requirementSelections);
       }
-      if (typeof draft?.clubAffiliationConfirmed === "boolean") {
-        setClubAffiliationConfirmed(draft.clubAffiliationConfirmed);
+      if (typeof draft?.codeOfConductAccepted === "boolean") {
+        setCodeOfConductAccepted(draft.codeOfConductAccepted);
       }
       if (typeof draft?.affiliatedClubId === "string") setAffiliatedClubId(draft.affiliatedClubId);
+      if (typeof draft?.rcraNonMember === "boolean") setRcraNonMember(draft.rcraNonMember);
+      if (typeof draft?.nonRcraIndemnityAccepted === "boolean") {
+        setNonRcraIndemnityAccepted(draft.nonRcraIndemnityAccepted);
+      }
       if (typeof draft?.selectedDriverId === "string") setSelectedDriverId(draft.selectedDriverId);
       if (typeof draft?.familyEditorOpen === "boolean") setFamilyEditorOpen(draft.familyEditorOpen);
       if (typeof draft?.familyEditorDriverId === "string") {
@@ -1259,8 +1304,10 @@ export default function EventNominate() {
     writeNominateDraft(eventId, membership.id, {
       selections,
       requirementSelections,
-      clubAffiliationConfirmed,
+      codeOfConductAccepted,
       affiliatedClubId,
+      rcraNonMember,
+      nonRcraIndemnityAccepted,
       selectedDriverId,
       familyEditorOpen,
       familyEditorDriverId,
@@ -1271,8 +1318,10 @@ export default function EventNominate() {
     draftScope,
     selections,
     requirementSelections,
-    clubAffiliationConfirmed,
+    codeOfConductAccepted,
     affiliatedClubId,
+    rcraNonMember,
+    nonRcraIndemnityAccepted,
     selectedDriverId,
     familyEditorOpen,
     familyEditorDriverId,
@@ -2188,10 +2237,31 @@ export default function EventNominate() {
     }
   }, [hydrationReady, hadPaidNominations]);
 
+  function rcraCheckoutError(withdrawingPaid) {
+    if (withdrawingPaid || !showRcraAffiliationSection) return null;
+    if (affiliatedClubId) return null;
+    if (rcraNonMember) {
+      if (!nonRcraIndemnityAccepted) {
+        return { message: t("nominate.errRcraIndemnity"), section: "rcra" };
+      }
+      return null;
+    }
+    return { message: t("nominate.errRcraClubOrDeclare"), section: "rcra" };
+  }
+
   function startPayment(method) {
     const active = drivers
       .map((driver) => ({ driver, selection: selections[driver.id] || emptySelection() }))
       .filter(({ selection }) => hasNominationActivity(selection));
+    const rcraErr = rcraCheckoutError(false);
+    if (rcraErr) {
+      showCheckoutError(rcraErr.message, rcraErr.section);
+      return;
+    }
+    if (codeOfConduct.required && !codeOfConductAccepted) {
+      showCheckoutError(t("nominate.errCodeOfConduct"), "conduct");
+      return;
+    }
     const purchaseErr = validateActiveDriversPurchases(active);
     if (purchaseErr) {
       showCheckoutError(purchaseErr.message, purchaseErr.section);
@@ -2234,6 +2304,7 @@ export default function EventNominate() {
   }
 
   async function confirmPaymentAndNominations() {
+    if (isEventCancelled(event)) return showCheckoutError(t("nominate.eventCancelled"));
     if (!membership?.id) return showCheckoutError(t("nominate.errMembershipUnavailable"));
     if (amountToPay > 0.005 && !paymentConfirmed) {
       return showCheckoutError(t("nominate.errPayBalanceFirst", { amount: money(amountToPay) }));
@@ -2241,14 +2312,17 @@ export default function EventNominate() {
     const active = drivers
       .map((driver) => ({ driver, selection: selections[driver.id] || emptySelection() }))
       .filter(({ selection }) => hasNominationActivity(selection));
-    if (!active.length) {
+    const withdrawingPaid =
+      !active.length &&
+      (hadPaidNominations || priorHouseholdPaid > 0.005) &&
+      reductionCredit > 0.005;
+    if (!active.length && !withdrawingPaid) {
       return showCheckoutError(t("nominate.errSelectClassOrPractice"), "classes");
     }
-    if (requiresRcraClub && !clubAffiliationConfirmed) {
-      return showCheckoutError(t("nominate.errConfirmRcra"), "rcra");
-    }
-    if (requiresRcraClub && !affiliatedClubId) {
-      return showCheckoutError(t("nominate.errSelectRcraClub"), "rcra");
+    const rcraErr = rcraCheckoutError(withdrawingPaid);
+    if (rcraErr) return showCheckoutError(rcraErr.message, rcraErr.section);
+    if (!withdrawingPaid && codeOfConduct.required && !codeOfConductAccepted) {
+      return showCheckoutError(t("nominate.errCodeOfConduct"), "conduct");
     }
 
     for (const { selection } of active) {
@@ -2301,8 +2375,12 @@ export default function EventNominate() {
     setFocusSection("");
 
     const affiliatedClubName =
-      requiresRcraClub && affiliatedClubId
+      showRcraAffiliationSection && !rcraNonMember && affiliatedClubId
         ? rcraClubs.find((item) => item.id === affiliatedClubId)?.name || null
+        : null;
+    const rcraIndemnityAt =
+      showRcraAffiliationSection && rcraNonMember && nonRcraIndemnityAccepted
+        ? new Date().toISOString()
         : null;
     const markPaid = amountToPay <= 0.005 || paymentConfirmed;
     const checkoutBreakdownAtSave = householdCheckoutBreakdown();
@@ -2313,6 +2391,41 @@ export default function EventNominate() {
     if (existingIds.length) {
       await supabase.from("nomination_entries").delete().in("nomination_id", existingIds);
       await supabase.from("nominations").delete().in("id", existingIds);
+    }
+
+    async function issueReductionCreditAndNotify() {
+      if (!(creditClubId && membership?.id && reductionCredit > 0.005)) return;
+      const schedule = creditRefundSchedule || (await fetchCreditRefundSchedule(supabase, club));
+      const creditErr = await insertNominationCredit({
+        group_id: membership.id,
+        club_id: creditClubId,
+        amount: reductionCredit,
+        source_event_id: eventId,
+        notes: `Credit from reduced nomination (${event?.name || eventId})`,
+        refund_deadline: schedule?.refundDeadline ? schedule.refundDeadline.toISOString() : null,
+        expires_at: schedule?.expiresAt ? schedule.expiresAt.toISOString() : null,
+      });
+      if (creditErr) console.error("Error issuing nomination credit:", creditErr);
+      await notifyNominationCredit({
+        supabase,
+        club,
+        clubSlug,
+        event,
+        membershipId: membership.id,
+        userId: user?.id,
+        amount: reductionCredit,
+        schedule,
+        senderUserId: user?.id,
+      });
+    }
+
+    if (withdrawingPaid) {
+      await issueReductionCreditAndNotify();
+      setSaving(false);
+      clearNominateDraft(eventId, membership.id);
+      setSaved(true);
+      navigate(`/${clubSlug}/app/nominations`);
+      return;
     }
 
     const { data: nominations, error: nominationError } = await supabase
@@ -2335,7 +2448,14 @@ export default function EventNominate() {
               practice_days: practiceMeta.practice_days,
               practice_class_ids: practiceMeta.practice_class_ids,
               affiliated_club_name: affiliatedClubName,
-              affiliated_rcra_club_id: affiliatedClubId || null,
+              affiliated_rcra_club_id:
+                showRcraAffiliationSection && !rcraNonMember ? affiliatedClubId || null : null,
+              rcra_non_member: showRcraAffiliationSection && rcraNonMember === true,
+              rcra_non_member_indemnity_accepted:
+                showRcraAffiliationSection && rcraNonMember && nonRcraIndemnityAccepted === true,
+              rcra_non_member_indemnity_accepted_at: rcraIndemnityAt,
+              code_of_conduct_accepted: codeOfConductAccepted === true,
+              code_of_conduct_accepted_at: codeOfConductAccepted ? new Date().toISOString() : null,
               selection_snapshot: nominationSelectionSnapshot(selection),
               prior_household_paid: priorHouseholdPaid,
               household_amount_due: amountToPay,
@@ -2391,14 +2511,7 @@ export default function EventNominate() {
 
     if (!entryError && creditClubId && membership?.id) {
       if (reductionCredit > 0.005) {
-        const creditErr = await insertNominationCredit({
-          group_id: membership.id,
-          club_id: creditClubId,
-          amount: reductionCredit,
-          source_event_id: eventId,
-          notes: `Credit from reduced nomination (${event?.name || eventId})`,
-        });
-        if (creditErr) console.error("Error issuing nomination credit:", creditErr);
+        await issueReductionCreditAndNotify();
       }
       if (creditApplied > 0.005) {
         const applyErr = await insertNominationCredit({
@@ -2506,6 +2619,24 @@ export default function EventNominate() {
       <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
         <PageTitle icon={ClipboardDocumentCheckIcon} title={t("nominate.title")} style={{ color: brand }} />
         <div style={{ padding: "40px", textAlign: "center", color: "#666", fontSize: "14px" }}>{t("nominate.eventNotFound")}</div>
+      </div>
+    );
+  }
+
+  if (isEventCancelled(event)) {
+    return (
+      <div style={{ minHeight: "100vh", background: palette?.background || "#ffffff" }}>
+        <PageTitle icon={ClipboardDocumentCheckIcon} title={t("nominate.title")} style={{ color: brand }} />
+        <div style={{ padding: "40px", textAlign: "center", color: "#666", fontSize: "14px" }}>
+          <p>{t("nominate.eventCancelled")}</p>
+          <Button
+            variant="primary"
+            className="mt-4"
+            onClick={() => navigate(`/${clubSlug}/app/events/${event.id}`)}
+          >
+            {t("nominate.back")}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -2839,7 +2970,6 @@ export default function EventNominate() {
                             {t("nominate.selectDriver")}
                           </label>
                           <FilterDropdown
-                            variant="cms"
                             value={selectedDriver.id}
                             onChange={(value) => {
                               if (isFamily) {
@@ -3012,7 +3142,6 @@ export default function EventNominate() {
                                           <div className="driver-class-assignment-row">
                                             <div className="driver-class-assignment-row__class">
                                               <FilterDropdown
-                                                variant="cms"
                                                 value={currentValue}
                                                 onChange={(value) =>
                                                   setDayClass(selectedDriver.id, dayIndex, value, slotIndex)
@@ -3039,7 +3168,6 @@ export default function EventNominate() {
                                             {currentValue ? (
                                               <div className="driver-class-assignment-row__chassis">
                                                 <ManufacturerSelect
-                                                  variant="cms"
                                                   compact
                                                   rowSlot
                                                   value={chassisFor(selectedDriver.id, currentValue)}
@@ -3058,7 +3186,6 @@ export default function EventNominate() {
                                             {currentValue ? (
                                               <div className="driver-class-assignment-row__transponder">
                                                 <TransponderCombobox
-                                                  variant="cms"
                                                   value={transponderFor(selectedDriver.id, currentValue)}
                                                   suggestions={savedTranspondersFor(selectedDriver.id)}
                                                   onChange={(value) =>
@@ -3106,7 +3233,6 @@ export default function EventNominate() {
                                           {preferenceOrdinalLabel(prefSlotCount, t)}
                                         </div>
                                         <FilterDropdown
-                                          variant="cms"
                                           value={dayPref}
                                           onChange={(value) => setDayPreference(selectedDriver.id, dayIndex, value)}
                                           options={[
@@ -3161,7 +3287,6 @@ export default function EventNominate() {
                                 <div className="driver-class-assignment-row">
                                   <div className="driver-class-assignment-row__class">
                                     <FilterDropdown
-                                      variant="cms"
                                       value={currentValue}
                                       onChange={(value) =>
                                         setClassSlot(selectedDriver.id, slotIndex, value)
@@ -3187,7 +3312,6 @@ export default function EventNominate() {
                                   {currentValue ? (
                                     <div className="driver-class-assignment-row__chassis">
                                       <ManufacturerSelect
-                                        variant="cms"
                                         compact
                                         rowSlot
                                         value={chassisFor(selectedDriver.id, currentValue)}
@@ -3206,7 +3330,6 @@ export default function EventNominate() {
                                   {currentValue ? (
                                     <div className="driver-class-assignment-row__transponder">
                                       <TransponderCombobox
-                                        variant="cms"
                                         value={transponderFor(selectedDriver.id, currentValue)}
                                         suggestions={savedTranspondersFor(selectedDriver.id)}
                                         onChange={(value) =>
@@ -3254,7 +3377,6 @@ export default function EventNominate() {
                       <div className="mt-4">
                         <div className="text-sm font-medium mb-1">{preferenceOrdinalLabel(slotsPerDay, t)}</div>
                         <FilterDropdown
-                          variant="cms"
                           value={selection.preference}
                           onChange={(value) => updateSelection(selectedDriver.id, { preference: value })}
                           options={[
@@ -3620,7 +3742,7 @@ export default function EventNominate() {
                   </div>
                 )}
 
-                {requiresRcraClub && (
+                {showRcraAffiliationSection && (
                   <div
                     id="nominate-focus-rcra"
                     className={`mt-6 rounded-md border p-4 space-y-3 ${
@@ -3633,27 +3755,88 @@ export default function EventNominate() {
                     }
                   >
                     <p className="text-sm font-medium">{t("nominate.rcraAffiliation")}</p>
+                    <p className="text-sm text-text-muted">{t("nominate.rcraClubPrompt")}</p>
+                    {!rcraNonMember && (
+                      <label className="block text-sm">
+                        {t("nominate.clubLabel")}
+                        <SearchableClubSelect
+                          clubs={rcraClubs}
+                          selectedClubId={affiliatedClubId}
+                          onSelectClub={(clubId) => {
+                            setAffiliatedClubId(clubId);
+                            setRcraNonMember(false);
+                            setNonRcraIndemnityAccepted(false);
+                            if (focusSection === "rcra") setFocusSection("");
+                          }}
+                        />
+                      </label>
+                    )}
                     <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
-                        checked={clubAffiliationConfirmed}
+                        checked={rcraNonMember}
                         onChange={(e) => {
-                          setClubAffiliationConfirmed(e.target.checked);
+                          const checked = e.target.checked;
+                          setRcraNonMember(checked);
+                          if (checked) {
+                            setAffiliatedClubId("");
+                            setNonRcraIndemnityAccepted(false);
+                          }
                           if (focusSection === "rcra") setFocusSection("");
                         }}
                       />
-                      <span>{t("nominate.rcraConfirm")}</span>
+                      <span>{t("nominate.rcraNotMember")}</span>
                     </label>
-                    <label className="block text-sm">
-                      {t("nominate.clubLabel")}
-                      <SearchableClubSelect
-                        clubs={rcraClubs}
-                        selectedClubId={affiliatedClubId}
-                        onSelectClub={(clubId) => {
-                          setAffiliatedClubId(clubId);
-                          if (focusSection === "rcra") setFocusSection("");
+                    {rcraNonMember && (
+                      <label className="flex items-start gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={nonRcraIndemnityAccepted}
+                          onChange={(e) => {
+                            setNonRcraIndemnityAccepted(e.target.checked);
+                            if (focusSection === "rcra") setFocusSection("");
+                          }}
+                        />
+                        <span>{t("nominate.rcraIndemnity")}</span>
+                      </label>
+                    )}
+                  </div>
+                )}
+
+                {codeOfConduct.required && (
+                  <div
+                    id="nominate-focus-conduct"
+                    className={`mt-6 rounded-md border p-4 space-y-3 ${
+                      focusSection === "conduct" ? "border-red-300 bg-red-50 ring-2 ring-red-200" : ""
+                    }`}
+                    style={
+                      focusSection === "conduct"
+                        ? undefined
+                        : { borderColor: palette?.surfaceBorder || "#e5e7eb" }
+                    }
+                  >
+                    <label className="flex items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        required
+                        checked={codeOfConductAccepted}
+                        onChange={(e) => {
+                          setCodeOfConductAccepted(e.target.checked);
+                          if (focusSection === "conduct") setFocusSection("");
                         }}
                       />
+                      <span>
+                        {t("nominate.codeOfConductPrefix")}{" "}
+                        <a
+                          href={codeOfConduct.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium underline"
+                          style={{ color: brand }}
+                        >
+                          {t("nominate.codeOfConductLink")}
+                        </a>{t("nominate.codeOfConductSuffix")}
+                      </span>
                     </label>
                   </div>
                 )}
@@ -3725,7 +3908,9 @@ export default function EventNominate() {
                       ) : reductionCredit > 0.005 ? (
                         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 leading-snug">
                           <p className="font-semibold">{t("nominate.accountCredited", { amount: money(reductionCredit) })}</p>
-                          <p className="mt-1">{t("nominate.creditFutureNote")}</p>
+                          <p className="mt-1">
+                            {refundWindowCopy(creditRefundSchedule) || t("nominate.creditFutureNote")}
+                          </p>
                         </div>
                       ) : (
                         <p className="text-sm text-green-700">{t("nominate.noAdditionalPayment")}</p>

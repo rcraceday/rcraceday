@@ -107,7 +107,15 @@ export default function EventsTable({ loading, events, clubSlug }) {
 
                 {/* STATUS */}
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  {event.is_published ? (
+                  {event.is_cancelled || event.cancelled ? (
+                    <XCircleIcon
+                      style={{
+                        width: text.iconSize,
+                        height: text.iconSize,
+                        color: "#D97706",
+                      }}
+                    />
+                  ) : event.is_published ? (
                     <CheckCircleIcon
                       style={{
                         width: text.iconSize,
@@ -125,7 +133,11 @@ export default function EventsTable({ loading, events, clubSlug }) {
                     />
                   )}
                   <strong style={{ fontSize: text.labelSize }}>Status:</strong>
-                  {event.is_published ? "Published" : "Draft"}
+                  {event.is_cancelled || event.cancelled
+                    ? t("admin.events.cancelled")
+                    : event.is_published
+                      ? "Published"
+                      : "Draft"}
                 </div>
 
                 {/* ⭐ NOMINATED COUNT */}

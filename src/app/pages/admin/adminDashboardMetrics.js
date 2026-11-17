@@ -1,5 +1,6 @@
 import { supabase } from "@/supabaseClient";
 import { countHouseholdSlots } from "@app/pages/profile/householdDriverLimits";
+import { isEventCancelled } from "@/app/pages/events/events-sections/helpers";
 
 export function getCalendarYear(date = new Date()) {
   return date.getFullYear();
@@ -33,10 +34,6 @@ export function getEventAnchorDate(event) {
 export function getEventYear(event) {
   const anchor = getEventAnchorDate(event);
   return anchor ? anchor.getFullYear() : null;
-}
-
-function isEventCancelled(event) {
-  return !!(event?.is_cancelled || event?.cancelled);
 }
 
 function trackKindFromName(name) {

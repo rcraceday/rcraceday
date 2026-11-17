@@ -108,13 +108,16 @@ export function compareRacesForDisplay(a, b) {
   return (a?.mainNumber || 0) - (b?.mainNumber || 0);
 }
 
-/** Short tab label: Q1, A1, B2, D1, … */
+/** Qualifying Rnd 1, A1 Main, B2 Main, … */
 export function raceTabLabel(race) {
   if (!race) return "";
-  if (race.raceKind === "qualifying") return race.roundLabel || "Q1";
+  if (race.raceKind === "qualifying") {
+    const n = String(race.roundLabel || "Q1").match(/(\d+)/)?.[1] || "1";
+    return `Qualifying Rnd ${n}`;
+  }
   const letter = String(race.mainLetter || "").toUpperCase();
   const segment = race.mainNumber ?? 1;
-  return letter ? `${letter}${segment}` : "Main";
+  return letter ? `${letter}${segment} Main` : "Main";
 }
 
 /** Stable key for per-race result tabs. */
@@ -131,16 +134,15 @@ export function raceTabKey(race, index = 0) {
 
 export function raceTitle(race) {
   if (!race) return "";
+  const tab = raceTabLabel(race);
   if (race.raceKind === "qualifying") {
-    const round = race.roundLabel || "Q1";
     const method = race.qualifyingRankLabel || race.qualifyingRankMethod || "";
     return method
-      ? `${race.className} · ${round} (${method})`.trim()
-      : `${race.className} · ${round}`.trim();
+      ? `${race.className} · ${tab} (${method})`.trim()
+      : `${race.className} · ${tab}`.trim();
   }
   if (race.mainLetter) {
-    const segment = race.mainNumber ?? 1;
-    return `${race.className} (${String(race.mainLetter).toUpperCase()}${segment} Main)`;
+    return `${race.className} (${tab})`;
   }
   return race.className || "";
 }

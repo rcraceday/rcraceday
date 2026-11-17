@@ -86,19 +86,33 @@ export async function loadUpcomingClubEventIds(supabase, clubId) {
   today.setHours(0, 0, 0, 0);
   const todayIso = today.toISOString().slice(0, 10);
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("events")
-    .select("id, event_date")
+    .select("id, event_date, is_cancelled")
     .eq("club_id", clubId)
     .gte("event_date", todayIso)
     .order("event_date", { ascending: true })
     .order("id", { ascending: true });
 
+  if (error && /is_cancelled/i.test(error.message || "")) {
+    const fallback = await supabase
+      .from("events")
+      .select("id, event_date")
+      .eq("club_id", clubId)
+      .gte("event_date", todayIso)
+      .order("event_date", { ascending: true })
+      .order("id", { ascending: true });
+    data = fallback.data;
+    error = fallback.error;
+  }
+
   if (error) {
     console.warn("[driverAccessRestriction] upcoming events", error.message);
     return [];
   }
-  return (data || []).map((row) => row.id);
+  return (data || [])
+    .filter((row) => !row.is_cancelled)
+    .map((row) => row.id);
 }
 
 export async function loadDriverNominationEventIds(supabase, clubId, driverIds) {

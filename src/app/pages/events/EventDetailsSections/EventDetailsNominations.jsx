@@ -3,6 +3,7 @@
 import { Link } from "react-router-dom";
 import Button from "@/components/ui/Button";
 import {
+  isEventCancelled,
   isLateEntryWindow,
   isNominationsOpen,
 } from "../events-sections/helpers";
@@ -32,7 +33,8 @@ export default function EventDetailsNominations({ event, clubSlug, brand }) {
   const open = event.nominations_open ? new Date(event.nominations_open) : null;
   const close = event.nominations_close ? new Date(event.nominations_close) : null;
 
-  const canNominate = isNominationsOpen(event, nowTime);
+  const cancelled = isEventCancelled(event);
+  const canNominate = !cancelled && isNominationsOpen(event, nowTime);
   const nominationsNotOpenYet = open && nowTime < open;
   const lateWindowActive = isLateEntryWindow(event, nowTime);
 
@@ -54,7 +56,9 @@ export default function EventDetailsNominations({ event, clubSlug, brand }) {
   let buttonLabel = t("events.nominate");
   let buttonDisabled = !canNominate;
 
-  if (nominationsNotOpenYet) {
+  if (cancelled) {
+    buttonLabel = t("events.nominateCancelled");
+  } else if (nominationsNotOpenYet) {
     buttonLabel = t("events.nominationsNotOpen");
   } else if (!canNominate) {
     buttonLabel = t("events.nominationsClosed");
@@ -93,10 +97,11 @@ export default function EventDetailsNominations({ event, clubSlug, brand }) {
 
         <p className="mt-2">
           <strong>{t("events.statusLabel")}</strong>{" "}
-          {nominationsNotOpenYet && t("events.statusNotOpen")}
-          {!nominationsNotOpenYet && canNominate && !lateWindowActive && t("events.statusOpen")}
-          {!canNominate && !nominationsNotOpenYet && t("events.statusClosed")}
-          {lateWindowActive && t("events.statusLateEntry")}
+          {cancelled && t("eventCard.cancelledBadge")}
+          {!cancelled && nominationsNotOpenYet && t("events.statusNotOpen")}
+          {!cancelled && !nominationsNotOpenYet && canNominate && !lateWindowActive && t("events.statusOpen")}
+          {!cancelled && !canNominate && !nominationsNotOpenYet && t("events.statusClosed")}
+          {!cancelled && lateWindowActive && t("events.statusLateEntry")}
         </p>
 
         {lateFeeActive && (

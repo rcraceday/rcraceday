@@ -186,24 +186,23 @@ export default function MyResultsYearDashboard({
   const rivalCompareOptions = useMemo(() => {
     const rivals = displayBundle?.rivals || [];
     if (!rivals.length) return [];
-    return [
-      { value: "", label: t("results.compareNone") },
-      ...rivals.map(({ name, avgGap }) => {
-        const gapLabel =
-          avgGap != null ? t("results.competitorAvgGapSuffix", { gap: avgGap }) : "";
-        return {
-          value: name,
-          label: `${t("results.competitorCloseMarker")}${name}${gapLabel}`,
-        };
-      }),
-    ];
-  }, [displayBundle?.rivals, t]);
-
-  useEffect(() => {
-    if (!compareDriver || !onCompareDriverChange) return;
-    const allowed = new Set((displayBundle?.rivals || []).map((r) => r.name));
-    if (!allowed.has(compareDriver)) onCompareDriverChange("");
-  }, [displayBundle?.rivals, compareDriver, onCompareDriverChange]);
+    const items = rivals.map(({ name, avgGap }) => {
+      const gapLabel =
+        avgGap != null ? t("results.competitorAvgGapSuffix", { gap: avgGap }) : "";
+      return {
+        value: name,
+        label: `${t("results.competitorCloseMarker")}${name}${gapLabel}`,
+      };
+    });
+    const compareKey = compareDriver ? normalizeDriverName(compareDriver) : "";
+    if (
+      compareDriver &&
+      !items.some((item) => normalizeDriverName(item.value) === compareKey)
+    ) {
+      items.push({ value: compareDriver, label: compareDriver });
+    }
+    return [{ value: "", label: t("results.compareNone") }, ...items];
+  }, [displayBundle?.rivals, compareDriver, t]);
 
   const compareKey = compareDriver ? normalizeDriverName(compareDriver) : "";
 

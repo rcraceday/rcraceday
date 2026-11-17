@@ -27,6 +27,7 @@ import {
   evaluateDriverProfileReadiness,
   resolveDriverNumberRules,
 } from "@/app/lib/driverClubSettings";
+import ClubCreditDisplay from "@/components/ui/ClubCreditDisplay";
 
 export default function DriverManager() {
   const navigate = useNavigate();
@@ -51,7 +52,6 @@ export default function DriverManager() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
-
   // ------------------------------------------------------------
   // LOAD CLUB MEMBERS
   // ------------------------------------------------------------
@@ -236,7 +236,10 @@ export default function DriverManager() {
 
           {/* DRIVERS */}
           <section className="space-y-3">
-            <h2 className="text-base font-semibold text-text-base m-0">Drivers</h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-base font-semibold text-text-base m-0">Drivers</h2>
+              <ClubCreditDisplay />
+            </div>
 
             {loadingDrivers && (
               <p className="text-sm text-text-muted">Loading drivers…</p>

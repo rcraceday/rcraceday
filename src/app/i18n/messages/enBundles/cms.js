@@ -6,10 +6,20 @@ export default {
     saveEvent: "Save Event",
     deleteEvent: "Delete Event",
     deleteEventConfirm:
-      "Are you sure you want to delete this event? This cannot be undone.",
+      "Are you sure you want to delete this event? This cannot be undone. To rain out a meeting, use Cancel Event so drivers are credited.",
     deleteEventFailed: "Failed to delete event.",
     deleteEventNoPermission:
       "You may not have permission, or the database needs the events delete policy (scripts/add-events-delete-admin.sql).",
+    cancelEvent: "Cancel Event",
+    cancelEventConfirm:
+      "Cancel this event? Nominated drivers will be credited their entry fee for a future event and notified by message and push. Use this for rain-outs instead of deleting the event.",
+    cancelEventConfirmRefund:
+      "Cancel this event? Nominated drivers will be credited their entry fee. They can request a refund by contacting the club before 6am the morning of the next meeting; after that the funds stay as credit for {{months}} months. Drivers will be notified by message and push.",
+    cancelEventFailed: "Failed to cancel event.",
+    cancelEventAlready: "This event is already cancelled.",
+    eventCancelledBanner: "This event is cancelled. Nominated drivers have been credited.",
+    cancellingEvent: "Cancelling…",
+    cancelEventDone: "Event cancelled. {{credited}} household(s) credited, {{notified}} notified.",
     add: "Add",
     remove: "Remove",
     search: "Search",

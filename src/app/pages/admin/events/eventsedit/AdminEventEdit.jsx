@@ -25,6 +25,13 @@ import { cmsStyles } from "@cms/styles";
 import { isRichTextEmpty } from "@/app/lib/richText";
 import { triggerNominationsOpenProcessing } from "@/app/lib/userNotifications";
 import { formatEdgeFunctionInvokeError } from "@/app/lib/edgeFunctionErrors";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { useClub } from "@/app/providers/ClubProvider";
+import {
+  cancelClubEvent,
+  getCancellationPolicy,
+  isEventCancelled,
+} from "@/app/lib/eventCancellation";
 import {
   applyEventTypeDefaults,
   applyNominationsFromTypeDefaults,
@@ -96,6 +103,8 @@ const initialEventState = {
   non_member_price: "",
   junior_price: "",
   is_published: true,
+  is_cancelled: false,
+  cancelled_at: null,
   created_at: null,
 
   merchandise: [],
@@ -109,6 +118,8 @@ export default function AdminEventEdit() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { clubSlug, id } = useParams();
+  const { user } = useAuth();
+  const { club } = useClub();
   const isNew = !id || id === "new";
 
   const [eventData, setEventData] = useState(initialEventState);
@@ -547,9 +558,59 @@ const normalizedDays = Array.isArray(data.days)
     }
   };
 
-  // CANCEL HANDLER
+  // CANCEL HANDLER (leave editor)
   const handleCancel = () => {
     navigate(`/${clubSlug}/app/admin/events`);
+  };
+
+  const handleCancelEvent = async () => {
+    if (isNew || !id) return;
+    if (isEventCancelled(eventData)) {
+      setError(t("cms.cancelEventAlready"));
+      return;
+    }
+
+    const policy = getCancellationPolicy(club);
+    const confirmed = window.confirm(
+      policy.refundRequestUntilNextMeeting
+        ? t("cms.cancelEventConfirmRefund", {
+            months: policy.creditExpiryMonths || 6,
+          })
+        : t("cms.cancelEventConfirm")
+    );
+    if (!confirmed) return;
+
+    setSaving(true);
+    setError(null);
+    setSendNotice(null);
+
+    const result = await cancelClubEvent({
+      supabase,
+      event: eventData,
+      club: club || { id: eventData.club_id, slug: clubSlug },
+      clubSlug,
+      senderUserId: user?.id,
+    });
+
+    if (result.error) {
+      setError(result.error.message || t("cms.cancelEventFailed"));
+      setSaving(false);
+      return;
+    }
+
+    setEventData((prev) => ({
+      ...prev,
+      is_cancelled: true,
+      cancelled_at: new Date().toISOString(),
+      cancelled_by: user?.id || null,
+    }));
+    setSendNotice(
+      t("cms.cancelEventDone", {
+        credited: result.creditedHouseholds || 0,
+        notified: result.notifiedHouseholds || 0,
+      })
+    );
+    setSaving(false);
   };
 
   // SAVE HANDLER
@@ -938,6 +999,21 @@ if (data.is_multi_day) {
           </div>
         )}
 
+        {isEventCancelled(eventData) && (
+          <div
+            style={{
+              padding: "12px 16px",
+              borderRadius: "6px",
+              backgroundColor: "#FEF3C7",
+              color: "#92400E",
+              fontSize: "14px",
+              marginBottom: "20px",
+            }}
+          >
+            {t("cms.eventCancelledBanner")}
+          </div>
+        )}
+
         {sendNotice && (
           <div
             style={{
@@ -1058,6 +1134,8 @@ if (data.is_multi_day) {
                 onSave={requestSave}
                 onCancel={handleCancel}
                 onDelete={handleDelete}
+                onCancelEvent={handleCancelEvent}
+                isCancelled={isEventCancelled(eventData)}
               />
             </div>
           </div>

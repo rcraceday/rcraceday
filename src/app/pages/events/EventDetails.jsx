@@ -25,10 +25,12 @@ import {
 } from "@/app/lib/eventClassLimit";
 import { useMembership } from "@/app/providers/MembershipProvider";
 import {
+  isEventCancelled,
   isNominationsOpen,
   perEntryFeeDisplayRows,
   resolveEventPricing,
 } from "@/app/pages/events/events-sections/helpers";
+import { getCancellationPolicy } from "@/app/lib/eventCancellation";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
@@ -450,7 +452,9 @@ if (!event) {
 
 const primaryDate = formatEventDate(event);
 
-const nominationsAreOpen = isNominationsOpen(event);
+const cancelled = isEventCancelled(event);
+const cancellationPolicy = getCancellationPolicy(club);
+const nominationsAreOpen = !cancelled && isNominationsOpen(event);
 
 const nominateButtonClassName =
   "!py-2.5 !px-6 !text-sm font-semibold !rounded-sm";
@@ -542,6 +546,25 @@ return (
   />
 </div>
 
+{cancelled && (
+  <div
+    className="mb-4 rounded-md px-3 py-3 text-sm"
+    style={{
+      background: "#FEF3C7",
+      color: "#92400E",
+      border: "1px solid #F59E0B",
+    }}
+  >
+    <div className="font-semibold mb-1">{t("events.cancelledTitle")}</div>
+    <p className="m-0">{t("events.cancelledBody")}</p>
+    <p className="m-0 mt-2">
+      {t("events.cancelledRefundBody", {
+        months: cancellationPolicy.creditExpiryMonths || 6,
+      })}
+    </p>
+  </div>
+)}
+
 {/* EVENT DETAILS AREA */}
 <div className="event-details flex justify-between items-start gap-3 md:gap-6 flex-wrap md:flex-nowrap mb-4 md:mb-6">
 
@@ -597,7 +620,15 @@ return (
   {/* RIGHT SIDE — Buttons horizontal OR Notify */}
   <div className="event-details-right w-full md:w-auto flex flex-col items-start md:items-end gap-2">
 
-    {nominationsAreOpen ? (
+    {cancelled ? (
+      <div className="event-details-right-buttons flex flex-row gap-2 w-full md:w-auto justify-start md:justify-end">
+        {hasResults && (
+          <Link to={`/${clubSlug}/app/events/${id}/results`} className="no-underline">
+            <Button className={nominateButtonClassName}>{t("eventCard.viewResults")}</Button>
+          </Link>
+        )}
+      </div>
+    ) : nominationsAreOpen ? (
       <div className="event-details-right-buttons flex flex-row gap-2 w-full md:w-auto justify-start md:justify-end">
         <Link
           to={`/${clubSlug}/app/events/${id}/nominate`}

@@ -164,6 +164,9 @@ async function loadEvents() {
       ...eventFields,
       name: `${richTextToPlainText(ev.name) || t("admin.nominations.eventFallback")}${t("admin.nominations.eventCopySuffix")}`,
       created_at: new Date().toISOString(),
+      ...(ev.is_cancelled != null || ev.cancelled_at != null
+        ? { is_cancelled: false, cancelled_at: null, cancelled_by: null }
+        : {}),
       days: Array.isArray(ev.days)
         ? ev.days.map((day) => normalizeDayRecord(day))
         : [],
@@ -485,8 +488,24 @@ const formatDateTime = (iso) => {
 
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", flexDirection: "column" }}>
-                          <div style={{ fontSize: 15, fontWeight: 700 }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             {richTextToPlainText(ev.name)}
+                            {(ev.is_cancelled || ev.cancelled) ? (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  letterSpacing: "0.06em",
+                                  textTransform: "uppercase",
+                                  background: "#F59E0B",
+                                  color: "#fff",
+                                  borderRadius: 6,
+                                  padding: "2px 8px",
+                                }}
+                              >
+                                {t("admin.events.cancelled")}
+                              </span>
+                            ) : null}
                           </div>
 
                           <div style={{ fontSize: 13, color: "#6B7280" }}>

@@ -66,6 +66,16 @@ export const DEFAULT_DRIVER_SETTINGS = {
     club_name_override: "",
     show_profile_field_hints: true,
   },
+  cancellation: {
+    refund_request_until_next_meeting: true,
+    refund_deadline_hour: 6,
+    credit_expiry_months: 6,
+    timezone: "Australia/Brisbane",
+  },
+  nomination: {
+    require_code_of_conduct: true,
+    code_of_conduct_url: "/ChargersRC_Code_of_Conduct.pdf",
+  },
 };
 
 function isObject(value) {
@@ -109,6 +119,8 @@ export function mergeDriverSettings(raw) {
     directory: mergeSection(DEFAULT_DRIVER_SETTINGS.directory, source.directory),
     juniors: mergeSection(DEFAULT_DRIVER_SETTINGS.juniors, source.juniors),
     livetime: mergeSection(DEFAULT_DRIVER_SETTINGS.livetime, source.livetime),
+    cancellation: mergeSection(DEFAULT_DRIVER_SETTINGS.cancellation, source.cancellation),
+    nomination: mergeSection(DEFAULT_DRIVER_SETTINGS.nomination, source.nomination),
   };
 }
 
@@ -168,6 +180,15 @@ export function getJuniorCheckboxLabel(club) {
 
 export function resolveLiveTimeDriverRules(club) {
   return getDriverSettings(club).livetime;
+}
+
+export function resolveNominationCodeOfConduct(club) {
+  const nomination = getDriverSettings(club).nomination;
+  const url = String(nomination.code_of_conduct_url || "").trim();
+  return {
+    required: nomination.require_code_of_conduct !== false && Boolean(url),
+    url,
+  };
 }
 
 export function liveTimeClubName(club) {

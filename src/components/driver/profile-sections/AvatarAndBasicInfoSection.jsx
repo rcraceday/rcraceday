@@ -133,12 +133,10 @@ export default function AvatarAndBasicInfoSection({
           <div>
             <label className="block text-sm font-medium mb-1">{t("driverProfile.gender")}</label>
             <FilterDropdown
-              variant="cms"
               value={driver.gender || ""}
               onChange={(value) => update("gender", value)}
               options={genderOptions}
               ariaLabel={t("driverProfile.gender")}
-              triggerStyleOverrides={{ fontSize: "0.875rem" }}
             />
           </div>
 

@@ -394,7 +394,6 @@ export default function NominationsView() {
                 options={classDropdownOptions}
                 compact
                 menuInline
-                variant="cms"
               />
 
               {activeGroup && (

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import ChampionshipRoundPointsTable from "./ChampionshipRoundPointsTable";
 import { ChevronDownIcon, TrophyIcon } from "@heroicons/react/24/solid";
 import PageTitle from "@/components/ui/PageTitle";
 import BackNavButton from "@/components/ui/BackNavButton";
 import Card from "@/components/ui/Card";
-import ClassFolderTabs from "@/components/ui/ClassFolderTabs";
+import FilterDropdown from "@/components/ui/FilterDropdown";
 import useTheme from "@/app/providers/useTheme";
 import { useClub } from "@/app/providers/ClubProvider";
 import { useTranslation } from "@/app/i18n/I18nContext";
@@ -15,6 +16,7 @@ import { loadResultMatchContext } from "@/app/lib/results/resultMemberMatch";
 import { isChampionshipSeasonComplete } from "@/app/lib/results/championshipSeason";
 import { useHouseholdResultHighlight } from "@/app/hooks/useHouseholdResultHighlight";
 import ChampionshipPlaceTrophy from "./ChampionshipPlaceTrophy";
+import ChampionshipClubChampion from "./ChampionshipClubChampion";
 import ResultsTableSection, {
   ResultsDataTable,
   PositionCell,
@@ -22,6 +24,7 @@ import ResultsTableSection, {
 
 export default function ChampionshipStandings() {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { club } = useClub();
   const { palette } = useTheme();
   const { t } = useTranslation();
@@ -29,11 +32,13 @@ export default function ChampionshipStandings() {
   const primaryColor = palette?.primary || "#2563eb";
 
   const [championship, setChampionship] = useState(null);
-  const [roundCount, setRoundCount] = useState(0);
+  const [rounds, setRounds] = useState([]);
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeClass, setActiveClass] = useState("");
+  const [activeClass, setActiveClass] = useState(searchParams.get("class") || "");
   const [mobileGapColumn, setMobileGapColumn] = useState("ahead");
+  const showRoundPoints = searchParams.get("view") === "rounds";
+  const roundCount = rounds.length;
 
   const seasonComplete = useMemo(
     () => isChampionshipSeasonComplete(championship, roundCount),
@@ -87,8 +92,8 @@ export default function ChampionshipStandings() {
         setLoading(false);
         return;
       }
-      const rounds = await loadChampionshipRounds(champ.id);
-      setRoundCount(rounds.length);
+      const loadedRounds = await loadChampionshipRounds(champ.id);
+      setRounds(loadedRounds);
       const clubId = club?.id || champ.club_id;
       const roster = await loadResultMatchContext(supabase, clubId);
       const { data: memberships = [] } = await supabase
@@ -100,7 +105,7 @@ export default function ChampionshipStandings() {
       setTables(
         computeChampionshipStandings({
           championship: champ,
-          rounds,
+          rounds: loadedRounds,
           drivers: roster.drivers,
           memberships,
           rosterIndex: roster.rosterIndex,
@@ -163,13 +168,24 @@ export default function ChampionshipStandings() {
           </div>
 
           {classTabOptions.length > 1 ? (
-            <ClassFolderTabs
-              options={classTabOptions}
-              value={resolvedActiveClass}
-              onChange={setActiveClass}
-              brand={primaryColor}
-              wrapWhenOverflow
-            />
+            <div className="flex justify-center px-4 py-3">
+              <div className="w-full max-w-sm">
+                <FilterDropdown
+                  value={resolvedActiveClass}
+                  onChange={(value) => {
+                    setActiveClass(value);
+                    const next = new URLSearchParams(searchParams);
+                    next.set("class", value);
+                    setSearchParams(next, { replace: true });
+                  }}
+                  ariaLabel={t("results.filterClass")}
+                  options={classTabOptions}
+                  hideSelectedOption={false}
+                  preserveOptionOrder
+                  variant="premium"
+                />
+              </div>
+            </div>
           ) : null}
 
           <div
@@ -188,6 +204,16 @@ export default function ChampionshipStandings() {
           </div>
 
           <div className="p-4 space-y-3">
+            {seasonComplete && classStats.leaderName ? (
+              <ChampionshipClubChampion
+                season={championship.season}
+                clubName={club?.name || championship.name}
+                driverName={classStats.leaderName}
+                className={activeTable.className}
+                primaryColor={primaryColor}
+                t={t}
+              />
+            ) : (
             <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-center text-xs sm:grid-cols-3 sm:text-sm">
               <div className="col-span-2 min-w-0 sm:col-span-1">
                 <div className="text-[10px] uppercase tracking-wide text-text-muted">
@@ -217,8 +243,38 @@ export default function ChampionshipStandings() {
                 </div>
               </div>
             </div>
+            )}
 
-            <ResultsTableSection title={t("results.championshipClassStandings")}>
+            {showRoundPoints ? (
+              <ChampionshipRoundPointsTable
+                standings={activeTable.standings}
+                rounds={rounds}
+                dropRounds={Number(championship?.drop_rounds) || 0}
+                t={t}
+                rowClass={rowClass}
+                action={
+                  <Link
+                    to={`?class=${encodeURIComponent(resolvedActiveClass)}`}
+                    className="m-0 text-[11px] font-semibold uppercase tracking-wider no-underline whitespace-nowrap"
+                    style={{ color: primaryColor }}
+                  >
+                    {t("results.championshipBackToStandings")}
+                  </Link>
+                }
+              />
+            ) : (
+            <ResultsTableSection
+              title={t("results.championshipClassStandings")}
+              action={
+                <Link
+                  to={`?view=rounds&class=${encodeURIComponent(resolvedActiveClass)}`}
+                  className="m-0 text-[11px] font-semibold uppercase tracking-wider no-underline whitespace-nowrap"
+                  style={{ color: primaryColor }}
+                >
+                  {t("results.championshipViewRoundPoints")}
+                </Link>
+              }
+            >
               <ResultsDataTable className="text-xs sm:text-sm">
                 <thead>
                   <tr>
@@ -295,6 +351,7 @@ export default function ChampionshipStandings() {
                 </tbody>
               </ResultsDataTable>
             </ResultsTableSection>
+            )}
           </div>
         </Card>
       ) : null}

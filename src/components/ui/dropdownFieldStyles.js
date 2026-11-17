@@ -24,6 +24,32 @@ export function getPublicDropdownBorderColor(palette) {
   return palette?.surfaceBorder || CMS_SELECT_BORDER;
 }
 
+export function getPremiumDropdownTriggerStyle(palette, overrides = {}) {
+  const primary = palette?.primary || "#00438a";
+  return getDropdownTriggerStyle(palette, {
+    minHeight: "2.5rem",
+    padding: "0.55rem 0.9rem",
+    borderRadius: 10,
+    border: `1px solid color-mix(in srgb, ${primary} 32%, ${CMS_SELECT_BORDER})`,
+    background: `linear-gradient(180deg, #ffffff 0%, color-mix(in srgb, ${primary} 7%, #ffffff) 100%)`,
+    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(10, 26, 47, 0.06)`,
+    fontWeight: 600,
+    fontSize: "0.8125rem",
+    letterSpacing: "0.01em",
+    ...overrides,
+  });
+}
+
+export function getPremiumDropdownMenuStyle(palette, overrides = {}) {
+  const primary = palette?.primary || "#00438a";
+  return getDropdownMenuStyle(palette, {
+    borderRadius: 10,
+    border: `1px solid color-mix(in srgb, ${primary} 22%, ${CMS_SELECT_BORDER})`,
+    boxShadow: "0 10px 28px rgba(10, 26, 47, 0.12), 0 2px 6px rgba(10, 26, 47, 0.06)",
+    ...overrides,
+  });
+}
+
 export function getDropdownTriggerStyle(palette, overrides = {}) {
   const borderColor = getPublicDropdownBorderColor(palette);
   return {

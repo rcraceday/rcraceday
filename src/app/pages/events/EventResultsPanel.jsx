@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "@/components/ui/Card";
-import ClassFolderTabs from "@/components/ui/ClassFolderTabs";
 import FilterDropdown from "@/components/ui/FilterDropdown";
 import useTheme from "@/app/providers/useTheme";
 import { useClub } from "@/app/providers/ClubProvider";
@@ -343,14 +342,12 @@ export default function EventResultsPanel({
     return match?.value || "";
   }, [compareDriver, compareOptions]);
 
-  useEffect(() => {
-    if (!compareDriver || !onCompareDriverChange) return;
-    if (!resolvedCompareValue) onCompareDriverChange("");
-  }, [compareDriver, resolvedCompareValue, onCompareDriverChange]);
-
   const rivalRow = useMemo(
-    () => (compareDriver ? overall.find((row) => isCompareDriver(row, compareDriver)) : null),
-    [overall, compareDriver]
+    () =>
+      resolvedCompareValue
+        ? overall.find((row) => isCompareDriver(row, resolvedCompareValue))
+        : null,
+    [overall, resolvedCompareValue]
   );
   const primaryMyRow = useMemo(() => {
     if (compareExcludeDriver) {
@@ -394,11 +391,14 @@ export default function EventResultsPanel({
       {(showDayPicker || displayBundle) && (
         <div className="p-4 space-y-4">
           {showDayPicker && dayTabOptions.length > 0 && (
-            <ClassFolderTabs
+            <FilterDropdown
               value={String(resultDayIndex)}
               onChange={(value) => setResultDayIndex(Number(value) || 0)}
               options={dayTabOptions}
-              brand={primaryColor}
+              ariaLabel={t("results.resultDay")}
+              hideSelectedOption={false}
+              preserveOptionOrder
+              variant="premium"
             />
           )}
           {!loading && !displayBundle && showDayPicker && (
@@ -417,6 +417,7 @@ export default function EventResultsPanel({
                   hideSelectedOption={false}
                   preserveOptionOrder
                   compact
+                  variant="premium"
                   className="flex-1 min-w-[12rem]"
                 />
               ) : null}
@@ -428,6 +429,7 @@ export default function EventResultsPanel({
                   options={classOptions}
                   hideSelectedOption={false}
                   compact
+                  variant="premium"
                   className="flex-1 min-w-[10rem]"
                 />
               )}
@@ -448,10 +450,10 @@ export default function EventResultsPanel({
             )}
           </div>
 
-          {compareDriver && primaryMyRow && (
+          {resolvedCompareValue && primaryMyRow && (
             <div className="rounded-xl border border-amber-200/90 bg-amber-50/35 px-3 py-3 space-y-2">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-900/80">
-                {t("results.eventHeadToHead", { name: compareDriver })}
+                {t("results.eventHeadToHead", { name: resolvedCompareValue })}
               </div>
               {rivalRow ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -607,12 +609,14 @@ export default function EventResultsPanel({
               <h4 className="m-0 text-[11px] font-semibold uppercase tracking-wider text-text-muted px-1">
                 {t("results.qualifyingAndMains")}
               </h4>
-              <ClassFolderTabs
+              <FilterDropdown
                 options={raceTabOptions}
                 value={raceViewTab}
                 onChange={setRaceViewTab}
-                brand={primaryColor}
-                wrapWhenOverflow
+                ariaLabel={t("results.qualifyingAndMains")}
+                hideSelectedOption={false}
+                preserveOptionOrder
+                variant="premium"
               />
 
               {visibleRacesForTab.map((race) => (

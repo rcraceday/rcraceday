@@ -123,6 +123,35 @@
   cursor: not-allowed;
 }
 
+.admin-root .admin-btn-warn {
+  height: var(--admin-btn-height);
+  min-height: var(--admin-btn-height);
+  max-height: var(--admin-btn-height);
+  padding: 0 10px;
+  box-sizing: border-box;
+  background-color: #d97706;
+  border: 1px solid #d97706;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.admin-root .admin-btn-warn:hover:not(:disabled) {
+  background-color: #b45309;
+  border-color: #b45309;
+}
+
+.admin-root .admin-btn-warn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .admin-root .admin-action-btn-fixed {
   min-width: 97px;
   justify-content: center;

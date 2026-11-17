@@ -69,6 +69,7 @@ export async function sendAdminClubMessageToMemberships({
   membershipIds,
   body,
   senderUserId,
+  eventId = null,
 }) {
   const trimmed = String(body || "").trim();
   const ids = (membershipIds || []).filter(Boolean);
@@ -79,7 +80,7 @@ export async function sendAdminClubMessageToMemberships({
     ids.map((membershipId) => ({
       club_id: clubId,
       membership_id: membershipId,
-      event_id: null,
+      event_id: eventId || null,
       body: trimmed,
       sender_role: "admin",
       sender_user_id: senderUserId || null,

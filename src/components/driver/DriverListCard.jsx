@@ -384,7 +384,6 @@ export default function DriverListCard({
                             className="driver-class-assignment-row__class"
                           >
                             <FilterDropdown
-                              variant="cms"
                               compact
                               fullWidth
                               hideSelectedOption
@@ -402,7 +401,6 @@ export default function DriverListCard({
                           </div>
                           <div className="driver-class-assignment-row__chassis">
                             <ManufacturerSelect
-                              variant="cms"
                               compact
                               rowSlot
                               menuScroll
@@ -415,7 +413,6 @@ export default function DriverListCard({
                           </div>
                           <div className="driver-class-assignment-row__transponder">
                             <TransponderCombobox
-                              variant="cms"
                               menuScroll={false}
                               onMenuToggle={handleMenuToggle}
                               value={dc.transponder_number || ""}
@@ -445,7 +442,6 @@ export default function DriverListCard({
                       <div className="flex w-full min-w-0 items-center gap-1.5 sm:gap-2 pt-1">
                         <div style={{ "--dropdown-primary": brand }} className="min-w-0 flex-1">
                           <FilterDropdown
-                            variant="cms"
                             compact
                             fullWidth
                             hideSelectedOption

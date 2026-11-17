@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import useTheme from "@/app/providers/useTheme";
 import Button from "@/components/ui/Button";
-import { formatDate, isEventCompleted, isNominationsOpen } from "./events-sections/helpers";
+import { formatDate, isEventCancelled, isEventCompleted, isNominationsOpen } from "./events-sections/helpers";
 import { sanitizeRichTextHtml } from "@/app/lib/richText";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import CalendarEventTypeChip from "./calendar/CalendarEventTypeChip";
@@ -61,16 +61,19 @@ export default function EventCard({
       : eventDate
         ? formatDate(eventDate)
         : t("eventCard.dateTbd");
-  const nominationsOpen = isNominationsOpen(event);
-  const isCompleted = isEventCompleted(event) || Boolean(isPast);
+  const cancelled = isEventCancelled(event);
+  const nominationsOpen = !cancelled && isNominationsOpen(event);
+  const isCompleted = !cancelled && (isEventCompleted(event) || Boolean(isPast));
   const showNominatedBadge = hasNomination || hasHouseholdInResults;
   const nominationStatusLabel = hasNomination
     ? nominationSummary || t("eventCard.nominated")
+    : cancelled
+    ? null
     : event.nominations_open
-      ? t("eventCard.nominationsOpenOn", {
-          date: formatDate(event.nominations_open),
-        })
-      : null;
+    ? t("eventCard.nominationsOpenOn", {
+        date: formatDate(event.nominations_open),
+      })
+    : null;
 
   return (
     <article className="event-list-card text-text-base">
@@ -97,8 +100,13 @@ export default function EventCard({
             </span>
           ) : null}
         </div>
-        {isCompleted || showNominatedBadge ? (
+        {cancelled || isCompleted || showNominatedBadge ? (
           <div className="flex flex-col items-end gap-1 shrink-0 md:flex-row md:items-center md:gap-2">
+            {cancelled ? (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-amber-500 text-white">
+                {t("eventCard.cancelledBadge")}
+              </span>
+            ) : null}
             {isCompleted ? (
               <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-red-600 text-white">
                 {t("eventCard.completedBadge")}

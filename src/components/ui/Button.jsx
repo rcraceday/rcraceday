@@ -29,6 +29,19 @@ function shiftRgb(color, amount) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+/** Light top shine, same pattern as premium dropdown triggers. */
+function filledButtonGradient(baseColor, highlightMix = 24) {
+  const top = `color-mix(in srgb, ${baseColor} ${100 - highlightMix}%, #ffffff)`;
+  return `linear-gradient(180deg, ${top} 0%, ${baseColor} 100%)`;
+}
+
+function secondaryButtonGradient(brand, bottomColor = "#ffffff") {
+  return `linear-gradient(180deg, #ffffff 0%, color-mix(in srgb, ${brand} 7%, ${bottomColor}) 100%)`;
+}
+
+const BUTTON_SURFACE_SHADOW =
+  "inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 2px rgba(10, 26, 47, 0.08)";
+
 export default function Button({
   children,
   variant = "primary",
@@ -47,8 +60,8 @@ export default function Button({
       bg: buttonColor,
       hover: shiftRgb(buttonColor, -28),
       text: buttonTextColor,
-      border: "rgba(255,255,255,0.8)",
-      hoverBorder: "rgba(255,255,255,0.8)",
+      border: brand,
+      hoverBorder: brand,
     },
     secondary: {
       bg: "#FFFFFF",
@@ -84,8 +97,20 @@ export default function Button({
   const sizeStyle = sizeStyles[size] || sizeStyles.md;
 
   const inlineBg = props.style?.backgroundColor;
+  const userBackground = props.style?.background;
   const baseBg = inlineBg || style.bg;
   const hoverBg = inlineBg ? shiftRgb(inlineBg, -28) : style.hover;
+
+  const baseBackground =
+    userBackground ||
+    (variant === "secondary"
+      ? secondaryButtonGradient(brand)
+      : filledButtonGradient(baseBg));
+  const hoverBackground =
+    userBackground ||
+    (variant === "secondary"
+      ? secondaryButtonGradient(brand, style.hover)
+      : filledButtonGradient(hoverBg, 18));
 
   const userOverridesPadding =
     className.includes("px-") || className.includes("py-") || className.includes("p-");
@@ -98,14 +123,16 @@ export default function Button({
         inline-flex
         items-center
         justify-center
-        transition-colors
+        transition-[background,border-color,transform]
+        duration-150
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${className}
       `}
       style={{
-        backgroundColor: baseBg,
+        background: baseBackground,
         color: style.text,
         border: `1px solid ${style.border}`,
+        boxShadow: BUTTON_SURFACE_SHADOW,
         padding: userOverridesPadding ? undefined : sizeStyle.padding,
         fontSize: sizeStyle.fontSize,
         fontWeight: sizeStyle.fontWeight || "500",
@@ -113,14 +140,14 @@ export default function Button({
         ...(props.style || {}),
       }}
       onMouseEnter={(e) => {
-        if (disabled) return;
-        e.currentTarget.style.backgroundColor = hoverBg;
+        if (disabled || userBackground) return;
+        e.currentTarget.style.background = hoverBackground;
         e.currentTarget.style.color = style.text;
         e.currentTarget.style.borderColor = style.hoverBorder || style.border;
       }}
       onMouseLeave={(e) => {
-        if (disabled) return;
-        e.currentTarget.style.backgroundColor = baseBg;
+        if (disabled || userBackground) return;
+        e.currentTarget.style.background = baseBackground;
         e.currentTarget.style.color = style.text;
         e.currentTarget.style.borderColor = style.border;
       }}

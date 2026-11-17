@@ -4,6 +4,7 @@ import { ClipboardDocumentCheckIcon } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
 import Button from "@/components/ui/Button";
 import BackNavButton from "@/components/ui/BackNavButton";
+import ClubCreditDisplay from "@/components/ui/ClubCreditDisplay";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import useTheme from "@app/providers/useTheme";
@@ -270,7 +271,12 @@ export default function NominationsReview() {
         icon={ClipboardDocumentCheckIcon}
         title={t("nominations.myTitle")}
         style={{ color: brand }}
-        actions={<BackNavButton />}
+        actions={
+          <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
+            <ClubCreditDisplay />
+            <BackNavButton />
+          </div>
+        }
       />
 
       <main className="app-page-main gap-4 max-w-3xl mx-auto w-full">

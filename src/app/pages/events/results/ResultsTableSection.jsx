@@ -1,10 +1,11 @@
-export default function ResultsTableSection({ title, children }) {
+export default function ResultsTableSection({ title, action = null, children }) {
   return (
     <div className="my-results-table-section rounded-xl border border-border/80 bg-gradient-to-b from-surface-alt/30 to-transparent overflow-hidden">
-      <div className="px-3 py-2 border-b border-border/60 bg-surface-alt/40">
+      <div className="px-3 py-2 border-b border-border/60 bg-surface-alt/40 flex items-center justify-between gap-3">
         <h4 className="m-0 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
           {title}
         </h4>
+        {action}
       </div>
       <div className="p-2 sm:p-3 overflow-x-auto">{children}</div>
     </div>

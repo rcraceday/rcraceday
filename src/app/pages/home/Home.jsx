@@ -16,7 +16,7 @@ import Button from "@/components/ui/Button";
 import Carousel from "@/components/Carousel";
 
 import PageTitle from "@/components/ui/PageTitle";
-import { isNominationsOpen } from "@/app/pages/events/events-sections/helpers";
+import { isEventCancelled, isNominationsOpen } from "@/app/pages/events/events-sections/helpers";
 import EventCard from "@/app/pages/events/EventCard";
 import { loadPublishedResultEventIds } from "@/app/lib/results/loadEventResults";
 import { loadHouseholdNominationSummaries } from "@/app/lib/householdNominationSummaries";
@@ -205,7 +205,7 @@ export default function Home() {
   const { nextEvent, nextEventCard, openNominationEvents } = useMemo(() => {
     const now = new Date();
     const upcoming = events
-      .filter((event) => getEventEndDate(event) >= now)
+      .filter((event) => getEventEndDate(event) >= now && !isEventCancelled(event))
       .sort((a, b) => getEventStartDate(a) - getEventStartDate(b));
     const next = upcoming[0] ?? null;
     const openNoms = events
