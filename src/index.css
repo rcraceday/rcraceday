@@ -866,28 +866,51 @@ a:hover {
 .drawer-overlay {
   position: fixed;
   inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
   background: rgba(0, 0, 0, 0.4);
-  z-index: 9000;
+  z-index: 10000;
+  cursor: default;
 }
 
 .mobile-drawer {
   position: fixed;
   top: 0;
   right: 0;
-  width: 260px;
-  height: 100vh;
+  width: min(280px, 86vw);
+  height: auto;
+  max-height: 100dvh;
   background: white;
   box-shadow: -4px 0 16px rgba(0,0,0,0.15);
   padding: 20px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   transform: translateX(100%);
   transition: transform 0.25s ease;
-  z-index: 100;
+  z-index: 10001;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  box-sizing: border-box;
 }
 
 .mobile-drawer.open {
   transform: translateX(0);
+}
+
+.mobile-drawer-nav {
+  flex: 0 1 auto;
+  max-height: calc(
+    100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+  );
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-drawer .close-btn {
+  flex-shrink: 0;
 }
 
 .mobile-drawer nav a {
