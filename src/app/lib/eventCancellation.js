@@ -321,6 +321,24 @@ export function cancellationMemberCopy({
   return lines.join(" ");
 }
 
+export function reinstateMemberCopy({ eventName, creditReversed }) {
+  const lines = [
+    `${eventName} is back on — the cancellation was reversed.`,
+    "Your nominations for this event are unchanged (check My Nominations).",
+    "You can only add or change nominations while the nomination window is still open.",
+  ];
+  if (creditReversed) {
+    lines.push(
+      "The entry-fee credit from when this event was cancelled has been removed from your club account."
+    );
+  }
+  return lines.join(" ");
+}
+
+export function reinstatePushCopy(eventName) {
+  return `${eventName} is back on. Your existing nominations are unchanged — check My Nominations.`;
+}
+
 export function cancellationPushCopy(eventName, schedule) {
   const hour = schedule?.policy?.refundDeadlineHour ?? 6;
   const hourLabel = hour === 0 ? "12am" : `${hour}am`;
@@ -603,5 +621,144 @@ export async function cancelClubEvent({
     notifiedHouseholds: membershipIds.length,
     refundDeadline: schedule.refundDeadline,
     expiresAt: schedule.expiresAt,
+  };
+}
+
+export async function reinstateClubEvent({
+  supabase,
+  event,
+  club,
+  clubSlug,
+  senderUserId,
+}) {
+  if (!event?.id || !club?.id) {
+    return { error: { message: "Event or club is missing." } };
+  }
+  if (!isEventCancelled(event)) {
+    return { error: { message: "This event is not cancelled.", code: "NOT_CANCELLED" } };
+  }
+
+  const eventName = richTextToPlainText(event.name) || "This event";
+
+  const { data: creditRows, error: creditFetchError } = await supabase
+    .from("nomination_credits")
+    .select("id, group_id, amount")
+    .eq("source_event_id", event.id)
+    .eq("club_id", club.id);
+
+  if (creditFetchError) return { error: creditFetchError };
+
+  const clawbackByGroup = new Map();
+  for (const row of creditRows || []) {
+    if (!row.group_id) continue;
+    const next = moneyAmount((clawbackByGroup.get(row.group_id) || 0) + Number(row.amount || 0));
+    clawbackByGroup.set(row.group_id, next);
+  }
+
+  const groupsNeedingClawback = [...clawbackByGroup.entries()].filter(([, net]) => net > 0.005);
+
+  for (const [groupId, clawback] of groupsNeedingClawback) {
+    const { data: ledger, error: balanceError } = await supabase
+      .from("nomination_credits")
+      .select("amount, expires_at")
+      .eq("group_id", groupId)
+      .eq("club_id", club.id);
+    if (balanceError) return { error: balanceError };
+    const balance = nominationCreditBalanceFromRows(ledger);
+    if (balance + 0.005 < clawback) {
+      return {
+        error: {
+          message:
+            "Cannot reinstate this event because at least one household has already used part of the cancellation credit.",
+          code: "CREDIT_SPENT",
+        },
+      };
+    }
+  }
+
+  const reversalRows = groupsNeedingClawback.map(([groupId, clawback]) => ({
+    group_id: groupId,
+    club_id: club.id,
+    amount: -clawback,
+    source_event_id: event.id,
+    notes: `Reversal: ${eventName} reinstated`,
+    created_by: senderUserId || null,
+  }));
+
+  if (reversalRows.length) {
+    const { error: reversalError } = await supabase.from("nomination_credits").insert(reversalRows);
+    if (reversalError) return { error: reversalError };
+  }
+
+  const { error: updateError } = await supabase
+    .from("events")
+    .update({
+      is_cancelled: false,
+      cancelled_at: null,
+      cancelled_by: null,
+    })
+    .eq("id", event.id)
+    .eq("club_id", club.id);
+
+  if (updateError) return { error: updateError };
+
+  const { data: nominations, error: nominationsError } = await supabase
+    .from("nominations")
+    .select("group_id")
+    .eq("event_id", event.id);
+
+  if (nominationsError) return { error: nominationsError };
+
+  const membershipIds = [
+    ...new Set((nominations || []).map((row) => row.group_id).filter(Boolean)),
+  ];
+
+  const { data: memberships } = membershipIds.length
+    ? await supabase.from("household_memberships").select("id, user_id").in("id", membershipIds)
+    : { data: [] };
+
+  const creditReversed = reversalRows.length > 0;
+  const body = reinstateMemberCopy({ eventName, creditReversed });
+  const title = `${eventName} is back on`;
+  const linkPath = clubSlug ? `/${clubSlug}/app/events/${event.id}` : null;
+
+  for (const membershipId of membershipIds) {
+    await sendAdminClubMessageToMemberships({
+      clubId: club.id,
+      membershipIds: [membershipId],
+      body,
+      senderUserId,
+      eventId: event.id,
+    });
+  }
+  if (membershipIds.length) notifyClubMessagesInboxChanged();
+
+  const userIds = (memberships || []).map((row) => row.user_id).filter(Boolean);
+  if (userIds.length) {
+    await Promise.all(
+      userIds.map((userId) =>
+        createInAppNotification(supabase, {
+          userId,
+          clubId: club.id,
+          title,
+          body,
+          linkPath,
+        })
+      )
+    );
+
+    await sendWebPushToUsers(supabase, {
+      userIds,
+      title,
+      body: reinstatePushCopy(eventName),
+      url: linkPath,
+      clubId: club.id,
+    });
+  }
+
+  return {
+    error: null,
+    reversedHouseholds: reversalRows.length,
+    notifiedHouseholds: membershipIds.length,
   };
 }

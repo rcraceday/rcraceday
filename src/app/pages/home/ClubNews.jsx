@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { NewspaperIcon } from "@heroicons/react/24/solid";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeftIcon, NewspaperIcon } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
 import useTheme from "@/app/providers/useTheme";
 import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
+import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import NewsItemImage from "@/components/news/NewsItemImage";
 import { richTextToPlainText } from "@/app/lib/richText";
@@ -24,6 +25,7 @@ function formatPublished(iso) {
 
 export default function ClubNews() {
   const { clubSlug } = useParams();
+  const navigate = useNavigate();
   const { club } = useClub();
   const { palette } = useTheme();
   const brand = palette.primary;
@@ -40,7 +42,9 @@ export default function ClubNews() {
       setLoading(true);
       const { data, error } = await supabase
         .from("club_news")
-        .select("id, title, body, image_url, published_at, display_from, display_until")
+        .select(
+          "id, title, body, image_url, published_at, display_from, display_until, is_published"
+        )
         .eq("club_id", club.id)
         .eq("is_published", true)
         .order("published_at", { ascending: false });
@@ -69,7 +73,22 @@ export default function ClubNews() {
         backgroundColor: palette.background,
       }}
     >
-      <PageTitle icon={NewspaperIcon} title={t("news.title")} style={{ color: brand }} />
+      <PageTitle
+        icon={NewspaperIcon}
+        title={t("news.title")}
+        style={{ color: brand }}
+        actions={
+          <Button
+            variant="primary"
+            size="sm"
+            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
+            onClick={() => navigate(`/${clubSlug}/app`)}
+          >
+            <ArrowLeftIcon className="h-3 w-3" />
+            {t("nav.home")}
+          </Button>
+        }
+      />
 
       <main className="app-page-main">
         {loading && (

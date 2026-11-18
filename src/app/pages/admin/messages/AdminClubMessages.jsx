@@ -14,6 +14,7 @@ import {
   sendAdminClubMessageToMemberships,
 } from "@/app/lib/clubMessages";
 import {
+  displayNameFromMembershipRow,
   enrichMembershipDisplayNameMapFromMessages,
   fetchMembershipDisplayNameMap,
 } from "@/app/lib/membershipDisplayName";
@@ -93,7 +94,8 @@ export default function AdminClubMessages() {
         );
         setMemberDirectory(
           rows.map((row) => {
-            const label = nameMap[row.id] || row.email || "Member";
+            const label =
+              nameMap[row.id] || displayNameFromMembershipRow(row) || row.email || "Member";
             const primary = [row.primary_first_name, row.primary_last_name]
               .filter(Boolean)
               .join(" ")
@@ -197,15 +199,13 @@ export default function AdminClubMessages() {
         Reply to members privately. Conversations are not shared between members.
       </p>
 
-      <div
-        className="grid grid-cols-1 gap-4 md:grid-cols-[240px_minmax(0,1fr)]"
-      >
+      <div className="club-messages-admin-grid">
         <div
+          className="club-messages-inbox-card"
           style={{
             background: "#fff",
             border: "1px solid #e5e7eb",
             borderRadius: 8,
-            overflow: "hidden",
           }}
         >
           <div style={{ padding: "10px 12px", borderBottom: "1px solid #e5e7eb" }}>
@@ -295,6 +295,7 @@ export default function AdminClubMessages() {
           ) : threads.length === 0 ? (
             <p style={{ padding: 12, fontSize: 14, color: "#6b7280" }}>No messages yet.</p>
           ) : (
+            <div className="club-messages-inbox-list-wrap">
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {threads.map((thread) => {
                 const active = thread.membershipId === selectedId;
@@ -341,16 +342,17 @@ export default function AdminClubMessages() {
                 );
               })}
             </ul>
+            </div>
           )}
         </div>
 
         <div
+          className="club-messages-conversation-card"
           style={{
             background: "#fff",
             border: "1px solid #e5e7eb",
             borderRadius: 8,
             padding: 16,
-            minHeight: 280,
           }}
         >
           {!selectedId ? (
@@ -387,8 +389,8 @@ export default function AdminClubMessages() {
               </div>
             </div>
           ) : (
-            <>
-              <p style={{ fontWeight: 600, marginBottom: 12 }}>
+            <div className="club-messages-conversation-body">
+              <p style={{ fontWeight: 600, marginBottom: 12, flexShrink: 0 }}>
                 {labels[selectedId] || "Member"}
               </p>
               <MessageThreadPanel
@@ -399,12 +401,13 @@ export default function AdminClubMessages() {
                 senderUserId={user?.id}
                 threadMemberName={labels[selectedId] || "Member"}
                 brand="#c20a0a"
+                fillHeight
                 onSent={() => {
                   refreshUnreadCount();
                   loadThreads();
                 }}
               />
-            </>
+            </div>
           )}
         </div>
       </div>

@@ -156,6 +156,7 @@ export default function AppLayout() {
         width: "100%",
         display: "flex",
         flexDirection: "column",
+        minHeight: "100dvh",
         backgroundColor: palette?.background || "#ffffff",
         color: palette?.text || "#111827",
       }}
@@ -166,7 +167,6 @@ export default function AppLayout() {
         style={{
           width: "100%",
           boxSizing: "border-box",
-          flex: "0 0 auto",
         }}
       >
         <div className="app-column">

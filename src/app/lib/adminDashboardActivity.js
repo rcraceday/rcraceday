@@ -33,7 +33,7 @@ export async function loadAdminRecentActivity(clubId) {
 
   const { data: events, error: eventsErr } = await supabase
     .from("events")
-    .select("id, name, is_published, track, created_at, updated_at")
+    .select("id, name, event_date, is_published, created_at")
     .eq("club_id", clubId);
 
   if (eventsErr) {
@@ -49,49 +49,33 @@ export async function loadAdminRecentActivity(clubId) {
   const { data: memberships, error: membershipErr } = await supabase
     .from("household_memberships")
     .select(
-      "id, email, primary_first_name, primary_last_name, membership_type, user_id, status, created_at, updated_at"
+      "id, email, primary_first_name, primary_last_name, membership_type, user_id, status, created_at"
     )
     .eq("club_id", clubId)
-    .or(`created_at.gte.${since},updated_at.gte.${since}`);
+    .gte("created_at", since);
 
   if (membershipErr) {
     return { items: [], error: membershipErr };
   }
 
   (memberships || []).forEach((row) => {
-    const created = row.created_at ? new Date(row.created_at).getTime() : 0;
-    const updated = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+    if (!row.created_at || row.created_at < since) return;
     const label = membershipLabel(row);
     const type = row.membership_type || "member";
 
-    if (row.created_at && row.created_at >= since) {
-      if (row.user_id && type === "non_member") {
-        items.push({
-          id: `signup-${row.id}`,
-          kind: "signup",
-          occurredAt: row.created_at,
-          label,
-          meta: { membershipType: type },
-        });
-      } else {
-        items.push({
-          id: `membership-new-${row.id}`,
-          kind: "membership_new",
-          occurredAt: row.created_at,
-          label,
-          meta: { membershipType: type },
-        });
-      }
-    } else if (
-      row.user_id &&
-      row.updated_at &&
-      row.updated_at >= since &&
-      updated - created > 60_000
-    ) {
+    if (row.user_id && type === "non_member") {
       items.push({
-        id: `account-linked-${row.id}-${row.updated_at}`,
-        kind: "account_linked",
-        occurredAt: row.updated_at,
+        id: `signup-${row.id}`,
+        kind: "signup",
+        occurredAt: row.created_at,
+        label,
+        meta: { membershipType: type },
+      });
+    } else {
+      items.push({
+        id: `membership-new-${row.id}`,
+        kind: "membership_new",
+        occurredAt: row.created_at,
         label,
         meta: { membershipType: type },
       });
@@ -101,7 +85,7 @@ export async function loadAdminRecentActivity(clubId) {
   if (eventIds.length > 0) {
     const { data: nominations, error: nomErr } = await supabase
       .from("nominations")
-      .select("id, event_id, group_id, created_at, status")
+      .select("id, event_id, group_id, created_at")
       .in("event_id", eventIds)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
@@ -130,7 +114,6 @@ export async function loadAdminRecentActivity(clubId) {
         label: household ? membershipLabel(household) : "Household",
         meta: {
           eventName: eventNameById.get(row.event_id) || "Event",
-          status: row.status,
         },
       });
     });
@@ -159,29 +142,14 @@ export async function loadAdminRecentActivity(clubId) {
   });
 
   eventList.forEach((event) => {
-    const stamp = event.updated_at || event.created_at;
-    if (!stamp || stamp < since) return;
-    const created = event.created_at ? new Date(event.created_at).getTime() : 0;
-    const updated = event.updated_at ? new Date(event.updated_at).getTime() : 0;
-    if (updated - created <= 60_000 && event.created_at >= since) {
-      items.push({
-        id: `event-new-${event.id}`,
-        kind: "event_created",
-        occurredAt: event.created_at,
-        label: richTextToPlainText(event.name) || "Event",
-        meta: { published: !!event.is_published },
-      });
-      return;
-    }
-    if (event.updated_at && event.updated_at >= since) {
-      items.push({
-        id: `event-updated-${event.id}-${event.updated_at}`,
-        kind: "event_updated",
-        occurredAt: event.updated_at,
-        label: richTextToPlainText(event.name) || "Event",
-        meta: { published: !!event.is_published },
-      });
-    }
+    if (!event.created_at || event.created_at < since) return;
+    items.push({
+      id: `event-new-${event.id}`,
+      kind: "event_created",
+      occurredAt: event.created_at,
+      label: richTextToPlainText(event.name) || "Event",
+      meta: { published: !!event.is_published },
+    });
   });
 
   const deduped = [];

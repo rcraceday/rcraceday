@@ -17,7 +17,7 @@ export async function loadAdminSystemNotices(clubId, clubSlug) {
 
   const { data: events, error: eventsErr } = await supabase
     .from("events")
-    .select("id, name, event_date, days, is_published, track, nominations_open")
+    .select("id, name, event_date, days, is_published, nominations_open, nominations_close")
     .eq("club_id", clubId);
 
   if (eventsErr) {

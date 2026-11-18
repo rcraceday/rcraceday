@@ -152,6 +152,35 @@
   cursor: not-allowed;
 }
 
+.admin-root .admin-btn-reinstate {
+  height: var(--admin-btn-height);
+  min-height: var(--admin-btn-height);
+  max-height: var(--admin-btn-height);
+  padding: 0 10px;
+  box-sizing: border-box;
+  background-color: #059669;
+  border: 1px solid #059669;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.admin-root .admin-btn-reinstate:hover:not(:disabled) {
+  background-color: #047857;
+  border-color: #047857;
+}
+
+.admin-root .admin-btn-reinstate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .admin-root .admin-action-btn-fixed {
   min-width: 97px;
   justify-content: center;

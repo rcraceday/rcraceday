@@ -57,6 +57,12 @@ export const CancelEventButton = ({ children = "Cancel Event", disabled, ...prop
   </button>
 );
 
+export const ReinstateEventButton = ({ children = "Reinstate Event", disabled, ...props }) => (
+  <button type="button" className="admin-btn-reinstate" disabled={disabled} {...props}>
+    {children}
+  </button>
+);
+
 export const AddButton = ({ children = "Add", ...props }) => (
   <CMSButton {...props}>
     <PlusIcon style={{ width: 16, height: 16, color: gray }} />

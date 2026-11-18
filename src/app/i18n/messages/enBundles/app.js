@@ -291,6 +291,10 @@ export default {
     title: "Club News",
     backToNews: "Back to news",
     noNews: "No news posts yet.",
+    adminPreviewBanner:
+      "Admin preview — members only see this item when it is published and within the display window.",
+    adminPreviewDraft:
+      "Draft — this post is not on Home or Club News yet. Open Edit, turn on Published, and save to publish.",
   },
   messages: {
     title: "Messages",

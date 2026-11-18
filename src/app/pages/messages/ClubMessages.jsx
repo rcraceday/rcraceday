@@ -32,18 +32,26 @@ export default function ClubMessages() {
   }, [club?.id, membership?.id]);
 
   return (
-    <div style={{ minHeight: "100vh", background: palette?.background || "#fff" }}>
+    <div
+      style={{
+        minHeight: "100dvh",
+        background: palette?.background || "#fff",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <PageTitle
         icon={ChatBubbleLeftRightIcon}
         title={t("messages.title")}
         style={{ color: brand }}
       />
-      <main className="app-page-main gap-5">
-        <p className="text-sm mb-4" style={{ color: palette?.textMuted || "#6b7280" }}>
+      <main className="app-page-main gap-5 club-messages-member-page">
+        <p className="text-sm mb-4" style={{ color: palette?.textMuted || "#6b7280", flexShrink: 0 }}>
           Private conversation with the club. Other members cannot see these messages.
         </p>
         {club?.id && membership?.id ? (
           <MessageThreadPanel
+            fillHeight
             key={`${club.id}-${membership.id}`}
             clubId={club.id}
             membershipId={membership.id}

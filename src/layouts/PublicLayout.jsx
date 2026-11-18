@@ -15,38 +15,51 @@ export default function PublicLayout() {
   }, []);
 
   return (
-    <main
+    <div
+      className="app-layout"
       style={{
         width: "100%",
+        minHeight: "100dvh",
         background: "white",
         display: "flex",
         flexDirection: "column",
       }}
     >
-      <div
+      <main
         style={{
           width: "100%",
+          flex: "1 1 auto",
           display: "flex",
-          justifyContent: "center",
-          paddingTop: "24px",
-          paddingBottom: "24px",
+          flexDirection: "column",
           boxSizing: "border-box",
         }}
       >
         <div
-          className="public-column"
           style={{
             width: "100%",
-            maxWidth: "720px",   // ⭐ FIXED
-            marginLeft: "auto",
-            marginRight: "auto",
+            flex: "1 1 auto",
+            display: "flex",
+            justifyContent: "center",
+            paddingTop: "24px",
+            paddingBottom: "24px",
             boxSizing: "border-box",
           }}
         >
-          <Outlet context={{ club }} />
+          <div
+            className="public-column"
+            style={{
+              width: "100%",
+              maxWidth: "720px",
+              marginLeft: "auto",
+              marginRight: "auto",
+              boxSizing: "border-box",
+            }}
+          >
+            <Outlet context={{ club }} />
+          </div>
         </div>
-      </div>
+      </main>
       <Footer club={club} />
-    </main>
+    </div>
   );
 }

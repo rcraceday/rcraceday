@@ -14,6 +14,7 @@ export default function AdminLayout() {
         width: "100%",
         display: "flex",
         flexDirection: "column",
+        minHeight: "100dvh",
         backgroundColor: "#ffffff",
         color: "#111827",
       }}
@@ -26,7 +27,6 @@ export default function AdminLayout() {
           backgroundColor: "#F5F5F5",
           minWidth: 0,
           boxSizing: "border-box",
-          flex: "0 0 auto",
         }}
       >
         <div className="app-column">

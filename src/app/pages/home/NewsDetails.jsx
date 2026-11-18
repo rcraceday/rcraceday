@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeftIcon, NewspaperIcon } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
@@ -11,7 +11,8 @@ import Card from "@/components/ui/Card";
 import { newsDetailHeaderStyle } from "@/components/news/NewsItemImage";
 import RichTextContent from "@/components/ui/RichTextContent";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
-import { isClubNewsVisible } from "@/app/lib/clubNews";
+import { getClubNewsDisplayStatus, isClubNewsVisible } from "@/app/lib/clubNews";
+import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
 
 function formatPublished(iso) {
   const d = parseStoredTimestamp(iso);
@@ -28,8 +29,13 @@ export default function NewsDetails() {
   const { club } = useClub();
   const { palette } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const brand = palette.primary;
   const { t } = useTranslation();
+  const { hasAnyAdminAccess } = useAdminAccess();
+  const isAdmin = hasAnyAdminAccess;
+  const saveNotice = location.state?.sendNotice;
+  const saveError = location.state?.sendError;
 
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,15 +47,20 @@ export default function NewsDetails() {
 
     async function load() {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from("club_news")
         .select("*")
         .eq("id", id)
-        .eq("club_id", club.id)
-        .eq("is_published", true)
-        .maybeSingle();
+        .eq("club_id", club.id);
+      if (!isAdmin) {
+        query = query.eq("is_published", true);
+      }
+      const { data, error } = await query.maybeSingle();
       if (cancelled) return;
-      if (error || !data || !isClubNewsVisible(data)) {
+      const visible = isAdmin
+        ? !!data
+        : !!(data && isClubNewsVisible(data));
+      if (error || !visible) {
         setMissing(true);
         setItem(null);
       } else {
@@ -63,7 +74,7 @@ export default function NewsDetails() {
     return () => {
       cancelled = true;
     };
-  }, [club?.id, id]);
+  }, [club?.id, id, isAdmin]);
 
   return (
     <div
@@ -78,19 +89,42 @@ export default function NewsDetails() {
         title={t("news.title")}
         style={{ color: brand }}
         actions={
-          <Button
-            variant="primary"
-            size="sm"
-            className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
-            onClick={() => navigate(`/${clubSlug}/app`)}
-          >
-            <ArrowLeftIcon className="h-3 w-3" />
-            {t("nav.home")}
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {isAdmin && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="!py-1 !px-3 !text-xs !rounded-sm"
+                onClick={() => navigate(`/${clubSlug}/app/admin/news/${id}`)}
+              >
+                {t("cms.edit")}
+              </Button>
+            )}
+            <Button
+              variant="primary"
+              size="sm"
+              className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
+              onClick={() => navigate(`/${clubSlug}/app/news`)}
+            >
+              <ArrowLeftIcon className="h-3 w-3" />
+              {t("news.title")}
+            </Button>
+          </div>
         }
       />
 
-      <main className="app-page-main flex justify-center !py-10">
+      <main className="app-page-main flex flex-col items-center !py-10">
+        {(saveNotice || saveError) && (
+          <div
+            className="w-full mb-4 rounded-md px-4 py-3 text-sm"
+            style={{
+              backgroundColor: saveError ? "#FEE2E2" : "#FEF3C7",
+              color: saveError ? "#991B1B" : "#92400E",
+            }}
+          >
+            {saveError || saveNotice}
+          </div>
+        )}
         {loading && (
           <Card className="w-full">
             <div style={{ padding: 16 }}>{t("loading.loading")}</div>
@@ -103,6 +137,14 @@ export default function NewsDetails() {
               This news item is not available.
             </p>
           </Card>
+        )}
+
+        {!loading && item && isAdmin && getClubNewsDisplayStatus(item) !== "live" && (
+          <div className="w-full mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {!item.is_published
+              ? t("news.adminPreviewDraft")
+              : t("news.adminPreviewBanner")}
+          </div>
         )}
 
         {!loading && item && (

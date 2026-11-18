@@ -22,7 +22,7 @@ import EventShareLinkActions from "./components/EventShareLinkActions";
 import EventPreviewModal from "./components/EventPreviewModal";
 
 import { cmsStyles } from "@cms/styles";
-import { isRichTextEmpty } from "@/app/lib/richText";
+import { isRichTextEmpty, richTextToPlainText } from "@/app/lib/richText";
 import { triggerNominationsOpenProcessing } from "@/app/lib/userNotifications";
 import { formatEdgeFunctionInvokeError } from "@/app/lib/edgeFunctionErrors";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -31,6 +31,7 @@ import {
   cancelClubEvent,
   getCancellationPolicy,
   isEventCancelled,
+  reinstateClubEvent,
 } from "@/app/lib/eventCancellation";
 import {
   applyEventTypeDefaults,
@@ -613,6 +614,56 @@ const normalizedDays = Array.isArray(data.days)
     setSaving(false);
   };
 
+  const handleReinstateEvent = async () => {
+    if (isNew || !id) return;
+    if (!isEventCancelled(eventData)) {
+      setError(t("cms.reinstateEventNotCancelled"));
+      return;
+    }
+
+    const eventName = richTextToPlainText(eventData.name) || t("admin.nominations.eventFallback");
+    const confirmed = window.confirm(
+      t("cms.reinstateEventConfirm", { eventName })
+    );
+    if (!confirmed) return;
+
+    setSaving(true);
+    setError(null);
+    setSendNotice(null);
+
+    const result = await reinstateClubEvent({
+      supabase,
+      event: eventData,
+      club: club || { id: eventData.club_id, slug: clubSlug },
+      clubSlug,
+      senderUserId: user?.id,
+    });
+
+    if (result.error) {
+      if (result.error.code === "CREDIT_SPENT") {
+        setError(t("cms.reinstateEventCreditSpent"));
+      } else {
+        setError(result.error.message || t("cms.reinstateEventFailed"));
+      }
+      setSaving(false);
+      return;
+    }
+
+    setEventData((prev) => ({
+      ...prev,
+      is_cancelled: false,
+      cancelled_at: null,
+      cancelled_by: null,
+    }));
+    setSendNotice(
+      t("cms.reinstateEventDone", {
+        reversed: result.reversedHouseholds || 0,
+        notified: result.notifiedHouseholds || 0,
+      })
+    );
+    setSaving(false);
+  };
+
   // SAVE HANDLER
   const normalizeDate = (v) => {
     if (v === null || v === undefined) return null;
@@ -1135,6 +1186,7 @@ if (data.is_multi_day) {
                 onCancel={handleCancel}
                 onDelete={handleDelete}
                 onCancelEvent={handleCancelEvent}
+                onReinstateEvent={handleReinstateEvent}
                 isCancelled={isEventCancelled(eventData)}
               />
             </div>

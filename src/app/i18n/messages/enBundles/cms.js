@@ -17,9 +17,19 @@ export default {
       "Cancel this event? Nominated drivers will be credited their entry fee. They can request a refund by contacting the club before 6am the morning of the next meeting; after that the funds stay as credit for {{months}} months. Drivers will be notified by message and push.",
     cancelEventFailed: "Failed to cancel event.",
     cancelEventAlready: "This event is already cancelled.",
-    eventCancelledBanner: "This event is cancelled. Nominated drivers have been credited.",
     cancellingEvent: "Cancelling…",
     cancelEventDone: "Event cancelled. {{credited}} household(s) credited, {{notified}} notified.",
+    reinstateEvent: "Reinstate Event",
+    reinstateEventConfirm:
+      "Reinstate “{{eventName}}”? The event will be open for nominations again. Any cancellation credits that have not been spent will be removed from household accounts. Nominated drivers will be notified.",
+    reinstateEventFailed: "Failed to reinstate event.",
+    reinstateEventNotCancelled: "This event is not cancelled.",
+    reinstateEventCreditSpent:
+      "Cannot reinstate this event because at least one household has already used part of their cancellation credit. Contact those drivers or adjust credits manually before trying again.",
+    reinstateEventDone:
+      "Event reinstated. {{reversed}} household credit(s) reversed, {{notified}} notified.",
+    eventCancelledBanner:
+      "This event is cancelled. Nominated drivers have been credited. Use Reinstate Event below if this was a mistake (only while cancellation credits have not been used).",
     add: "Add",
     remove: "Remove",
     search: "Search",

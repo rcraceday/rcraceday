@@ -141,7 +141,10 @@ export default function CMSRichTextEditor({ value, onChange }) {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: false,
+        underline: false,
+      }),
       Underline,
       AppLink.configure({
         openOnClick: false,

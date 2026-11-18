@@ -792,6 +792,13 @@ a:hover {
   transform: translateY(0);
 }
 
+.desktop-dropdown nav {
+  max-height: calc(100dvh - 7rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .desktop-dropdown nav a,
 .desktop-dropdown nav button.desktop-dropdown-item {
   display: flex;
@@ -1163,6 +1170,20 @@ html.body-drawer-open body {
   text-decoration: underline;
 }
 
+.app-layout {
+  min-height: 100dvh;
+  box-sizing: border-box;
+}
+
+.app-layout > main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-layout > footer {
+  flex-shrink: 0;
+}
+
 .app-column {
   width: 100%;
   max-width: 720px;
@@ -1311,4 +1332,227 @@ html.body-drawer-open body {
 
 .event-month-section {
   background: #fff;
+}
+
+/* Club messages: scroll inside panel, keep composer on screen */
+.club-message-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.club-message-thread-scroll {
+  box-sizing: border-box;
+  min-height: 200px;
+  max-height: min(52dvh, 520px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.club-message-thread-compose {
+  flex-shrink: 0;
+}
+
+.club-message-thread--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.club-message-thread--fill .club-message-thread-scroll {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 120px;
+}
+
+.club-message-bubble-row {
+  display: flex;
+}
+
+.club-message-bubble-row--start {
+  justify-content: flex-start;
+}
+
+.club-message-bubble-row--end {
+  justify-content: flex-end;
+}
+
+.club-message-bubble {
+  max-width: 85%;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.club-message-bubble-meta {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.club-messages-member-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(100dvh - 9rem);
+}
+
+.club-messages-member-page .club-message-thread {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.club-messages-member-page .club-message-thread-scroll {
+  max-height: none;
+  flex: 1 1 auto;
+}
+
+.club-messages-admin-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: stretch;
+  height: calc(100dvh - 12rem);
+  min-height: 360px;
+  max-height: calc(100dvh - 8rem);
+}
+
+@media (min-width: 768px) {
+  .club-messages-admin-grid {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+}
+
+.club-messages-inbox-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.club-messages-inbox-list-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.club-messages-conversation-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.club-messages-conversation-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.club-message-thread-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.club-message-thread-toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.club-message-thread-toolbar-muted {
+  color: #6b7280;
+}
+
+.club-message-thread-toolbar-btn {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.club-message-thread-toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.club-message-thread-toolbar-btn--danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.club-message-bubble-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.club-message-bubble-wrap--end {
+  justify-content: flex-end;
+}
+
+.club-message-bubble-wrap--start {
+  justify-content: flex-start;
+}
+
+.club-message-bubble-wrap--selected .club-message-bubble {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.club-message-select-check {
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.club-message-context-menu {
+  position: fixed;
+  z-index: 1200;
+  min-width: 148px;
+  padding: 4px 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.club-message-context-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.club-message-context-menu button:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.club-message-context-menu button:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.club-message-context-menu button.danger {
+  color: #b91c1c;
 }

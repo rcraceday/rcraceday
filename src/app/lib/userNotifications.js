@@ -164,6 +164,13 @@ export async function sendWebPushToUsers(supabase, {
     };
   }
 
+  await supabase.auth.refreshSession();
+
+  const {
+    data: { session: freshSession },
+  } = await supabase.auth.getSession();
+  const accessToken = freshSession?.access_token || session.access_token;
+
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   const payload = {
     userIds: ids,
@@ -183,7 +190,7 @@ export async function sendWebPushToUsers(supabase, {
       headers: {
         "Content-Type": "application/json",
         apikey: anonKey,
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(payload),
     });

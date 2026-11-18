@@ -23,11 +23,10 @@ import {
   uploadClubAsset,
 } from "@/app/lib/clubAssetStorage";
 import {
+  deliverClubNewsNotifications,
   shouldAutoSendClubNewsNotifications,
   validateClubNewsDisplayDates,
 } from "@/app/lib/clubNews";
-import { triggerNominationsOpenProcessing } from "@/app/lib/userNotifications";
-import { formatEdgeFunctionInvokeError } from "@/app/lib/edgeFunctionErrors";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
 const emptyNews = {
@@ -35,7 +34,7 @@ const emptyNews = {
   body: "",
   image_url: "",
   is_published: false,
-  notify_members: false,
+  notify_members: true,
   notify_mode: "on_publish",
   notify_at: "",
   display_from: "",
@@ -76,6 +75,7 @@ export default function AdminClubNewsEdit() {
         .from("club_news")
         .select("*")
         .eq("id", id)
+        .eq("club_id", club.id)
         .maybeSingle();
       if (cancelled) return;
       if (loadError || !data) {
@@ -98,46 +98,43 @@ export default function AdminClubNewsEdit() {
     return () => {
       cancelled = true;
     };
-  }, [id, isNew]);
+  }, [id, isNew, club?.id]);
 
   const update = (field, value) => {
     setNews((prev) => ({ ...prev, [field]: value }));
   };
 
-  async function runNewsNotifications(newsId, { force = false } = {}) {
+  async function runNewsNotifications(newsRow, { force = false } = {}) {
     setSending(true);
     setNotice(null);
+    setError(null);
     try {
-      const { data, error: fnError } = await triggerNominationsOpenProcessing(
+      const result = await deliverClubNewsNotifications({
         supabase,
-        null,
-        { newsId, type: "club_news", force }
-      );
-      if (fnError) {
-        const message =
-          formatEdgeFunctionInvokeError(fnError, "process-nominations-open") ||
-          "Could not send news notifications.";
+        club,
+        clubSlug,
+        news: newsRow,
+        senderUserId: user?.id,
+        force,
+      });
+      if (!result.ok) {
+        const message = result.error || "Could not send news notifications.";
         setError(message);
         return { ok: false, error: message, notice: null };
       }
-      if (data?.error) {
-        const message = String(data.error);
-        setError(message);
-        return { ok: false, error: message, notice: null };
-      }
-      const row = Array.isArray(data?.summary)
-        ? data.summary.find((item) => item?.type === "club_news") || data.summary[0]
-        : null;
-      if (row) {
-        const noticeText = `In-app: ${row.inApp}. Email: ${row.email}. Push: ${row.push}.`;
-        setNotice(noticeText);
-        return { ok: true, error: null, notice: noticeText };
-      }
-      if (force) {
+      if (result.skipped) {
         const noticeText =
-          "Notification job ran, but nothing was sent. Use Send notification now.";
+          result.reason === "already_sent"
+            ? "Notifications were already sent for this post. Use Send notification now to send again."
+            : result.reason === "not_due"
+              ? "Notifications are scheduled for later."
+              : "Notifications are disabled for this post.";
         setNotice(noticeText);
         return { ok: true, error: null, notice: noticeText };
+      }
+      if (result.notice) {
+        setNotice(result.notice);
+        return { ok: true, error: null, notice: result.notice };
       }
       return { ok: true, error: null, notice: null };
     } finally {
@@ -146,7 +143,11 @@ export default function AdminClubNewsEdit() {
   }
 
   const handleSave = async (isPublished = !!news.is_published) => {
-    if (saving || !club?.id) return;
+    if (saving) return;
+    if (!club?.id) {
+      setError("Club is still loading. Wait a moment and try again.");
+      return;
+    }
     const title = String(news.title || "").trim();
     if (!title) {
       setError("Title is required.");
@@ -240,20 +241,36 @@ export default function AdminClubNewsEdit() {
           .maybeSingle();
       }
 
-      if (res.error || !res.data) {
-        setError(res.error?.message || "Failed to save news item.");
+      if (res.error) {
+        setError(res.error.message || "Failed to save news item.");
         setSaving(false);
         return;
       }
 
+      let saved = res.data;
+      if (!saved) {
+        const refetch = await supabase
+          .from("club_news")
+          .select("*")
+          .eq("id", newsId)
+          .eq("club_id", club.id)
+          .maybeSingle();
+        if (refetch.error || !refetch.data) {
+          setError(refetch.error?.message || "Saved, but could not reload the news item.");
+          setSaving(false);
+          return;
+        }
+        saved = refetch.data;
+      }
+
       setNews({
-        ...res.data,
-        notify_at: isoToDatetimeLocal(res.data.notify_at),
-        notify_mode: res.data.notify_mode || "on_publish",
-        display_from: isoToDatetimeLocal(res.data.display_from),
-        display_until: isoToDatetimeLocal(res.data.display_until),
+        ...saved,
+        notify_at: isoToDatetimeLocal(saved.notify_at),
+        notify_mode: saved.notify_mode || "on_publish",
+        display_from: isoToDatetimeLocal(saved.display_from),
+        display_until: isoToDatetimeLocal(saved.display_until),
       });
-      setOriginalImageUrl(res.data.image_url || "");
+      setOriginalImageUrl(saved.image_url || "");
       setImageFile(null);
 
       let sendNotice = null;
@@ -262,24 +279,25 @@ export default function AdminClubNewsEdit() {
         shouldAutoSendClubNewsNotifications({
           wasPublished,
           nowPublished,
-          news: res.data,
+          news: saved,
         })
       ) {
-        const result = await runNewsNotifications(res.data.id);
+        const result = await runNewsNotifications(saved);
         sendNotice = result?.notice || null;
         sendError = result?.ok ? null : result?.error || "Could not send news notifications.";
+      } else if (nowPublished && !wasPublished && !saved.notify_members) {
+        sendNotice = "Published on the site. Turn on “Send notification to members” to alert members.";
+      } else if (nowPublished && !wasPublished && saved.notify_mode === "scheduled") {
+        sendNotice = "Published. Notifications will send at the scheduled date and time.";
+      } else if (!nowPublished) {
+        sendNotice = "Saved as draft. It will not appear on Home or Club News until you publish it.";
       }
 
       setSaving(false);
-      if (isNew) {
-        navigate(`/${clubSlug}/app/admin/news/${res.data.id}`, {
-          replace: true,
-          state: { sendNotice, sendError },
-        });
-        return;
-      }
-      if (sendNotice) setNotice(sendNotice);
-      if (sendError) setError(sendError);
+      navigate(`/${clubSlug}/app/news/${saved.id}`, {
+        replace: isNew,
+        state: { sendNotice, sendError, fromAdminSave: true },
+      });
     } catch {
       setError("Unexpected error saving news item.");
       setSaving(false);
@@ -452,7 +470,7 @@ export default function AdminClubNewsEdit() {
                     <CMSButton
                       type="button"
                       disabled={sending || saving}
-                      onClick={() => runNewsNotifications(id, { force: true })}
+                      onClick={() => runNewsNotifications(news, { force: true })}
                     >
                       {sending ? "Sending…" : "Send notification now"}
                     </CMSButton>

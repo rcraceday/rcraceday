@@ -1,5 +1,5 @@
 import CMSButton from "@cms/CMSButton";
-import { CancelEventButton, DeleteEventButton } from "@cms/CMSButtonSet";
+import { CancelEventButton, DeleteEventButton, ReinstateEventButton } from "@cms/CMSButtonSet";
 import { cmsLayout } from "@cms/layout";
 import { useTranslation } from "@/app/i18n/I18nContext";
 
@@ -10,6 +10,7 @@ export default function SaveActions({
   onCancel,
   onDelete,
   onCancelEvent,
+  onReinstateEvent,
   isCancelled,
   saveLabel,
   deleteLabel,
@@ -31,6 +32,11 @@ export default function SaveActions({
           <CancelEventButton onClick={onCancelEvent} disabled={saving}>
             {t("cms.cancelEvent")}
           </CancelEventButton>
+        )}
+        {!isNew && onReinstateEvent && isCancelled && (
+          <ReinstateEventButton onClick={onReinstateEvent} disabled={saving}>
+            {t("cms.reinstateEvent")}
+          </ReinstateEventButton>
         )}
         {!isNew && (
           <DeleteEventButton onClick={onDelete} disabled={saving}>

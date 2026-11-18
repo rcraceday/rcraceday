@@ -135,7 +135,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from("club_news")
         .select(
-          "id, title, body, image_url, published_at, created_at, display_from, display_until"
+          "id, title, body, image_url, published_at, created_at, display_from, display_until, is_published"
         )
         .eq("club_id", club.id)
         .eq("is_published", true)

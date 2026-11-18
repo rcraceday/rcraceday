@@ -91,3 +91,8 @@ export function shouldNotifyClubNews(preferences) {
     push: prefs.push_enabled && news,
   };
 }
+
+/** Club news broadcast from admin — deliver to every active household (incl. admins). */
+export function shouldNotifyClubNewsBroadcast() {
+  return { inApp: true, email: false, push: true, forced: true };
+}
