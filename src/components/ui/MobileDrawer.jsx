@@ -7,6 +7,55 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 import useTheme from "@/app/providers/useTheme";
 import MenuUnreadBadge from "@/components/ui/MenuUnreadBadge";
 
+const BODY_LOCK_CLASS = "body-drawer-open";
+
+function lockPageScroll() {
+  const scrollY = window.scrollY;
+  const { body, documentElement: html } = document;
+
+  body.classList.add(BODY_LOCK_CLASS);
+  html.classList.add(BODY_LOCK_CLASS);
+
+  body.style.position = "fixed";
+  body.style.top = `-${scrollY}px`;
+  body.style.left = "0";
+  body.style.right = "0";
+  body.style.width = "100%";
+  body.style.overflow = "hidden";
+  html.style.overflow = "hidden";
+
+  const blockBackgroundTouch = (event) => {
+    if (event.target.closest(".mobile-drawer-nav")) return;
+    event.preventDefault();
+  };
+
+  document.addEventListener("touchmove", blockBackgroundTouch, { passive: false });
+
+  return {
+    scrollY,
+    blockBackgroundTouch,
+  };
+}
+
+function unlockPageScroll(lock) {
+  if (!lock) return;
+  const { body, documentElement: html } = document;
+
+  document.removeEventListener("touchmove", lock.blockBackgroundTouch);
+
+  body.classList.remove(BODY_LOCK_CLASS);
+  html.classList.remove(BODY_LOCK_CLASS);
+  body.style.position = "";
+  body.style.top = "";
+  body.style.left = "";
+  body.style.right = "";
+  body.style.width = "";
+  body.style.overflow = "";
+  html.style.overflow = "";
+
+  window.scrollTo(0, lock.scrollY);
+}
+
 export default function MobileDrawer({
   open,
   onClose,
@@ -23,11 +72,8 @@ export default function MobileDrawer({
 
   useEffect(() => {
     if (!open) return undefined;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
+    const lock = lockPageScroll();
+    return () => unlockPageScroll(lock);
   }, [open]);
 
   const drawerStyle = isAdmin
