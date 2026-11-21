@@ -11,6 +11,7 @@ import MessageThreadPanel from "@/app/pages/messages/MessageThreadPanel";
 import {
   fetchClubMessagesForClub,
   groupMessagesByMembership,
+  markAllMemberMessagesReadForAdmin,
   sendAdminClubMessageToMemberships,
 } from "@/app/lib/clubMessages";
 import {
@@ -37,7 +38,8 @@ export default function AdminClubMessages() {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastError, setBroadcastError] = useState("");
   const [loading, setLoading] = useState(true);
-  const { refreshUnreadCount } = useClubMessageUnreadCount({
+  const [markingAllRead, setMarkingAllRead] = useState(false);
+  const { unreadCount, refreshUnreadCount } = useClubMessageUnreadCount({
     clubId: club?.id,
     audience: "admin",
   });
@@ -145,6 +147,19 @@ export default function AdminClubMessages() {
       setLabels({});
     }
     setLoading(false);
+  }
+
+  async function handleMarkAllRead() {
+    if (!club?.id || markingAllRead || unreadCount < 1) return;
+    setMarkingAllRead(true);
+    const { error } = await markAllMemberMessagesReadForAdmin(club.id);
+    setMarkingAllRead(false);
+    if (error) {
+      console.warn(error);
+      return;
+    }
+    refreshUnreadCount();
+    loadThreads();
   }
 
   async function handleBroadcastSend() {
@@ -287,8 +302,28 @@ export default function AdminClubMessages() {
               </ul>
             )}
           </div>
-          <div style={{ padding: "10px 12px", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>
-            Inbox
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              padding: "10px 12px",
+              fontWeight: 600,
+              borderBottom: "1px solid #e5e7eb",
+            }}
+          >
+            <span>Inbox</span>
+            {unreadCount > 0 ? (
+              <button
+                type="button"
+                onClick={handleMarkAllRead}
+                disabled={markingAllRead}
+                className="club-messages-mark-all-read"
+              >
+                {markingAllRead ? "…" : t("messages.markAllRead")}
+              </button>
+            ) : null}
           </div>
           {loading ? (
             <p style={{ padding: 12, fontSize: 14, color: "#6b7280" }}>Loading…</p>
@@ -300,6 +335,7 @@ export default function AdminClubMessages() {
               {threads.map((thread) => {
                 const active = thread.membershipId === selectedId;
                 const preview = (thread.lastMessage?.body || "").slice(0, 80);
+                const isUnread = thread.unreadCount > 0;
                 return (
                   <li key={thread.membershipId}>
                     <button
@@ -318,10 +354,16 @@ export default function AdminClubMessages() {
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                        <span style={{ fontWeight: 600, fontSize: 13 }}>
+                        <span
+                          style={{
+                            fontWeight: isUnread ? 700 : 400,
+                            fontSize: 13,
+                            color: "#111827",
+                          }}
+                        >
                           {labels[thread.membershipId] || "Member"}
                         </span>
-                        {thread.unreadCount > 0 && (
+                        {isUnread && (
                           <span
                             style={{
                               background: "#c20a0a",
@@ -330,13 +372,23 @@ export default function AdminClubMessages() {
                               fontSize: 11,
                               padding: "2px 6px",
                               fontWeight: 600,
+                              flexShrink: 0,
                             }}
                           >
                             {thread.unreadCount}
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{preview}</div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: isUnread ? "#374151" : "#6b7280",
+                          fontWeight: isUnread ? 600 : 400,
+                          marginTop: 4,
+                        }}
+                      >
+                        {preview}
+                      </div>
                     </button>
                   </li>
                 );

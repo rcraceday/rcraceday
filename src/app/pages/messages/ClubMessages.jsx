@@ -6,8 +6,9 @@ import { useMembership } from "@/app/providers/MembershipProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import useTheme from "@/app/providers/useTheme";
 import MessageThreadPanel from "@/app/pages/messages/MessageThreadPanel";
-import { useEffect } from "react";
-import { markAdminMessagesReadForMember } from "@/app/lib/clubMessages";
+import { useEffect, useState } from "react";
+import Button from "@/components/ui/Button";
+import { markAllAdminMessagesReadForMember } from "@/app/lib/clubMessages";
 import { useClubMessageUnreadCount } from "@/app/hooks/useClubMessageUnreadCount";
 
 export default function ClubMessages() {
@@ -17,19 +18,23 @@ export default function ClubMessages() {
   const { palette } = useTheme() || {};
   const brand = palette?.primary || "#0A66C2";
   const { t } = useTranslation();
-  const { refreshUnreadCount } = useClubMessageUnreadCount({
+  const [markingAllRead, setMarkingAllRead] = useState(false);
+  const { unreadCount, refreshUnreadCount } = useClubMessageUnreadCount({
     clubId: club?.id,
     membershipId: membership?.id,
     audience: "member",
   });
 
-  useEffect(() => {
-    if (!club?.id || !membership?.id) return;
-    markAdminMessagesReadForMember({
+  async function handleMarkAllRead() {
+    if (!club?.id || !membership?.id || markingAllRead || unreadCount < 1) return;
+    setMarkingAllRead(true);
+    await markAllAdminMessagesReadForMember({
       clubId: club.id,
       membershipId: membership.id,
     });
-  }, [club?.id, membership?.id]);
+    setMarkingAllRead(false);
+    refreshUnreadCount();
+  }
 
   return (
     <div
@@ -44,6 +49,19 @@ export default function ClubMessages() {
         icon={ChatBubbleLeftRightIcon}
         title={t("messages.title")}
         style={{ color: brand }}
+        actions={
+          unreadCount > 0 ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="!py-1 !px-3 !text-xs !rounded-sm"
+              disabled={markingAllRead}
+              onClick={handleMarkAllRead}
+            >
+              {markingAllRead ? "…" : t("messages.markAllRead")}
+            </Button>
+          ) : null
+        }
       />
       <main className="app-page-main gap-5 club-messages-member-page">
         <p className="text-sm mb-4" style={{ color: palette?.textMuted || "#6b7280", flexShrink: 0 }}>

@@ -301,6 +301,7 @@ export default {
   messages: {
     title: "Messages",
     empty: "No messages yet.",
+    markAllRead: "Mark all as read",
   },
   nominations: {
     myTitle: "My Nominations",

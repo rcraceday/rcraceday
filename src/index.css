@@ -1589,3 +1589,22 @@ html.body-drawer-open body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.club-messages-mark-all-read {
+  border: none;
+  background: transparent;
+  color: #c20a0a;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.club-messages-mark-all-read:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.club-messages-mark-all-read:hover:not(:disabled) {
+  text-decoration: underline;
+}

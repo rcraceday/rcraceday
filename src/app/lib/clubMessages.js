@@ -172,6 +172,69 @@ export async function markAdminMessagesReadForMember({ clubId, membershipId }) {
   return result;
 }
 
+async function markAllMemberMessagesReadForAdminDirect(clubId) {
+  const now = new Date().toISOString();
+  return supabase
+    .from("club_messages")
+    .update({ read_by_admin_at: now })
+    .eq("club_id", clubId)
+    .eq("sender_role", "member")
+    .is("read_by_admin_at", null)
+    .is("archived_by_admin_at", null);
+}
+
+async function markAllAdminMessagesReadForMemberDirect(clubId, membershipId) {
+  const now = new Date().toISOString();
+  let query = supabase
+    .from("club_messages")
+    .update({ read_by_member_at: now })
+    .eq("club_id", clubId)
+    .eq("membership_id", membershipId)
+    .eq("sender_role", "admin")
+    .is("read_by_member_at", null);
+  const withArchive = await query.is("archived_by_member_at", null);
+  if (withArchive.error && /archived_by_/i.test(withArchive.error.message || "")) {
+    return markAdminMessagesReadForMemberDirect({ clubId, membershipId });
+  }
+  return withArchive;
+}
+
+export async function markAllMemberMessagesReadForAdmin(clubId) {
+  if (!clubId) return { error: { message: "Missing club." } };
+  const rpc = await supabase.rpc("mark_club_messages_read_all_for_admin", {
+    p_club_id: clubId,
+  });
+  let result = rpc;
+  if (rpc.error && /function|schema cache|mark_club_messages_read_all/i.test(rpc.error.message || "")) {
+    result = await markAllMemberMessagesReadForAdminDirect(clubId);
+    if (result.error && /archived_by_/i.test(result.error.message || "")) {
+      const now = new Date().toISOString();
+      result = await supabase
+        .from("club_messages")
+        .update({ read_by_admin_at: now })
+        .eq("club_id", clubId)
+        .eq("sender_role", "member")
+        .is("read_by_admin_at", null);
+    }
+  }
+  if (!result.error) notifyClubMessagesInboxChanged();
+  return result;
+}
+
+export async function markAllAdminMessagesReadForMember({ clubId, membershipId }) {
+  if (!clubId || !membershipId) return { error: null };
+  const rpc = await supabase.rpc("mark_club_messages_read_all_for_member", {
+    p_club_id: clubId,
+    p_membership_id: membershipId,
+  });
+  let result = rpc;
+  if (rpc.error && /function|schema cache|mark_club_messages_read_all/i.test(rpc.error.message || "")) {
+    result = await markAllAdminMessagesReadForMemberDirect(clubId, membershipId);
+  }
+  if (!result.error) notifyClubMessagesInboxChanged();
+  return result;
+}
+
 export async function manageClubMessages({
   clubId,
   membershipId,
