@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeftIcon, NewspaperIcon } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
@@ -8,21 +8,9 @@ import PageTitle from "@/components/ui/PageTitle";
 import { useTranslation } from "@/app/i18n/I18nContext";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-import NewsItemImage from "@/components/news/NewsItemImage";
-import { richTextToPlainText } from "@/app/lib/richText";
-import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
-import { isClubNewsVisible } from "@/app/lib/clubNews";
+import { fetchVisibleClubNewsList } from "@/app/lib/clubNews";
 
-function formatPublished(iso) {
-  const d = parseStoredTimestamp(iso);
-  if (!d) return "";
-  return d.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
+/** Menu target: open latest visible post (no card list). */
 export default function ClubNews() {
   const { clubSlug } = useParams();
   const navigate = useNavigate();
@@ -30,49 +18,54 @@ export default function ClubNews() {
   const { palette } = useTheme();
   const brand = palette.primary;
   const { t } = useTranslation();
-
-  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [empty, setEmpty] = useState(false);
 
   useEffect(() => {
-    if (!club?.id) return undefined;
+    if (!club?.id || !clubSlug) return undefined;
     let cancelled = false;
 
-    async function load() {
+    (async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("club_news")
-        .select(
-          "id, title, body, image_url, published_at, display_from, display_until, is_published"
-        )
-        .eq("club_id", club.id)
-        .eq("is_published", true)
-        .order("published_at", { ascending: false });
-
+      const { data, error } = await fetchVisibleClubNewsList(supabase, club.id);
       if (cancelled) return;
       if (error) {
         console.warn(error);
-        setItems([]);
-      } else {
-        setItems((data || []).filter((item) => isClubNewsVisible(item)));
+        setEmpty(true);
+        setLoading(false);
+        return;
       }
+      const latest = data?.[0];
+      if (latest?.id) {
+        navigate(`/${clubSlug}/app/news/${latest.id}`, { replace: true });
+        return;
+      }
+      setEmpty(true);
       setLoading(false);
-    }
+    })();
 
-    load();
     return () => {
       cancelled = true;
     };
-  }, [club?.id]);
+  }, [club?.id, clubSlug, navigate]);
+
+  if (!empty && loading) {
+    return (
+      <div style={{ minHeight: "100vh", width: "100%", backgroundColor: palette.background }}>
+        <PageTitle icon={NewspaperIcon} title={t("news.title")} style={{ color: brand }} />
+        <main className="app-page-main">
+          <Card>
+            <div style={{ padding: 16 }}>{t("loading.loading")}</div>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  if (!empty) return null;
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        width: "100%",
-        backgroundColor: palette.background,
-      }}
-    >
+    <div style={{ minHeight: "100vh", width: "100%", backgroundColor: palette.background }}>
       <PageTitle
         icon={NewspaperIcon}
         title={t("news.title")}
@@ -89,71 +82,12 @@ export default function ClubNews() {
           </Button>
         }
       />
-
       <main className="app-page-main">
-        {loading && (
-          <Card>
-            <div style={{ padding: 16 }}>{t("loading.loading")}</div>
-          </Card>
-        )}
-
-        {!loading && items.length === 0 && (
-          <Card>
-            <p className="text-text-muted" style={{ padding: 16 }}>
-              {t("news.noNews")}
-            </p>
-          </Card>
-        )}
-
-        {!loading && items.length > 0 && (
-          <div className="space-y-3">
-            {items.map((item) => {
-              const excerpt = richTextToPlainText(item.body).slice(0, 140);
-              return (
-                <Link
-                  key={item.id}
-                  to={`/${clubSlug}/app/news/${item.id}`}
-                  className="no-underline block"
-                >
-                  <Card className="!p-0 overflow-hidden hover:opacity-[0.98]">
-                    <div className="flex gap-3 p-3 sm:p-4 items-center">
-                      {item.image_url ? (
-                        <NewsItemImage
-                          variant="thumb"
-                          newsBackgroundUrl={club?.news_background_url}
-                          imageUrl={item.image_url}
-                          title={item.title}
-                        />
-                      ) : (
-                        <div
-                          className="shrink-0 rounded-lg overflow-hidden bg-[#F3F4F6] flex items-center justify-center"
-                          style={{ width: 72, height: 72 }}
-                        >
-                          <NewspaperIcon className="h-8 w-8 text-text-muted opacity-50" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <h2 className="text-base font-semibold text-text-base m-0">
-                          {item.title}
-                        </h2>
-                        {item.published_at && (
-                          <p className="text-xs text-text-muted mt-1 mb-0">
-                            {formatPublished(item.published_at)}
-                          </p>
-                        )}
-                        {excerpt ? (
-                          <p className="text-sm text-text-muted mt-2 mb-0 line-clamp-2">
-                            {excerpt}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+        <Card>
+          <p className="text-text-muted" style={{ padding: 16 }}>
+            {t("news.noNews")}
+          </p>
+        </Card>
       </main>
     </div>
   );

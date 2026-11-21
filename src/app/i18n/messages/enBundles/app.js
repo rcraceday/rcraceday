@@ -290,6 +290,8 @@ export default {
   news: {
     title: "Club News",
     backToNews: "Back to news",
+    olderPost: "Older",
+    newerPost: "Newer",
     noNews: "No news posts yet.",
     adminPreviewBanner:
       "Admin preview — members only see this item when it is published and within the display window.",

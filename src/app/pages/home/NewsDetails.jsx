@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeftIcon, NewspaperIcon } from "@heroicons/react/24/solid";
+import { ArrowLeftIcon, ChevronLeftIcon, ChevronRightIcon, NewspaperIcon } from "@heroicons/react/24/solid";
 import { supabase } from "@/supabaseClient";
 import { useClub } from "@/app/providers/ClubProvider";
 import useTheme from "@/app/providers/useTheme";
@@ -11,7 +11,11 @@ import Card from "@/components/ui/Card";
 import { newsDetailHeaderStyle } from "@/components/news/NewsItemImage";
 import RichTextContent from "@/components/ui/RichTextContent";
 import { parseStoredTimestamp } from "@/app/lib/eventDatetime";
-import { getClubNewsDisplayStatus, isClubNewsVisible } from "@/app/lib/clubNews";
+import {
+  fetchVisibleClubNewsList,
+  getClubNewsDisplayStatus,
+  isClubNewsVisible,
+} from "@/app/lib/clubNews";
 import { useAdminAccess } from "@/app/providers/AdminAccessProvider";
 
 function formatPublished(iso) {
@@ -38,8 +42,14 @@ export default function NewsDetails() {
   const saveError = location.state?.sendError;
 
   const [item, setItem] = useState(null);
+  const [navItems, setNavItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
+
+  const currentIndex = navItems.findIndex((row) => row.id === id);
+  const newerPost = currentIndex > 0 ? navItems[currentIndex - 1] : null;
+  const olderPost =
+    currentIndex >= 0 && currentIndex < navItems.length - 1 ? navItems[currentIndex + 1] : null;
 
   useEffect(() => {
     if (!club?.id || !id) return undefined;
@@ -47,16 +57,23 @@ export default function NewsDetails() {
 
     async function load() {
       setLoading(true);
-      let query = supabase
-        .from("club_news")
-        .select("*")
-        .eq("id", id)
-        .eq("club_id", club.id);
-      if (!isAdmin) {
-        query = query.eq("is_published", true);
-      }
-      const { data, error } = await query.maybeSingle();
+      const [{ data: list }, itemResult] = await Promise.all([
+        fetchVisibleClubNewsList(supabase, club.id),
+        (async () => {
+          let query = supabase
+            .from("club_news")
+            .select("*")
+            .eq("id", id)
+            .eq("club_id", club.id);
+          if (!isAdmin) {
+            query = query.eq("is_published", true);
+          }
+          return query.maybeSingle();
+        })(),
+      ]);
       if (cancelled) return;
+      setNavItems(list || []);
+      const { data, error } = itemResult;
       const visible = isAdmin
         ? !!data
         : !!(data && isClubNewsVisible(data));
@@ -75,6 +92,11 @@ export default function NewsDetails() {
       cancelled = true;
     };
   }, [club?.id, id, isAdmin]);
+
+  function goToPost(targetId) {
+    if (!targetId) return;
+    navigate(`/${clubSlug}/app/news/${targetId}`);
+  }
 
   return (
     <div
@@ -104,10 +126,10 @@ export default function NewsDetails() {
               variant="primary"
               size="sm"
               className="!py-1 !px-3 !text-xs !rounded-sm flex items-center gap-1"
-              onClick={() => navigate(`/${clubSlug}/app/news`)}
+              onClick={() => navigate(`/${clubSlug}/app`)}
             >
               <ArrowLeftIcon className="h-3 w-3" />
-              {t("news.title")}
+              {t("nav.home")}
             </Button>
           </div>
         }
@@ -194,6 +216,28 @@ export default function NewsDetails() {
               style={{ marginTop: 12 }}
               html={item.body}
             />
+            {navItems.length > 1 ? (
+              <div className="club-news-post-nav">
+                <button
+                  type="button"
+                  className="club-news-post-nav-btn"
+                  disabled={!newerPost}
+                  onClick={() => goToPost(newerPost?.id)}
+                >
+                  <ChevronLeftIcon className="h-4 w-4" aria-hidden />
+                  <span>{t("news.newerPost")}</span>
+                </button>
+                <button
+                  type="button"
+                  className="club-news-post-nav-btn"
+                  disabled={!olderPost}
+                  onClick={() => goToPost(olderPost?.id)}
+                >
+                  <span>{t("news.olderPost")}</span>
+                  <ChevronRightIcon className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+            ) : null}
           </div>
         )}
       </main>

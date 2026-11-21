@@ -32,6 +32,23 @@ export function isClubNewsVisible(news, now = new Date()) {
   return true;
 }
 
+export const CLUB_NEWS_LIST_SELECT =
+  "id, title, published_at, display_from, display_until, is_published";
+
+/** Newest first, visible published items only. */
+export async function fetchVisibleClubNewsList(supabase, clubId) {
+  if (!supabase || !clubId) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from("club_news")
+    .select(CLUB_NEWS_LIST_SELECT)
+    .eq("club_id", clubId)
+    .eq("is_published", true)
+    .order("published_at", { ascending: false });
+  if (error) return { data: [], error };
+  const rows = (data || []).filter((item) => isClubNewsVisible(item));
+  return { data: rows, error: null };
+}
+
 export function validateClubNewsDisplayDates(displayFromIso, displayUntilIso) {
   const from = parseStoredTimestamp(displayFromIso);
   const until = parseStoredTimestamp(displayUntilIso);
