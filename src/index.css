@@ -1608,3 +1608,45 @@ html.body-drawer-open body {
 .club-messages-mark-all-read:hover:not(:disabled) {
   text-decoration: underline;
 }
+
+.club-messages-inbox-row {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.club-messages-inbox-row:hover {
+  background: #f9fafb;
+}
+
+.club-messages-inbox-row--unread {
+  background: #eff6ff;
+  box-shadow: inset 3px 0 0 #2563eb;
+  padding-left: 9px;
+}
+
+.club-messages-inbox-row--unread:hover {
+  background: #dbeafe;
+}
+
+.club-messages-inbox-row--active {
+  background: #fef2f2;
+}
+
+.club-messages-inbox-row--active:hover {
+  background: #fee2e2;
+}
+
+.club-messages-inbox-row--active.club-messages-inbox-row--unread {
+  background: #fef2f2;
+  box-shadow: inset 3px 0 0 #c20a0a;
+}
+
+.club-messages-inbox-row--active.club-messages-inbox-row--unread:hover {
+  background: #fee2e2;
+}

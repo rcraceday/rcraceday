@@ -340,18 +340,16 @@ export default function AdminClubMessages() {
                   <li key={thread.membershipId}>
                     <button
                       type="button"
+                      className={[
+                        "club-messages-inbox-row",
+                        isUnread ? "club-messages-inbox-row--unread" : "",
+                        active ? "club-messages-inbox-row--active" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                       onClick={() =>
                         setSearchParams({ household: thread.membershipId })
                       }
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "10px 12px",
-                        border: "none",
-                        borderBottom: "1px solid #f3f4f6",
-                        background: active ? "#fef2f2" : "#fff",
-                        cursor: "pointer",
-                      }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                         <span
